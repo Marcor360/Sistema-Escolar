@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "Sistema Escolar",
+    "slug": "sistema-escolar",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#14343B"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "mx.escuela.alumnos"
+    },
+    "android": {
+      "package": "mx.escuela.alumnos"
+    },
+    "extra": {
+      "apiUrl": "http://localhost:3000/api"
+    },
+    "plugins": [
+      "expo-asset"
+    ]
+  }
+}

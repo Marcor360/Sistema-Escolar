@@ -1,0 +1,36 @@
+# Infraestructura local de desarrollo.
+# MySQL por defecto:            docker compose up -d mysql
+# SQL Server (perfil opcional): docker compose --profile mssql up -d sqlserver
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: escolar-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: escolar
+      MYSQL_USER: escolar
+      MYSQL_PASSWORD: escolar123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot"]
+      interval: 10s
+      retries: 10
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: escolar-sqlserver
+    profiles: ["mssql"]
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Escolar123!"
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql_data:/var/opt/mssql
+
+volumes:
+  mysql_data:
+  mssql_data:

@@ -1,0 +1,58 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.*
+
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Build output and generated artifacts
+dist/
+build/
+coverage/
+.vite/
+*.tsbuildinfo
+
+# Runtime uploads
+**/uploads/*
+!**/uploads/.gitkeep
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Expo / React Native
+.expo/
+.expo-shared/
+.eas/
+.metro-cache/
+web-build/
+
+# Native mobile build output
+android/.gradle/
+android/app/build/
+ios/build/
+ios/Pods/
+DerivedData/
+*.jks
+*.keystore
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Local editor and OS files
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+desktop.ini

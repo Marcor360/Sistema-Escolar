@@ -1,0 +1,381 @@
+/* ============================================================
+   Sistema Escolar — identidad "documento oficial"
+   Papel #F7F8F6 · Tinta #1C2528 · Pizarra #14343B · Dorado #C79A3C
+   ============================================================ */
+:root {
+  --papel: #f7f8f6;
+  --tinta: #1c2528;
+  --pizarra: #14343b;
+  --pizarra-2: #0e262b;
+  --dorado: #c79a3c;
+  --linea: #d8dcd6;
+  --exito: #2e7d5b;
+  --peligro: #b4452f;
+  --serif: Georgia, 'Times New Roman', serif;
+  --sans: -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: var(--papel);
+  color: var(--tinta);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+/* ---------- Estructura ---------- */
+.shell { display: flex; min-height: 100vh; }
+
+.lateral {
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--pizarra);
+  color: #e8ece9;
+  padding: 24px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.monograma {
+  width: 52px; height: 52px;
+  margin: 0 auto;
+  border: 2px solid var(--dorado);
+  border-radius: 50%;
+  display: grid; place-items: center;
+  font-family: var(--serif);
+  font-size: 20px;
+  color: var(--dorado);
+  letter-spacing: 1px;
+}
+.lateral-titulo {
+  text-align: center;
+  font-family: var(--serif);
+  font-size: 15px;
+  margin: 8px 16px 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(232, 236, 233, 0.18);
+}
+.lateral nav { display: flex; flex-direction: column; }
+.lateral nav a {
+  color: #c8d2cd;
+  text-decoration: none;
+  padding: 9px 24px;
+  border-left: 3px solid transparent;
+  font-size: 13.5px;
+}
+.lateral nav a:hover { color: #fff; background: rgba(255, 255, 255, 0.05); }
+.lateral nav a.active {
+  color: #fff;
+  border-left-color: var(--dorado);
+  background: var(--pizarra-2);
+}
+.lateral-pie {
+  margin-top: auto;
+  padding: 16px 24px 0;
+  border-top: 1px solid rgba(232, 236, 233, 0.18);
+  font-size: 12.5px;
+}
+.lateral-pie .rol { color: #9fb0a9; font-size: 11px; margin-top: 2px; }
+
+.contenido { flex: 1; padding: 32px 40px 60px; max-width: 1200px; }
+
+/* ---------- Encabezado tipo boleta oficial ---------- */
+.encabezado { margin-bottom: 24px; }
+.encabezado h1 {
+  font-family: var(--serif);
+  font-weight: normal;
+  font-size: 26px;
+  margin: 0 0 4px;
+}
+.encabezado .detalle { color: #5c6a66; font-size: 13px; }
+.encabezado::after {
+  content: '';
+  display: block;
+  margin-top: 12px;
+  border-top: 2px solid var(--tinta);
+  border-bottom: 1px solid var(--tinta);
+  height: 3px;
+}
+
+/* ---------- Tarjetas KPI ---------- */
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
+.kpi {
+  background: #fff;
+  border: 1px solid var(--linea);
+  padding: 16px 18px;
+}
+.kpi .valor { font-family: var(--serif); font-size: 28px; }
+.kpi .etiqueta { color: #5c6a66; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* ---------- Tablas ---------- */
+.tabla { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--linea); }
+.tabla th {
+  text-align: left;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #5c6a66;
+  padding: 10px 12px;
+  border-bottom: 2px solid var(--tinta);
+  background: #fdfdfc;
+}
+.tabla td { padding: 9px 12px; border-bottom: 1px solid var(--linea); vertical-align: middle; }
+.tabla tr:last-child td { border-bottom: none; }
+.tabla tr:hover td { background: #fbfaf6; }
+
+/* ---------- Formularios ---------- */
+.panel {
+  background: #fff;
+  border: 1px solid var(--linea);
+  padding: 18px;
+  margin-bottom: 20px;
+}
+.panel h2 { font-family: var(--serif); font-weight: normal; font-size: 17px; margin: 0 0 14px; }
+.fila { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.campo { display: flex; flex-direction: column; gap: 4px; }
+.campo label { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.05em; color: #5c6a66; }
+input, select, textarea {
+  font: inherit;
+  padding: 7px 9px;
+  border: 1px solid #b9c0ba;
+  background: #fff;
+  color: var(--tinta);
+  min-width: 140px;
+}
+input:focus, select:focus, textarea:focus, button:focus-visible {
+  outline: 2px solid var(--dorado);
+  outline-offset: 1px;
+}
+
+.boton {
+  font: inherit;
+  padding: 8px 16px;
+  border: 1px solid var(--pizarra);
+  background: var(--pizarra);
+  color: #fff;
+  cursor: pointer;
+}
+.boton:hover { background: var(--pizarra-2); }
+.boton.secundario { background: #fff; color: var(--pizarra); }
+.boton.secundario:hover { background: #eef1ee; }
+.boton.fantasma {
+  background: transparent;
+  border-color: rgba(232, 236, 233, 0.4);
+  color: #e8ece9;
+  margin-top: 10px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+}
+.boton.peligro { border-color: var(--peligro); background: #fff; color: var(--peligro); }
+.boton.peligro:hover { background: #faf0ed; }
+.boton:disabled { opacity: 0.55; cursor: default; }
+
+/* ---------- Etiquetas de estado ---------- */
+.sello {
+  display: inline-block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border: 1px solid currentColor;
+}
+.sello.ok { color: var(--exito); }
+.sello.aviso { color: var(--dorado); }
+.sello.mal { color: var(--peligro); }
+.sello.neutro { color: #5c6a66; }
+
+/* ---------- Utilidades ---------- */
+.mensaje-error { color: var(--peligro); font-size: 13px; margin: 8px 0; }
+.mensaje-ok { color: var(--exito); font-size: 13px; margin: 8px 0; }
+.acciones { display: flex; gap: 8px; flex-wrap: wrap; }
+.tabs { display: flex; gap: 0; border-bottom: 2px solid var(--tinta); margin-bottom: 18px; }
+.tabs button {
+  font: inherit;
+  border: none;
+  background: none;
+  padding: 9px 16px;
+  cursor: pointer;
+  color: #5c6a66;
+}
+.tabs button.activa {
+  color: var(--tinta);
+  font-weight: 600;
+  box-shadow: inset 0 -3px 0 var(--dorado);
+}
+.derecha { text-align: right; }
+.monto { font-variant-numeric: tabular-nums; }
+
+/* ---------- Login ---------- */
+.login-fondo {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: var(--pizarra);
+}
+.login-caja {
+  width: 360px;
+  background: var(--papel);
+  padding: 36px 32px;
+  border-top: 4px solid var(--dorado);
+}
+.login-caja h1 {
+  font-family: var(--serif);
+  font-weight: normal;
+  font-size: 22px;
+  text-align: center;
+  margin: 12px 0 24px;
+}
+.login-caja .campo { margin-bottom: 14px; }
+.login-caja input { width: 100%; }
+.login-caja .monograma { border-color: var(--pizarra); color: var(--pizarra); }
+
+@media (max-width: 800px) {
+  .shell { flex-direction: column; }
+  .lateral { width: 100%; flex-direction: row; flex-wrap: wrap; align-items: center; padding: 12px; }
+  .lateral nav { flex-direction: row; flex-wrap: wrap; }
+  .lateral nav a { padding: 8px 12px; border-left: none; }
+  .lateral nav a.active { border-left: none; box-shadow: inset 0 -3px 0 var(--dorado); }
+  .monograma { width: 40px; height: 40px; font-size: 15px; margin: 0; }
+  .lateral-titulo, .lateral-pie p { display: none; }
+  .lateral-pie { margin: 0; border: none; padding: 0; }
+  .contenido { padding: 20px 16px 40px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+
+/* ---------- Responsivo: tablas y formularios en móvil ---------- */
+@media (max-width: 800px) {
+  .tabla {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+  .fila { align-items: stretch; }
+  .campo { flex: 1 1 100%; }
+  .campo input, .campo select, .campo textarea { width: 100%; min-width: 0; }
+  .fila > .boton { width: 100%; }
+  .kpis { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ---------- Acciones compactas y captura en línea ---------- */
+.boton.chico { padding: 5px 11px; font-size: 12.5px; }
+.acciones-fila { display: inline-flex; gap: 6px; }
+.captura-nota { display: inline-flex; gap: 6px; align-items: center; }
+.captura-nota input { width: 84px; min-width: 84px; }
+.tabla td.vacio {
+  text-align: center;
+  color: #5c6a66;
+  padding: 26px 12px;
+  white-space: normal;
+}
+
+/* ---------- Barra superior y campana de notificaciones ---------- */
+.barra-superior {
+  display: flex;
+  justify-content: flex-end;
+  margin: -8px 0 8px;
+}
+.campana { position: relative; }
+.campana-boton {
+  font: inherit;
+  font-size: 17px;
+  background: #fff;
+  border: 1px solid var(--linea);
+  padding: 6px 10px;
+  cursor: pointer;
+  position: relative;
+}
+.campana-boton:hover { background: #eef1ee; }
+.campana-conteo {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  background: var(--peligro);
+  color: #fff;
+  font-size: 10.5px;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 999px;
+}
+.campana-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  width: 330px;
+  max-height: 420px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid var(--linea);
+  border-top: 3px solid var(--dorado);
+  box-shadow: 0 8px 22px rgba(20, 52, 59, 0.14);
+  z-index: 20;
+}
+.campana-titulo {
+  font-family: var(--serif);
+  font-size: 14px;
+  margin: 0;
+  padding: 12px 14px 8px;
+  border-bottom: 1px solid var(--linea);
+}
+.campana-vacia { padding: 18px 14px; color: #5c6a66; font-size: 13px; margin: 0; }
+.campana-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--linea);
+  padding: 10px 14px;
+  cursor: pointer;
+}
+.campana-item:hover { background: #fbfaf6; }
+.campana-item.sin-leer { box-shadow: inset 3px 0 0 var(--dorado); background: #fdfbf5; }
+.campana-item-titulo { font-weight: 600; font-size: 13px; }
+.campana-item-mensaje { font-size: 12.5px; color: #444f4b; }
+.campana-item-fecha { font-size: 11px; color: #5c6a66; }
+
+@media (max-width: 800px) {
+  .campana-panel { width: min(330px, calc(100vw - 32px)); }
+}
+
+/* ---------- Casillas de selección (roles) ---------- */
+.casilla {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  border: 1px solid var(--linea);
+  background: #fff;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+.casilla input { min-width: 0; accent-color: var(--pizarra); }
+
+/* ---------- Enlaces auxiliares ---------- */
+.enlace {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  font: inherit;
+  font-size: 13px;
+  background: none;
+  border: none;
+  color: var(--pizarra);
+  text-decoration: underline;
+  cursor: pointer;
+  text-align: center;
+}
+.pie-enlace {
+  display: inline-block;
+  color: var(--dorado);
+  font-size: 12.5px;
+  margin: 4px 0 2px;
+}
