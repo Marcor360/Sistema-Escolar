@@ -1,5 +1,7 @@
 export * from './rol.entity';
 export * from './usuario.entity';
+export * from './plantel.entity';
+export * from './usuario-plantel.entity';
 export * from './password-reset-token.entity';
 export * from './alumno.entity';
 export * from './docente.entity';

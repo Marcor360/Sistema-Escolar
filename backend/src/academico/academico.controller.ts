@@ -47,11 +47,11 @@ export class AcademicoController {
 
   // ---- Grupos ----
   @Get('grupos') @Roles('ADMINISTRATIVO', 'MAESTRO', 'FINANZAS')
-  listarGrupos(@Query('cicloId') cicloId?: string) {
-    return this.service.listarGrupos(cicloId ? Number(cicloId) : undefined);
+  listarGrupos(@CurrentUser() user: JwtUser, @Query('cicloId') cicloId?: string, @Query('plantelId') plantelId?: string) {
+    return this.service.listarGrupos(user, cicloId ? Number(cicloId) : undefined, plantelId ? Number(plantelId) : undefined);
   }
-  @Post('grupos') @Roles('ADMINISTRATIVO') crearGrupo(@Body() dto: GrupoDto) {
-    return this.service.crearGrupo(dto);
+  @Post('grupos') @Roles('ADMINISTRATIVO') crearGrupo(@Body() dto: GrupoDto, @CurrentUser() user: JwtUser) {
+    return this.service.crearGrupo(dto, user);
   }
   @Get('grupo-materias') @Roles('ADMINISTRATIVO', 'FINANZAS')
   listarGrupoMaterias() {
@@ -79,8 +79,8 @@ export class AcademicoController {
     return this.service.alumnosDeGrupo(id);
   }
   @Post('grupos/:id/alumnos') @Roles('ADMINISTRATIVO')
-  inscribir(@Param('id', ParseIntPipe) id: number, @Body() dto: InscribirAlumnoDto) {
-    return this.service.inscribirAlumno(id, dto.alumnoId);
+  inscribir(@Param('id', ParseIntPipe) id: number, @Body() dto: InscribirAlumnoDto, @CurrentUser() user: JwtUser) {
+    return this.service.inscribirAlumno(id, dto.alumnoId, user);
   }
   @Delete('inscripciones/:id') @Roles('ADMINISTRATIVO')
   bajaInscripcion(@Param('id', ParseIntPipe) id: number) {

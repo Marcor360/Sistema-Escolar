@@ -1,7 +1,8 @@
 import {
-  Column, CreateDateColumn, DeleteDateColumn, Entity, JoinColumn,
+  Column, CreateDateColumn, DeleteDateColumn, Entity, JoinColumn, ManyToOne,
   OneToOne, PrimaryGeneratedColumn, UpdateDateColumn,
 } from 'typeorm';
+import { Plantel } from './plantel.entity';
 import { Usuario } from './usuario.entity';
 
 export type AlumnoEstatus = 'ACTIVO' | 'BAJA' | 'EGRESADO';
@@ -13,6 +14,10 @@ export class Alumno {
   @OneToOne(() => Usuario, { eager: true })
   @JoinColumn({ name: 'usuario_id' })
   usuario: Usuario;
+  @Column() plantelId: number;
+  @ManyToOne(() => Plantel, { eager: true })
+  @JoinColumn({ name: 'plantel_id' })
+  plantel: Plantel;
   @Column({ length: 20, unique: true }) matricula: string;
   @Column({ length: 18, nullable: true }) curp: string | null;
   @Column({ type: 'date', nullable: true }) fechaNacimiento: string | null;

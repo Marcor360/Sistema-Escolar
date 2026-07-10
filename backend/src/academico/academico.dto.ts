@@ -1,3 +1,4 @@
+import { Type } from 'class-transformer';
 import { IsBoolean, IsIn, IsInt, IsOptional, IsString } from 'class-validator';
 
 export class CicloDto {
@@ -16,7 +17,8 @@ export class MateriaDto {
 }
 
 export class GrupoDto {
-  @IsInt() cicloId: number;
+  @Type(() => Number) @IsInt() cicloId: number;
+  @Type(() => Number) @IsInt() plantelId: number;
   @IsString() nombre: string;
   @IsOptional() @IsString() grado?: string;
   @IsOptional() @IsIn(['MATUTINO', 'VESPERTINO']) turno?: 'MATUTINO' | 'VESPERTINO';

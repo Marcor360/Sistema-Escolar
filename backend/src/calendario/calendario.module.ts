@@ -19,7 +19,7 @@ class EventoDto {
 }
 
 @Injectable()
-class CalendarioService {
+export class CalendarioService {
   constructor(
     @InjectRepository(EventoCalendario) private readonly repo: Repository<EventoCalendario>,
   ) {}

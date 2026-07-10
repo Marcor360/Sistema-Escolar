@@ -9,11 +9,13 @@ import { Alumno } from '../entities/alumno.entity';
 import { AcademicoService } from './academico.service';
 import { AcademicoController } from './academico.controller';
 import { DocentesModule } from '../docentes/docentes.module';
+import { PlantelesModule } from '../planteles/planteles.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([CicloEscolar, Materia, Grupo, GrupoMateria, Inscripcion, Alumno]),
     DocentesModule,
+    PlantelesModule,
   ],
   providers: [AcademicoService],
   controllers: [AcademicoController],

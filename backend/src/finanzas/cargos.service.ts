@@ -6,6 +6,7 @@ import { Pago } from '../entities/pago.entity';
 import { Inscripcion } from '../entities/inscripcion.entity';
 import { Grupo } from '../entities/grupo.entity';
 import { AlumnosService } from '../alumnos/alumnos.service';
+import { ScopeService } from '../planteles/scope.service';
 import { ConceptosService } from './conceptos.service';
 import { BitacoraFinancieraService } from './bitacora-financiera.service';
 import { JwtUser } from '../common/current-user.decorator';
@@ -33,6 +34,7 @@ export class CargosService {
     private readonly alumnos: AlumnosService,
     private readonly conceptos: ConceptosService,
     private readonly bitacora: BitacoraFinancieraService,
+    private readonly scope: ScopeService,
   ) {}
 
   totalDeCargo(cargo: Cargo): number {
@@ -69,7 +71,7 @@ export class CargosService {
 
   async crear(dto: CrearCargoDto, user: JwtUser) {
     await this.conceptos.obtener(dto.conceptoId);
-    await this.alumnos.obtener(dto.alumnoId);
+    await this.alumnos.obtener(dto.alumnoId, user);
     const cargo = await this.cargos.save(
       this.cargos.create({
         alumnoId: dto.alumnoId,
@@ -171,11 +173,16 @@ export class CargosService {
   }
 
   /** Cargos con saldo pendiente en todo el plantel (sin N+1). */
-  async adeudos(): Promise<CargoConSaldo[]> {
-    const cargos = await this.cargos.find({
-      where: { estatus: In(['PENDIENTE', 'PARCIAL', 'VENCIDO']) },
-      order: { fechaVencimiento: 'ASC' },
-    });
+  async adeudos(user?: JwtUser, plantelId?: number): Promise<CargoConSaldo[]> {
+    const planteles = user ? await this.scope.resolverFiltro(user, plantelId) : null;
+    const qb = this.cargos
+      .createQueryBuilder('c')
+      .leftJoinAndSelect('c.alumno', 'a')
+      .leftJoinAndSelect('a.usuario', 'u')
+      .where('c.estatus IN (:...estatus)', { estatus: ['PENDIENTE', 'PARCIAL', 'VENCIDO'] })
+      .orderBy('c.fecha_vencimiento', 'ASC');
+    if (planteles !== null) qb.andWhere('a.plantel_id IN (:...planteles)', { planteles });
+    const cargos = await qb.getMany();
     const pagado = await this.pagadoPorCargo(cargos.map((c) => c.id));
     return cargos
       .map((cargo) => {
@@ -187,8 +194,8 @@ export class CargosService {
   }
 
   /** Estado de cuenta de un alumno: cargos con saldos + historial de pagos. */
-  async estadoDeCuenta(alumnoId: number) {
-    const alumno = await this.alumnos.obtener(alumnoId);
+  async estadoDeCuenta(alumnoId: number, user?: JwtUser) {
+    const alumno = await this.alumnos.obtener(alumnoId, user);
     const [cargos, pagos] = await Promise.all([
       this.cargos.find({
         where: { alumnoId, estatus: In(['PENDIENTE', 'PARCIAL', 'PAGADO', 'VENCIDO']) },

@@ -16,7 +16,7 @@ export class AuthController {
   @Post('login')
   @Throttle(LIMITE_ESTRICTO)
   login(@Body() dto: LoginDto) {
-    return this.auth.login(dto.email, dto.password);
+    return this.auth.login(dto.email, dto.password, dto.portal ?? 'WEB');
   }
 
   @Get('me')

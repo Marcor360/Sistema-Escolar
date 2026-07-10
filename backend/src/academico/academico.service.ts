@@ -1,6 +1,6 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { CicloEscolar } from '../entities/ciclo-escolar.entity';
 import { Materia } from '../entities/materia.entity';
 import { Grupo } from '../entities/grupo.entity';
@@ -8,6 +8,8 @@ import { GrupoMateria } from '../entities/grupo-materia.entity';
 import { Inscripcion } from '../entities/inscripcion.entity';
 import { Alumno } from '../entities/alumno.entity';
 import { DocentesService } from '../docentes/docentes.service';
+import { JwtUser } from '../common/current-user.decorator';
+import { ScopeService } from '../planteles/scope.service';
 import { AsignarMateriaDto, CicloDto, GrupoDto, MateriaDto } from './academico.dto';
 
 @Injectable()
@@ -20,6 +22,7 @@ export class AcademicoService {
     @InjectRepository(Inscripcion) private readonly inscripciones: Repository<Inscripcion>,
     @InjectRepository(Alumno) private readonly alumnos: Repository<Alumno>,
     private readonly docentes: DocentesService,
+    private readonly scope: ScopeService,
   ) {}
 
   // ---- Ciclos ----
@@ -49,10 +52,17 @@ export class AcademicoService {
   }
 
   // ---- Grupos ----
-  listarGrupos(cicloId?: number) {
-    return this.grupos.find({ where: cicloId ? { cicloId } : {}, order: { nombre: 'ASC' } });
+  async listarGrupos(user: JwtUser, cicloId?: number, plantelId?: number) {
+    const planteles = await this.scope.resolverFiltro(user, plantelId);
+    return this.grupos.find({
+      where: { ...(cicloId ? { cicloId } : {}), ...(planteles === null ? {} : { plantelId: In(planteles) }) },
+      order: { nombre: 'ASC' },
+    });
   }
-  crearGrupo(dto: GrupoDto) { return this.grupos.save(this.grupos.create(dto)); }
+  async crearGrupo(dto: GrupoDto, user: JwtUser) {
+    await this.scope.validarGestion(user, dto.plantelId);
+    return this.grupos.save(this.grupos.create(dto));
+  }
 
   /** Todas las asignaciones grupo-materia (captura de calificaciones del administrativo). */
   listarGrupoMaterias() {
@@ -83,9 +93,13 @@ export class AcademicoService {
   }
 
   // ---- Inscripciones ----
-  async inscribirAlumno(grupoId: number, alumnoId: number) {
+  async inscribirAlumno(grupoId: number, alumnoId: number, user?: JwtUser) {
+    const grupo = await this.grupos.findOne({ where: { id: grupoId } });
+    if (!grupo) throw new NotFoundException('Grupo no encontrado');
+    if (user) await this.scope.validarGestion(user, grupo.plantelId);
     const alumno = await this.alumnos.findOne({ where: { id: alumnoId } });
     if (!alumno) throw new NotFoundException('Alumno no encontrado');
+    if (alumno.plantelId !== grupo.plantelId) throw new ForbiddenException('El alumno no pertenece al plantel del grupo');
     const duplicada = await this.inscripciones.findOne({ where: { grupoId, alumnoId } });
     if (duplicada) throw new ConflictException('El alumno ya está inscrito en este grupo');
     return this.inscripciones.save(this.inscripciones.create({ grupoId, alumnoId }));

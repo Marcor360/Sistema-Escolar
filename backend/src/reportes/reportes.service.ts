@@ -13,6 +13,8 @@ import { Calificacion } from '../entities/calificacion.entity';
 import { Pago } from '../entities/pago.entity';
 import { CargosService } from '../finanzas/cargos.service';
 import { DocentesService } from '../docentes/docentes.service';
+import { AlumnosService } from '../alumnos/alumnos.service';
+import { ScopeService } from '../planteles/scope.service';
 import { JwtUser } from '../common/current-user.decorator';
 
 @Injectable()
@@ -26,17 +28,22 @@ export class ReportesService {
     @InjectRepository(Pago) private readonly pagos: Repository<Pago>,
     private readonly cargos: CargosService,
     private readonly docentes: DocentesService,
+    private readonly alumnosService: AlumnosService,
+    private readonly scope: ScopeService,
     private readonly config: ConfigService,
   ) {}
 
   /** Contadores para el dashboard. */
-  async resumen() {
+  async resumen(user: JwtUser, plantelId?: number) {
+    const planteles = await this.scope.resolverFiltro(user, plantelId);
+    const alumnoWhere = planteles === null ? { estatus: 'ACTIVO' as const } : { estatus: 'ACTIVO' as const, plantelId: this.scope.condicion(planteles) };
+    const grupoWhere = planteles === null ? {} : { plantelId: this.scope.condicion(planteles) };
     const [alumnosActivos, docentesActivos, totalGrupos] = await Promise.all([
-      this.alumnos.count({ where: { estatus: 'ACTIVO' } }),
+      this.alumnos.count({ where: alumnoWhere }),
       this.docentesRepo.count({ where: { estatus: 'ACTIVO' } }),
-      this.grupos.count(),
+      this.grupos.count({ where: grupoWhere }),
     ]);
-    const adeudos = await this.cargos.adeudos();
+    const adeudos = await this.cargos.adeudos(user, plantelId);
     const saldoPendiente = Math.round(adeudos.reduce((s, c) => s + c.saldo, 0) * 100) / 100;
 
     const inicioMes = new Date();
@@ -129,9 +136,15 @@ export class ReportesService {
   }
 
   /** Boleta PDF básica: calificaciones por materia y parcial + promedios. */
-  async boletaPdf(alumnoId: number, res: Response) {
+  async boletaPdf(alumnoId: number, user: JwtUser, res: Response) {
     const alumno = await this.alumnos.findOne({ where: { id: alumnoId } });
     if (!alumno) throw new NotFoundException('Alumno no encontrado');
+    if (user.roles.includes('ALUMNO')) {
+      const propio = await this.alumnosService.obtenerPorUsuario(user.sub);
+      if (propio.id !== alumno.id) throw new ForbiddenException('No puedes consultar la boleta de otro alumno');
+    } else if (!user.roles.includes('SUPERADMIN') && !user.roles.includes('MAESTRO')) {
+      await this.scope.validarGestion(user, alumno.plantelId);
+    }
     const calificaciones = await this.calificaciones.find({
       where: { alumnoId },
       order: { grupoMateriaId: 'ASC', parcial: 'ASC' },
@@ -205,8 +218,8 @@ export class ReportesService {
   }
 
   /** Reporte de adeudos en Excel. */
-  async adeudosExcel(res: Response) {
-    const adeudos = await this.cargos.adeudos();
+  async adeudosExcel(user: JwtUser, res: Response, plantelId?: number) {
+    const adeudos = await this.cargos.adeudos(user, plantelId);
 
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('Adeudos');

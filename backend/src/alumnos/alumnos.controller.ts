@@ -30,31 +30,31 @@ export class AlumnosController {
   // --- Control escolar ---
   @Get()
   @Roles('ADMINISTRATIVO', 'FINANZAS', 'MAESTRO')
-  listar(@Query('buscar') buscar?: string) {
-    return this.service.listar(buscar);
+  listar(@CurrentUser() user: JwtUser, @Query('buscar') buscar?: string, @Query('plantelId') plantelId?: string) {
+    return this.service.listar(buscar, user, plantelId ? Number(plantelId) : undefined);
   }
 
   @Get(':id')
   @Roles('ADMINISTRATIVO', 'FINANZAS', 'MAESTRO')
-  obtener(@Param('id', ParseIntPipe) id: number) {
-    return this.service.obtener(id);
+  obtener(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) {
+    return this.service.obtener(id, user);
   }
 
   @Post()
   @Roles('ADMINISTRATIVO')
-  crear(@Body() dto: CrearAlumnoDto) {
-    return this.service.crear(dto);
+  crear(@Body() dto: CrearAlumnoDto, @CurrentUser() user: JwtUser) {
+    return this.service.crear(dto, user);
   }
 
   @Patch(':id')
   @Roles('ADMINISTRATIVO')
-  actualizar(@Param('id', ParseIntPipe) id: number, @Body() dto: ActualizarAlumnoDto) {
-    return this.service.actualizar(id, dto);
+  actualizar(@Param('id', ParseIntPipe) id: number, @Body() dto: ActualizarAlumnoDto, @CurrentUser() user: JwtUser) {
+    return this.service.actualizar(id, dto, user);
   }
 
   @Delete(':id')
   @Roles('ADMINISTRATIVO')
-  baja(@Param('id', ParseIntPipe) id: number) {
-    return this.service.baja(id);
+  baja(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) {
+    return this.service.baja(id, user);
   }
 }

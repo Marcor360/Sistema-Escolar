@@ -6,9 +6,10 @@ import { GrupoMateria } from '../entities/grupo-materia.entity';
 import { AlumnosService } from './alumnos.service';
 import { AlumnosController } from './alumnos.controller';
 import { UsuariosModule } from '../usuarios/usuarios.module';
+import { PlantelesModule } from '../planteles/planteles.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Alumno, Inscripcion, GrupoMateria]), UsuariosModule],
+  imports: [TypeOrmModule.forFeature([Alumno, Inscripcion, GrupoMateria]), UsuariosModule, PlantelesModule],
   providers: [AlumnosService],
   controllers: [AlumnosController],
   exports: [AlumnosService],

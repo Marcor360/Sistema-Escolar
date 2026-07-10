@@ -1,4 +1,4 @@
-import { Controller, Get, Param, ParseIntPipe, Res, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Query, Res, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { ReportesService } from './reportes.service';
@@ -16,14 +16,14 @@ export class ReportesController {
 
   @Get('resumen')
   @Roles('ADMINISTRATIVO', 'FINANZAS', 'MAESTRO')
-  resumen() {
-    return this.service.resumen();
+  resumen(@CurrentUser() user: JwtUser, @Query('plantelId') plantelId?: string) {
+    return this.service.resumen(user, plantelId ? Number(plantelId) : undefined);
   }
 
   @Get('boleta/:alumnoId')
   @Roles('ADMINISTRATIVO', 'MAESTRO', 'FINANZAS', 'ALUMNO')
-  boleta(@Param('alumnoId', ParseIntPipe) alumnoId: number, @Res() res: Response) {
-    return this.service.boletaPdf(alumnoId, res);
+  boleta(@Param('alumnoId', ParseIntPipe) alumnoId: number, @CurrentUser() user: JwtUser, @Res() res: Response) {
+    return this.service.boletaPdf(alumnoId, user, res);
   }
 
   @Get('grupo-materias/:id/calificaciones.xlsx')
@@ -38,7 +38,7 @@ export class ReportesController {
 
   @Get('adeudos.xlsx')
   @Roles('FINANZAS', 'ADMINISTRATIVO')
-  adeudos(@Res() res: Response) {
-    return this.service.adeudosExcel(res);
+  adeudos(@CurrentUser() user: JwtUser, @Res() res: Response, @Query('plantelId') plantelId?: string) {
+    return this.service.adeudosExcel(user, res, plantelId ? Number(plantelId) : undefined);
   }
 }

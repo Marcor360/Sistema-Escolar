@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -16,20 +17,31 @@ export class AuthService {
     @InjectRepository(PasswordResetToken) private readonly tokens: Repository<PasswordResetToken>,
     private readonly jwt: JwtService,
     private readonly notificaciones: NotificacionesService,
+    private readonly config: ConfigService,
   ) {}
 
-  async login(email: string, password: string) {
+  async login(email: string, password: string, portal: 'WEB' | 'MOVIL' = 'WEB') {
     const usuario = await this.usuarios.findOne({ where: { email, activo: true } });
     if (!usuario || !(await bcrypt.compare(password, usuario.passwordHash))) {
       throw new UnauthorizedException('Credenciales inválidas');
+    }
+    const roles = usuario.roles.map((r) => r.clave);
+    if (portal === 'WEB' && roles.includes('ALUMNO')) {
+      throw new ForbiddenException('Los alumnos deben iniciar sesión en la app móvil');
+    }
+    if (portal === 'MOVIL' && !roles.includes('ALUMNO')) {
+      throw new ForbiddenException('El portal móvil es exclusivo para alumnos');
     }
     const payload: JwtUser = {
       sub: usuario.id,
       email: usuario.email,
       nombre: usuario.nombreCompleto,
-      roles: usuario.roles.map((r) => r.clave),
+      roles,
     };
-    return { accessToken: this.jwt.sign(payload), usuario: payload };
+    const expiresIn = portal === 'MOVIL'
+      ? this.config.get<string>('JWT_EXPIRES_MOVIL') || this.config.get<string>('JWT_EXPIRES') || '8h'
+      : this.config.get<string>('JWT_EXPIRES') || '8h';
+    return { accessToken: this.jwt.sign(payload, { expiresIn }), usuario: payload };
   }
 
   async me(user: JwtUser) {

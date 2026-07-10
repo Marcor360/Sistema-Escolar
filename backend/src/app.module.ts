@@ -17,6 +17,7 @@ import { CalendarioModule } from './calendario/calendario.module';
 import { NotificacionesModule } from './notificaciones/notificaciones.module';
 import { FinanzasModule } from './finanzas/finanzas.module';
 import { ReportesModule } from './reportes/reportes.module';
+import { PlantelesModule } from './planteles/planteles.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { ReportesModule } from './reportes/reportes.module';
     NotificacionesModule,
     FinanzasModule,
     ReportesModule,
+    PlantelesModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

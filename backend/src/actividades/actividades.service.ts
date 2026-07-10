@@ -35,7 +35,20 @@ export class ActividadesService {
     return gm;
   }
 
-  listarPorGrupoMateria(grupoMateriaId: number) {
+  private async validarAlumnoEnGrupoMateria(grupoMateriaId: number, user: JwtUser) {
+    const alumno = await this.alumnos.obtenerPorUsuario(user.sub);
+    const gm = await this.grupoMaterias.findOne({ where: { id: grupoMateriaId } });
+    if (!gm) throw new NotFoundException('Grupo-materia no encontrado');
+    const inscripcion = await this.inscripciones.findOne({
+      where: { alumnoId: alumno.id, grupoId: gm.grupoId, estatus: 'ACTIVA' },
+    });
+    if (!inscripcion) throw new ForbiddenException('El alumno no está inscrito en el grupo de esta actividad');
+    return { alumno, gm };
+  }
+
+  async listarPorGrupoMateria(grupoMateriaId: number, user: JwtUser) {
+    if (user.roles.includes('ALUMNO')) await this.validarAlumnoEnGrupoMateria(grupoMateriaId, user);
+    else await this.validarPropiedad(grupoMateriaId, user);
     return this.actividades.find({
       where: { grupoMateriaId, activo: true },
       order: { fechaEntrega: 'ASC' },
@@ -87,7 +100,7 @@ export class ActividadesService {
   // ---- Entregas ----
   async entregar(actividadId: number, user: JwtUser, dto: EntregarDto, archivo?: Express.Multer.File) {
     const actividad = await this.obtener(actividadId);
-    const alumno = await this.alumnos.obtenerPorUsuario(user.sub);
+    const { alumno } = await this.validarAlumnoEnGrupoMateria(actividad.grupoMateriaId, user);
 
     const tarde = actividad.fechaEntrega !== null && new Date() > actividad.fechaEntrega;
     const previa = await this.entregas.findOne({ where: { actividadId, alumnoId: alumno.id } });
@@ -160,7 +173,9 @@ export class ActividadesService {
     );
   }
 
-  materialesDeGrupoMateria(grupoMateriaId: number) {
+  async materialesDeGrupoMateria(grupoMateriaId: number, user: JwtUser) {
+    if (user.roles.includes('ALUMNO')) await this.validarAlumnoEnGrupoMateria(grupoMateriaId, user);
+    else await this.validarPropiedad(grupoMateriaId, user);
     return this.materiales.find({ where: { grupoMateriaId }, order: { createdAt: 'DESC' } });
   }
 }

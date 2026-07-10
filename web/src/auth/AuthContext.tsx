@@ -29,7 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string) => {
-    const { data } = await api.post('/auth/login', { email, password });
+    const { data } = await api.post('/auth/login', { email, password, portal: 'WEB' });
     localStorage.setItem('token', data.accessToken);
     localStorage.setItem('sesion', JSON.stringify(data.usuario));
     setSesion(data.usuario);

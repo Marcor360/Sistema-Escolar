@@ -42,8 +42,8 @@ export class ActividadesController {
   // ---- Docente / administrativo ----
   @Get('grupo-materias/:id/actividades')
   @Roles('MAESTRO', 'ADMINISTRATIVO', 'ALUMNO')
-  listar(@Param('id', ParseIntPipe) id: number) {
-    return this.service.listarPorGrupoMateria(id);
+  listar(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) {
+    return this.service.listarPorGrupoMateria(id, user);
   }
 
   @Post('actividades')
@@ -87,8 +87,8 @@ export class ActividadesController {
   // ---- Materiales ----
   @Get('grupo-materias/:id/materiales')
   @Roles('MAESTRO', 'ADMINISTRATIVO', 'ALUMNO')
-  materiales(@Param('id', ParseIntPipe) id: number) {
-    return this.service.materialesDeGrupoMateria(id);
+  materiales(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) {
+    return this.service.materialesDeGrupoMateria(id, user);
   }
 
   @Post('grupo-materias/:id/materiales')

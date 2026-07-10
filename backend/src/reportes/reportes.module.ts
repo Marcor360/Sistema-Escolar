@@ -10,12 +10,16 @@ import { ReportesService } from './reportes.service';
 import { ReportesController } from './reportes.controller';
 import { FinanzasModule } from '../finanzas/finanzas.module';
 import { DocentesModule } from '../docentes/docentes.module';
+import { AlumnosModule } from '../alumnos/alumnos.module';
+import { PlantelesModule } from '../planteles/planteles.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Alumno, Docente, Grupo, GrupoMateria, Calificacion, Pago]),
     FinanzasModule,
     DocentesModule,
+    AlumnosModule,
+    PlantelesModule,
   ],
   providers: [ReportesService],
   controllers: [ReportesController],

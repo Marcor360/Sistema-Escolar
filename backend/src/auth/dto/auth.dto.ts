@@ -1,8 +1,9 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsIn, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
 
 export class LoginDto {
   @IsEmail() email: string;
   @IsString() @IsNotEmpty() password: string;
+  @IsOptional() @IsIn(['WEB', 'MOVIL']) portal?: 'WEB' | 'MOVIL';
 }
 
 export class ForgotPasswordDto {

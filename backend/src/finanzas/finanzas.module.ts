@@ -18,6 +18,7 @@ import { BitacoraFinancieraService } from './bitacora-financiera.service';
 import { OpenpayService } from './openpay.service';
 import { AlumnosModule } from '../alumnos/alumnos.module';
 import { NotificacionesModule } from '../notificaciones/notificaciones.module';
+import { PlantelesModule } from '../planteles/planteles.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { NotificacionesModule } from '../notificaciones/notificaciones.module';
     ]),
     AlumnosModule,
     NotificacionesModule,
+    PlantelesModule,
   ],
   controllers: [FinanzasController],
   providers: [

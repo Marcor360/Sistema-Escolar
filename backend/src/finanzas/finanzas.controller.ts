@@ -107,13 +107,15 @@ export class FinanzasController {
 
   @Get('alumnos/:id/estado-cuenta')
   @ApiBearerAuth() @UseGuards(JwtAuthGuard, RolesGuard) @Roles('FINANZAS', 'ADMINISTRATIVO')
-  estadoDeCuenta(@Param('id', ParseIntPipe) id: number) {
-    return this.cargos.estadoDeCuenta(id);
+  estadoDeCuenta(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) {
+    return this.cargos.estadoDeCuenta(id, user);
   }
 
   @Get('adeudos')
   @ApiBearerAuth() @UseGuards(JwtAuthGuard, RolesGuard) @Roles('FINANZAS', 'ADMINISTRATIVO')
-  adeudos() { return this.cargos.adeudos(); }
+  adeudos(@CurrentUser() user: JwtUser, @Query('plantelId') plantelId?: string) {
+    return this.cargos.adeudos(user, plantelId ? Number(plantelId) : undefined);
+  }
 
   // ---------- Pagos ----------
   @Get('pagos')

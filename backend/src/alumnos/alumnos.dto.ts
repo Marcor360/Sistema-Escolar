@@ -1,4 +1,5 @@
-import { IsEmail, IsIn, IsOptional, IsString, MinLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsEmail, IsIn, IsInt, IsOptional, IsString, MinLength } from 'class-validator';
 
 export class CrearAlumnoDto {
   // Cuenta
@@ -10,11 +11,13 @@ export class CrearAlumnoDto {
   @IsOptional() @IsString() telefono?: string;
   // Expediente
   @IsString() matricula: string;
+  @Type(() => Number) @IsInt() plantelId: number;
   @IsOptional() @IsString() curp?: string;
   @IsOptional() @IsString() fechaNacimiento?: string; // YYYY-MM-DD
   @IsOptional() @IsString() tutorNombre?: string;
   @IsOptional() @IsString() tutorTelefono?: string;
   @IsOptional() @IsString() direccion?: string;
+  @IsOptional() @Type(() => Number) @IsInt() plantelId?: number;
 }
 
 export class ActualizarAlumnoDto {
