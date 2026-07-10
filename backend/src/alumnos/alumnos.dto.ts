@@ -17,7 +17,6 @@ export class CrearAlumnoDto {
   @IsOptional() @IsString() tutorNombre?: string;
   @IsOptional() @IsString() tutorTelefono?: string;
   @IsOptional() @IsString() direccion?: string;
-  @IsOptional() @Type(() => Number) @IsInt() plantelId?: number;
 }
 
 export class ActualizarAlumnoDto {
@@ -30,5 +29,6 @@ export class ActualizarAlumnoDto {
   @IsOptional() @IsString() tutorNombre?: string;
   @IsOptional() @IsString() tutorTelefono?: string;
   @IsOptional() @IsString() direccion?: string;
+  @IsOptional() @Type(() => Number) @IsInt() plantelId?: number;
   @IsOptional() @IsIn(['ACTIVO', 'BAJA', 'EGRESADO']) estatus?: 'ACTIVO' | 'BAJA' | 'EGRESADO';
 }

@@ -1,9 +1,10 @@
-import { Body, Controller, Delete, Get, Injectable, Module, Param, ParseIntPipe, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, ForbiddenException, Get, Injectable, Module, Param, ParseIntPipe, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { InjectRepository, TypeOrmModule } from '@nestjs/typeorm';
 import { Between, Repository } from 'typeorm';
 import { IsIn, IsInt, IsOptional, IsString } from 'class-validator';
 import { EventoCalendario } from '../entities/evento-calendario.entity';
+import { JwtUser } from '../common/current-user.decorator';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { RolesGuard } from '../common/roles.guard';
 import { Roles } from '../common/roles.decorator';
@@ -22,6 +23,12 @@ class EventoDto {
 export class CalendarioService {
   constructor(
     @InjectRepository(EventoCalendario) private readonly repo: Repository<EventoCalendario>,
+    private readonly grupos?: unknown,
+    private readonly grupoMaterias?: unknown,
+    private readonly inscripciones?: unknown,
+    private readonly alumnos?: unknown,
+    private readonly docentes?: unknown,
+    private readonly scope?: unknown,
   ) {}
 
   listar(desde?: string, hasta?: string) {
@@ -34,7 +41,10 @@ export class CalendarioService {
     return this.repo.find({ order: { fechaInicio: 'ASC' }, take: 200 });
   }
 
-  crear(dto: EventoDto) {
+  async crear(dto: EventoDto, user?: JwtUser) {
+    if (user && !user.roles.includes('SUPERADMIN') && !dto.grupoId) {
+      throw new ForbiddenException('Solo SUPERADMIN puede crear eventos globales');
+    }
     return this.repo.save(
       this.repo.create({
         titulo: dto.titulo,
