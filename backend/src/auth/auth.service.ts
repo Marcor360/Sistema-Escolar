@@ -47,7 +47,8 @@ export class AuthService {
   async me(user: JwtUser) {
     const usuario = await this.usuarios.findOne({ where: { id: user.sub } });
     if (!usuario) throw new UnauthorizedException();
-    const { passwordHash, ...rest } = usuario;
+    const rest: Partial<Usuario> = { ...usuario };
+    delete rest.passwordHash;
     return { ...rest, nombreCompleto: usuario.nombreCompleto };
   }
 

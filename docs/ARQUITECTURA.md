@@ -71,6 +71,15 @@ desde el login y cambio de contraseña en Mi cuenta; la app del alumno abre en
 una pestaña Inicio con resumen (tareas por entregar, saldo), avisos y próximos
 eventos.
 
+## Convención de zona horaria
+
+Los servidores de aplicación y base de datos se configuran en `America/Mexico_City`.
+Las fechas civiles de operación (vencimientos, colegiaturas y recargos) se calculan
+con esa zona y se almacenan como `DATE`; los instantes se almacenan como fecha-hora.
+Los clientes presentan fechas con locale `es-MX`. No se debe usar el día UTC obtenido
+con `toISOString()` para decidir vencimientos, porque puede corresponder al día anterior
+en México.
+
 ## Modelo de datos (resumen)
 
 - Seguridad: roles, usuarios, usuario_roles, password_reset_tokens

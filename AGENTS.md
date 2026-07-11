@@ -6,4 +6,4 @@
 - Roles: `SUPERADMIN` global; `ADMINISTRATIVO`/`FINANZAS` por planteles asignados; `MAESTRO` por sus grupos; `ALUMNO` solo lo propio.
 - Verificación: `cd backend && npm run lint && npm run typecheck && npm test`; `cd web && npm run lint && npm run build`; `cd mobile && npx tsc --noEmit`.
 
-Pendientes P2: paginación uniforme, bitácora de login fallido, documentación completa de zona horaria y evaluación de sesiones móviles largas.
+Pendientes P2: paginación uniforme y bitácora de intentos de login fallidos. La zona horaria está documentada en `docs/ARQUITECTURA.md`; la sesión móvil admite `JWT_EXPIRES_MOVIL` con el riesgo documentado en `.env.example`.

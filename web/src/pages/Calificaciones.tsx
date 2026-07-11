@@ -29,7 +29,7 @@ export default function CalificacionesPage() {
       ? '/academico/mis-grupos'
       : '/academico/grupo-materias';
     api.get<GrupoMateria[]>(ruta).then((r) => setClases(r.data));
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const cargarAlumnos = async () => {
     setMensaje(''); setError('');

@@ -21,7 +21,9 @@ async function bootstrap() {
   // CORS: en producción, restringir con CORS_ORIGINS=https://portal.midominio.mx,https://otro
   const origenes = process.env.CORS_ORIGINS?.split(',').map((o) => o.trim());
   app.enableCors({
-    origin: 'http://localhost:5173',
+    origin: origenes?.filter(Boolean).length
+      ? origenes.filter(Boolean)
+      : process.env.NODE_ENV === 'production' ? false : 'http://localhost:5173',
   });
 
   app.setGlobalPrefix('api');
