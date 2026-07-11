@@ -62,7 +62,7 @@ export default function App() {
             <Route path="/finanzas" element={<FinanzasPage />} />
           </Route>
 
-          <Route element={<RutaProtegida roles={['SUPERADMIN']} />}>
+          <Route element={<RutaProtegida roles={['ADMINISTRATIVO', 'FINANZAS', 'MAESTRO']} />}>
             <Route path="/usuarios" element={<UsuariosPage />} />
           </Route>
 

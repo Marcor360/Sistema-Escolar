@@ -16,7 +16,7 @@ const secciones = [
   { destino: '/calendario', etiqueta: 'Calendario', roles: ['MAESTRO', 'ADMINISTRATIVO'] },
   { destino: '/avisos', etiqueta: 'Avisos', roles: ['ADMINISTRATIVO'] },
   { destino: '/finanzas', etiqueta: 'Finanzas', roles: ['FINANZAS'] },
-  { destino: '/usuarios', etiqueta: 'Usuarios', roles: ['SUPERADMIN'] },
+  { destino: '/usuarios', etiqueta: 'Usuarios', roles: ['ADMINISTRATIVO', 'FINANZAS', 'MAESTRO'] },
 ];
 
 export function Shell() {
