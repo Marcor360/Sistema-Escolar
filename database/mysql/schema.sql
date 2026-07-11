@@ -27,6 +27,27 @@ CREATE TABLE usuarios (
   deleted_at DATETIME NULL
 ) ENGINE=InnoDB;
 
+CREATE TABLE planteles (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  clave VARCHAR(80) NOT NULL UNIQUE,
+  nombre VARCHAR(150) NOT NULL,
+  direccion VARCHAR(200) NULL,
+  municipio VARCHAR(80) NULL,
+  telefono VARCHAR(20) NULL,
+  director_usuario_id INT NULL,
+  activo TINYINT(1) NOT NULL DEFAULT 1,
+  CONSTRAINT fk_plantel_director FOREIGN KEY (director_usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE usuario_planteles (
+  usuario_id INT NOT NULL,
+  plantel_id INT NOT NULL,
+  activo TINYINT(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (usuario_id, plantel_id),
+  CONSTRAINT fk_up_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+  CONSTRAINT fk_up_plantel FOREIGN KEY (plantel_id) REFERENCES planteles(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 CREATE TABLE usuario_roles (
   usuario_id INT NOT NULL,
   rol_id INT NOT NULL,
@@ -49,6 +70,7 @@ CREATE TABLE password_reset_tokens (
 CREATE TABLE alumnos (
   id INT AUTO_INCREMENT PRIMARY KEY,
   usuario_id INT NOT NULL UNIQUE,
+  plantel_id INT NOT NULL,
   matricula VARCHAR(20) NOT NULL UNIQUE,
   curp VARCHAR(18) NULL,
   fecha_nacimiento DATE NULL,
@@ -59,7 +81,8 @@ CREATE TABLE alumnos (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   deleted_at DATETIME NULL,
-  CONSTRAINT fk_al_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+  CONSTRAINT fk_al_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
+  CONSTRAINT fk_al_plantel FOREIGN KEY (plantel_id) REFERENCES planteles(id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE docentes (
@@ -97,11 +120,13 @@ CREATE TABLE materias (
 CREATE TABLE grupos (
   id INT AUTO_INCREMENT PRIMARY KEY,
   ciclo_id INT NOT NULL,
+  plantel_id INT NOT NULL,
   nombre VARCHAR(40) NOT NULL,
   grado VARCHAR(20) NULL,
   turno VARCHAR(10) NULL,                          -- MATUTINO | VESPERTINO
   UNIQUE KEY uq_grupo_ciclo_nombre (ciclo_id, nombre),
-  CONSTRAINT fk_gr_ciclo FOREIGN KEY (ciclo_id) REFERENCES ciclos_escolares(id)
+  CONSTRAINT fk_gr_ciclo FOREIGN KEY (ciclo_id) REFERENCES ciclos_escolares(id),
+  CONSTRAINT fk_gr_plantel FOREIGN KEY (plantel_id) REFERENCES planteles(id)
 ) ENGINE=InnoDB;
 
 -- Materia impartida en un grupo por un docente (1 docente por grupo-materia)

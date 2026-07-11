@@ -19,6 +19,7 @@ const PagoCompletadoPage = lazy(() => import('./pages/PagoCompletado'));
 const CalendarioPage = lazy(() => import('./pages/Calendario'));
 const AvisosPage = lazy(() => import('./pages/Avisos'));
 const CuentaPage = lazy(() => import('./pages/Cuenta'));
+const PlantelesPage = lazy(() => import('./pages/Planteles'));
 
 export default function App() {
   const { sesion, cargando } = useAuth();
@@ -35,6 +36,7 @@ export default function App() {
 
           <Route element={<RutaProtegida roles={['ADMINISTRATIVO', 'FINANZAS']} />}>
             <Route path="/alumnos" element={<AlumnosPage />} />
+            <Route path="/planteles" element={<PlantelesPage />} />
           </Route>
 
           <Route element={<RutaProtegida roles={['ADMINISTRATIVO']} />}>

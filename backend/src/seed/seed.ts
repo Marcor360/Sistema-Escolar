@@ -1,7 +1,7 @@
 /**
  * Seed de datos: roles, catálogos, superadmin y datos demo end-to-end
  * (docente, alumnos, ciclo, grupo, materia, cargos).
- * Uso: npm run seed  (requiere .env configurado; crea tablas si DB_SYNC=true)
+ * Uso exclusivo en desarrollo: npm run seed (requiere esquema migrado; nunca DB_SYNC=true en producción)
  */
 import 'reflect-metadata';
 import { config as loadEnv } from 'dotenv';
@@ -13,7 +13,7 @@ import * as bcrypt from 'bcryptjs';
 import { join } from 'path';
 import {
   Rol, Usuario, Alumno, Docente, CicloEscolar, Materia, Grupo, GrupoMateria,
-  Inscripcion, ConceptoPago, Cargo, PlantillaCorreo,
+  Inscripcion, ConceptoPago, Cargo, PlantillaCorreo, Plantel, UsuarioPlantel,
 } from '../entities';
 
 const type = (process.env.DB_TYPE || 'mysql') as 'mysql' | 'mssql';
@@ -98,9 +98,37 @@ async function main() {
   );
   void admin;
 
+  const coordinadora = await crearUsuario(
+    'coordinacion.naucalpan@escuela.mx', 'Coordina123!', 'Coordinación', 'Naucalpan', ['ADMINISTRATIVO'],
+  );
   const uDocente = await crearUsuario('maestro@escuela.mx', 'Maestro123!', 'Laura', 'Mendoza', ['MAESTRO']);
   const uAlumno1 = await crearUsuario('alumno1@escuela.mx', 'Alumno123!', 'Carlos', 'Ramírez', ['ALUMNO']);
   const uAlumno2 = await crearUsuario('alumno2@escuela.mx', 'Alumno123!', 'María', 'Torres', ['ALUMNO']);
+
+  // ---- Planteles demo (solo desarrollo) ----
+  const plantelesRepo = dataSource.getRepository(Plantel);
+  const asegurarPlantel = async (clave: string, nombre: string, municipio: string) => {
+    let plantel = await plantelesRepo.findOne({ where: { clave } });
+    if (!plantel) plantel = await plantelesRepo.save(plantelesRepo.create({ clave, nombre, municipio }));
+    return plantel;
+  };
+  const naucalpan = await asegurarPlantel('NAU', 'Naucalpan', 'Naucalpan de Juárez');
+  const losReyes = await asegurarPlantel('REY', 'Los Reyes', 'La Paz');
+  await asegurarPlantel('CEN', 'Centro', 'Ciudad de México');
+
+  const asignacionesRepo = dataSource.getRepository(UsuarioPlantel);
+  const asignar = async (usuarioId: number, plantelId: number) => {
+    let asignacion = await asignacionesRepo.findOne({ where: { usuarioId, plantelId } });
+    if (!asignacion) asignacion = asignacionesRepo.create({ usuarioId, plantelId, activo: true });
+    asignacion.activo = true;
+    await asignacionesRepo.save(asignacion);
+  };
+  await asignar(coordinadora.id, naucalpan.id);
+  await asignar(uDocente.id, naucalpan.id);
+  if (naucalpan.directorUsuarioId !== coordinadora.id) {
+    naucalpan.directorUsuarioId = coordinadora.id;
+    await plantelesRepo.save(naucalpan);
+  }
 
   // ---- Expedientes ----
   const docentesRepo = dataSource.getRepository(Docente);
@@ -108,13 +136,15 @@ async function main() {
   if (!docente) docente = await docentesRepo.save(docentesRepo.create({ usuarioId: uDocente.id, numEmpleado: 'D-0001', especialidad: 'Matemáticas' }));
 
   const alumnosRepo = dataSource.getRepository(Alumno);
-  const asegurarAlumno = async (usuarioId: number, matricula: string) => {
+  const asegurarAlumno = async (usuarioId: number, matricula: string, plantelId: number) => {
     let alumno = await alumnosRepo.findOne({ where: { usuarioId } });
-    if (!alumno) alumno = await alumnosRepo.save(alumnosRepo.create({ usuarioId, matricula }));
+    if (!alumno) alumno = alumnosRepo.create({ usuarioId, matricula, plantelId });
+    alumno.plantelId = plantelId;
+    alumno = await alumnosRepo.save(alumno);
     return alumno;
   };
-  const alumno1 = await asegurarAlumno(uAlumno1.id, 'A-2026-001');
-  const alumno2 = await asegurarAlumno(uAlumno2.id, 'A-2026-002');
+  const alumno1 = await asegurarAlumno(uAlumno1.id, 'A-2026-001', naucalpan.id);
+  const alumno2 = await asegurarAlumno(uAlumno2.id, 'A-2026-002', losReyes.id);
 
   // ---- Estructura académica demo ----
   const ciclosRepo = dataSource.getRepository(CicloEscolar);
@@ -132,17 +162,28 @@ async function main() {
 
   const gruposRepo = dataSource.getRepository(Grupo);
   let grupo = await gruposRepo.findOne({ where: { cicloId: ciclo.id, nombre: '1-A' } });
-  if (!grupo) grupo = await gruposRepo.save(gruposRepo.create({ cicloId: ciclo.id, nombre: '1-A', grado: '1', turno: 'MATUTINO' }));
+  if (!grupo) grupo = gruposRepo.create({ cicloId: ciclo.id, plantelId: naucalpan.id, nombre: '1-A', grado: '1', turno: 'MATUTINO' });
+  grupo.plantelId = naucalpan.id;
+  grupo = await gruposRepo.save(grupo);
+  let grupoB = await gruposRepo.findOne({ where: { cicloId: ciclo.id, nombre: '1-B' } });
+  if (!grupoB) grupoB = await gruposRepo.save(gruposRepo.create({ cicloId: ciclo.id, plantelId: losReyes.id, nombre: '1-B', grado: '1', turno: 'MATUTINO' }));
+  else if (grupoB.plantelId !== losReyes.id) { grupoB.plantelId = losReyes.id; grupoB = await gruposRepo.save(grupoB); }
 
   const gmRepo = dataSource.getRepository(GrupoMateria);
   let gm = await gmRepo.findOne({ where: { grupoId: grupo.id, materiaId: materia.id } });
   if (!gm) gm = await gmRepo.save(gmRepo.create({ grupoId: grupo.id, materiaId: materia.id, docenteId: docente.id }));
 
   const inscRepo = dataSource.getRepository(Inscripcion);
-  for (const alumno of [alumno1, alumno2]) {
-    const existe = await inscRepo.findOne({ where: { alumnoId: alumno.id, grupoId: grupo.id } });
-    if (!existe) await inscRepo.save(inscRepo.create({ alumnoId: alumno.id, grupoId: grupo.id }));
-  }
+  const asegurarInscripcion = async (alumnoId: number, grupoId: number) => {
+    let existe = await inscRepo.findOne({ where: { alumnoId, grupoId } });
+    if (!existe) existe = inscRepo.create({ alumnoId, grupoId });
+    existe.estatus = 'ACTIVA';
+    await inscRepo.save(existe);
+  };
+  await asegurarInscripcion(alumno1.id, grupo.id);
+  const anteriorAlumno2 = await inscRepo.findOne({ where: { alumnoId: alumno2.id, grupoId: grupo.id } });
+  if (anteriorAlumno2) { anteriorAlumno2.estatus = 'BAJA'; await inscRepo.save(anteriorAlumno2); }
+  await asegurarInscripcion(alumno2.id, grupoB.id);
 
   // ---- Cargo demo de inscripción ----
   const cargosRepo = dataSource.getRepository(Cargo);

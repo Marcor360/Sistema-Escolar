@@ -29,6 +29,27 @@ CREATE TABLE usuarios (
   deleted_at DATETIME2 NULL
 );
 
+CREATE TABLE planteles (
+  id INT IDENTITY(1,1) PRIMARY KEY,
+  clave NVARCHAR(80) NOT NULL UNIQUE,
+  nombre NVARCHAR(150) NOT NULL,
+  direccion NVARCHAR(200) NULL,
+  municipio NVARCHAR(80) NULL,
+  telefono NVARCHAR(20) NULL,
+  director_usuario_id INT NULL,
+  activo BIT NOT NULL DEFAULT 1,
+  CONSTRAINT fk_plantel_director FOREIGN KEY (director_usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL
+);
+
+CREATE TABLE usuario_planteles (
+  usuario_id INT NOT NULL,
+  plantel_id INT NOT NULL,
+  activo BIT NOT NULL DEFAULT 1,
+  PRIMARY KEY (usuario_id, plantel_id),
+  CONSTRAINT fk_up_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+  CONSTRAINT fk_up_plantel FOREIGN KEY (plantel_id) REFERENCES planteles(id) ON DELETE CASCADE
+);
+
 CREATE TABLE usuario_roles (
   usuario_id INT NOT NULL,
   rol_id INT NOT NULL,
@@ -51,6 +72,7 @@ CREATE TABLE password_reset_tokens (
 CREATE TABLE alumnos (
   id INT IDENTITY(1,1) PRIMARY KEY,
   usuario_id INT NOT NULL UNIQUE,
+  plantel_id INT NOT NULL,
   matricula NVARCHAR(20) NOT NULL UNIQUE,
   curp NVARCHAR(18) NULL,
   fecha_nacimiento DATE NULL,
@@ -61,7 +83,8 @@ CREATE TABLE alumnos (
   created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
   updated_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
   deleted_at DATETIME2 NULL,
-  CONSTRAINT fk_al_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+  CONSTRAINT fk_al_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
+  CONSTRAINT fk_al_plantel FOREIGN KEY (plantel_id) REFERENCES planteles(id)
 );
 
 CREATE TABLE docentes (
@@ -99,11 +122,13 @@ CREATE TABLE materias (
 CREATE TABLE grupos (
   id INT IDENTITY(1,1) PRIMARY KEY,
   ciclo_id INT NOT NULL,
+  plantel_id INT NOT NULL,
   nombre NVARCHAR(40) NOT NULL,
   grado NVARCHAR(20) NULL,
   turno NVARCHAR(10) NULL,                          -- MATUTINO | VESPERTINO
   CONSTRAINT uq_grupo_ciclo_nombre UNIQUE (ciclo_id, nombre),
-  CONSTRAINT fk_gr_ciclo FOREIGN KEY (ciclo_id) REFERENCES ciclos_escolares(id)
+  CONSTRAINT fk_gr_ciclo FOREIGN KEY (ciclo_id) REFERENCES ciclos_escolares(id),
+  CONSTRAINT fk_gr_plantel FOREIGN KEY (plantel_id) REFERENCES planteles(id)
 );
 
 CREATE TABLE grupo_materias (

@@ -30,7 +30,7 @@ docker compose up -d mysql
 cd backend
 cp .env.example .env          # revisa credenciales
 npm install
-npm run seed                  # crea tablas (DB_SYNC=true) y datos demo
+npm run seed                  # solo desarrollo; requiere migraciones aplicadas y crea datos demo
 npm run start:dev             # http://localhost:3000/api — Swagger en /api/docs
 
 # 3) Portal web
@@ -47,6 +47,8 @@ npx expo start
 ```
 
 ### Usuarios demo (creados por `npm run seed`)
+
+> El seed es idempotente y exclusivo de desarrollo/demostración. No debe ejecutarse en producción ni con `DB_SYNC=true`.
 
 | Rol                          | Correo               | Contraseña  |
 |------------------------------|----------------------|-------------|

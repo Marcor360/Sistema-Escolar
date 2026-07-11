@@ -7,6 +7,7 @@ import { Campana } from '../components/Campana';
 const secciones = [
   { destino: '/', etiqueta: 'Panel', roles: ['ADMINISTRATIVO', 'FINANZAS', 'MAESTRO'] },
   { destino: '/alumnos', etiqueta: 'Alumnos', roles: ['ADMINISTRATIVO', 'FINANZAS'] },
+  { destino: '/planteles', etiqueta: 'Planteles', roles: ['ADMINISTRATIVO', 'FINANZAS'] },
   { destino: '/docentes', etiqueta: 'Docentes', roles: ['ADMINISTRATIVO'] },
   { destino: '/materias', etiqueta: 'Materias', roles: ['ADMINISTRATIVO'] },
   { destino: '/grupos', etiqueta: 'Grupos', roles: ['ADMINISTRATIVO'] },
