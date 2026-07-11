@@ -38,9 +38,19 @@ export class ReportesService {
     const planteles = await this.scope.resolverFiltro(user, plantelId);
     const alumnoWhere = planteles === null ? { estatus: 'ACTIVO' as const } : { estatus: 'ACTIVO' as const, plantelId: this.scope.condicion(planteles) };
     const grupoWhere = planteles === null ? {} : { plantelId: this.scope.condicion(planteles) };
+    const docentesQb = this.docentesRepo
+      .createQueryBuilder('d')
+      .innerJoin('d.usuario', 'u')
+      .where('d.estatus = :estatusDocente', { estatusDocente: 'ACTIVO' });
+    if (planteles !== null) {
+      docentesQb.andWhere(
+        'EXISTS (SELECT 1 FROM usuario_planteles up WHERE up.usuario_id = u.id AND up.plantel_id IN (:...planteles) AND up.activo = :asignacionActiva)',
+        { planteles, asignacionActiva: true },
+      );
+    }
     const [alumnosActivos, docentesActivos, totalGrupos] = await Promise.all([
       this.alumnos.count({ where: alumnoWhere }),
-      this.docentesRepo.count({ where: { estatus: 'ACTIVO' } }),
+      docentesQb.getCount(),
       this.grupos.count({ where: grupoWhere }),
     ]);
     const adeudos = await this.cargos.adeudos(user, plantelId);
@@ -49,12 +59,14 @@ export class ReportesService {
     const inicioMes = new Date();
     inicioMes.setDate(1);
     inicioMes.setHours(0, 0, 0, 0);
-    const pagosMes = await this.pagos
+    const pagosQb = this.pagos
       .createQueryBuilder('p')
       .select('COALESCE(SUM(p.monto), 0)', 'total')
+      .innerJoin('p.alumno', 'a')
       .where('p.estatus = :e', { e: 'CONFIRMADO' })
-      .andWhere('p.fecha_pago >= :d', { d: inicioMes })
-      .getRawOne<{ total: string }>();
+      .andWhere('p.fecha_pago >= :d', { d: inicioMes });
+    if (planteles !== null) pagosQb.andWhere('a.plantel_id IN (:...planteles)', { planteles });
+    const pagosMes = await pagosQb.getRawOne<{ total: string }>();
 
     return {
       alumnosActivos,
@@ -70,7 +82,11 @@ export class ReportesService {
   private async validarAccesoAClase(grupoMateriaId: number, user: JwtUser): Promise<GrupoMateria> {
     const gm = await this.grupoMaterias.findOne({ where: { id: grupoMateriaId } });
     if (!gm) throw new NotFoundException('Grupo-materia no encontrado');
-    if (user.roles.includes('SUPERADMIN') || user.roles.includes('ADMINISTRATIVO')) return gm;
+    if (user.roles.includes('SUPERADMIN')) return gm;
+    if (user.roles.includes('ADMINISTRATIVO')) {
+      await this.scope.validarGestion(user, gm.grupo.plantelId);
+      return gm;
+    }
     const docente = await this.docentes.obtenerPorUsuario(user.sub);
     if (gm.docenteId !== docente.id) {
       throw new ForbiddenException('La materia no está asignada a este docente');
@@ -142,7 +158,20 @@ export class ReportesService {
     if (user.roles.includes('ALUMNO')) {
       const propio = await this.alumnosService.obtenerPorUsuario(user.sub);
       if (propio.id !== alumno.id) throw new ForbiddenException('No puedes consultar la boleta de otro alumno');
-    } else if (!user.roles.includes('SUPERADMIN') && !user.roles.includes('MAESTRO')) {
+    } else if (
+      user.roles.includes('MAESTRO') &&
+      !user.roles.some((rol) => ['SUPERADMIN', 'ADMINISTRATIVO', 'FINANZAS'].includes(rol))
+    ) {
+      const permitido = await this.alumnos
+        .createQueryBuilder('a')
+        .where('a.id = :alumnoId', { alumnoId })
+        .andWhere(
+          'EXISTS (SELECT 1 FROM inscripciones i INNER JOIN grupo_materias gm ON gm.grupo_id = i.grupo_id INNER JOIN docentes d ON d.id = gm.docente_id WHERE i.alumno_id = a.id AND i.estatus = :inscripcionActiva AND d.usuario_id = :actorId)',
+          { inscripcionActiva: 'ACTIVA', actorId: user.sub },
+        )
+        .getCount();
+      if (!permitido) throw new ForbiddenException('El alumno no pertenece a uno de tus grupos');
+    } else if (!user.roles.includes('SUPERADMIN')) {
       await this.scope.validarGestion(user, alumno.plantelId);
     }
     const calificaciones = await this.calificaciones.find({

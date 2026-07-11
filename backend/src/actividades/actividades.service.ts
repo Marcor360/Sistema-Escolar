@@ -10,6 +10,7 @@ import { AlumnosService } from '../alumnos/alumnos.service';
 import { DocentesService } from '../docentes/docentes.service';
 import { JwtUser } from '../common/current-user.decorator';
 import { ActualizarActividadDto, CalificarEntregaDto, CrearActividadDto, EntregarDto } from './actividades.dto';
+import { ScopeService } from '../planteles/scope.service';
 
 @Injectable()
 export class ActividadesService {
@@ -21,13 +22,18 @@ export class ActividadesService {
     @InjectRepository(Inscripcion) private readonly inscripciones: Repository<Inscripcion>,
     private readonly alumnos: AlumnosService,
     private readonly docentes: DocentesService,
+    private readonly scope: ScopeService,
   ) {}
 
   /** El maestro solo opera sobre sus grupos-materia; ADMINISTRATIVO y SUPERADMIN, sobre todos. */
   private async validarPropiedad(grupoMateriaId: number, user: JwtUser): Promise<GrupoMateria> {
     const gm = await this.grupoMaterias.findOne({ where: { id: grupoMateriaId } });
     if (!gm) throw new NotFoundException('Grupo-materia no encontrado');
-    if (user.roles.includes('SUPERADMIN') || user.roles.includes('ADMINISTRATIVO')) return gm;
+    if (user.roles.includes('SUPERADMIN')) return gm;
+    if (user.roles.includes('ADMINISTRATIVO')) {
+      await this.scope.validarGestion(user, gm.grupo.plantelId);
+      return gm;
+    }
     const docente = await this.docentes.obtenerPorUsuario(user.sub);
     if (gm.docenteId !== docente.id) {
       throw new ForbiddenException('La materia no está asignada a este docente');

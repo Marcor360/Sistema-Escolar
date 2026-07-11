@@ -9,12 +9,14 @@ import { ActividadesService } from './actividades.service';
 import { ActividadesController } from './actividades.controller';
 import { AlumnosModule } from '../alumnos/alumnos.module';
 import { DocentesModule } from '../docentes/docentes.module';
+import { PlantelesModule } from '../planteles/planteles.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Actividad, Entrega, Material, GrupoMateria, Inscripcion]),
     AlumnosModule,
     DocentesModule,
+    PlantelesModule,
   ],
   providers: [ActividadesService],
   controllers: [ActividadesController],

@@ -28,13 +28,17 @@ export class CalificacionesController {
 
   @Get('grupo-materia/:id')
   @Roles('MAESTRO', 'ADMINISTRATIVO')
-  porGrupoMateria(@Param('id', ParseIntPipe) id: number, @Query('parcial') parcial?: string) {
-    return this.service.porGrupoMateria(id, parcial !== undefined ? Number(parcial) : undefined);
+  porGrupoMateria(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: JwtUser,
+    @Query('parcial') parcial?: string,
+  ) {
+    return this.service.porGrupoMateria(id, user, parcial !== undefined ? Number(parcial) : undefined);
   }
 
   @Get('alumno/:id')
   @Roles('ADMINISTRATIVO', 'MAESTRO', 'FINANZAS')
-  porAlumno(@Param('id', ParseIntPipe) id: number) {
-    return this.service.porAlumno(id);
+  porAlumno(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) {
+    return this.service.porAlumno(id, user);
   }
 }
