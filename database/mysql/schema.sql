@@ -264,6 +264,7 @@ CREATE TABLE cargos (
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   KEY idx_cargo_alumno (alumno_id),
   KEY idx_cargo_periodo (periodo),
+  KEY idx_cargos_alumno (alumno_id),               -- ver migracion_indices.sql
   CONSTRAINT fk_cg_alumno FOREIGN KEY (alumno_id) REFERENCES alumnos(id),
   CONSTRAINT fk_cg_concepto FOREIGN KEY (concepto_id) REFERENCES conceptos_pago(id),
   CONSTRAINT fk_cg_ciclo FOREIGN KEY (ciclo_id) REFERENCES ciclos_escolares(id)

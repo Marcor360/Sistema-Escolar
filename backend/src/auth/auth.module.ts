@@ -5,6 +5,7 @@ import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Usuario } from '../entities/usuario.entity';
 import { PasswordResetToken } from '../entities/password-reset-token.entity';
+import { BitacoraActividad } from '../entities/bitacora-actividad.entity';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
@@ -12,7 +13,7 @@ import { NotificacionesModule } from '../notificaciones/notificaciones.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Usuario, PasswordResetToken]),
+    TypeOrmModule.forFeature([Usuario, PasswordResetToken, BitacoraActividad]),
     PassportModule,
     NotificacionesModule,
     JwtModule.registerAsync({

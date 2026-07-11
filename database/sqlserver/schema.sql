@@ -268,6 +268,7 @@ CREATE TABLE cargos (
 );
 CREATE INDEX idx_cargo_alumno ON cargos(alumno_id);
 CREATE INDEX idx_cargo_periodo ON cargos(periodo);
+CREATE INDEX idx_cargos_alumno ON cargos(alumno_id); -- ver migracion_indices.sql
 
 CREATE TABLE ordenes_pago (
   id INT IDENTITY(1,1) PRIMARY KEY,

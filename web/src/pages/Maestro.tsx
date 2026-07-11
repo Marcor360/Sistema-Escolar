@@ -1,5 +1,5 @@
 import { FormEvent, useRef, useState } from 'react';
-import { api, mensajeDeError } from '../api/client';
+import { abrirArchivo, api, mensajeDeError } from '../api/client';
 import { Encabezado } from '../components/Encabezado';
 import { useDatos } from '../hooks/useDatos';
 import { fecha, fechaHora } from '../utils/formato';
@@ -23,7 +23,6 @@ interface Entrega {
   alumno: { matricula: string; usuario: { nombre: string; apellidoPaterno: string } };
 }
 
-const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api').replace(/\/api$/, '');
 const FORM_INICIAL = { titulo: '', tipo: 'TAREA', parcial: '1', ponderacion: '0', fechaEntrega: '' };
 
 export default function MaestroPage() {
@@ -204,7 +203,7 @@ export default function MaestroPage() {
               {materiales.map((m) => (
                 <tr key={m.id}>
                   <td>{m.titulo}</td>
-                  <td><a href={`${API_BASE}${m.archivoRuta}`} target="_blank" rel="noreferrer">{m.archivoNombre}</a></td>
+                  <td><button className="enlace" onClick={() => abrirArchivo('materiales', m.id)}>{m.archivoNombre}</button></td>
                   <td>{m.tamanoKb} KB</td>
                   <td>{fecha(m.createdAt)}</td>
                 </tr>
@@ -234,7 +233,7 @@ export default function MaestroPage() {
                       {e.estatus}
                     </span>
                   </td>
-                  <td>{e.archivoRuta ? <a href={`${API_BASE}${e.archivoRuta}`} target="_blank" rel="noreferrer">Ver archivo</a> : '—'}</td>
+                  <td>{e.archivoRuta ? <button className="enlace" onClick={() => abrirArchivo('entregas', e.id)}>Ver archivo</button> : '—'}</td>
                   <td>
                     <span className="captura-nota">
                       <input

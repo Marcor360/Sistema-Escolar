@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Ip, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
@@ -16,8 +16,8 @@ export class AuthController {
 
   @Post('login')
   @Throttle(LIMITE_ESTRICTO)
-  login(@Body() dto: LoginDto, @PortalActual() portal: Portal) {
-    return this.auth.login(dto.email, dto.password, portal);
+  login(@Body() dto: LoginDto, @PortalActual() portal: Portal, @Ip() ip: string) {
+    return this.auth.login(dto.email, dto.password, portal, ip);
   }
 
   @Get('me')

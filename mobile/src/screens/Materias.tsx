@@ -44,6 +44,12 @@ export default function MateriasScreen() {
     }
   };
 
+  /** Pide un enlace firmado de corta vida y lo abre (los materiales ya no son públicos). */
+  const abrirMaterial = async (materialId: number) => {
+    const { data } = await api.get<{ url: string }>(`/archivos/materiales/${materialId}/enlace`);
+    Linking.openURL(`${archivosBase}${data.url}`);
+  };
+
   return (
     <View style={base.pantalla}>
       <FlatList
@@ -74,7 +80,7 @@ export default function MateriasScreen() {
                       <TouchableOpacity
                         key={m.id}
                         style={estilos.material}
-                        onPress={() => Linking.openURL(`${archivosBase}${m.archivoRuta}`)}
+                        onPress={() => abrirMaterial(m.id)}
                       >
                         <Text style={estilos.materialTitulo}>📄 {m.titulo}</Text>
                         <Text style={base.secundario}>{m.archivoNombre} · {m.tamanoKb} KB</Text>

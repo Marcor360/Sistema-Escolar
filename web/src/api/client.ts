@@ -29,3 +29,11 @@ export function mensajeDeError(error: unknown): string {
   if (Array.isArray(data?.message)) return data.message.join(', ');
   return data?.message || 'Ocurrió un error inesperado';
 }
+
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api').replace(/\/api$/, '');
+
+/** Pide un enlace firmado de corta vida y lo abre en una pestaña nueva (sin exponer /uploads). */
+export async function abrirArchivo(tipo: 'materiales' | 'entregas', id: number): Promise<void> {
+  const { data } = await api.get<{ url: string }>(`/archivos/${tipo}/${id}/enlace`);
+  window.open(API_BASE + data.url, '_blank');
+}

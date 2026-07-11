@@ -18,6 +18,7 @@ import { NotificacionesModule } from './notificaciones/notificaciones.module';
 import { FinanzasModule } from './finanzas/finanzas.module';
 import { ReportesModule } from './reportes/reportes.module';
 import { PlantelesModule } from './planteles/planteles.module';
+import { ArchivosModule } from './archivos/archivos.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { PlantelesModule } from './planteles/planteles.module';
     FinanzasModule,
     ReportesModule,
     PlantelesModule,
+    ArchivosModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

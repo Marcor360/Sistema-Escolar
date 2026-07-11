@@ -15,8 +15,8 @@ async function bootstrap() {
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // Encabezados de seguridad; CORP relajado para servir /uploads al portal
-  app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+  // Encabezados de seguridad
+  app.use(helmet({ contentSecurityPolicy: false }));
 
   // CORS: en producción, restringir con CORS_ORIGINS=https://portal.midominio.mx,https://otro
   const origenes = process.env.CORS_ORIGINS?.split(',').map((o) => o.trim());
@@ -28,7 +28,6 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
-  app.useStaticAssets(uploadsDir, { prefix: '/uploads/' });
 
   // Documentación interactiva solo fuera de producción
   if (process.env.NODE_ENV !== 'production') {
