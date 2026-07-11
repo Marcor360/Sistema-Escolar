@@ -58,7 +58,7 @@ export default function App() {
   }, []);
 
   const iniciar = async (email: string, password: string) => {
-    const { data } = await api.post('/auth/login', { email, password, portal: 'MOVIL' });
+    const { data } = await api.post('/auth/login', { email, password });
     await SecureStore.setItemAsync(TOKEN_KEY, data.accessToken);
     setSesion(data.usuario);
   };

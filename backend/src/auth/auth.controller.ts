@@ -5,6 +5,7 @@ import { AuthService } from './auth.service';
 import { CambiarPasswordDto, ForgotPasswordDto, LoginDto, ResetPasswordDto } from './dto/auth.dto';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { CurrentUser, JwtUser } from '../common/current-user.decorator';
+import { Portal, PortalActual } from '../common/portales';
 
 const LIMITE_ESTRICTO = { default: { limit: 5, ttl: 60_000 } };
 
@@ -15,8 +16,8 @@ export class AuthController {
 
   @Post('login')
   @Throttle(LIMITE_ESTRICTO)
-  login(@Body() dto: LoginDto) {
-    return this.auth.login(dto.email, dto.password, dto.portal ?? 'WEB');
+  login(@Body() dto: LoginDto, @PortalActual() portal: Portal) {
+    return this.auth.login(dto.email, dto.password, portal);
   }
 
   @Get('me')

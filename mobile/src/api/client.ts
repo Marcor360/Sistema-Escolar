@@ -7,7 +7,7 @@ const baseURL =
   (Constants.expoConfig?.extra?.apiUrl as string) ||
   'http://localhost:3000/api';
 
-export const api = axios.create({ baseURL });
+export const api = axios.create({ baseURL, headers: { 'x-portal': 'MOVIL' } });
 
 export const TOKEN_KEY = 'escolar_token';
 

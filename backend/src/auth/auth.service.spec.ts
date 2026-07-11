@@ -1,5 +1,4 @@
 import * as bcrypt from 'bcryptjs';
-import { ForbiddenException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 
 const usuario = async (roles: string[]) => ({
@@ -21,17 +20,26 @@ describe('AuthService.login', () => {
 
   it('rechaza alumno en portal WEB', async () => {
     const { service } = await crear(['ALUMNO']);
-    await expect(service.login('demo@escuela.mx', 'Correcta123', 'WEB')).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(service.login('demo@escuela.mx', 'Correcta123', 'WEB')).rejects.toThrow(
+      'Tu cuenta es de alumno. Ingresa desde la app móvil de la escuela.',
+    );
   });
 
   it('rechaza personal en portal MOVIL', async () => {
     const { service } = await crear(['ADMINISTRATIVO']);
-    await expect(service.login('demo@escuela.mx', 'Correcta123', 'MOVIL')).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(service.login('demo@escuela.mx', 'Correcta123', 'MOVIL')).rejects.toThrow(
+      'Esta app es solo para alumnos. El personal ingresa por el portal web.',
+    );
   });
 
   it('firma token en caso feliz', async () => {
     const { service, jwt } = await crear(['ADMINISTRATIVO']);
     await expect(service.login('demo@escuela.mx', 'Correcta123', 'WEB')).resolves.toMatchObject({ accessToken: 'token' });
     expect(jwt.sign).toHaveBeenCalledWith(expect.objectContaining({ roles: ['ADMINISTRATIVO'] }), { expiresIn: '8h' });
+  });
+
+  it('permite alumno en MOVIL', async () => {
+    const { service } = await crear(['ALUMNO']);
+    await expect(service.login('demo@escuela.mx', 'Correcta123', 'MOVIL')).resolves.toMatchObject({ accessToken: 'token' });
   });
 });

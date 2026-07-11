@@ -9,6 +9,7 @@ import { Usuario } from '../entities/usuario.entity';
 import { PasswordResetToken } from '../entities/password-reset-token.entity';
 import { NotificacionesService } from '../notificaciones/notificaciones.service';
 import { JwtUser } from '../common/current-user.decorator';
+import { MENSAJES_PORTAL, Portal, ROLES_POR_PORTAL } from '../common/portales';
 
 @Injectable()
 export class AuthService {
@@ -20,17 +21,14 @@ export class AuthService {
     private readonly config: ConfigService,
   ) {}
 
-  async login(email: string, password: string, portal: 'WEB' | 'MOVIL' = 'WEB') {
+  async login(email: string, password: string, portal: Portal = 'WEB') {
     const usuario = await this.usuarios.findOne({ where: { email, activo: true } });
     if (!usuario || !(await bcrypt.compare(password, usuario.passwordHash))) {
       throw new UnauthorizedException('Credenciales inválidas');
     }
     const roles = usuario.roles.map((r) => r.clave);
-    if (portal === 'WEB' && roles.includes('ALUMNO')) {
-      throw new ForbiddenException('Los alumnos deben iniciar sesión en la app móvil');
-    }
-    if (portal === 'MOVIL' && !roles.includes('ALUMNO')) {
-      throw new ForbiddenException('El portal móvil es exclusivo para alumnos');
+    if (!roles.some((rol) => (ROLES_POR_PORTAL[portal] as string[]).includes(rol))) {
+      throw new ForbiddenException(MENSAJES_PORTAL[portal]);
     }
     const payload: JwtUser = {
       sub: usuario.id,
