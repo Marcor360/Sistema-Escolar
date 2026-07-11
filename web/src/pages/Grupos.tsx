@@ -3,7 +3,8 @@ import { api, mensajeDeError } from '../api/client';
 import { Encabezado } from '../components/Encabezado';
 
 interface Ciclo { id: number; clave: string; activo: boolean }
-interface Grupo { id: number; nombre: string; grado?: string; turno?: string; ciclo: Ciclo }
+interface Plantel { id: number; nombre: string }
+interface Grupo { id: number; nombre: string; grado?: string; turno?: string; ciclo: Ciclo; plantel: Plantel | null }
 interface Materia { id: number; clave: string; nombre: string }
 interface Docente { id: number; numEmpleado: string; usuario: { nombre: string; apellidoPaterno: string } }
 interface GrupoMateria { id: number; materia: Materia; docente: Docente | null }
@@ -12,6 +13,8 @@ interface Alumno { id: number; matricula: string; usuario: { nombre: string; ape
 
 export default function GruposPage() {
   const [ciclos, setCiclos] = useState<Ciclo[]>([]);
+  const [planteles, setPlanteles] = useState<Plantel[]>([]);
+  const [filtroPlantel, setFiltroPlantel] = useState('');
   const [grupos, setGrupos] = useState<Grupo[]>([]);
   const [materias, setMaterias] = useState<Materia[]>([]);
   const [docentes, setDocentes] = useState<Docente[]>([]);
@@ -19,20 +22,21 @@ export default function GruposPage() {
   const [seleccionado, setSeleccionado] = useState<Grupo | null>(null);
   const [asignaciones, setAsignaciones] = useState<GrupoMateria[]>([]);
   const [inscritos, setInscritos] = useState<Inscripcion[]>([]);
-  const [formGrupo, setFormGrupo] = useState({ cicloId: '', nombre: '', grado: '', turno: 'MATUTINO' });
+  const [formGrupo, setFormGrupo] = useState({ cicloId: '', plantelId: '', nombre: '', grado: '', turno: 'MATUTINO' });
   const [materiaId, setMateriaId] = useState('');
   const [docenteId, setDocenteId] = useState('');
   const [alumnoId, setAlumnoId] = useState('');
   const [error, setError] = useState('');
 
-  const cargar = () => {
+  const cargar = (plantelId = filtroPlantel) => {
     api.get<Ciclo[]>('/academico/ciclos').then((r) => setCiclos(r.data));
-    api.get<Grupo[]>('/academico/grupos').then((r) => setGrupos(r.data));
+    api.get<Grupo[]>('/academico/grupos', { params: plantelId ? { plantelId } : {} }).then((r) => setGrupos(r.data));
+    api.get<Plantel[]>('/planteles/mios').then((r) => setPlanteles(r.data));
     api.get<Materia[]>('/academico/materias').then((r) => setMaterias(r.data));
     api.get<Docente[]>('/docentes').then((r) => setDocentes(r.data));
     api.get<Alumno[]>('/alumnos').then((r) => setAlumnos(r.data));
   };
-  useEffect(() => { cargar(); }, []);
+  useEffect(() => { cargar(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const abrirGrupo = async (grupo: Grupo) => {
     setSeleccionado(grupo);
@@ -51,11 +55,12 @@ export default function GruposPage() {
     try {
       await api.post('/academico/grupos', {
         cicloId: Number(formGrupo.cicloId),
+        plantelId: Number(formGrupo.plantelId),
         nombre: formGrupo.nombre,
         grado: formGrupo.grado || undefined,
         turno: formGrupo.turno,
       });
-      setFormGrupo({ cicloId: '', nombre: '', grado: '', turno: 'MATUTINO' });
+      setFormGrupo({ cicloId: '', plantelId: '', nombre: '', grado: '', turno: 'MATUTINO' });
       cargar();
     } catch (err) { setError(mensajeDeError(err)); }
   };
@@ -93,6 +98,12 @@ export default function GruposPage() {
       <section className="panel">
         <h2>Nuevo grupo</h2>
         <form onSubmit={crearGrupo} className="fila">
+          <div className="campo"><label>Plantel</label>
+            <select required value={formGrupo.plantelId} onChange={(e) => setFormGrupo({ ...formGrupo, plantelId: e.target.value })}>
+              <option value="">Selecciona…</option>
+              {planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+            </select>
+          </div>
           <div className="campo"><label>Ciclo</label>
             <select required value={formGrupo.cicloId} onChange={(e) => setFormGrupo({ ...formGrupo, cicloId: e.target.value })}>
               <option value="">Selecciona…</option>
@@ -115,18 +126,28 @@ export default function GruposPage() {
         </form>
       </section>
 
+      <div className="fila" style={{ marginBottom: 12 }}>
+        <div className="campo"><label>Filtrar por plantel</label>
+          <select value={filtroPlantel} onChange={(e) => setFiltroPlantel(e.target.value)}>
+            <option value="">Todos</option>
+            {planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+          </select>
+        </div>
+        <button className="boton secundario" onClick={() => cargar()}>Aplicar</button>
+      </div>
+
       <table className="tabla" style={{ marginBottom: 24 }}>
-        <thead><tr><th>Grupo</th><th>Ciclo</th><th>Grado</th><th>Turno</th><th /></tr></thead>
+        <thead><tr><th>Grupo</th><th>Plantel</th><th>Ciclo</th><th>Grado</th><th>Turno</th><th /></tr></thead>
         <tbody>
           {grupos.map((g) => (
             <tr key={g.id}>
-              <td>{g.nombre}</td><td>{g.ciclo?.clave}</td><td>{g.grado ?? '—'}</td><td>{g.turno ?? '—'}</td>
+              <td>{g.nombre}</td><td>{g.plantel?.nombre ?? <span className="sello neutro">Sin plantel</span>}</td><td>{g.ciclo?.clave}</td><td>{g.grado ?? '—'}</td><td>{g.turno ?? '—'}</td>
               <td className="derecha">
                 <button className="boton secundario chico" onClick={() => abrirGrupo(g)}>Administrar</button>
               </td>
             </tr>
           ))}
-          {grupos.length === 0 && <tr><td className="vacio" colSpan={5}>Sin grupos. Crea el primero con el formulario.</td></tr>}
+          {grupos.length === 0 && <tr><td className="vacio" colSpan={6}>Sin grupos. Crea el primero con el formulario.</td></tr>}
         </tbody>
       </table>
 

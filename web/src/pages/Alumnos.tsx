@@ -7,15 +7,19 @@ interface Alumno {
   matricula: string;
   estatus: string;
   usuario: { nombre: string; apellidoPaterno: string; apellidoMaterno?: string; email: string };
+  plantel: { id: number; nombre: string } | null;
 }
+interface Plantel { id: number; nombre: string }
 
 const FORM_INICIAL = {
   matricula: '', nombre: '', apellidoPaterno: '', apellidoMaterno: '',
-  email: '', password: '', curp: '', tutorNombre: '', tutorTelefono: '',
+  email: '', password: '', curp: '', tutorNombre: '', tutorTelefono: '', plantelId: '',
 };
 
 export default function AlumnosPage() {
   const [alumnos, setAlumnos] = useState<Alumno[]>([]);
+  const [planteles, setPlanteles] = useState<Plantel[]>([]);
+  const [plantelId, setPlantelId] = useState('');
   const [cargando, setCargando] = useState(true);
   const [buscar, setBuscar] = useState('');
   const [form, setForm] = useState(FORM_INICIAL);
@@ -24,13 +28,18 @@ export default function AlumnosPage() {
 
   const cargar = (termino = buscar) => {
     setCargando(true);
-    api.get<Alumno[]>('/alumnos', { params: termino ? { buscar: termino } : {} })
+    api.get<Alumno[]>('/alumnos', {
+      params: { ...(termino ? { buscar: termino } : {}), ...(plantelId ? { plantelId } : {}) },
+    })
       .then((r) => setAlumnos(r.data))
       .catch((err) => setError(mensajeDeError(err)))
       .finally(() => setCargando(false));
   };
 
-  useEffect(() => { cargar(''); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    api.get<Plantel[]>('/planteles/mios').then((r) => setPlanteles(r.data));
+    cargar('');
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const crear = async (e: FormEvent) => {
     e.preventDefault();
@@ -38,6 +47,7 @@ export default function AlumnosPage() {
     try {
       await api.post('/alumnos', {
         ...form,
+        plantelId: Number(form.plantelId),
         apellidoMaterno: form.apellidoMaterno || undefined,
         curp: form.curp || undefined,
         tutorNombre: form.tutorNombre || undefined,
@@ -49,7 +59,7 @@ export default function AlumnosPage() {
     } catch (err) { setError(mensajeDeError(err)); }
   };
 
-  const dar = (campo: keyof typeof FORM_INICIAL) => ({
+  const dar = (campo: Exclude<keyof typeof FORM_INICIAL, 'plantelId'>) => ({
     value: form[campo],
     onChange: (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [campo]: e.target.value }),
   });
@@ -79,6 +89,12 @@ export default function AlumnosPage() {
         <h2>Registrar alumno</h2>
         <form onSubmit={crear}>
           <div className="fila">
+            <div className="campo"><label>Plantel</label>
+              <select required value={form.plantelId} onChange={(e) => setForm({ ...form, plantelId: e.target.value })}>
+                <option value="">Selecciona…</option>
+                {planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+              </select>
+            </div>
             <div className="campo"><label>Matrícula</label><input required {...dar('matricula')} /></div>
             <div className="campo"><label>Nombre</label><input required {...dar('nombre')} /></div>
             <div className="campo"><label>Apellido paterno</label><input required {...dar('apellidoPaterno')} /></div>
@@ -98,6 +114,12 @@ export default function AlumnosPage() {
       </section>
 
       <div className="fila" style={{ marginBottom: 12 }}>
+        <div className="campo"><label>Filtrar por plantel</label>
+          <select value={plantelId} onChange={(e) => setPlantelId(e.target.value)}>
+            <option value="">Todos</option>
+            {planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+          </select>
+        </div>
         <div className="campo">
           <label>Buscar por matrícula</label>
           <input
@@ -111,13 +133,14 @@ export default function AlumnosPage() {
 
       <table className="tabla">
         <thead>
-          <tr><th>Matrícula</th><th>Nombre</th><th>Correo</th><th>Estatus</th><th className="derecha">Acciones</th></tr>
+          <tr><th>Matrícula</th><th>Nombre</th><th>Plantel</th><th>Correo</th><th>Estatus</th><th className="derecha">Acciones</th></tr>
         </thead>
         <tbody>
           {alumnos.map((a) => (
             <tr key={a.id}>
               <td>{a.matricula}</td>
               <td>{a.usuario.nombre} {a.usuario.apellidoPaterno} {a.usuario.apellidoMaterno ?? ''}</td>
+              <td>{a.plantel?.nombre ?? <span className="sello neutro">Sin plantel</span>}</td>
               <td>{a.usuario.email}</td>
               <td><span className={`sello ${a.estatus === 'ACTIVO' ? 'ok' : 'neutro'}`}>{a.estatus}</span></td>
               <td className="derecha">
@@ -129,9 +152,9 @@ export default function AlumnosPage() {
             </tr>
           ))}
           {!cargando && alumnos.length === 0 && (
-            <tr><td className="vacio" colSpan={5}>Sin alumnos registrados. Usa el formulario para dar de alta al primero.</td></tr>
+            <tr><td className="vacio" colSpan={6}>Sin alumnos registrados. Usa el formulario para dar de alta al primero.</td></tr>
           )}
-          {cargando && <tr><td className="vacio" colSpan={5}>Cargando…</td></tr>}
+          {cargando && <tr><td className="vacio" colSpan={6}>Cargando…</td></tr>}
         </tbody>
       </table>
     </>
