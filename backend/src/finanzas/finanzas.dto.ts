@@ -1,4 +1,5 @@
 import { IsIn, IsInt, IsNumber, IsOptional, IsString, Matches, Max, Min } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class ConceptoDto {
   @IsString() clave: string;
@@ -20,6 +21,7 @@ export class CrearCargoDto {
 }
 
 export class GenerarColegiaturasDto {
+  @IsOptional() @Type(() => Number) @IsInt() plantelId?: number;
   @IsInt() cicloId: number;
   @Matches(/^\d{4}-\d{2}$/) periodo: string; // YYYY-MM
   @IsOptional() @IsNumber() @Min(0) monto?: number;   // por defecto, montoBase del concepto COL
@@ -27,6 +29,7 @@ export class GenerarColegiaturasDto {
 }
 
 export class AplicarRecargosDto {
+  @IsOptional() @Type(() => Number) @IsInt() plantelId?: number;
   @IsOptional() @IsNumber() @Min(0) @Max(100) porcentaje?: number; // por defecto 10%
 }
 

@@ -28,8 +28,10 @@ export class OrdenesService {
 
     // Un alumno solo puede pagar sus propios cargos; FINANZAS puede generar para cualquiera
     const alumno = await this.alumnos.obtenerPorUsuario(user.sub).catch(() => null);
-    if (alumno && cargo.alumnoId !== alumno.id) {
-      throw new BadRequestException('El cargo no pertenece al alumno autenticado');
+    if (alumno) {
+      if (cargo.alumnoId !== alumno.id) throw new BadRequestException('El cargo no pertenece al alumno autenticado');
+    } else {
+      await this.alumnos.obtener(cargo.alumnoId, user);
     }
 
     const saldo = await this.cargos.saldoDeCargo(cargo);
@@ -61,9 +63,17 @@ export class OrdenesService {
     return orden;
   }
 
-  async obtener(id: number) {
+  async obtener(id: number, user?: JwtUser) {
     const orden = await this.ordenes.findOne({ where: { id } });
     if (!orden) throw new NotFoundException('Orden no encontrada');
+    if (user) {
+      const alumno = await this.alumnos.obtenerPorUsuario(user.sub).catch(() => null);
+      if (alumno) {
+        if (orden.alumnoId !== alumno.id) throw new BadRequestException('La orden no pertenece al alumno autenticado');
+      } else {
+        await this.alumnos.obtener(orden.alumnoId, user);
+      }
+    }
     return orden;
   }
 

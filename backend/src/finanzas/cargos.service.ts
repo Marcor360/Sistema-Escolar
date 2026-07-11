@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, LessThan, Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Cargo } from '../entities/cargo.entity';
 import { Pago } from '../entities/pago.entity';
 import { Inscripcion } from '../entities/inscripcion.entity';
@@ -55,12 +55,14 @@ export class CargosService {
     return new Map(filas.map((f) => [Number(f.cargoId), redondear(Number(f.pagado))]));
   }
 
-  listar(filtro: { alumnoId?: number; estatus?: string; periodo?: string }) {
-    const where: Record<string, unknown> = {};
-    if (filtro.alumnoId) where.alumnoId = filtro.alumnoId;
-    if (filtro.estatus) where.estatus = filtro.estatus;
-    if (filtro.periodo) where.periodo = filtro.periodo;
-    return this.cargos.find({ where, order: { fechaVencimiento: 'ASC' }, take: 500 });
+  async listar(filtro: { alumnoId?: number; estatus?: string; periodo?: string }, user: JwtUser) {
+    const planteles = await this.scope.resolverFiltro(user);
+    const qb = this.cargos.createQueryBuilder('c').innerJoinAndSelect('c.alumno', 'a');
+    if (planteles !== null) qb.andWhere('a.plantel_id IN (:...planteles)', { planteles });
+    if (filtro.alumnoId) qb.andWhere('c.alumno_id = :alumnoId', { alumnoId: filtro.alumnoId });
+    if (filtro.estatus) qb.andWhere('c.estatus = :estatus', { estatus: filtro.estatus });
+    if (filtro.periodo) qb.andWhere('c.periodo = :periodo', { periodo: filtro.periodo });
+    return qb.orderBy('c.fecha_vencimiento', 'ASC').take(500).getMany();
   }
 
   async obtener(id: number) {
@@ -97,7 +99,13 @@ export class CargosService {
     const monto = dto.monto ?? concepto.montoBase;
     if (monto <= 0) throw new BadRequestException('Monto de colegiatura inválido');
 
-    const gruposDelCiclo = await this.grupos.find({ where: { cicloId: dto.cicloId } });
+    const planteles = await this.scope.resolverFiltro(user, dto.plantelId);
+    const gruposDelCiclo = await this.grupos.find({
+      where: {
+        cicloId: dto.cicloId,
+        ...(planteles === null ? {} : { plantelId: this.scope.condicion(planteles) }),
+      },
+    });
     if (gruposDelCiclo.length === 0) return { generados: 0, omitidos: 0 };
 
     const inscripciones = await this.inscripciones.find({
@@ -139,10 +147,17 @@ export class CargosService {
   /** Aplica recargo a cargos vencidos sin liquidar (una sola vez por cargo). */
   async aplicarRecargos(dto: AplicarRecargosDto, user: JwtUser) {
     const porcentaje = dto.porcentaje ?? 10;
-    const hoy = new Date().toISOString().slice(0, 10);
-    const vencidos = await this.cargos.find({
-      where: { estatus: In(['PENDIENTE', 'PARCIAL']), fechaVencimiento: LessThan(hoy) },
-    });
+    const hoy = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(new Date());
+    const planteles = await this.scope.resolverFiltro(user, dto.plantelId);
+    const qb = this.cargos
+      .createQueryBuilder('c')
+      .innerJoin('c.alumno', 'a')
+      .where('c.estatus IN (:...estatus)', { estatus: ['PENDIENTE', 'PARCIAL'] })
+      .andWhere('c.fecha_vencimiento < :hoy', { hoy });
+    if (planteles !== null) qb.andWhere('a.plantel_id IN (:...planteles)', { planteles });
+    const vencidos = await qb.getMany();
 
     const modificados: Cargo[] = [];
     for (const cargo of vencidos) {

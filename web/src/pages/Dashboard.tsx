@@ -2,6 +2,7 @@ import { api } from '../api/client';
 import { Encabezado } from '../components/Encabezado';
 import { useDatos } from '../hooks/useDatos';
 import { pesos, fechaHora } from '../utils/formato';
+import { useState } from 'react';
 
 interface Evento {
   id: number;
@@ -19,11 +20,23 @@ interface Resumen {
   cobradoMes: number;
 }
 
+interface Plantel { id: number; nombre: string }
+
 export default function DashboardPage() {
-  const { datos: resumen, cargando, error, recargar } = useDatos<Resumen | null>(
+  const [plantelId, setPlantelId] = useState('');
+  const { datos: planteles } = useDatos<Plantel[]>(
+    () => api.get('/planteles/mios').then((r) => r.data),
+    [],
+  );
+  const { datos: resumen, cargando, error, recargar, setDatos: setResumen } = useDatos<Resumen | null>(
     () => api.get('/reportes/resumen').then((r) => r.data),
     null,
   );
+  const filtrarPlantel = (valor: string) => {
+    setPlantelId(valor);
+    api.get('/reportes/resumen', { params: valor ? { plantelId: valor } : {} })
+      .then((r) => setResumen(r.data));
+  };
   const hoy = new Date();
   const en30dias = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
   const { datos: eventos } = useDatos<Evento[]>(
@@ -36,6 +49,17 @@ export default function DashboardPage() {
   return (
     <>
       <Encabezado titulo="Panel general" detalle="Resumen académico y financiero al día de hoy" />
+      {planteles.length > 1 && (
+        <div className="fila" style={{ marginBottom: 16 }}>
+          <div className="campo">
+            <label>Ver plantel</label>
+            <select value={plantelId} onChange={(e) => filtrarPlantel(e.target.value)}>
+              <option value="">Todos mis planteles</option>
+              {planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+            </select>
+          </div>
+        </div>
+      )}
       {cargando && <p className="detalle">Cargando indicadores…</p>}
       {error && (
         <p className="mensaje-error">

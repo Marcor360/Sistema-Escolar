@@ -53,8 +53,8 @@ export class FinanzasController {
 
   @Get('ordenes/:id')
   @ApiBearerAuth() @UseGuards(JwtAuthGuard, RolesGuard) @Roles('ALUMNO', 'FINANZAS')
-  obtenerOrden(@Param('id', ParseIntPipe) id: number) {
-    return this.ordenes.obtener(id);
+  obtenerOrden(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) {
+    return this.ordenes.obtener(id, user);
   }
 
   // ---------- Catálogo de conceptos ----------
@@ -76,6 +76,7 @@ export class FinanzasController {
   @Get('cargos')
   @ApiBearerAuth() @UseGuards(JwtAuthGuard, RolesGuard) @Roles('FINANZAS', 'ADMINISTRATIVO')
   listarCargos(
+    @CurrentUser() user: JwtUser,
     @Query('alumnoId') alumnoId?: string,
     @Query('estatus') estatus?: string,
     @Query('periodo') periodo?: string,
@@ -84,7 +85,7 @@ export class FinanzasController {
       alumnoId: alumnoId ? Number(alumnoId) : undefined,
       estatus,
       periodo,
-    });
+    }, user);
   }
 
   @Post('cargos')
@@ -120,8 +121,8 @@ export class FinanzasController {
   // ---------- Pagos ----------
   @Get('pagos')
   @ApiBearerAuth() @UseGuards(JwtAuthGuard, RolesGuard) @Roles('FINANZAS', 'ADMINISTRATIVO')
-  listarPagos(@Query('alumnoId') alumnoId?: string) {
-    return this.pagos.listar(alumnoId ? Number(alumnoId) : undefined);
+  listarPagos(@CurrentUser() user: JwtUser, @Query('alumnoId') alumnoId?: string) {
+    return this.pagos.listar(user, alumnoId ? Number(alumnoId) : undefined);
   }
 
   @Post('pagos')
