@@ -1,95 +1,20 @@
-import { Body, Controller, Delete, ForbiddenException, Get, Injectable, Module, Param, ParseIntPipe, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { InjectRepository, TypeOrmModule } from '@nestjs/typeorm';
-import { Between, Repository } from 'typeorm';
-import { IsIn, IsInt, IsOptional, IsString } from 'class-validator';
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Alumno } from '../entities/alumno.entity';
+import { Docente } from '../entities/docente.entity';
 import { EventoCalendario } from '../entities/evento-calendario.entity';
-import { JwtUser } from '../common/current-user.decorator';
-import { JwtAuthGuard } from '../common/jwt-auth.guard';
-import { RolesGuard } from '../common/roles.guard';
-import { Roles } from '../common/roles.decorator';
-
-class EventoDto {
-  @IsString() titulo: string;
-  @IsOptional() @IsString() descripcion?: string;
-  @IsOptional() @IsIn(['GENERAL', 'EXAMEN', 'ENTREGA', 'FESTIVO'])
-  tipo?: 'GENERAL' | 'EXAMEN' | 'ENTREGA' | 'FESTIVO';
-  @IsString() fechaInicio: string; // ISO
-  @IsOptional() @IsString() fechaFin?: string;
-  @IsOptional() @IsInt() grupoId?: number;
-}
-
-@Injectable()
-export class CalendarioService {
-  constructor(
-    @InjectRepository(EventoCalendario) private readonly repo: Repository<EventoCalendario>,
-    private readonly grupos?: unknown,
-    private readonly grupoMaterias?: unknown,
-    private readonly inscripciones?: unknown,
-    private readonly alumnos?: unknown,
-    private readonly docentes?: unknown,
-    private readonly scope?: unknown,
-  ) {}
-
-  listar(desde?: string, hasta?: string) {
-    if (desde && hasta) {
-      return this.repo.find({
-        where: { fechaInicio: Between(new Date(desde), new Date(hasta)) },
-        order: { fechaInicio: 'ASC' },
-      });
-    }
-    return this.repo.find({ order: { fechaInicio: 'ASC' }, take: 200 });
-  }
-
-  async crear(dto: EventoDto, user?: JwtUser) {
-    if (user && !user.roles.includes('SUPERADMIN') && !dto.grupoId) {
-      throw new ForbiddenException('Solo SUPERADMIN puede crear eventos globales');
-    }
-    return this.repo.save(
-      this.repo.create({
-        titulo: dto.titulo,
-        descripcion: dto.descripcion ?? null,
-        tipo: dto.tipo ?? 'GENERAL',
-        fechaInicio: new Date(dto.fechaInicio),
-        fechaFin: dto.fechaFin ? new Date(dto.fechaFin) : null,
-        grupoId: dto.grupoId ?? null,
-      }),
-    );
-  }
-
-  async eliminar(id: number) {
-    await this.repo.delete(id);
-    return { ok: true };
-  }
-}
-
-@ApiTags('calendario')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Controller('calendario')
-class CalendarioController {
-  constructor(private readonly service: CalendarioService) {}
-
-  @Get()
-  listar(@Query('desde') desde?: string, @Query('hasta') hasta?: string) {
-    return this.service.listar(desde, hasta);
-  }
-
-  @Post()
-  @Roles('ADMINISTRATIVO', 'MAESTRO')
-  crear(@Body() dto: EventoDto) {
-    return this.service.crear(dto);
-  }
-
-  @Delete(':id')
-  @Roles('ADMINISTRATIVO', 'MAESTRO')
-  eliminar(@Param('id', ParseIntPipe) id: number) {
-    return this.service.eliminar(id);
-  }
-}
+import { Grupo } from '../entities/grupo.entity';
+import { GrupoMateria } from '../entities/grupo-materia.entity';
+import { Inscripcion } from '../entities/inscripcion.entity';
+import { PlantelesModule } from '../planteles/planteles.module';
+import { CalendarioController } from './calendario.controller';
+import { CalendarioService } from './calendario.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([EventoCalendario])],
+  imports: [
+    TypeOrmModule.forFeature([EventoCalendario, Grupo, GrupoMateria, Inscripcion, Alumno, Docente]),
+    PlantelesModule,
+  ],
   providers: [CalendarioService],
   controllers: [CalendarioController],
 })

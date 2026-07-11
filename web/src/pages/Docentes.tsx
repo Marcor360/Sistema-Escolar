@@ -8,7 +8,9 @@ interface Docente {
   especialidad?: string;
   estatus: string;
   usuario: { nombre: string; apellidoPaterno: string; email: string };
+  planteles: string[];
 }
+interface Plantel { id: number; nombre: string }
 
 const FORM_INICIAL = {
   numEmpleado: '', nombre: '', apellidoPaterno: '', email: '', password: '', especialidad: '',
@@ -16,18 +18,22 @@ const FORM_INICIAL = {
 
 export default function DocentesPage() {
   const [docentes, setDocentes] = useState<Docente[]>([]);
+  const [planteles, setPlanteles] = useState<Plantel[]>([]);
+  const [plantelIds, setPlantelIds] = useState<number[]>([]);
+  const [filtroPlantel, setFiltroPlantel] = useState('');
   const [form, setForm] = useState(FORM_INICIAL);
   const [error, setError] = useState('');
 
-  const cargar = () => api.get<Docente[]>('/docentes').then((r) => setDocentes(r.data));
-  useEffect(() => { cargar(); }, []);
+  const cargar = (plantelId = filtroPlantel) => api.get<Docente[]>('/docentes', { params: plantelId ? { plantelId } : {} }).then((r) => setDocentes(r.data));
+  useEffect(() => { cargar(); api.get<Plantel[]>('/planteles/mios').then((r) => setPlanteles(r.data)); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const crear = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
     try {
-      await api.post('/docentes', { ...form, especialidad: form.especialidad || undefined });
+      await api.post('/docentes', { ...form, plantelIds, especialidad: form.especialidad || undefined });
       setForm(FORM_INICIAL);
+      setPlantelIds([]);
       cargar();
     } catch (err) { setError(mensajeDeError(err)); }
   };
@@ -59,26 +65,33 @@ export default function DocentesPage() {
             <div className="campo"><label>Contraseña inicial</label><input required minLength={8} {...dar('password')} /></div>
             <button className="boton">Guardar docente</button>
           </div>
+          <div className="fila" style={{ marginTop: 12 }}>
+            <span className="campo"><label>Planteles</label></span>
+            {planteles.map((p) => <label className="casilla" key={p.id}><input type="checkbox" required={plantelIds.length === 0} checked={plantelIds.includes(p.id)} onChange={() => setPlantelIds((ids) => ids.includes(p.id) ? ids.filter((id) => id !== p.id) : [...ids, p.id])} />{p.nombre}</label>)}
+          </div>
         </form>
         {error && <p className="mensaje-error">{error}</p>}
       </section>
 
+      <div className="fila" style={{ marginBottom: 12 }}><div className="campo"><label>Filtrar por plantel</label><select value={filtroPlantel} onChange={(e) => setFiltroPlantel(e.target.value)}><option value="">Todos</option>{planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div><button className="boton secundario" onClick={() => cargar()}>Aplicar</button></div>
+
       <table className="tabla">
         <thead>
-          <tr><th>Empleado</th><th>Nombre</th><th>Especialidad</th><th>Correo</th><th>Estatus</th><th /></tr>
+          <tr><th>Empleado</th><th>Nombre</th><th>Planteles</th><th>Especialidad</th><th>Correo</th><th>Estatus</th><th /></tr>
         </thead>
         <tbody>
           {docentes.map((d) => (
             <tr key={d.id}>
               <td>{d.numEmpleado}</td>
               <td>{d.usuario.nombre} {d.usuario.apellidoPaterno}</td>
+              <td>{d.planteles.join(', ') || '—'}</td>
               <td>{d.especialidad ?? '—'}</td>
               <td>{d.usuario.email}</td>
               <td><span className={`sello ${d.estatus === 'ACTIVO' ? 'ok' : 'neutro'}`}>{d.estatus}</span></td>
               <td className="derecha"><button className="boton peligro chico" onClick={() => baja(d)}>Baja</button></td>
             </tr>
           ))}
-          {docentes.length === 0 && <tr><td className="vacio" colSpan={6}>Sin docentes registrados.</td></tr>}
+          {docentes.length === 0 && <tr><td className="vacio" colSpan={7}>Sin docentes registrados.</td></tr>}
         </tbody>
       </table>
     </>

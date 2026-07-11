@@ -1,6 +1,8 @@
-import { IsEmail, IsIn, IsOptional, IsString, MinLength } from 'class-validator';
+import { ArrayNotEmpty, IsArray, IsEmail, IsIn, IsInt, IsOptional, IsString, MinLength } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CrearDocenteDto {
+  @IsArray() @ArrayNotEmpty() @Type(() => Number) @IsInt({ each: true }) plantelIds: number[];
   @IsEmail() email: string;
   @IsString() @MinLength(8) password: string;
   @IsString() nombre: string;

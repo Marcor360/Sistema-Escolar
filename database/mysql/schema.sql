@@ -216,11 +216,15 @@ CREATE TABLE eventos_calendario (
   id INT AUTO_INCREMENT PRIMARY KEY,
   titulo VARCHAR(150) NOT NULL,
   descripcion VARCHAR(400) NULL,
-  tipo VARCHAR(30) NOT NULL DEFAULT 'GENERAL',     -- GENERAL | EXAMEN | ENTREGA | FESTIVO
+  tipo VARCHAR(30) NOT NULL DEFAULT 'GENERAL',     -- GENERAL | EXAMEN | ENTREGA | FESTIVO | PAGO | JUNTA
   fecha_inicio DATETIME NOT NULL,
   fecha_fin DATETIME NULL,
+  plantel_id INT NULL,
   grupo_id INT NULL,
-  CONSTRAINT fk_ev_grupo FOREIGN KEY (grupo_id) REFERENCES grupos(id) ON DELETE SET NULL
+  creado_por_id INT NULL,
+  CONSTRAINT fk_ev_grupo FOREIGN KEY (grupo_id) REFERENCES grupos(id) ON DELETE SET NULL,
+  CONSTRAINT fk_ev_plantel FOREIGN KEY (plantel_id) REFERENCES planteles(id) ON DELETE SET NULL,
+  CONSTRAINT fk_evento_creador FOREIGN KEY (creado_por_id) REFERENCES usuarios(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 CREATE TABLE notificaciones (

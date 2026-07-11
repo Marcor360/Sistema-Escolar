@@ -1,5 +1,5 @@
 import { ForbiddenException } from '@nestjs/common';
-import { CalendarioService } from './calendario.module';
+import { CalendarioService } from './calendario.service';
 import { JwtUser } from '../common/current-user.decorator';
 
 const maestro: JwtUser = {

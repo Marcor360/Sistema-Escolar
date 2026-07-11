@@ -219,8 +219,12 @@ CREATE TABLE eventos_calendario (
   tipo NVARCHAR(30) NOT NULL DEFAULT 'GENERAL',
   fecha_inicio DATETIME2 NOT NULL,
   fecha_fin DATETIME2 NULL,
+  plantel_id INT NULL,
   grupo_id INT NULL,
-  CONSTRAINT fk_ev_grupo FOREIGN KEY (grupo_id) REFERENCES grupos(id) ON DELETE SET NULL
+  creado_por_id INT NULL,
+  CONSTRAINT fk_ev_grupo FOREIGN KEY (grupo_id) REFERENCES grupos(id) ON DELETE SET NULL,
+  CONSTRAINT fk_ev_plantel FOREIGN KEY (plantel_id) REFERENCES planteles(id) ON DELETE SET NULL,
+  CONSTRAINT fk_evento_creador FOREIGN KEY (creado_por_id) REFERENCES usuarios(id) ON DELETE SET NULL
 );
 
 CREATE TABLE notificaciones (

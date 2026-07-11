@@ -3,25 +3,37 @@ import { api, mensajeDeError } from '../api/client';
 import { Encabezado } from '../components/Encabezado';
 import { useDatos } from '../hooks/useDatos';
 import { fechaHora } from '../utils/formato';
+import { useAuth } from '../auth/AuthContext';
 
 interface Evento {
   id: number;
   titulo: string;
   descripcion: string | null;
-  tipo: 'GENERAL' | 'EXAMEN' | 'ENTREGA' | 'FESTIVO';
+  tipo: 'GENERAL' | 'EXAMEN' | 'ENTREGA' | 'FESTIVO' | 'PAGO' | 'JUNTA';
   fechaInicio: string;
   fechaFin: string | null;
+  plantel: { id: number; nombre: string } | null;
 }
+interface Plantel { id: number; nombre: string }
+interface GrupoMateria { grupo: { id: number; nombre: string } }
 
-const FORM_INICIAL = { titulo: '', tipo: 'GENERAL', fechaInicio: '', fechaFin: '', descripcion: '' };
-const TONO: Record<Evento['tipo'], string> = { GENERAL: 'neutro', EXAMEN: 'mal', ENTREGA: 'aviso', FESTIVO: 'ok' };
+const FORM_INICIAL = { titulo: '', tipo: 'GENERAL', fechaInicio: '', fechaFin: '', descripcion: '', plantelId: '', grupoId: '' };
+const TONO: Record<Evento['tipo'], string> = { GENERAL: 'neutro', EXAMEN: 'mal', ENTREGA: 'aviso', FESTIVO: 'ok', PAGO: 'aviso', JUNTA: 'neutro' };
 
 export default function CalendarioPage() {
-  const { datos: eventos, cargando, error: errorCarga, recargar } = useDatos<Evento[]>(
+  const { sesion } = useAuth();
+  const esSuperadmin = sesion?.roles.includes('SUPERADMIN') ?? false;
+  const maestroPuro = sesion?.roles.includes('MAESTRO') && !sesion.roles.includes('ADMINISTRATIVO') && !esSuperadmin;
+  const { datos: eventos, cargando, error: errorCarga, recargar, setDatos: setEventos } = useDatos<Evento[]>(
     () => api.get('/calendario').then((r) => r.data),
     [],
   );
+  const { datos: planteles } = useDatos<Plantel[]>(() => api.get('/planteles/mios').then((r) => r.data), []);
+  const { datos: clases } = useDatos<GrupoMateria[]>(
+    () => api.get(maestroPuro ? '/academico/mis-grupos' : '/academico/grupo-materias').then((r) => r.data), [],
+  );
   const [form, setForm] = useState(FORM_INICIAL);
+  const [filtroPlantel, setFiltroPlantel] = useState('');
   const [error, setError] = useState('');
 
   const crear = async (e: FormEvent) => {
@@ -34,6 +46,8 @@ export default function CalendarioPage() {
         fechaInicio: new Date(form.fechaInicio).toISOString(),
         fechaFin: form.fechaFin ? new Date(form.fechaFin).toISOString() : undefined,
         descripcion: form.descripcion || undefined,
+        plantelId: form.plantelId ? Number(form.plantelId) : undefined,
+        grupoId: form.grupoId ? Number(form.grupoId) : undefined,
       });
       setForm(FORM_INICIAL);
       recargar();
@@ -60,8 +74,11 @@ export default function CalendarioPage() {
           <div className="campo"><label>Tipo</label>
             <select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })}>
               <option>GENERAL</option><option>EXAMEN</option><option>ENTREGA</option><option>FESTIVO</option>
+              <option>PAGO</option><option>JUNTA</option>
             </select>
           </div>
+          <div className="campo"><label>Plantel</label><select required={!esSuperadmin && !maestroPuro} disabled={maestroPuro} value={form.plantelId} onChange={(e) => setForm({ ...form, plantelId: e.target.value })}>{esSuperadmin && <option value="">Global (todos)</option>}{!esSuperadmin && <option value="">Selecciona…</option>}{planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div>
+          <div className="campo"><label>Grupo {maestroPuro ? '' : '(opcional)'}</label><select required={maestroPuro} value={form.grupoId} onChange={(e) => setForm({ ...form, grupoId: e.target.value })}><option value="">Sin grupo</option>{Array.from(new Map(clases.map((c) => [c.grupo.id, c.grupo])).values()).map((g) => <option key={g.id} value={g.id}>{g.nombre}</option>)}</select></div>
           <div className="campo"><label>Inicio</label>
             <input type="datetime-local" required value={form.fechaInicio} onChange={(e) => setForm({ ...form, fechaInicio: e.target.value })} />
           </div>
@@ -75,13 +92,16 @@ export default function CalendarioPage() {
         </form>
       </section>
 
+      <div className="fila" style={{ marginBottom: 12 }}><div className="campo"><label>Ver plantel</label><select value={filtroPlantel} onChange={(e) => setFiltroPlantel(e.target.value)}><option value="">Todos</option>{planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div><button className="boton secundario" onClick={() => api.get('/calendario', { params: filtroPlantel ? { plantelId: filtroPlantel } : {} }).then((r) => setEventos(r.data))}>Aplicar</button></div>
+
       <table className="tabla">
-        <thead><tr><th>Fecha</th><th>Evento</th><th>Tipo</th><th>Descripción</th><th className="derecha">Acciones</th></tr></thead>
+        <thead><tr><th>Fecha</th><th>Evento</th><th>Ámbito</th><th>Tipo</th><th>Descripción</th><th className="derecha">Acciones</th></tr></thead>
         <tbody>
           {eventos.map((ev) => (
             <tr key={ev.id}>
               <td>{fechaHora(ev.fechaInicio)}{ev.fechaFin ? ` — ${fechaHora(ev.fechaFin)}` : ''}</td>
               <td>{ev.titulo}</td>
+              <td>{ev.plantel ? ev.plantel.nombre : <span className="sello ok">Global</span>}</td>
               <td><span className={`sello ${TONO[ev.tipo]}`}>{ev.tipo}</span></td>
               <td>{ev.descripcion ?? '—'}</td>
               <td className="derecha">
@@ -90,7 +110,7 @@ export default function CalendarioPage() {
             </tr>
           ))}
           {!cargando && eventos.length === 0 && (
-            <tr><td className="vacio" colSpan={5}>Calendario vacío. Agrega el primer evento del ciclo.</td></tr>
+            <tr><td className="vacio" colSpan={6}>Calendario vacío. Agrega el primer evento del ciclo.</td></tr>
           )}
         </tbody>
       </table>
