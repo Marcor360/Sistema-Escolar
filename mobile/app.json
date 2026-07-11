@@ -1,5 +1,6 @@
 {
   "expo": {
+    "newArchEnabled": true,
     "name": "Sistema Escolar",
     "slug": "sistema-escolar",
     "version": "1.0.0",
