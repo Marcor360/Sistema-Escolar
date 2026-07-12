@@ -1,6 +1,6 @@
 import 'dotenv/config'; // primero: garantiza process.env para módulos evaluados al importar
 import 'reflect-metadata';
-import { ValidationPipe } from '@nestjs/common';
+import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -26,7 +26,7 @@ async function bootstrap() {
       : process.env.NODE_ENV === 'production' ? false : 'http://localhost:5173',
   });
 
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('api', { exclude: [{ path: 'uploads/:filename', method: RequestMethod.GET }] });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
   // Documentación interactiva solo fuera de producción

@@ -9,6 +9,7 @@ import { Usuario } from '../entities/usuario.entity';
 import { ArchivosService } from './archivos.service';
 import { ArchivosController } from './archivos.controller';
 import { PlantelesModule } from '../planteles/planteles.module';
+import { LogoPublicoController } from './logo-publico.controller';
 
 @Module({
   imports: [
@@ -22,6 +23,6 @@ import { PlantelesModule } from '../planteles/planteles.module';
     }),
   ],
   providers: [ArchivosService],
-  controllers: [ArchivosController],
+  controllers: [ArchivosController, LogoPublicoController],
 })
 export class ArchivosModule {}
