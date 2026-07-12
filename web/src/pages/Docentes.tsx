@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { Encabezado } from '../components/Encabezado';
+import { Paginador } from '../components/Paginador';
 
 interface Docente {
   id: number;
@@ -11,20 +12,22 @@ interface Docente {
   planteles: string[];
 }
 interface Plantel { id: number; nombre: string }
+interface Resultado { datos: Docente[]; total: number; pagina: number; porPagina: number }
 
 const FORM_INICIAL = {
   numEmpleado: '', nombre: '', apellidoPaterno: '', email: '', password: '', especialidad: '',
 };
 
 export default function DocentesPage() {
-  const [docentes, setDocentes] = useState<Docente[]>([]);
+  const [resultado, setResultado] = useState<Resultado>({ datos: [], total: 0, pagina: 1, porPagina: 20 });
   const [planteles, setPlanteles] = useState<Plantel[]>([]);
   const [plantelIds, setPlantelIds] = useState<number[]>([]);
   const [filtroPlantel, setFiltroPlantel] = useState('');
   const [form, setForm] = useState(FORM_INICIAL);
   const [error, setError] = useState('');
 
-  const cargar = (plantelId = filtroPlantel) => api.get<Docente[]>('/docentes', { params: plantelId ? { plantelId } : {} }).then((r) => setDocentes(r.data));
+  const cargar = (pagina = 1, plantelId = filtroPlantel) =>
+    api.get<Resultado>('/docentes', { params: { pagina, ...(plantelId ? { plantelId } : {}) } }).then((r) => setResultado(r.data));
   useEffect(() => { cargar(); api.get<Plantel[]>('/planteles/mios').then((r) => setPlanteles(r.data)); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const crear = async (e: FormEvent) => {
@@ -73,14 +76,14 @@ export default function DocentesPage() {
         {error && <p className="mensaje-error">{error}</p>}
       </section>
 
-      <div className="fila" style={{ marginBottom: 12 }}><div className="campo"><label>Filtrar por plantel</label><select value={filtroPlantel} onChange={(e) => setFiltroPlantel(e.target.value)}><option value="">Todos</option>{planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div><button className="boton secundario" onClick={() => cargar()}>Aplicar</button></div>
+      <div className="fila" style={{ marginBottom: 12 }}><div className="campo"><label>Filtrar por plantel</label><select value={filtroPlantel} onChange={(e) => setFiltroPlantel(e.target.value)}><option value="">Todos</option>{planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div><button className="boton secundario" onClick={() => cargar(1)}>Aplicar</button></div>
 
       <table className="tabla">
         <thead>
           <tr><th>Empleado</th><th>Nombre</th><th>Planteles</th><th>Especialidad</th><th>Correo</th><th>Estatus</th><th /></tr>
         </thead>
         <tbody>
-          {docentes.map((d) => (
+          {resultado.datos.map((d) => (
             <tr key={d.id}>
               <td>{d.numEmpleado}</td>
               <td>{d.usuario.nombre} {d.usuario.apellidoPaterno}</td>
@@ -91,9 +94,10 @@ export default function DocentesPage() {
               <td className="derecha"><button className="boton peligro chico" onClick={() => baja(d)}>Baja</button></td>
             </tr>
           ))}
-          {docentes.length === 0 && <tr><td className="vacio" colSpan={7}>Sin docentes registrados.</td></tr>}
+          {resultado.datos.length === 0 && <tr><td className="vacio" colSpan={7}>Sin docentes registrados.</td></tr>}
         </tbody>
       </table>
+      <Paginador total={resultado.total} pagina={resultado.pagina} porPagina={resultado.porPagina} onCambio={(pagina) => cargar(pagina)} />
     </>
   );
 }

@@ -1,5 +1,11 @@
 import { Type } from 'class-transformer';
 import { IsBoolean, IsIn, IsInt, IsOptional, IsString } from 'class-validator';
+import { PaginacionDto } from '../common/paginacion.dto';
+
+export class ListarGruposDto extends PaginacionDto {
+  @IsOptional() @Type(() => Number) @IsInt() cicloId?: number;
+  @IsOptional() @Type(() => Number) @IsInt() plantelId?: number;
+}
 
 export class CicloDto {
   @IsString() clave: string;

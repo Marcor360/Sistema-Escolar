@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { Encabezado } from '../components/Encabezado';
+import { Paginador } from '../components/Paginador';
 
 type Tipo = 'ALUMNO' | 'DOCENTE' | 'ADMINISTRATIVO';
 interface Plantel { id: number; nombre: string }
@@ -77,6 +78,6 @@ export default function UsuariosPage() {
       {resultado.datos.map((fila) => <tr key={fila.id}><td>{fila.matricula ?? fila.numEmpleado ?? fila.id}</td><td>{fila.nombre}</td><td>{fila.correo}</td><td>{fila.plantel ?? fila.planteles?.join(', ') ?? '—'}</td><td>{fila.roles?.join(', ') ?? fila.estatus ?? (fila.activo ? 'ACTIVO' : 'INACTIVO')}</td></tr>)}
       {!resultado.datos.length && <tr><td className="vacio" colSpan={5}>Sin resultados.</td></tr>}
     </tbody></table>
-    <div className="fila" style={{ marginTop: 14 }}><button className="boton secundario" disabled={resultado.pagina <= 1} onClick={() => cargar(resultado.pagina - 1)}>Anterior</button><span>{resultado.total} registros · página {resultado.pagina}</span><button className="boton secundario" disabled={resultado.pagina * resultado.porPagina >= resultado.total} onClick={() => cargar(resultado.pagina + 1)}>Siguiente</button></div>
+    <Paginador total={resultado.total} pagina={resultado.pagina} porPagina={resultado.porPagina} onCambio={(pagina) => cargar(pagina)} />
   </>;
 }

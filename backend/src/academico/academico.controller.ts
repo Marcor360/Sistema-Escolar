@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AcademicoService } from './academico.service';
-import { AsignarMateriaDto, CicloDto, GrupoDto, InscribirAlumnoDto, MateriaDto } from './academico.dto';
+import { AsignarMateriaDto, CicloDto, GrupoDto, InscribirAlumnoDto, ListarGruposDto, MateriaDto } from './academico.dto';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { RolesGuard } from '../common/roles.guard';
 import { Roles } from '../common/roles.decorator';
@@ -47,8 +47,8 @@ export class AcademicoController {
 
   // ---- Grupos ----
   @Get('grupos') @Roles('ADMINISTRATIVO', 'MAESTRO', 'FINANZAS')
-  listarGrupos(@CurrentUser() user: JwtUser, @Query('cicloId') cicloId?: string, @Query('plantelId') plantelId?: string) {
-    return this.service.listarGrupos(user, cicloId ? Number(cicloId) : undefined, plantelId ? Number(plantelId) : undefined);
+  listarGrupos(@CurrentUser() user: JwtUser, @Query() query: ListarGruposDto) {
+    return this.service.listarGrupos(user, query);
   }
   @Post('grupos') @Roles('ADMINISTRATIVO') crearGrupo(@Body() dto: GrupoDto, @CurrentUser() user: JwtUser) {
     return this.service.crearGrupo(dto, user);

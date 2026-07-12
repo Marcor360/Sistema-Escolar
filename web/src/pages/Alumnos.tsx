@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { Encabezado } from '../components/Encabezado';
+import { Paginador } from '../components/Paginador';
 
 interface Alumno {
   id: number;
@@ -10,6 +11,7 @@ interface Alumno {
   plantel: { id: number; nombre: string } | null;
 }
 interface Plantel { id: number; nombre: string }
+interface Resultado { datos: Alumno[]; total: number; pagina: number; porPagina: number }
 
 const FORM_INICIAL = {
   matricula: '', nombre: '', apellidoPaterno: '', apellidoMaterno: '',
@@ -17,7 +19,7 @@ const FORM_INICIAL = {
 };
 
 export default function AlumnosPage() {
-  const [alumnos, setAlumnos] = useState<Alumno[]>([]);
+  const [resultado, setResultado] = useState<Resultado>({ datos: [], total: 0, pagina: 1, porPagina: 20 });
   const [planteles, setPlanteles] = useState<Plantel[]>([]);
   const [plantelId, setPlantelId] = useState('');
   const [cargando, setCargando] = useState(true);
@@ -26,19 +28,19 @@ export default function AlumnosPage() {
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
 
-  const cargar = (termino = buscar) => {
+  const cargar = (pagina = 1, termino = buscar) => {
     setCargando(true);
-    api.get<Alumno[]>('/alumnos', {
-      params: { ...(termino ? { buscar: termino } : {}), ...(plantelId ? { plantelId } : {}) },
+    api.get<Resultado>('/alumnos', {
+      params: { pagina, ...(termino ? { buscar: termino } : {}), ...(plantelId ? { plantelId } : {}) },
     })
-      .then((r) => setAlumnos(r.data))
+      .then((r) => setResultado(r.data))
       .catch((err) => setError(mensajeDeError(err)))
       .finally(() => setCargando(false));
   };
 
   useEffect(() => {
     api.get<Plantel[]>('/planteles/mios').then((r) => setPlanteles(r.data));
-    cargar('');
+    cargar(1, '');
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const crear = async (e: FormEvent) => {
@@ -136,7 +138,7 @@ export default function AlumnosPage() {
           <tr><th>Matrícula</th><th>Nombre</th><th>Plantel</th><th>Correo</th><th>Estatus</th><th className="derecha">Acciones</th></tr>
         </thead>
         <tbody>
-          {alumnos.map((a) => (
+          {resultado.datos.map((a) => (
             <tr key={a.id}>
               <td>{a.matricula}</td>
               <td>{a.usuario.nombre} {a.usuario.apellidoPaterno} {a.usuario.apellidoMaterno ?? ''}</td>
@@ -151,12 +153,13 @@ export default function AlumnosPage() {
               </td>
             </tr>
           ))}
-          {!cargando && alumnos.length === 0 && (
+          {!cargando && resultado.datos.length === 0 && (
             <tr><td className="vacio" colSpan={6}>Sin alumnos registrados. Usa el formulario para dar de alta al primero.</td></tr>
           )}
           {cargando && <tr><td className="vacio" colSpan={6}>Cargando…</td></tr>}
         </tbody>
       </table>
+      <Paginador total={resultado.total} pagina={resultado.pagina} porPagina={resultado.porPagina} onCambio={(pagina) => cargar(pagina)} />
     </>
   );
 }

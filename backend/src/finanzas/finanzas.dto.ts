@@ -1,5 +1,16 @@
 import { IsIn, IsInt, IsNumber, IsOptional, IsString, Matches, Max, Min } from 'class-validator';
 import { Type } from 'class-transformer';
+import { PaginacionDto } from '../common/paginacion.dto';
+
+export class ListarCargosDto extends PaginacionDto {
+  @IsOptional() @Type(() => Number) @IsInt() alumnoId?: number;
+  @IsOptional() @IsString() estatus?: string;
+  @IsOptional() @Matches(/^\d{4}-\d{2}$/) periodo?: string;
+}
+
+export class ListarPagosDto extends PaginacionDto {
+  @IsOptional() @Type(() => Number) @IsInt() alumnoId?: number;
+}
 
 export class ConceptoDto {
   @IsString() clave: string;

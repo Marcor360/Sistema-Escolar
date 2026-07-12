@@ -1,5 +1,11 @@
 import { Type } from 'class-transformer';
 import { IsEmail, IsIn, IsInt, IsOptional, IsString, MinLength } from 'class-validator';
+import { PaginacionDto } from '../common/paginacion.dto';
+
+export class ListarAlumnosDto extends PaginacionDto {
+  @IsOptional() @IsString() buscar?: string;
+  @IsOptional() @Type(() => Number) @IsInt() plantelId?: number;
+}
 
 export class CrearAlumnoDto {
   // Cuenta

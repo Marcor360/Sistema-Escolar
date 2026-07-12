@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Docente } from '../entities/docente.entity';
 import { UsuariosService } from '../usuarios/usuarios.service';
-import { ActualizarDocenteDto, CrearDocenteDto } from './docentes.dto';
+import { ActualizarDocenteDto, CrearDocenteDto, ListarDocentesDto } from './docentes.dto';
 import { UsuarioPlantel } from '../entities/usuario-plantel.entity';
 import { ScopeService } from '../planteles/scope.service';
 import { JwtUser } from '../common/current-user.decorator';
@@ -18,21 +18,28 @@ export class DocentesService {
     private readonly scope: ScopeService,
   ) {}
 
-  async listar(user: JwtUser, plantelId?: number) {
-    const planteles = await this.scope.resolverFiltro(user, plantelId);
+  async listar(user: JwtUser, query: ListarDocentesDto) {
+    const pagina = query.pagina || 1;
+    const porPagina = query.porPagina || 20;
+    const planteles = await this.scope.resolverFiltro(user, query.plantelId);
     const qb = this.docentes.createQueryBuilder('d').innerJoinAndSelect('d.usuario', 'u');
     if (planteles !== null) qb.andWhere(
       'EXISTS (SELECT 1 FROM usuario_planteles up WHERE up.usuario_id = u.id AND up.activo = :activa AND up.plantel_id IN (:...planteles))',
       { activa: true, planteles },
     );
-    const docentes = await qb.orderBy('d.id', 'DESC').getMany();
+    const [docentes, total] = await qb
+      .orderBy('d.id', 'DESC')
+      .skip((pagina - 1) * porPagina)
+      .take(porPagina)
+      .getManyAndCount();
     const asignaciones = docentes.length ? await this.asignaciones.find({
       where: { usuarioId: In(docentes.map((d) => d.usuarioId)), activo: true },
     }) : [];
-    return docentes.map((d) => ({
+    const datos = docentes.map((d) => ({
       ...d,
       planteles: asignaciones.filter((a) => a.usuarioId === d.usuarioId).map((a) => a.plantel.nombre),
     }));
+    return { datos, total, pagina, porPagina };
   }
 
   async obtener(id: number) {

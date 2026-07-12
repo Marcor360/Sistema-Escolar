@@ -10,7 +10,7 @@ import { Alumno } from '../entities/alumno.entity';
 import { DocentesService } from '../docentes/docentes.service';
 import { JwtUser } from '../common/current-user.decorator';
 import { ScopeService } from '../planteles/scope.service';
-import { AsignarMateriaDto, CicloDto, GrupoDto, MateriaDto } from './academico.dto';
+import { AsignarMateriaDto, CicloDto, GrupoDto, ListarGruposDto, MateriaDto } from './academico.dto';
 
 @Injectable()
 export class AcademicoService {
@@ -52,12 +52,20 @@ export class AcademicoService {
   }
 
   // ---- Grupos ----
-  async listarGrupos(user: JwtUser, cicloId?: number, plantelId?: number) {
-    const planteles = await this.scope.resolverFiltro(user, plantelId);
-    return this.grupos.find({
-      where: { ...(cicloId ? { cicloId } : {}), ...(planteles === null ? {} : { plantelId: In(planteles) }) },
-      order: { nombre: 'ASC' },
+  async listarGrupos(user: JwtUser, query: ListarGruposDto) {
+    const pagina = query.pagina || 1;
+    const porPagina = query.porPagina || 20;
+    const planteles = await this.scope.resolverFiltro(user, query.plantelId);
+    const [datos, total] = await this.grupos.findAndCount({
+      where: {
+        ...(query.cicloId ? { cicloId: query.cicloId } : {}),
+        ...(planteles === null ? {} : { plantelId: In(planteles) }),
+      },
+      order: { id: 'DESC' },
+      skip: (pagina - 1) * porPagina,
+      take: porPagina,
     });
+    return { datos, total, pagina, porPagina };
   }
   async crearGrupo(dto: GrupoDto, user: JwtUser) {
     await this.scope.validarGestion(user, dto.plantelId);

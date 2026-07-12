@@ -8,7 +8,7 @@ import { CargosService } from './cargos.service';
 import { BitacoraFinancieraService } from './bitacora-financiera.service';
 import { JwtUser } from '../common/current-user.decorator';
 import { ScopeService } from '../planteles/scope.service';
-import { RegistrarPagoDto } from './finanzas.dto';
+import { ListarPagosDto, RegistrarPagoDto } from './finanzas.dto';
 
 /** Única responsabilidad: registrar pagos (ventanilla y pasarela) y consultarlos. */
 @Injectable()
@@ -21,12 +21,19 @@ export class PagosService {
     private readonly scope: ScopeService,
   ) {}
 
-  async listar(user: JwtUser, alumnoId?: number) {
+  async listar(query: ListarPagosDto, user: JwtUser) {
+    const pagina = query.pagina || 1;
+    const porPagina = query.porPagina || 20;
     const planteles = await this.scope.resolverFiltro(user);
     const qb = this.pagos.createQueryBuilder('p').innerJoinAndSelect('p.alumno', 'a');
     if (planteles !== null) qb.andWhere('a.plantel_id IN (:...planteles)', { planteles });
-    if (alumnoId) qb.andWhere('p.alumno_id = :alumnoId', { alumnoId });
-    return qb.orderBy('p.fecha_pago', 'DESC').take(500).getMany();
+    if (query.alumnoId) qb.andWhere('p.alumno_id = :alumnoId', { alumnoId: query.alumnoId });
+    const [datos, total] = await qb
+      .orderBy('p.id', 'DESC')
+      .skip((pagina - 1) * porPagina)
+      .take(porPagina)
+      .getManyAndCount();
+    return { datos, total, pagina, porPagina };
   }
 
   /** Pago manual de ventanilla (efectivo/transferencia/tarjeta). */

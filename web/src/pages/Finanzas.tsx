@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { pesos, selloDeCargo } from '../utils/formato';
 import { Encabezado } from '../components/Encabezado';
+import { Paginador } from '../components/Paginador';
 
 interface Alumno { id: number; matricula: string; usuario: { nombre: string; apellidoPaterno: string } }
 interface Concepto { id: number; clave: string; nombre: string; tipo: string; montoBase: number }
@@ -16,6 +17,8 @@ interface Pago {
   id: number; monto: number; metodo: string; referencia: string | null;
   fechaPago: string; estatus: string; alumno: Alumno;
 }
+interface ResultadoCargos { datos: Cargo[]; total: number; pagina: number; porPagina: number }
+interface ResultadoPagos { datos: Pago[]; total: number; pagina: number; porPagina: number }
 
 
 export default function FinanzasPage() {
@@ -23,8 +26,8 @@ export default function FinanzasPage() {
   const [alumnos, setAlumnos] = useState<Alumno[]>([]);
   const [conceptos, setConceptos] = useState<Concepto[]>([]);
   const [ciclos, setCiclos] = useState<Ciclo[]>([]);
-  const [cargos, setCargos] = useState<Cargo[]>([]);
-  const [pagos, setPagos] = useState<Pago[]>([]);
+  const [resultadoCargos, setResultadoCargos] = useState<ResultadoCargos>({ datos: [], total: 0, pagina: 1, porPagina: 20 });
+  const [resultadoPagos, setResultadoPagos] = useState<ResultadoPagos>({ datos: [], total: 0, pagina: 1, porPagina: 20 });
   const [adeudos, setAdeudos] = useState<Adeudo[]>([]);
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
@@ -32,18 +35,28 @@ export default function FinanzasPage() {
   const [formCargo, setFormCargo] = useState({ alumnoId: '', conceptoId: '', descripcion: '', monto: '', fechaVencimiento: '' });
   const [formColegiaturas, setFormColegiaturas] = useState({ cicloId: '', periodo: '' });
   const [formPago, setFormPago] = useState({ alumnoId: '', cargoId: '', monto: '', metodo: 'EFECTIVO', referencia: '' });
+  const [cargosAlumno, setCargosAlumno] = useState<Cargo[]>([]);
 
   const cargarCatalogos = () => {
-    api.get<Alumno[]>('/alumnos').then((r) => setAlumnos(r.data));
+    api.get<{ datos: Alumno[] }>('/alumnos', { params: { porPagina: 100 } }).then((r) => setAlumnos(r.data.datos));
     api.get<Concepto[]>('/finanzas/conceptos').then((r) => setConceptos(r.data));
     api.get<Ciclo[]>('/academico/ciclos').then((r) => setCiclos(r.data));
   };
+  const cargarCargos = (pagina = 1) => api.get<ResultadoCargos>('/finanzas/cargos', { params: { pagina } }).then((r) => setResultadoCargos(r.data));
+  const cargarPagos = (pagina = 1) => api.get<ResultadoPagos>('/finanzas/pagos', { params: { pagina } }).then((r) => setResultadoPagos(r.data));
   const cargarDatos = () => {
-    api.get<Cargo[]>('/finanzas/cargos').then((r) => setCargos(r.data));
-    api.get<Pago[]>('/finanzas/pagos').then((r) => setPagos(r.data));
+    cargarCargos();
+    cargarPagos();
     api.get<Adeudo[]>('/finanzas/adeudos').then((r) => setAdeudos(r.data));
   };
   useEffect(() => { cargarCatalogos(); cargarDatos(); }, []);
+
+  /** Cargos con saldo del alumno elegido, para el selector de "pago a cargo" (independiente de la página visible). */
+  useEffect(() => {
+    if (!formPago.alumnoId) { setCargosAlumno([]); return; }
+    api.get<ResultadoCargos>('/finanzas/cargos', { params: { alumnoId: formPago.alumnoId, porPagina: 100 } })
+      .then((r) => setCargosAlumno(r.data.datos));
+  }, [formPago.alumnoId]);
 
   const limpiarAvisos = () => { setError(''); setMensaje(''); };
 
@@ -196,7 +209,7 @@ export default function FinanzasPage() {
           <table className="tabla">
             <thead><tr><th>Alumno</th><th>Descripción</th><th>Periodo</th><th>Vence</th><th className="derecha">Monto</th><th className="derecha">Recargo</th><th>Estatus</th></tr></thead>
             <tbody>
-              {cargos.map((c) => (
+              {resultadoCargos.datos.map((c) => (
                 <tr key={c.id}>
                   <td>{c.alumno.matricula}</td>
                   <td>{c.descripcion}</td>
@@ -207,9 +220,10 @@ export default function FinanzasPage() {
                   <td><span className={`sello ${selloDeCargo(c.estatus)}`}>{c.estatus}</span></td>
                 </tr>
               ))}
-              {cargos.length === 0 && <tr><td className="vacio" colSpan={7}>Sin cargos registrados.</td></tr>}
+              {resultadoCargos.datos.length === 0 && <tr><td className="vacio" colSpan={7}>Sin cargos registrados.</td></tr>}
             </tbody>
           </table>
+          <Paginador total={resultadoCargos.total} pagina={resultadoCargos.pagina} porPagina={resultadoCargos.porPagina} onCambio={cargarCargos} />
         </>
       )}
 
@@ -227,8 +241,8 @@ export default function FinanzasPage() {
               <div className="campo"><label>Cargo (opcional)</label>
                 <select value={formPago.cargoId} onChange={(e) => setFormPago({ ...formPago, cargoId: e.target.value })}>
                   <option value="">Pago a cuenta</option>
-                  {cargos
-                    .filter((c) => String(c.alumno.id) === formPago.alumnoId && c.estatus !== 'PAGADO' && c.estatus !== 'CANCELADO')
+                  {cargosAlumno
+                    .filter((c) => c.estatus !== 'PAGADO' && c.estatus !== 'CANCELADO')
                     .map((c) => <option key={c.id} value={c.id}>{c.descripcion} ({c.estatus})</option>)}
                 </select>
               </div>
@@ -250,7 +264,7 @@ export default function FinanzasPage() {
           <table className="tabla">
             <thead><tr><th>Fecha</th><th>Alumno</th><th className="derecha">Monto</th><th>Método</th><th>Referencia</th><th>Estatus</th></tr></thead>
             <tbody>
-              {pagos.map((p) => (
+              {resultadoPagos.datos.map((p) => (
                 <tr key={p.id}>
                   <td>{new Date(p.fechaPago).toLocaleString('es-MX')}</td>
                   <td>{p.alumno.matricula} — {p.alumno.usuario.nombre} {p.alumno.usuario.apellidoPaterno}</td>
@@ -260,9 +274,10 @@ export default function FinanzasPage() {
                   <td><span className={`sello ${p.estatus === 'CONFIRMADO' ? 'ok' : 'aviso'}`}>{p.estatus}</span></td>
                 </tr>
               ))}
-              {pagos.length === 0 && <tr><td className="vacio" colSpan={6}>Sin pagos registrados.</td></tr>}
+              {resultadoPagos.datos.length === 0 && <tr><td className="vacio" colSpan={6}>Sin pagos registrados.</td></tr>}
             </tbody>
           </table>
+          <Paginador total={resultadoPagos.total} pagina={resultadoPagos.pagina} porPagina={resultadoPagos.porPagina} onCambio={cargarPagos} />
         </>
       )}
 

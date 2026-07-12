@@ -10,7 +10,7 @@ import { BitacoraFinancieraService } from './bitacora-financiera.service';
 import { OpenpayWebhookGuard } from './openpay-webhook.guard';
 import {
   AplicarRecargosDto, ConceptoDto, CrearCargoDto, CrearOrdenDto,
-  GenerarColegiaturasDto, RegistrarPagoDto,
+  GenerarColegiaturasDto, ListarCargosDto, ListarPagosDto, RegistrarPagoDto,
 } from './finanzas.dto';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { RolesGuard } from '../common/roles.guard';
@@ -75,17 +75,8 @@ export class FinanzasController {
   // ---------- Cuentas por cobrar ----------
   @Get('cargos')
   @ApiBearerAuth() @UseGuards(JwtAuthGuard, RolesGuard) @Roles('FINANZAS', 'ADMINISTRATIVO')
-  listarCargos(
-    @CurrentUser() user: JwtUser,
-    @Query('alumnoId') alumnoId?: string,
-    @Query('estatus') estatus?: string,
-    @Query('periodo') periodo?: string,
-  ) {
-    return this.cargos.listar({
-      alumnoId: alumnoId ? Number(alumnoId) : undefined,
-      estatus,
-      periodo,
-    }, user);
+  listarCargos(@CurrentUser() user: JwtUser, @Query() query: ListarCargosDto) {
+    return this.cargos.listar(query, user);
   }
 
   @Post('cargos')
@@ -121,8 +112,8 @@ export class FinanzasController {
   // ---------- Pagos ----------
   @Get('pagos')
   @ApiBearerAuth() @UseGuards(JwtAuthGuard, RolesGuard) @Roles('FINANZAS', 'ADMINISTRATIVO')
-  listarPagos(@CurrentUser() user: JwtUser, @Query('alumnoId') alumnoId?: string) {
-    return this.pagos.listar(user, alumnoId ? Number(alumnoId) : undefined);
+  listarPagos(@CurrentUser() user: JwtUser, @Query() query: ListarPagosDto) {
+    return this.pagos.listar(query, user);
   }
 
   @Post('pagos')

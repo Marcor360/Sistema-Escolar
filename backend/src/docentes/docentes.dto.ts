@@ -1,5 +1,10 @@
 import { ArrayNotEmpty, IsArray, IsEmail, IsIn, IsInt, IsOptional, IsString, MinLength } from 'class-validator';
 import { Type } from 'class-transformer';
+import { PaginacionDto } from '../common/paginacion.dto';
+
+export class ListarDocentesDto extends PaginacionDto {
+  @IsOptional() @Type(() => Number) @IsInt() plantelId?: number;
+}
 
 export class CrearDocenteDto {
   @IsArray() @ArrayNotEmpty() @Type(() => Number) @IsInt({ each: true }) plantelIds: number[];

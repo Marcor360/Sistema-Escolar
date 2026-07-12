@@ -1,10 +1,12 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { Encabezado } from '../components/Encabezado';
+import { Paginador } from '../components/Paginador';
 
 interface Ciclo { id: number; clave: string; activo: boolean }
 interface Plantel { id: number; nombre: string }
 interface Grupo { id: number; nombre: string; grado?: string; turno?: string; ciclo: Ciclo; plantel: Plantel | null }
+interface ResultadoGrupos { datos: Grupo[]; total: number; pagina: number; porPagina: number }
 interface Materia { id: number; clave: string; nombre: string }
 interface Docente { id: number; numEmpleado: string; usuario: { nombre: string; apellidoPaterno: string } }
 interface GrupoMateria { id: number; materia: Materia; docente: Docente | null }
@@ -15,7 +17,7 @@ export default function GruposPage() {
   const [ciclos, setCiclos] = useState<Ciclo[]>([]);
   const [planteles, setPlanteles] = useState<Plantel[]>([]);
   const [filtroPlantel, setFiltroPlantel] = useState('');
-  const [grupos, setGrupos] = useState<Grupo[]>([]);
+  const [resultado, setResultado] = useState<ResultadoGrupos>({ datos: [], total: 0, pagina: 1, porPagina: 20 });
   const [materias, setMaterias] = useState<Materia[]>([]);
   const [docentes, setDocentes] = useState<Docente[]>([]);
   const [alumnos, setAlumnos] = useState<Alumno[]>([]);
@@ -28,13 +30,13 @@ export default function GruposPage() {
   const [alumnoId, setAlumnoId] = useState('');
   const [error, setError] = useState('');
 
-  const cargar = (plantelId = filtroPlantel) => {
+  const cargar = (pagina = 1, plantelId = filtroPlantel) => {
     api.get<Ciclo[]>('/academico/ciclos').then((r) => setCiclos(r.data));
-    api.get<Grupo[]>('/academico/grupos', { params: plantelId ? { plantelId } : {} }).then((r) => setGrupos(r.data));
+    api.get<ResultadoGrupos>('/academico/grupos', { params: { pagina, ...(plantelId ? { plantelId } : {}) } }).then((r) => setResultado(r.data));
     api.get<Plantel[]>('/planteles/mios').then((r) => setPlanteles(r.data));
     api.get<Materia[]>('/academico/materias').then((r) => setMaterias(r.data));
-    api.get<Docente[]>('/docentes').then((r) => setDocentes(r.data));
-    api.get<Alumno[]>('/alumnos').then((r) => setAlumnos(r.data));
+    api.get<{ datos: Docente[] }>('/docentes', { params: { porPagina: 100 } }).then((r) => setDocentes(r.data.datos));
+    api.get<{ datos: Alumno[] }>('/alumnos', { params: { porPagina: 100 } }).then((r) => setAlumnos(r.data.datos));
   };
   useEffect(() => { cargar(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -133,13 +135,13 @@ export default function GruposPage() {
             {planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
           </select>
         </div>
-        <button className="boton secundario" onClick={() => cargar()}>Aplicar</button>
+        <button className="boton secundario" onClick={() => cargar(1)}>Aplicar</button>
       </div>
 
       <table className="tabla" style={{ marginBottom: 24 }}>
         <thead><tr><th>Grupo</th><th>Plantel</th><th>Ciclo</th><th>Grado</th><th>Turno</th><th /></tr></thead>
         <tbody>
-          {grupos.map((g) => (
+          {resultado.datos.map((g) => (
             <tr key={g.id}>
               <td>{g.nombre}</td><td>{g.plantel?.nombre ?? <span className="sello neutro">Sin plantel</span>}</td><td>{g.ciclo?.clave}</td><td>{g.grado ?? '—'}</td><td>{g.turno ?? '—'}</td>
               <td className="derecha">
@@ -147,9 +149,10 @@ export default function GruposPage() {
               </td>
             </tr>
           ))}
-          {grupos.length === 0 && <tr><td className="vacio" colSpan={6}>Sin grupos. Crea el primero con el formulario.</td></tr>}
+          {resultado.datos.length === 0 && <tr><td className="vacio" colSpan={6}>Sin grupos. Crea el primero con el formulario.</td></tr>}
         </tbody>
       </table>
+      <Paginador total={resultado.total} pagina={resultado.pagina} porPagina={resultado.porPagina} onCambio={(pagina) => cargar(pagina)} />
 
       {seleccionado && (
         <>

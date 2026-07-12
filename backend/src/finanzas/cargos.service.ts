@@ -10,7 +10,7 @@ import { ScopeService } from '../planteles/scope.service';
 import { ConceptosService } from './conceptos.service';
 import { BitacoraFinancieraService } from './bitacora-financiera.service';
 import { JwtUser } from '../common/current-user.decorator';
-import { AplicarRecargosDto, CrearCargoDto, GenerarColegiaturasDto } from './finanzas.dto';
+import { AplicarRecargosDto, CrearCargoDto, GenerarColegiaturasDto, ListarCargosDto } from './finanzas.dto';
 
 const redondear = (n: number) => Math.round(n * 100) / 100;
 
@@ -55,14 +55,21 @@ export class CargosService {
     return new Map(filas.map((f) => [Number(f.cargoId), redondear(Number(f.pagado))]));
   }
 
-  async listar(filtro: { alumnoId?: number; estatus?: string; periodo?: string }, user: JwtUser) {
+  async listar(query: ListarCargosDto, user: JwtUser) {
+    const pagina = query.pagina || 1;
+    const porPagina = query.porPagina || 20;
     const planteles = await this.scope.resolverFiltro(user);
     const qb = this.cargos.createQueryBuilder('c').innerJoinAndSelect('c.alumno', 'a');
     if (planteles !== null) qb.andWhere('a.plantel_id IN (:...planteles)', { planteles });
-    if (filtro.alumnoId) qb.andWhere('c.alumno_id = :alumnoId', { alumnoId: filtro.alumnoId });
-    if (filtro.estatus) qb.andWhere('c.estatus = :estatus', { estatus: filtro.estatus });
-    if (filtro.periodo) qb.andWhere('c.periodo = :periodo', { periodo: filtro.periodo });
-    return qb.orderBy('c.fecha_vencimiento', 'ASC').take(500).getMany();
+    if (query.alumnoId) qb.andWhere('c.alumno_id = :alumnoId', { alumnoId: query.alumnoId });
+    if (query.estatus) qb.andWhere('c.estatus = :estatus', { estatus: query.estatus });
+    if (query.periodo) qb.andWhere('c.periodo = :periodo', { periodo: query.periodo });
+    const [datos, total] = await qb
+      .orderBy('c.id', 'DESC')
+      .skip((pagina - 1) * porPagina)
+      .take(porPagina)
+      .getManyAndCount();
+    return { datos, total, pagina, porPagina };
   }
 
   async obtener(id: number) {

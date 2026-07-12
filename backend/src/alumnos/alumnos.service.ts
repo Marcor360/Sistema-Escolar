@@ -7,7 +7,7 @@ import { GrupoMateria } from '../entities/grupo-materia.entity';
 import { UsuariosService } from '../usuarios/usuarios.service';
 import { JwtUser } from '../common/current-user.decorator';
 import { ScopeService } from '../planteles/scope.service';
-import { ActualizarAlumnoDto, CrearAlumnoDto } from './alumnos.dto';
+import { ActualizarAlumnoDto, CrearAlumnoDto, ListarAlumnosDto } from './alumnos.dto';
 
 @Injectable()
 export class AlumnosService {
@@ -19,17 +19,19 @@ export class AlumnosService {
     private readonly scope: ScopeService,
   ) {}
 
-  async listar(buscar?: string, user?: JwtUser, plantelId?: number) {
-    const planteles = user ? await this.scope.resolverFiltro(user, plantelId) : null;
+  async listar(query: ListarAlumnosDto, user?: JwtUser) {
+    const pagina = query.pagina || 1;
+    const porPagina = query.porPagina || 20;
+    const planteles = user ? await this.scope.resolverFiltro(user, query.plantelId) : null;
     const base = planteles === null ? {} : { plantelId: this.scope.condicion(planteles) };
-    if (buscar) {
-      return this.alumnos.find({
-        where: [{ ...base, matricula: Like(`%${buscar}%`) }],
-        order: { id: 'DESC' },
-        take: 200,
-      });
-    }
-    return this.alumnos.find({ where: base, order: { id: 'DESC' }, take: 200 });
+    const where = query.buscar ? { ...base, matricula: Like(`%${query.buscar}%`) } : base;
+    const [datos, total] = await this.alumnos.findAndCount({
+      where,
+      order: { id: 'DESC' },
+      skip: (pagina - 1) * porPagina,
+      take: porPagina,
+    });
+    return { datos, total, pagina, porPagina };
   }
 
   async obtener(id: number, user?: JwtUser) {

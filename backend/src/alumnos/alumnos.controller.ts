@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AlumnosService } from './alumnos.service';
-import { ActualizarAlumnoDto, CrearAlumnoDto } from './alumnos.dto';
+import { ActualizarAlumnoDto, CrearAlumnoDto, ListarAlumnosDto } from './alumnos.dto';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { RolesGuard } from '../common/roles.guard';
 import { Roles } from '../common/roles.decorator';
@@ -30,8 +30,8 @@ export class AlumnosController {
   // --- Control escolar ---
   @Get()
   @Roles('ADMINISTRATIVO', 'FINANZAS', 'MAESTRO')
-  listar(@CurrentUser() user: JwtUser, @Query('buscar') buscar?: string, @Query('plantelId') plantelId?: string) {
-    return this.service.listar(buscar, user, plantelId ? Number(plantelId) : undefined);
+  listar(@CurrentUser() user: JwtUser, @Query() query: ListarAlumnosDto) {
+    return this.service.listar(query, user);
   }
 
   @Get(':id')
