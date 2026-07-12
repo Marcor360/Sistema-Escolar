@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
@@ -14,20 +14,9 @@ import TareasScreen from './src/screens/Tareas';
 import CalificacionesScreen from './src/screens/Calificaciones';
 import EstadoCuentaScreen from './src/screens/EstadoCuenta';
 import PerfilScreen from './src/screens/Perfil';
+import { aplicarColores, MARCA_CACHE_KEY, MARCA_POR_DEFECTO, Marca, MarcaContext } from './src/marca';
 
 const Tab = createBottomTabNavigator();
-
-const tema = {
-  ...DefaultTheme,
-  colors: {
-    ...DefaultTheme.colors,
-    primary: colores.pizarra,
-    background: colores.papel,
-    card: colores.pizarra,
-    text: colores.tinta,
-    border: colores.linea,
-  },
-};
 
 const iconos: Record<string, string> = {
   Inicio: '🏠', Materias: '📚', Tareas: '📝', Calificaciones: '🎓', Pagos: '💳', Perfil: '👤',
@@ -36,6 +25,20 @@ const iconos: Record<string, string> = {
 export default function App() {
   const [sesion, setSesion] = useState<Sesion | null>(null);
   const [listo, setListo] = useState(false);
+  const [marca, setMarca] = useState<Marca>(MARCA_POR_DEFECTO);
+  const [marcaLista, setMarcaLista] = useState(false);
+
+  const tema = useMemo(() => ({
+    ...DefaultTheme,
+    colors: {
+      ...DefaultTheme.colors,
+      primary: marca.colorPrimario,
+      background: colores.papel,
+      card: marca.colorPrimario,
+      text: colores.tinta,
+      border: colores.linea,
+    },
+  }), [marca]);
 
   useEffect(() => {
     (async () => {
@@ -57,6 +60,33 @@ export default function App() {
     })();
   }, []);
 
+  useEffect(() => {
+    let activa = true;
+    (async () => {
+      const cache = await SecureStore.getItemAsync(MARCA_CACHE_KEY);
+      if (cache) {
+        try {
+          const guardada = JSON.parse(cache) as Marca;
+          aplicarColores(guardada);
+          if (activa) { setMarca(guardada); setMarcaLista(true); }
+        } catch {
+          await SecureStore.deleteItemAsync(MARCA_CACHE_KEY);
+        }
+      }
+      try {
+        const { data } = await api.get<Marca>('/configuracion/marca');
+        aplicarColores(data);
+        await SecureStore.setItemAsync(MARCA_CACHE_KEY, JSON.stringify(data));
+        if (activa) setMarca(data);
+      } catch {
+        if (!cache) aplicarColores(MARCA_POR_DEFECTO);
+      } finally {
+        if (activa) setMarcaLista(true);
+      }
+    })();
+    return () => { activa = false; };
+  }, []);
+
   const iniciar = async (email: string, password: string) => {
     const { data } = await api.post('/auth/login', { email, password });
     await SecureStore.setItemAsync(TOKEN_KEY, data.accessToken);
@@ -68,11 +98,12 @@ export default function App() {
     setSesion(null);
   };
 
-  if (!listo) return null;
+  if (!listo || !marcaLista) return null;
 
   return (
-    <SesionContext.Provider value={{ sesion, iniciar, cerrar }}>
-      <NavigationContainer theme={tema}>
+    <MarcaContext.Provider value={{ marca }}>
+      <SesionContext.Provider value={{ sesion, iniciar, cerrar }}>
+        <NavigationContainer theme={tema}>
         <StatusBar style="light" />
         {sesion ? (
           <Tab.Navigator
@@ -95,7 +126,8 @@ export default function App() {
         ) : (
           <LoginScreen />
         )}
-      </NavigationContainer>
-    </SesionContext.Provider>
+        </NavigationContainer>
+      </SesionContext.Provider>
+    </MarcaContext.Provider>
   );
 }

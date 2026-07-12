@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import {
-  KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View,
+  Image, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { useSesion } from '../sesion';
-import { mensajeDeError } from '../api/client';
+import { archivosBase, mensajeDeError } from '../api/client';
 import { colores } from '../theme';
+import { useMarca } from '../marca';
 
 export default function LoginScreen() {
   const { iniciar } = useSesion();
+  const { marca } = useMarca();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -26,10 +28,12 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={estilos.fondo} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <View style={estilos.caja}>
-        <View style={estilos.monograma}><Text style={estilos.monogramaTexto}>SE</Text></View>
-        <Text style={estilos.titulo}>Sistema Escolar</Text>
+    <KeyboardAvoidingView style={[estilos.fondo, { backgroundColor: marca.colorPrimario }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={[estilos.caja, { borderTopColor: marca.colorAcento }]}>
+        {marca.logoUrl
+          ? <Image source={{ uri: archivosBase + marca.logoUrl }} style={estilos.logo} resizeMode="contain" />
+          : <View style={[estilos.monograma, { borderColor: marca.colorPrimario }]}><Text style={[estilos.monogramaTexto, { color: marca.colorPrimario }]}>{marca.nombreCorto}</Text></View>}
+        <Text style={estilos.titulo}>{marca.nombreInstitucion}</Text>
         <Text style={estilos.etiqueta}>Correo institucional</Text>
         <TextInput
           style={estilos.input} autoCapitalize="none" keyboardType="email-address"
@@ -38,7 +42,7 @@ export default function LoginScreen() {
         <Text style={estilos.etiqueta}>Contraseña</Text>
         <TextInput style={estilos.input} secureTextEntry value={password} onChangeText={setPassword} />
         {error !== '' && <Text style={estilos.error}>{error}</Text>}
-        <TouchableOpacity style={estilos.boton} onPress={entrar} disabled={enviando}>
+        <TouchableOpacity style={[estilos.boton, { backgroundColor: marca.colorPrimario }]} onPress={entrar} disabled={enviando}>
           <Text style={estilos.botonTexto}>{enviando ? 'Verificando…' : 'Entrar'}</Text>
         </TouchableOpacity>
       </View>
@@ -54,6 +58,7 @@ const estilos = StyleSheet.create({
     alignSelf: 'center', alignItems: 'center', justifyContent: 'center', marginBottom: 10,
   },
   monogramaTexto: { fontSize: 18, color: colores.pizarra, fontWeight: '600' },
+  logo: { width: 160, height: 72, alignSelf: 'center', marginBottom: 10 },
   titulo: { fontSize: 20, textAlign: 'center', marginBottom: 20, color: colores.tinta },
   etiqueta: { fontSize: 11, letterSpacing: 0.6, textTransform: 'uppercase', color: colores.gris, marginBottom: 4 },
   input: {
