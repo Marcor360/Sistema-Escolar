@@ -5,6 +5,9 @@ export const api = axios.create({
   headers: { 'x-portal': 'WEB' },
 });
 
+/** Base sin /api, para recursos públicos como el logo institucional. */
+export const archivosBase = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api').replace(/\/api$/, '');
+
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
@@ -30,10 +33,8 @@ export function mensajeDeError(error: unknown): string {
   return data?.message || 'Ocurrió un error inesperado';
 }
 
-const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api').replace(/\/api$/, '');
-
 /** Pide un enlace firmado de corta vida y lo abre en una pestaña nueva (sin exponer /uploads). */
 export async function abrirArchivo(tipo: 'materiales' | 'entregas', id: number): Promise<void> {
   const { data } = await api.get<{ url: string }>(`/archivos/${tipo}/${id}/enlace`);
-  window.open(API_BASE + data.url, '_blank');
+  window.open(archivosBase + data.url, '_blank');
 }

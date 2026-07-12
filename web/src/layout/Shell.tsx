@@ -3,6 +3,8 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { Cargando } from '../components/Cargando';
 import { Campana } from '../components/Campana';
+import { archivosBase } from '../api/client';
+import { useMarca } from '../marca/MarcaContext';
 
 const secciones = [
   { destino: '/', etiqueta: 'Panel', roles: ['ADMINISTRATIVO', 'FINANZAS', 'MAESTRO'] },
@@ -17,17 +19,21 @@ const secciones = [
   { destino: '/avisos', etiqueta: 'Avisos', roles: ['ADMINISTRATIVO'] },
   { destino: '/finanzas', etiqueta: 'Finanzas', roles: ['FINANZAS'] },
   { destino: '/usuarios', etiqueta: 'Usuarios', roles: ['ADMINISTRATIVO', 'FINANZAS', 'MAESTRO'] },
+  { destino: '/configuracion', etiqueta: 'Configuración', roles: ['SUPERADMIN'] },
 ];
 
 export function Shell() {
   const { sesion, logout, tieneRol } = useAuth();
   const navigate = useNavigate();
+  const { marca } = useMarca();
 
   return (
     <div className="shell">
       <aside className="lateral">
-        <div className="monograma" aria-hidden>SE</div>
-        <p className="lateral-titulo">Sistema Escolar</p>
+        {marca.logoUrl
+          ? <img className="logo-marca" src={archivosBase + marca.logoUrl} alt={marca.nombreInstitucion} />
+          : <div className="monograma" aria-hidden>{marca.nombreCorto}</div>}
+        <p className="lateral-titulo">{marca.nombreInstitucion}</p>
         <nav>
           {secciones
             .filter((s) => tieneRol(...s.roles))

@@ -20,6 +20,7 @@ const CalendarioPage = lazy(() => import('./pages/Calendario'));
 const AvisosPage = lazy(() => import('./pages/Avisos'));
 const CuentaPage = lazy(() => import('./pages/Cuenta'));
 const PlantelesPage = lazy(() => import('./pages/Planteles'));
+const ConfiguracionPage = lazy(() => import('./pages/Configuracion'));
 
 export default function App() {
   const { sesion, cargando } = useAuth();
@@ -33,6 +34,10 @@ export default function App() {
         <Route element={<Shell />}>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/cuenta" element={<CuentaPage />} />
+
+          <Route element={<RutaProtegida roles={['SUPERADMIN']} />}>
+            <Route path="/configuracion" element={<ConfiguracionPage />} />
+          </Route>
 
           <Route element={<RutaProtegida roles={['ADMINISTRATIVO', 'FINANZAS']} />}>
             <Route path="/alumnos" element={<AlumnosPage />} />

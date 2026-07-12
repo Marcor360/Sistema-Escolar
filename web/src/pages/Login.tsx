@@ -1,12 +1,14 @@
 import { FormEvent, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
-import { api, mensajeDeError } from '../api/client';
+import { api, archivosBase, mensajeDeError } from '../api/client';
+import { useMarca } from '../marca/MarcaContext';
 
 type Modo = 'entrar' | 'solicitar' | 'restablecer';
 
 export default function LoginPage() {
   const { login } = useAuth();
+  const { marca } = useMarca();
   const navigate = useNavigate();
   const [modo, setModo] = useState<Modo>('entrar');
   const [email, setEmail] = useState('');
@@ -67,8 +69,10 @@ export default function LoginPage() {
   return (
     <div className="login-fondo">
       <div className="login-caja">
-        <div className="monograma" aria-hidden>SE</div>
-        <h1>Sistema Escolar</h1>
+        {marca.logoUrl
+          ? <img className="logo-marca" src={archivosBase + marca.logoUrl} alt={marca.nombreInstitucion} />
+          : <div className="monograma" aria-hidden>{marca.nombreCorto}</div>}
+        <h1>{marca.nombreInstitucion}</h1>
 
         {modo === 'entrar' && (
           <form onSubmit={entrar}>
