@@ -334,4 +334,17 @@ CREATE TABLE bitacora_actividad (
   ip NVARCHAR(45) NULL,
   created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME()
 );
+
+-- ---------- Configuración institucional ----------
+CREATE TABLE configuracion_marca (
+  id INT NOT NULL PRIMARY KEY,
+  nombre_institucion NVARCHAR(150) NOT NULL CONSTRAINT df_marca_nombre DEFAULT 'Sistema Escolar',
+  nombre_corto NVARCHAR(10) NOT NULL CONSTRAINT df_marca_corto DEFAULT 'SE',
+  logo_url NVARCHAR(255) NULL,
+  color_primario CHAR(7) NOT NULL CONSTRAINT df_marca_primario DEFAULT '#14343B',
+  color_acento CHAR(7) NOT NULL CONSTRAINT df_marca_acento DEFAULT '#C79A3C',
+  actualizado_en DATETIME2 NOT NULL CONSTRAINT df_marca_actualizado DEFAULT SYSUTCDATETIME()
+);
+
+INSERT INTO configuracion_marca (id) VALUES (1);
 GO

@@ -14,6 +14,7 @@ import { join } from 'path';
 import {
   Rol, Usuario, Alumno, Docente, CicloEscolar, Materia, Grupo, GrupoMateria,
   Inscripcion, ConceptoPago, Cargo, PlantillaCorreo, Plantel, UsuarioPlantel,
+  ConfiguracionMarca,
 } from '../entities';
 
 const type = (process.env.DB_TYPE || 'mysql') as 'mysql' | 'mssql';
@@ -34,6 +35,19 @@ const dataSource = new DataSource({
 async function main() {
   await dataSource.initialize();
   console.log(`Conectado a ${type} — sembrando datos…`);
+
+  // ---- Identidad institucional ----
+  const marcaRepo = dataSource.getRepository(ConfiguracionMarca);
+  if (!(await marcaRepo.count({ where: { id: 1 } }))) {
+    await marcaRepo.save(marcaRepo.create({
+      id: 1,
+      nombreInstitucion: 'Sistema Escolar',
+      nombreCorto: 'SE',
+      logoUrl: null,
+      colorPrimario: '#14343B',
+      colorAcento: '#C79A3C',
+    }));
+  }
 
   // ---- Roles ----
   const rolesRepo = dataSource.getRepository(Rol);

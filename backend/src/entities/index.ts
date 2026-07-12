@@ -23,3 +23,4 @@ export * from './pago.entity';
 export * from './plantilla-correo.entity';
 export * from './bitacora-financiera.entity';
 export * from './bitacora-actividad.entity';
+export * from './configuracion-marca.entity';
