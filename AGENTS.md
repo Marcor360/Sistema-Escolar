@@ -8,3 +8,5 @@
 - Verificación: `cd backend && npm run lint && npm run typecheck && npm test`; `cd web && npm run lint && npm run build`; `cd mobile && npx tsc --noEmit`.
 
 La zona horaria está documentada en `docs/ARQUITECTURA.md`; la sesión móvil admite `JWT_EXPIRES_MOVIL` con el riesgo documentado en `.env.example`.
+
+La identidad visual se configura en `configuracion_marca` y los clientes la consumen de `GET /api/configuracion/marca`.
