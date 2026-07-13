@@ -28,4 +28,6 @@ export class Alumno {
   @CreateDateColumn() createdAt: Date;
   @UpdateDateColumn() updatedAt: Date;
   @DeleteDateColumn() deletedAt: Date | null;
+  /** Vínculo con la base certweb para la migración inicial (ETL); no se expone en la API pública. */
+  @Column({ type: 'bigint', nullable: true }) legacyId: string | null;
 }

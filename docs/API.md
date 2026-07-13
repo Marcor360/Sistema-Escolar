@@ -60,8 +60,17 @@ CRUD en `/docentes`. `GET /docentes?plantelId=&pagina=&porPagina=` está paginad
 ## Académico
 - `/academico/ciclos`, `/academico/materias`: catálogos (escritura: ADMINISTRATIVO).
 - `/academico/grupos` (+ `/:id/materias`, `/:id/alumnos`): grupos, asignación de
-  materias/docentes e inscripciones. `GET /academico/grupos?cicloId=&plantelId=&pagina=&porPagina=`
-  está paginado.
+  materias/docentes e inscripciones. `GET /academico/grupos?cicloId=&plantelId=&pagina=&porPagina=&inactivos=`
+  está paginado; excluye grupos dados de baja (`activo=false`) salvo que se pida
+  `inactivos=true`, permitido solo a ADMINISTRATIVO/SUPERADMIN. `mis-grupos` aplica la
+  misma exclusión.
+- `PATCH /academico/grupos/:id` (ADMINISTRATIVO): edita `nombre`, `grado`, `turno`,
+  `cicloId`; no permite cambiar el plantel del grupo. Valida alcance por plantel.
+- `DELETE /academico/grupos/:id` (ADMINISTRATIVO): baja lógica (`activo=false`).
+  Rechaza con 409 si el grupo tiene inscripciones con `estatus=ACTIVA`.
+- `DELETE /academico/grupo-materias/:id` (ADMINISTRATIVO): quita una materia asignada
+  por error (baja física). Rechaza con 409 si ya existen calificaciones, actividades o
+  materiales ligados a esa asignación.
 - `/academico/grupo-materias` (ADMINISTRATIVO, FINANZAS): todas las asignaciones.
 - `/academico/mis-grupos` (MAESTRO): clases asignadas al docente autenticado.
 

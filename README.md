@@ -14,6 +14,7 @@ sistema-escolar-mvp/
 ├── database/
 │   ├── mysql/      schema.sql + seed.sql para MySQL 8
 │   └── sqlserver/  schema.sql + seed.sql equivalentes para SQL Server 2019+
+├── etl/            ETL Python (certweb → Sistema Escolar), idempotente por legacy_id
 ├── docs/           API, arquitectura y mapeo contra las etapas del contrato
 └── docker-compose.yml
 ```
@@ -81,6 +82,16 @@ contrata y proporciona el cliente:
    `POST https://tu-dominio/api/finanzas/webhook/openpay`.
 3. Sin credenciales, el resto del sistema opera normal y el endpoint de órdenes
    responde 503 indicando la configuración faltante.
+
+## Migración desde certweb (ETL)
+
+`etl/` contiene el ETL Python de la migración inicial (estrategia *strangler fig*,
+Mes 6 del contrato). Vincula cada registro migrado con la base legacy vía `legacy_id`
+(agregado a las 12 entidades principales), lo que lo hace idempotente: correrlo varias
+veces solo genera altas para lo que falta. Corre en modo `--dry-run` por defecto (no
+escribe); ver `etl/README.md` para variables de entorno, orden de carga y ejemplos.
+Hoy solo **planteles** y **alumnos** tienen el pipeline completo; el resto queda con
+`NotImplementedError` explícito hasta mapearse contra el esquema real de certweb.
 
 ## Seguridad incluida
 

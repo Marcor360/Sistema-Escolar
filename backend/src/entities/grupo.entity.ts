@@ -17,4 +17,5 @@ export class Grupo {
   @Column({ length: 40 }) nombre: string;
   @Column({ length: 20, nullable: true }) grado: string | null;
   @Column({ length: 10, nullable: true }) turno: 'MATUTINO' | 'VESPERTINO' | null;
+  @Column({ default: true }) activo: boolean;
 }

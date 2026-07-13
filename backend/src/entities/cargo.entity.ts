@@ -36,4 +36,6 @@ export class Cargo {
   @Column({ length: 15, default: 'PENDIENTE' }) estatus: CargoEstatus;
   @CreateDateColumn() createdAt: Date;
   @UpdateDateColumn() updatedAt: Date;
+  /** Vínculo con la base certweb para la migración inicial (ETL); no se expone en la API pública. */
+  @Column({ type: 'bigint', nullable: true }) legacyId: string | null;
 }

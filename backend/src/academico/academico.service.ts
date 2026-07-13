@@ -7,10 +7,13 @@ import { Grupo } from '../entities/grupo.entity';
 import { GrupoMateria } from '../entities/grupo-materia.entity';
 import { Inscripcion } from '../entities/inscripcion.entity';
 import { Alumno } from '../entities/alumno.entity';
+import { Calificacion } from '../entities/calificacion.entity';
+import { Actividad } from '../entities/actividad.entity';
+import { Material } from '../entities/material.entity';
 import { DocentesService } from '../docentes/docentes.service';
 import { JwtUser } from '../common/current-user.decorator';
 import { ScopeService } from '../planteles/scope.service';
-import { AsignarMateriaDto, CicloDto, GrupoDto, ListarGruposDto, MateriaDto } from './academico.dto';
+import { ActualizarGrupoDto, AsignarMateriaDto, CicloDto, GrupoDto, ListarGruposDto, MateriaDto } from './academico.dto';
 
 @Injectable()
 export class AcademicoService {
@@ -21,6 +24,9 @@ export class AcademicoService {
     @InjectRepository(GrupoMateria) private readonly grupoMaterias: Repository<GrupoMateria>,
     @InjectRepository(Inscripcion) private readonly inscripciones: Repository<Inscripcion>,
     @InjectRepository(Alumno) private readonly alumnos: Repository<Alumno>,
+    @InjectRepository(Calificacion) private readonly calificaciones: Repository<Calificacion>,
+    @InjectRepository(Actividad) private readonly actividades: Repository<Actividad>,
+    @InjectRepository(Material) private readonly materiales: Repository<Material>,
     private readonly docentes: DocentesService,
     private readonly scope: ScopeService,
   ) {}
@@ -56,10 +62,12 @@ export class AcademicoService {
     const pagina = query.pagina || 1;
     const porPagina = query.porPagina || 20;
     const planteles = await this.scope.resolverFiltro(user, query.plantelId);
+    const puedeVerInactivos = user.roles.includes('ADMINISTRATIVO') || user.roles.includes('SUPERADMIN');
     const [datos, total] = await this.grupos.findAndCount({
       where: {
         ...(query.cicloId ? { cicloId: query.cicloId } : {}),
         ...(planteles === null ? {} : { plantelId: In(planteles) }),
+        ...(query.inactivos && puedeVerInactivos ? {} : { activo: true }),
       },
       order: { id: 'DESC' },
       skip: (pagina - 1) * porPagina,
@@ -70,6 +78,29 @@ export class AcademicoService {
   async crearGrupo(dto: GrupoDto, user: JwtUser) {
     await this.scope.validarGestion(user, dto.plantelId);
     return this.grupos.save(this.grupos.create(dto));
+  }
+
+  async actualizarGrupo(id: number, dto: ActualizarGrupoDto, user: JwtUser) {
+    const grupo = await this.grupos.findOne({ where: { id } });
+    if (!grupo) throw new NotFoundException('Grupo no encontrado');
+    await this.scope.validarGestion(user, grupo.plantelId);
+    await this.grupos.update(id, dto);
+    return this.grupos.findOne({ where: { id } });
+  }
+
+  /** Baja lógica: se rechaza si el grupo tiene inscripciones activas. */
+  async eliminarGrupo(id: number, user: JwtUser) {
+    const grupo = await this.grupos.findOne({ where: { id } });
+    if (!grupo) throw new NotFoundException('Grupo no encontrado');
+    await this.scope.validarGestion(user, grupo.plantelId);
+    const inscripcionesActivas = await this.inscripciones.count({ where: { grupoId: id, estatus: 'ACTIVA' } });
+    if (inscripcionesActivas > 0) {
+      throw new ConflictException(
+        `El grupo tiene ${inscripcionesActivas} inscripción(es) activa(s); dalas de baja antes de eliminar el grupo`,
+      );
+    }
+    await this.grupos.update(id, { activo: false });
+    return { ok: true };
   }
 
   /** Todas las asignaciones grupo-materia (captura de calificaciones del administrativo). */
@@ -100,6 +131,28 @@ export class AcademicoService {
     return this.grupoMaterias.save(gm);
   }
 
+  /** Quita una materia asignada por error; rechaza si ya tiene trabajo académico registrado. */
+  async eliminarGrupoMateria(id: number, user: JwtUser) {
+    const gm = await this.grupoMaterias.findOne({ where: { id } });
+    if (!gm) throw new NotFoundException('Asignación grupo-materia no encontrada');
+    await this.scope.validarGestion(user, gm.grupo.plantelId);
+
+    const [calificaciones, actividades, materiales] = await Promise.all([
+      this.calificaciones.count({ where: { grupoMateriaId: id } }),
+      this.actividades.count({ where: { grupoMateriaId: id } }),
+      this.materiales.count({ where: { grupoMateriaId: id } }),
+    ]);
+    const bloqueos: string[] = [];
+    if (calificaciones > 0) bloqueos.push(`${calificaciones} calificación(es)`);
+    if (actividades > 0) bloqueos.push(`${actividades} actividad(es)`);
+    if (materiales > 0) bloqueos.push(`${materiales} material(es)`);
+    if (bloqueos.length > 0) {
+      throw new ConflictException(`No se puede quitar la materia: tiene ${bloqueos.join(', ')} asociados`);
+    }
+    await this.grupoMaterias.delete(id);
+    return { ok: true };
+  }
+
   // ---- Inscripciones ----
   async inscribirAlumno(grupoId: number, alumnoId: number, user?: JwtUser) {
     const grupo = await this.grupos.findOne({ where: { id: grupoId } });
@@ -122,9 +175,10 @@ export class AcademicoService {
     return { ok: true };
   }
 
-  /** Grupos-materia asignados al docente autenticado (panel maestro). */
+  /** Grupos-materia asignados al docente autenticado (panel maestro); excluye grupos dados de baja. */
   async misGrupos(usuarioId: number) {
     const docente = await this.docentes.obtenerPorUsuario(usuarioId);
-    return this.grupoMaterias.find({ where: { docenteId: docente.id } });
+    const asignaciones = await this.grupoMaterias.find({ where: { docenteId: docente.id } });
+    return asignaciones.filter((gm) => gm.grupo.activo);
   }
 }

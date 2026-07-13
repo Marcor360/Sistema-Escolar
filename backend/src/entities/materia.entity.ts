@@ -8,4 +8,6 @@ export class Materia {
   @Column({ length: 300, nullable: true }) descripcion: string | null;
   @Column({ default: 0 }) creditos: number;
   @Column({ default: true }) activo: boolean;
+  /** Vínculo con la base certweb para la migración inicial (ETL); no se expone en la API pública. */
+  @Column({ type: 'bigint', nullable: true }) legacyId: string | null;
 }

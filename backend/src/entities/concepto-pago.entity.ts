@@ -12,4 +12,6 @@ export class ConceptoPago {
   @Column('decimal', { precision: 12, scale: 2, default: 0, transformer: decimalTransformer })
   montoBase: number;
   @Column({ default: true }) activo: boolean;
+  /** Vínculo con la base certweb para la migración inicial (ETL); no se expone en la API pública. */
+  @Column({ type: 'bigint', nullable: true }) legacyId: string | null;
 }

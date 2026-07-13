@@ -1,10 +1,11 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { IsBoolean, IsIn, IsInt, IsOptional, IsString } from 'class-validator';
 import { PaginacionDto } from '../common/paginacion.dto';
 
 export class ListarGruposDto extends PaginacionDto {
   @IsOptional() @Type(() => Number) @IsInt() cicloId?: number;
   @IsOptional() @Type(() => Number) @IsInt() plantelId?: number;
+  @IsOptional() @Transform(({ value }) => value === true || value === 'true') @IsBoolean() inactivos?: boolean;
 }
 
 export class CicloDto {
@@ -26,6 +27,13 @@ export class GrupoDto {
   @Type(() => Number) @IsInt() cicloId: number;
   @Type(() => Number) @IsInt() plantelId: number;
   @IsString() nombre: string;
+  @IsOptional() @IsString() grado?: string;
+  @IsOptional() @IsIn(['MATUTINO', 'VESPERTINO']) turno?: 'MATUTINO' | 'VESPERTINO';
+}
+
+export class ActualizarGrupoDto {
+  @IsOptional() @Type(() => Number) @IsInt() cicloId?: number;
+  @IsOptional() @IsString() nombre?: string;
   @IsOptional() @IsString() grado?: string;
   @IsOptional() @IsIn(['MATUTINO', 'VESPERTINO']) turno?: 'MATUTINO' | 'VESPERTINO';
 }

@@ -24,7 +24,9 @@ CREATE TABLE usuarios (
   activo TINYINT(1) NOT NULL DEFAULT 1,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  deleted_at DATETIME NULL
+  deleted_at DATETIME NULL,
+  legacy_id BIGINT NULL,                           -- ver migracion_legacy_id.sql
+  UNIQUE KEY uq_usuarios_legacy (legacy_id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE planteles (
@@ -36,7 +38,9 @@ CREATE TABLE planteles (
   telefono VARCHAR(20) NULL,
   director_usuario_id INT NULL,
   activo TINYINT(1) NOT NULL DEFAULT 1,
-  CONSTRAINT fk_plantel_director FOREIGN KEY (director_usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL
+  legacy_id BIGINT NULL,                           -- ver migracion_legacy_id.sql
+  CONSTRAINT fk_plantel_director FOREIGN KEY (director_usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL,
+  UNIQUE KEY uq_planteles_legacy (legacy_id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE usuario_planteles (
@@ -81,8 +85,10 @@ CREATE TABLE alumnos (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   deleted_at DATETIME NULL,
+  legacy_id BIGINT NULL,                           -- ver migracion_legacy_id.sql
   CONSTRAINT fk_al_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
-  CONSTRAINT fk_al_plantel FOREIGN KEY (plantel_id) REFERENCES planteles(id)
+  CONSTRAINT fk_al_plantel FOREIGN KEY (plantel_id) REFERENCES planteles(id),
+  UNIQUE KEY uq_alumnos_legacy (legacy_id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE docentes (
@@ -95,7 +101,9 @@ CREATE TABLE docentes (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   deleted_at DATETIME NULL,
-  CONSTRAINT fk_do_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+  legacy_id BIGINT NULL,                           -- ver migracion_legacy_id.sql
+  CONSTRAINT fk_do_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
+  UNIQUE KEY uq_docentes_legacy (legacy_id)
 ) ENGINE=InnoDB;
 
 -- ---------- Estructura académica ----------
@@ -105,7 +113,9 @@ CREATE TABLE ciclos_escolares (
   nombre VARCHAR(80) NOT NULL,
   fecha_inicio DATE NOT NULL,
   fecha_fin DATE NOT NULL,
-  activo TINYINT(1) NOT NULL DEFAULT 0
+  activo TINYINT(1) NOT NULL DEFAULT 0,
+  legacy_id BIGINT NULL,                           -- ver migracion_legacy_id.sql
+  UNIQUE KEY uq_ciclos_escolares_legacy (legacy_id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE materias (
@@ -114,7 +124,9 @@ CREATE TABLE materias (
   nombre VARCHAR(120) NOT NULL,
   descripcion VARCHAR(300) NULL,
   creditos INT NOT NULL DEFAULT 0,
-  activo TINYINT(1) NOT NULL DEFAULT 1
+  activo TINYINT(1) NOT NULL DEFAULT 1,
+  legacy_id BIGINT NULL,                           -- ver migracion_legacy_id.sql
+  UNIQUE KEY uq_materias_legacy (legacy_id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE grupos (
@@ -124,7 +136,10 @@ CREATE TABLE grupos (
   nombre VARCHAR(40) NOT NULL,
   grado VARCHAR(20) NULL,
   turno VARCHAR(10) NULL,                          -- MATUTINO | VESPERTINO
+  activo TINYINT(1) NOT NULL DEFAULT 1,             -- ver migracion_grupos_ciclo_vida.sql
+  legacy_id BIGINT NULL,                           -- ver migracion_legacy_id.sql
   UNIQUE KEY uq_grupo_ciclo_nombre (ciclo_id, nombre),
+  UNIQUE KEY uq_grupos_legacy (legacy_id),
   CONSTRAINT fk_gr_ciclo FOREIGN KEY (ciclo_id) REFERENCES ciclos_escolares(id),
   CONSTRAINT fk_gr_plantel FOREIGN KEY (plantel_id) REFERENCES planteles(id)
 ) ENGINE=InnoDB;
@@ -135,7 +150,9 @@ CREATE TABLE grupo_materias (
   grupo_id INT NOT NULL,
   materia_id INT NOT NULL,
   docente_id INT NULL,
+  legacy_id BIGINT NULL,                           -- ver migracion_legacy_id.sql
   UNIQUE KEY uq_gm (grupo_id, materia_id),
+  UNIQUE KEY uq_grupo_materias_legacy (legacy_id),
   CONSTRAINT fk_gm_grupo FOREIGN KEY (grupo_id) REFERENCES grupos(id) ON DELETE CASCADE,
   CONSTRAINT fk_gm_materia FOREIGN KEY (materia_id) REFERENCES materias(id),
   CONSTRAINT fk_gm_docente FOREIGN KEY (docente_id) REFERENCES docentes(id)
@@ -147,7 +164,9 @@ CREATE TABLE inscripciones (
   grupo_id INT NOT NULL,
   fecha_inscripcion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   estatus VARCHAR(15) NOT NULL DEFAULT 'ACTIVA',   -- ACTIVA | BAJA
+  legacy_id BIGINT NULL,                           -- ver migracion_legacy_id.sql
   UNIQUE KEY uq_insc (alumno_id, grupo_id),
+  UNIQUE KEY uq_inscripciones_legacy (legacy_id),
   CONSTRAINT fk_in_alumno FOREIGN KEY (alumno_id) REFERENCES alumnos(id),
   CONSTRAINT fk_in_grupo FOREIGN KEY (grupo_id) REFERENCES grupos(id)
 ) ENGINE=InnoDB;
@@ -245,7 +264,9 @@ CREATE TABLE conceptos_pago (
   nombre VARCHAR(120) NOT NULL,
   tipo VARCHAR(20) NOT NULL,                       -- INSCRIPCION | COLEGIATURA | RECARGO | DESCUENTO | BECA | OTRO
   monto_base DECIMAL(12,2) NOT NULL DEFAULT 0,
-  activo TINYINT(1) NOT NULL DEFAULT 1
+  activo TINYINT(1) NOT NULL DEFAULT 1,
+  legacy_id BIGINT NULL,                           -- ver migracion_legacy_id.sql
+  UNIQUE KEY uq_conceptos_pago_legacy (legacy_id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE cargos (
@@ -262,9 +283,11 @@ CREATE TABLE cargos (
   estatus VARCHAR(15) NOT NULL DEFAULT 'PENDIENTE',-- PENDIENTE | PARCIAL | PAGADO | VENCIDO | CANCELADO
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  legacy_id BIGINT NULL,                           -- ver migracion_legacy_id.sql
   KEY idx_cargo_alumno (alumno_id),
   KEY idx_cargo_periodo (periodo),
   KEY idx_cargos_alumno (alumno_id),               -- ver migracion_indices.sql
+  UNIQUE KEY uq_cargos_legacy (legacy_id),
   CONSTRAINT fk_cg_alumno FOREIGN KEY (alumno_id) REFERENCES alumnos(id),
   CONSTRAINT fk_cg_concepto FOREIGN KEY (concepto_id) REFERENCES conceptos_pago(id),
   CONSTRAINT fk_cg_ciclo FOREIGN KEY (ciclo_id) REFERENCES ciclos_escolares(id)
@@ -301,7 +324,9 @@ CREATE TABLE pagos (
   fecha_pago DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   registrado_por_id INT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  legacy_id BIGINT NULL,                           -- ver migracion_legacy_id.sql
   KEY idx_pago_alumno (alumno_id),
+  UNIQUE KEY uq_pagos_legacy (legacy_id),
   CONSTRAINT fk_pg_alumno FOREIGN KEY (alumno_id) REFERENCES alumnos(id),
   CONSTRAINT fk_pg_cargo FOREIGN KEY (cargo_id) REFERENCES cargos(id),
   CONSTRAINT fk_pg_orden FOREIGN KEY (orden_pago_id) REFERENCES ordenes_pago(id),

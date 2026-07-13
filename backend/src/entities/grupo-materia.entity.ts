@@ -20,4 +20,6 @@ export class GrupoMateria {
   @ManyToOne(() => Docente, { eager: true, nullable: true })
   @JoinColumn({ name: 'docente_id' })
   docente: Docente | null;
+  /** Vínculo con la base certweb para la migración inicial (ETL); no se expone en la API pública. */
+  @Column({ type: 'bigint', nullable: true }) legacyId: string | null;
 }

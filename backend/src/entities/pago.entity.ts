@@ -29,4 +29,6 @@ export class Pago {
   @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' }) fechaPago: Date;
   @Column({ nullable: true }) registradoPorId: number | null;
   @CreateDateColumn() createdAt: Date;
+  /** Vínculo con la base certweb para la migración inicial (ETL); no se expone en la API pública. */
+  @Column({ type: 'bigint', nullable: true }) legacyId: string | null;
 }

@@ -26,8 +26,10 @@ CREATE TABLE usuarios (
   activo BIT NOT NULL DEFAULT 1,
   created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
   updated_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
-  deleted_at DATETIME2 NULL
+  deleted_at DATETIME2 NULL,
+  legacy_id BIGINT NULL                            -- ver migracion_legacy_id.sql (índice único filtrado)
 );
+CREATE UNIQUE INDEX uq_usuarios_legacy ON usuarios(legacy_id) WHERE legacy_id IS NOT NULL;
 
 CREATE TABLE planteles (
   id INT IDENTITY(1,1) PRIMARY KEY,
@@ -38,8 +40,10 @@ CREATE TABLE planteles (
   telefono NVARCHAR(20) NULL,
   director_usuario_id INT NULL,
   activo BIT NOT NULL DEFAULT 1,
+  legacy_id BIGINT NULL,                           -- ver migracion_legacy_id.sql (índice único filtrado)
   CONSTRAINT fk_plantel_director FOREIGN KEY (director_usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL
 );
+CREATE UNIQUE INDEX uq_planteles_legacy ON planteles(legacy_id) WHERE legacy_id IS NOT NULL;
 
 CREATE TABLE usuario_planteles (
   usuario_id INT NOT NULL,
@@ -83,9 +87,11 @@ CREATE TABLE alumnos (
   created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
   updated_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
   deleted_at DATETIME2 NULL,
+  legacy_id BIGINT NULL,                           -- ver migracion_legacy_id.sql (índice único filtrado)
   CONSTRAINT fk_al_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
   CONSTRAINT fk_al_plantel FOREIGN KEY (plantel_id) REFERENCES planteles(id)
 );
+CREATE UNIQUE INDEX uq_alumnos_legacy ON alumnos(legacy_id) WHERE legacy_id IS NOT NULL;
 
 CREATE TABLE docentes (
   id INT IDENTITY(1,1) PRIMARY KEY,
@@ -97,8 +103,10 @@ CREATE TABLE docentes (
   created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
   updated_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
   deleted_at DATETIME2 NULL,
+  legacy_id BIGINT NULL,                           -- ver migracion_legacy_id.sql (índice único filtrado)
   CONSTRAINT fk_do_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
 );
+CREATE UNIQUE INDEX uq_docentes_legacy ON docentes(legacy_id) WHERE legacy_id IS NOT NULL;
 
 -- ---------- Estructura académica ----------
 CREATE TABLE ciclos_escolares (
@@ -107,8 +115,10 @@ CREATE TABLE ciclos_escolares (
   nombre NVARCHAR(80) NOT NULL,
   fecha_inicio DATE NOT NULL,
   fecha_fin DATE NOT NULL,
-  activo BIT NOT NULL DEFAULT 0
+  activo BIT NOT NULL DEFAULT 0,
+  legacy_id BIGINT NULL                            -- ver migracion_legacy_id.sql (índice único filtrado)
 );
+CREATE UNIQUE INDEX uq_ciclos_escolares_legacy ON ciclos_escolares(legacy_id) WHERE legacy_id IS NOT NULL;
 
 CREATE TABLE materias (
   id INT IDENTITY(1,1) PRIMARY KEY,
@@ -116,8 +126,10 @@ CREATE TABLE materias (
   nombre NVARCHAR(120) NOT NULL,
   descripcion NVARCHAR(300) NULL,
   creditos INT NOT NULL DEFAULT 0,
-  activo BIT NOT NULL DEFAULT 1
+  activo BIT NOT NULL DEFAULT 1,
+  legacy_id BIGINT NULL                            -- ver migracion_legacy_id.sql (índice único filtrado)
 );
+CREATE UNIQUE INDEX uq_materias_legacy ON materias(legacy_id) WHERE legacy_id IS NOT NULL;
 
 CREATE TABLE grupos (
   id INT IDENTITY(1,1) PRIMARY KEY,
@@ -126,21 +138,26 @@ CREATE TABLE grupos (
   nombre NVARCHAR(40) NOT NULL,
   grado NVARCHAR(20) NULL,
   turno NVARCHAR(10) NULL,                          -- MATUTINO | VESPERTINO
+  activo BIT NOT NULL DEFAULT 1,                     -- ver migracion_grupos_ciclo_vida.sql
+  legacy_id BIGINT NULL,                            -- ver migracion_legacy_id.sql (índice único filtrado)
   CONSTRAINT uq_grupo_ciclo_nombre UNIQUE (ciclo_id, nombre),
   CONSTRAINT fk_gr_ciclo FOREIGN KEY (ciclo_id) REFERENCES ciclos_escolares(id),
   CONSTRAINT fk_gr_plantel FOREIGN KEY (plantel_id) REFERENCES planteles(id)
 );
+CREATE UNIQUE INDEX uq_grupos_legacy ON grupos(legacy_id) WHERE legacy_id IS NOT NULL;
 
 CREATE TABLE grupo_materias (
   id INT IDENTITY(1,1) PRIMARY KEY,
   grupo_id INT NOT NULL,
   materia_id INT NOT NULL,
   docente_id INT NULL,
+  legacy_id BIGINT NULL,                            -- ver migracion_legacy_id.sql (índice único filtrado)
   CONSTRAINT uq_gm UNIQUE (grupo_id, materia_id),
   CONSTRAINT fk_gm_grupo FOREIGN KEY (grupo_id) REFERENCES grupos(id) ON DELETE CASCADE,
   CONSTRAINT fk_gm_materia FOREIGN KEY (materia_id) REFERENCES materias(id),
   CONSTRAINT fk_gm_docente FOREIGN KEY (docente_id) REFERENCES docentes(id)
 );
+CREATE UNIQUE INDEX uq_grupo_materias_legacy ON grupo_materias(legacy_id) WHERE legacy_id IS NOT NULL;
 
 CREATE TABLE inscripciones (
   id INT IDENTITY(1,1) PRIMARY KEY,
@@ -148,10 +165,12 @@ CREATE TABLE inscripciones (
   grupo_id INT NOT NULL,
   fecha_inscripcion DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
   estatus NVARCHAR(15) NOT NULL DEFAULT 'ACTIVA',   -- ACTIVA | BAJA
+  legacy_id BIGINT NULL,                            -- ver migracion_legacy_id.sql (índice único filtrado)
   CONSTRAINT uq_insc UNIQUE (alumno_id, grupo_id),
   CONSTRAINT fk_in_alumno FOREIGN KEY (alumno_id) REFERENCES alumnos(id),
   CONSTRAINT fk_in_grupo FOREIGN KEY (grupo_id) REFERENCES grupos(id)
 );
+CREATE UNIQUE INDEX uq_inscripciones_legacy ON inscripciones(legacy_id) WHERE legacy_id IS NOT NULL;
 
 -- ---------- Trabajo académico ----------
 CREATE TABLE actividades (
@@ -245,8 +264,10 @@ CREATE TABLE conceptos_pago (
   nombre NVARCHAR(120) NOT NULL,
   tipo NVARCHAR(20) NOT NULL,                       -- INSCRIPCION | COLEGIATURA | RECARGO | DESCUENTO | BECA | OTRO
   monto_base DECIMAL(12,2) NOT NULL DEFAULT 0,
-  activo BIT NOT NULL DEFAULT 1
+  activo BIT NOT NULL DEFAULT 1,
+  legacy_id BIGINT NULL                            -- ver migracion_legacy_id.sql (índice único filtrado)
 );
+CREATE UNIQUE INDEX uq_conceptos_pago_legacy ON conceptos_pago(legacy_id) WHERE legacy_id IS NOT NULL;
 
 CREATE TABLE cargos (
   id INT IDENTITY(1,1) PRIMARY KEY,
@@ -262,6 +283,7 @@ CREATE TABLE cargos (
   estatus NVARCHAR(15) NOT NULL DEFAULT 'PENDIENTE',-- PENDIENTE | PARCIAL | PAGADO | VENCIDO | CANCELADO
   created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
   updated_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+  legacy_id BIGINT NULL,                            -- ver migracion_legacy_id.sql (índice único filtrado)
   CONSTRAINT fk_cg_alumno FOREIGN KEY (alumno_id) REFERENCES alumnos(id),
   CONSTRAINT fk_cg_concepto FOREIGN KEY (concepto_id) REFERENCES conceptos_pago(id),
   CONSTRAINT fk_cg_ciclo FOREIGN KEY (ciclo_id) REFERENCES ciclos_escolares(id)
@@ -269,6 +291,7 @@ CREATE TABLE cargos (
 CREATE INDEX idx_cargo_alumno ON cargos(alumno_id);
 CREATE INDEX idx_cargo_periodo ON cargos(periodo);
 CREATE INDEX idx_cargos_alumno ON cargos(alumno_id); -- ver migracion_indices.sql
+CREATE UNIQUE INDEX uq_cargos_legacy ON cargos(legacy_id) WHERE legacy_id IS NOT NULL;
 
 CREATE TABLE ordenes_pago (
   id INT IDENTITY(1,1) PRIMARY KEY,
@@ -301,12 +324,14 @@ CREATE TABLE pagos (
   fecha_pago DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
   registrado_por_id INT NULL,
   created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+  legacy_id BIGINT NULL,                            -- ver migracion_legacy_id.sql (índice único filtrado)
   CONSTRAINT fk_pg_alumno FOREIGN KEY (alumno_id) REFERENCES alumnos(id),
   CONSTRAINT fk_pg_cargo FOREIGN KEY (cargo_id) REFERENCES cargos(id),
   CONSTRAINT fk_pg_orden FOREIGN KEY (orden_pago_id) REFERENCES ordenes_pago(id),
   CONSTRAINT fk_pg_usuario FOREIGN KEY (registrado_por_id) REFERENCES usuarios(id)
 );
 CREATE INDEX idx_pago_alumno ON pagos(alumno_id);
+CREATE UNIQUE INDEX uq_pagos_legacy ON pagos(legacy_id) WHERE legacy_id IS NOT NULL;
 
 CREATE TABLE plantillas_correo (
   id INT IDENTITY(1,1) PRIMARY KEY,

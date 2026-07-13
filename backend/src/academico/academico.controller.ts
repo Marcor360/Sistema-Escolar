@@ -1,7 +1,9 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AcademicoService } from './academico.service';
-import { AsignarMateriaDto, CicloDto, GrupoDto, InscribirAlumnoDto, ListarGruposDto, MateriaDto } from './academico.dto';
+import {
+  ActualizarGrupoDto, AsignarMateriaDto, CicloDto, GrupoDto, InscribirAlumnoDto, ListarGruposDto, MateriaDto,
+} from './academico.dto';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { RolesGuard } from '../common/roles.guard';
 import { Roles } from '../common/roles.decorator';
@@ -53,6 +55,18 @@ export class AcademicoController {
   @Post('grupos') @Roles('ADMINISTRATIVO') crearGrupo(@Body() dto: GrupoDto, @CurrentUser() user: JwtUser) {
     return this.service.crearGrupo(dto, user);
   }
+  @Patch('grupos/:id') @Roles('ADMINISTRATIVO')
+  actualizarGrupo(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: ActualizarGrupoDto,
+    @CurrentUser() user: JwtUser,
+  ) {
+    return this.service.actualizarGrupo(id, dto, user);
+  }
+  @Delete('grupos/:id') @Roles('ADMINISTRATIVO')
+  eliminarGrupo(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) {
+    return this.service.eliminarGrupo(id, user);
+  }
   @Get('grupo-materias') @Roles('ADMINISTRATIVO', 'FINANZAS')
   listarGrupoMaterias() {
     return this.service.listarGrupoMaterias();
@@ -71,6 +85,10 @@ export class AcademicoController {
     @Param('docenteId', ParseIntPipe) docenteId: number,
   ) {
     return this.service.asignarDocente(id, docenteId);
+  }
+  @Delete('grupo-materias/:id') @Roles('ADMINISTRATIVO')
+  eliminarGrupoMateria(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) {
+    return this.service.eliminarGrupoMateria(id, user);
   }
 
   // ---- Inscripciones ----
