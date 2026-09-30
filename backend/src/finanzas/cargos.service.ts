@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { EntityManager, In, Repository } from 'typeorm';
 import { Cargo } from '../entities/cargo.entity';
 import { Pago } from '../entities/pago.entity';
 import { Inscripcion } from '../entities/inscripcion.entity';
@@ -42,9 +42,10 @@ export class CargosService {
   }
 
   /** Suma de pagos confirmados por cargo, en UNA consulta agrupada (evita N+1). */
-  async pagadoPorCargo(cargoIds: number[]): Promise<Map<number, number>> {
+  async pagadoPorCargo(cargoIds: number[], manager?: EntityManager): Promise<Map<number, number>> {
     if (cargoIds.length === 0) return new Map();
-    const filas = await this.pagos
+    const pagos = manager?.getRepository(Pago) ?? this.pagos;
+    const filas = await pagos
       .createQueryBuilder('p')
       .select('p.cargo_id', 'cargoId')
       .addSelect('SUM(p.monto)', 'pagado')
@@ -179,13 +180,14 @@ export class CargosService {
   }
 
   /** Recalcula el estatus de un cargo con base en sus pagos confirmados. */
-  async recalcularEstatus(cargoId: number) {
-    const cargo = await this.cargos.findOne({ where: { id: cargoId } });
+  async recalcularEstatus(cargoId: number, manager?: EntityManager) {
+    const cargos = manager?.getRepository(Cargo) ?? this.cargos;
+    const cargo = await cargos.findOne({ where: { id: cargoId } });
     if (!cargo || cargo.estatus === 'CANCELADO') return;
-    const pagado = (await this.pagadoPorCargo([cargoId])).get(cargoId) ?? 0;
+    const pagado = (await this.pagadoPorCargo([cargoId], manager)).get(cargoId) ?? 0;
     const total = this.totalDeCargo(cargo);
     cargo.estatus = pagado >= total ? 'PAGADO' : pagado > 0 ? 'PARCIAL' : cargo.estatus;
-    await this.cargos.save(cargo);
+    await cargos.save(cargo);
   }
 
   /** Saldo vivo de un cargo (para órdenes de pago). */

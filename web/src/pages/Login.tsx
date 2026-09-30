@@ -84,8 +84,8 @@ export default function LoginPage() {
               <label htmlFor="password">Contraseña</label>
               <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
             </div>
-            {error && <p className="mensaje-error">{error}</p>}
-            {aviso && <p className="mensaje-ok">{aviso}</p>}
+            {error && <p className="mensaje-error" role="alert">{error}</p>}
+            {aviso && <p className="mensaje-ok" role="status">{aviso}</p>}
             <button className="boton" style={{ width: '100%' }} disabled={enviando}>
               {enviando ? 'Verificando…' : 'Entrar'}
             </button>
@@ -104,7 +104,7 @@ export default function LoginPage() {
               <label htmlFor="email-rec">Correo institucional</label>
               <input id="email-rec" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus />
             </div>
-            {error && <p className="mensaje-error">{error}</p>}
+            {error && <p className="mensaje-error" role="alert">{error}</p>}
             <button className="boton" style={{ width: '100%' }} disabled={enviando}>
               {enviando ? 'Enviando…' : 'Enviar código'}
             </button>
@@ -116,7 +116,7 @@ export default function LoginPage() {
 
         {modo === 'restablecer' && (
           <form onSubmit={restablecer}>
-            {aviso && <p className="mensaje-ok" style={{ marginTop: 0 }}>{aviso}</p>}
+            {aviso && <p className="mensaje-ok" role="status" style={{ marginTop: 0 }}>{aviso}</p>}
             <div className="campo">
               <label htmlFor="token">Código de recuperación</label>
               <input id="token" value={token} onChange={(e) => setToken(e.target.value)} required autoFocus />
@@ -125,7 +125,7 @@ export default function LoginPage() {
               <label htmlFor="nueva">Nueva contraseña (mínimo 8)</label>
               <input id="nueva" type="password" minLength={8} value={nueva} onChange={(e) => setNueva(e.target.value)} required />
             </div>
-            {error && <p className="mensaje-error">{error}</p>}
+            {error && <p className="mensaje-error" role="alert">{error}</p>}
             <button className="boton" style={{ width: '100%' }} disabled={enviando}>
               {enviando ? 'Guardando…' : 'Restablecer contraseña'}
             </button>

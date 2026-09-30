@@ -20,6 +20,7 @@ import { ReportesModule } from './reportes/reportes.module';
 import { PlantelesModule } from './planteles/planteles.module';
 import { ArchivosModule } from './archivos/archivos.module';
 import { ConfiguracionModule } from './configuracion/configuracion.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { ConfiguracionModule } from './configuracion/configuracion.module';
     PlantelesModule,
     ArchivosModule,
     ConfiguracionModule,
+    HealthModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

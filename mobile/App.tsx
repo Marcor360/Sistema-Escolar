@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
-import { Text } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
-import { api, TOKEN_KEY } from './src/api/client';
+import { api, registrarSesionExpirada, TOKEN_KEY } from './src/api/client';
 import { Sesion, SesionContext } from './src/sesion';
 import { colores } from './src/theme';
 import LoginScreen from './src/screens/Login';
@@ -87,6 +87,11 @@ export default function App() {
     return () => { activa = false; };
   }, []);
 
+  useEffect(() => {
+    registrarSesionExpirada(() => setSesion(null));
+    return () => registrarSesionExpirada(null);
+  }, []);
+
   const iniciar = async (email: string, password: string) => {
     const { data } = await api.post('/auth/login', { email, password });
     await SecureStore.setItemAsync(TOKEN_KEY, data.accessToken);
@@ -98,7 +103,13 @@ export default function App() {
     setSesion(null);
   };
 
-  if (!listo || !marcaLista) return null;
+  if (!listo || !marcaLista) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colores.papel }}>
+        <ActivityIndicator color={marca.colorPrimario} accessibilityLabel="Cargando aplicación" />
+      </View>
+    );
+  }
 
   return (
     <MarcaContext.Provider value={{ marca }}>

@@ -61,7 +61,13 @@ export default function MateriasScreen() {
           const desplegada = abierta === item.id;
           const materiales = materialesPor[item.id];
           return (
-            <TouchableOpacity onPress={() => alternar(item)} activeOpacity={0.7}>
+            <TouchableOpacity
+              onPress={() => alternar(item)}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`${item.materia.clave}: ${item.materia.nombre}. ${desplegada ? 'Ocultar' : 'Ver'} materiales`}
+              accessibilityState={{ expanded: desplegada }}
+            >
               <Tarjeta>
                 <Text style={base.tituloTarjeta}>{item.materia.clave} — {item.materia.nombre}</Text>
                 <Text style={base.secundario}>Grupo {item.grupo.nombre} · Ciclo {item.grupo.ciclo.clave}</Text>
@@ -81,6 +87,8 @@ export default function MateriasScreen() {
                         key={m.id}
                         style={estilos.material}
                         onPress={() => abrirMaterial(m.id)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Abrir material: ${m.titulo}, ${m.archivoNombre}`}
                       >
                         <Text style={estilos.materialTitulo}>📄 {m.titulo}</Text>
                         <Text style={base.secundario}>{m.archivoNombre} · {m.tamanoKb} KB</Text>

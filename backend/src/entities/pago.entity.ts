@@ -7,6 +7,12 @@ import { OrdenPago } from './orden-pago.entity';
 export type PagoMetodo = 'EFECTIVO' | 'TRANSFERENCIA' | 'TARJETA' | 'PASARELA';
 export type PagoEstatus = 'CONFIRMADO' | 'PENDIENTE' | 'FALLIDO' | 'CANCELADO';
 
+// Una orden de Openpay solo puede originar un pago. El filtro permite que muchos
+// pagos manuales con ordenPagoId=NULL coexistan también en SQL Server.
+@Index('uq_pagos_orden_pago', ['ordenPagoId'], {
+  unique: true,
+  where: 'orden_pago_id IS NOT NULL',
+})
 @Entity('pagos')
 export class Pago {
   @PrimaryGeneratedColumn() id: number;

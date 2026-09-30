@@ -11,11 +11,22 @@ describe('OpenpayWebhookGuard', () => {
     process.env = { ...envOriginal };
   });
 
-  it('permite la petición si no hay usuario/contraseña configurados (comportamiento actual)', () => {
+  it('permite el webhook sin credenciales fuera de producción', () => {
     delete process.env.OPENPAY_WEBHOOK_USER;
+    delete process.env.OPENPAY_WEBHOOK_PASS;
+    process.env.NODE_ENV = 'test';
     const guard = new OpenpayWebhookGuard();
 
     expect(guard.canActivate(contexto({}))).toBe(true);
+  });
+
+  it('falla cerrado en producción si faltan credenciales', () => {
+    delete process.env.OPENPAY_WEBHOOK_USER;
+    delete process.env.OPENPAY_WEBHOOK_PASS;
+    process.env.NODE_ENV = 'production';
+    const guard = new OpenpayWebhookGuard();
+
+    expect(() => guard.canActivate(contexto({}))).toThrow(UnauthorizedException);
   });
 
   it('rechaza sin encabezado Authorization cuando sí hay credenciales configuradas', () => {

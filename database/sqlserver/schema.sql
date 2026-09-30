@@ -331,6 +331,7 @@ CREATE TABLE pagos (
   CONSTRAINT fk_pg_usuario FOREIGN KEY (registrado_por_id) REFERENCES usuarios(id)
 );
 CREATE INDEX idx_pago_alumno ON pagos(alumno_id);
+CREATE UNIQUE INDEX uq_pagos_orden_pago ON pagos(orden_pago_id) WHERE orden_pago_id IS NOT NULL;
 CREATE UNIQUE INDEX uq_pagos_legacy ON pagos(legacy_id) WHERE legacy_id IS NOT NULL;
 
 CREATE TABLE plantillas_correo (
@@ -356,6 +357,10 @@ CREATE TABLE bitacora_actividad (
   usuario_id INT NULL,
   metodo NVARCHAR(8) NOT NULL,
   ruta NVARCHAR(200) NOT NULL,
+  entidad NVARCHAR(100) NULL,
+  entidad_id INT NULL,
+  resultado NVARCHAR(10) NOT NULL DEFAULT N'EXITO',
+  status_code SMALLINT NULL,
   ip NVARCHAR(45) NULL,
   created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME()
 );

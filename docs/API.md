@@ -3,6 +3,15 @@
 Base: `http://localhost:3000/api` · Autenticación: `Authorization: Bearer <token>` ·
 Documentación interactiva: `/api/docs` (Swagger). `SUPERADMIN` accede a todo.
 
+Para el resumen por rol y las decisiones que requieren validación institucional, consulta
+[MATRIZ_ACCESO.md](MATRIZ_ACCESO.md).
+
+## Disponibilidad
+
+| Método | Ruta | Acceso | Descripción |
+|---|---|---|---|
+| GET | /health | público | Consulta la conexión de base de datos; devuelve `200` si responde o `503` si no está disponible |
+
 ## Autenticación
 | Método | Ruta | Rol | Descripción |
 |---|---|---|---|
@@ -117,8 +126,8 @@ POST `/notificaciones/difundir` (ADMINISTRATIVO; por `usuarioIds` o `rol`).
 | GET | /finanzas/alumnos/:id/estado-cuenta | FINANZAS, ADMINISTRATIVO | Totales, pagado y saldo por cargo |
 | GET | /finanzas/me/estado-cuenta | ALUMNO | Estado de cuenta propio |
 | GET/POST | /finanzas/pagos | FINANZAS, ADMINISTRATIVO (solo GET) | Pago manual actualiza estatus del cargo; GET paginado |
-| POST | /finanzas/ordenes | ALUMNO, FINANZAS | Crea cargo Openpay y devuelve `urlPago` |
-| POST | /finanzas/webhook/openpay | público* | Confirmación de la pasarela (*Basic Auth si se configura `OPENPAY_WEBHOOK_USER/PASS`) |
+| POST | /finanzas/ordenes | ALUMNO, FINANZAS | Crea cargo Openpay y devuelve `urlPago`; si Openpay falla, la orden queda `FALLIDA` |
+| POST | /finanzas/webhook/openpay | público* | Confirmación idempotente (*Basic Auth opcional en desarrollo; requerida en producción*) |
 | GET | /finanzas/adeudos | FINANZAS, ADMINISTRATIVO | Cargos con saldo |
 | POST | /finanzas/avisos-cobranza | FINANZAS | Correo con plantilla + notificación in-app |
 | GET | /finanzas/bitacora | FINANZAS | Bitácora de movimientos financieros |

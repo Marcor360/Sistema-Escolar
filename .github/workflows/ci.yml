@@ -54,3 +54,86 @@ jobs:
           cache-dependency-path: mobile/package-lock.json
       - run: npm ci
       - run: npx tsc --noEmit
+
+  integration-mysql:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: integration-root
+          MYSQL_DATABASE: escolar_integration_mysql
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pintegration-root"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      RUN_DB_INTEGRATION: '1'
+      NODE_ENV: test
+      DB_TYPE: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: '3306'
+      DB_USER: root
+      DB_PASS: integration-root
+      DB_NAME: escolar_integration_mysql
+      DB_SYNC: 'true'
+      JWT_SECRET: integration-only-secret
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run test:integration
+
+  integration-sqlserver:
+    runs-on: ubuntu-latest
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: 'Y'
+          MSSQL_PID: Developer
+          MSSQL_SA_PASSWORD: Integration_Test_42!
+        ports:
+          - 1433:1433
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      RUN_DB_INTEGRATION: '1'
+      NODE_ENV: test
+      DB_TYPE: mssql
+      DB_HOST: 127.0.0.1
+      DB_PORT: '1433'
+      DB_USER: sa
+      DB_PASS: Integration_Test_42!
+      DB_NAME: escolar_integration_sqlserver
+      DB_SYNC: 'true'
+      DB_ENCRYPT: 'false'
+      DB_TRUST_SERVER_CERTIFICATE: 'true'
+      JWT_SECRET: integration-only-secret
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run test:integration
+
+  etl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m unittest discover -s etl/tests -v

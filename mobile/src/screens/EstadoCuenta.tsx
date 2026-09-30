@@ -68,7 +68,12 @@ export default function EstadoCuentaScreen() {
               <Text style={[base.monto, { marginTop: 4 }]}>Saldo: {pesos(c.saldo)}</Text>
               <Sello texto={c.estatus} tono={tono(c.estatus)} />
               {c.saldo > 0 && (
-                <TouchableOpacity style={estilos.boton} onPress={() => pagarEnLinea(c)}>
+                <TouchableOpacity
+                  style={estilos.boton}
+                  onPress={() => pagarEnLinea(c)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Pagar ${c.descripcion} en línea. Saldo ${pesos(c.saldo)}`}
+                >
                   <Text style={estilos.botonTexto}>Pagar en línea</Text>
                 </TouchableOpacity>
               )}

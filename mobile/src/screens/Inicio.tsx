@@ -70,7 +70,13 @@ export default function InicioScreen() {
       <Text style={estilos.subtitulo}>Avisos</Text>
       {avisos.length === 0 && <Text style={base.secundario}>Sin avisos por ahora.</Text>}
       {avisos.slice(0, 5).map((aviso) => (
-        <TouchableOpacity key={aviso.id} onPress={() => leerAviso(aviso)} activeOpacity={0.7}>
+        <TouchableOpacity
+          key={aviso.id}
+          onPress={() => leerAviso(aviso)}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={`Aviso: ${aviso.titulo}. Marcar como leído`}
+        >
           <View style={[estilos.aviso, !aviso.leida && estilos.avisoSinLeer]}>
             <Text style={base.tituloTarjeta}>{aviso.titulo}</Text>
             <Text style={base.secundario}>{aviso.mensaje}</Text>

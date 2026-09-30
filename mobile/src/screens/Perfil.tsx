@@ -54,15 +54,21 @@ export default function PerfilScreen() {
       <Tarjeta>
         <Text style={base.tituloTarjeta}>Cambiar contraseña</Text>
         <Text style={estilos.etiqueta}>Contraseña actual</Text>
-        <TextInput style={estilos.input} secureTextEntry value={actual} onChangeText={setActual} />
+        <TextInput
+          style={estilos.input} secureTextEntry value={actual} onChangeText={setActual}
+          accessibilityLabel="Contraseña actual"
+        />
         <Text style={estilos.etiqueta}>Nueva contraseña (mínimo 8)</Text>
-        <TextInput style={estilos.input} secureTextEntry value={nueva} onChangeText={setNueva} />
-        <TouchableOpacity style={estilos.botonPrimario} onPress={cambiarPassword}>
+        <TextInput
+          style={estilos.input} secureTextEntry value={nueva} onChangeText={setNueva}
+          accessibilityLabel="Nueva contraseña, mínimo 8 caracteres"
+        />
+        <TouchableOpacity style={estilos.botonPrimario} onPress={cambiarPassword} accessibilityRole="button">
           <Text style={estilos.botonPrimarioTexto}>Actualizar contraseña</Text>
         </TouchableOpacity>
       </Tarjeta>
 
-      <TouchableOpacity style={estilos.boton} onPress={cerrar}>
+      <TouchableOpacity style={estilos.boton} onPress={cerrar} accessibilityRole="button">
         <Text style={estilos.botonTexto}>Cerrar sesión</Text>
       </TouchableOpacity>
       <Text style={{ height: 24 }} />

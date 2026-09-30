@@ -1,18 +1,22 @@
 # ETL certweb → Sistema Escolar
 
 Migra datos desde la base legacy certweb (SQL Server) hacia el nuevo Sistema Escolar,
-como parte de la estrategia *strangler fig* (Mes 6 del contrato). Es idempotente: cada
-entidad se vincula por `legacy_id` y correr el ETL varias veces solo genera altas para
-lo que falta y actualizaciones para lo que cambió.
+como parte de la estrategia *strangler fig* (Mes 6 del contrato). Los upserts de
+planteles y alumnos usan `legacy_id` para reconocer altas y actualizaciones. El mapeo
+del origen sigue pendiente de confirmar contra el esquema real de certweb.
 
 ## Requisitos
 
 - Python 3.11+
-- Driver ODBC 17 para SQL Server (lectura de certweb y, si el destino es SQL Server,
-  también para escribir)
+- `pymssql` para la lectura de certweb y, si el destino es SQL Server, ODBC Driver 17
+  para `pyodbc`; para destino MySQL se usa `mysql-connector-python`
 - `pip install -r requirements.txt`
 - Copiar `.env.example` a `.env` y llenar `LEGACY_DB_*` (certweb) y `TARGET_DB_*`
   (destino; `TARGET_DB_ENGINE=mysql` o `sqlserver`)
+
+Las cargas al destino adaptan marcadores e identificadores generados para MySQL y
+SQL Server. La prueba local cubre el SQL generado con cursores simulados; aún se
+requiere validar ambas rutas contra instancias reales antes de migrar datos.
 
 ## Orden de ejecución
 
@@ -22,9 +26,9 @@ Respeta las dependencias entre entidades:
 planteles → usuarios → docentes/alumnos → ciclos → materias → grupos
 ```
 
-Hoy solo **planteles** y **alumnos** tienen el pipeline completo (extract, transform y
-load); el resto de entidades levanta `NotImplementedError` explícito en su función de
-extracción hasta que se mapeen contra el esquema real de certweb.
+Hoy solo **planteles** y **alumnos** tienen código de extract, transform y load; el
+extract usa nombres de referencia y no está validado contra una instancia real de
+certweb. Usuarios, docentes y grupos todavía no tienen pipeline implementado.
 
 ## Uso
 
@@ -49,3 +53,5 @@ cuyo plantel legacy aún no se ha migrado).
 - `extract.py` solo hace `SELECT` contra certweb.
 - Los nombres de tabla/columna en `extract.py` son de referencia; deben ajustarse al
   esquema real de certweb antes de usarse contra un entorno productivo.
+- Pruebas del adaptador de carga: `python -m unittest discover -s etl/tests -v`.
+- GitHub Actions ejecuta estas pruebas con Python 3.11; las pruebas no conectan con bases reales.

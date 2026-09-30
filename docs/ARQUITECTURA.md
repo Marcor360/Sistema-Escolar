@@ -44,6 +44,11 @@ periodo).
 Openpay: el sistema nunca toca datos de tarjeta). El webhook
 `/finanzas/webhook/openpay` procesa `charge.succeeded/failed/cancelled` y
 `transaction.expired`, registra el pago, recalcula el cargo y notifica al alumno.
+Cada orden admite un único pago por índice único en la base y los reintentos no
+duplican pago ni notificación. El pago, el recálculo del cargo y la bitácora se
+confirman en una transacción. Si falla la creación externa, la orden local queda
+`FALLIDA`; ante un timeout se debe conciliar `ORD-{id}` en Openpay antes de reintentar,
+porque el proveedor podría haber creado el cargo aunque la respuesta no llegara.
 Sin credenciales el servicio queda deshabilitado de forma segura (503 explicativo).
 
 **Archivos.** Multer a disco (`UPLOADS_DIR`), nombre UUID, límite 5 MB y lista

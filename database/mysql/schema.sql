@@ -326,6 +326,7 @@ CREATE TABLE pagos (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   legacy_id BIGINT NULL,                           -- ver migracion_legacy_id.sql
   KEY idx_pago_alumno (alumno_id),
+  UNIQUE KEY uq_pagos_orden_pago (orden_pago_id),
   UNIQUE KEY uq_pagos_legacy (legacy_id),
   CONSTRAINT fk_pg_alumno FOREIGN KEY (alumno_id) REFERENCES alumnos(id),
   CONSTRAINT fk_pg_cargo FOREIGN KEY (cargo_id) REFERENCES cargos(id),
@@ -356,6 +357,10 @@ CREATE TABLE bitacora_actividad (
   usuario_id INT NULL,
   metodo VARCHAR(8) NOT NULL,
   ruta VARCHAR(200) NOT NULL,
+  entidad VARCHAR(100) NULL,
+  entidad_id INT NULL,
+  resultado VARCHAR(10) NOT NULL DEFAULT 'EXITO',
+  status_code SMALLINT NULL,
   ip VARCHAR(45) NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;

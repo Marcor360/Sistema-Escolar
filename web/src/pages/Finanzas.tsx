@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { pesos, selloDeCargo } from '../utils/formato';
 import { Encabezado } from '../components/Encabezado';
@@ -37,19 +37,25 @@ export default function FinanzasPage() {
   const [formPago, setFormPago] = useState({ alumnoId: '', cargoId: '', monto: '', metodo: 'EFECTIVO', referencia: '' });
   const [cargosAlumno, setCargosAlumno] = useState<Cargo[]>([]);
 
-  const cargarCatalogos = () => {
+  const cargarCatalogos = useCallback(() => {
     api.get<{ datos: Alumno[] }>('/alumnos', { params: { porPagina: 100 } }).then((r) => setAlumnos(r.data.datos));
     api.get<Concepto[]>('/finanzas/conceptos').then((r) => setConceptos(r.data));
     api.get<Ciclo[]>('/academico/ciclos').then((r) => setCiclos(r.data));
-  };
-  const cargarCargos = (pagina = 1) => api.get<ResultadoCargos>('/finanzas/cargos', { params: { pagina } }).then((r) => setResultadoCargos(r.data));
-  const cargarPagos = (pagina = 1) => api.get<ResultadoPagos>('/finanzas/pagos', { params: { pagina } }).then((r) => setResultadoPagos(r.data));
-  const cargarDatos = () => {
+  }, []);
+  const cargarCargos = useCallback(
+    (pagina = 1) => api.get<ResultadoCargos>('/finanzas/cargos', { params: { pagina } }).then((r) => setResultadoCargos(r.data)),
+    [],
+  );
+  const cargarPagos = useCallback(
+    (pagina = 1) => api.get<ResultadoPagos>('/finanzas/pagos', { params: { pagina } }).then((r) => setResultadoPagos(r.data)),
+    [],
+  );
+  const cargarDatos = useCallback(() => {
     cargarCargos();
     cargarPagos();
     api.get<Adeudo[]>('/finanzas/adeudos').then((r) => setAdeudos(r.data));
-  };
-  useEffect(() => { cargarCatalogos(); cargarDatos(); }, []);
+  }, [cargarCargos, cargarPagos]);
+  useEffect(() => { cargarCatalogos(); cargarDatos(); }, [cargarCatalogos, cargarDatos]);
 
   /** Cargos con saldo del alumno elegido, para el selector de "pago a cargo" (independiente de la página visible). */
   useEffect(() => {
@@ -144,8 +150,8 @@ export default function FinanzasPage() {
         <button className={tab === 'adeudos' ? 'activa' : ''} onClick={() => setTab('adeudos')}>Adeudos y cobranza</button>
       </div>
 
-      {error && <p className="mensaje-error">{error}</p>}
-      {mensaje && <p className="mensaje-ok">{mensaje}</p>}
+      {error && <p className="mensaje-error" role="alert">{error}</p>}
+      {mensaje && <p className="mensaje-ok" role="status">{mensaje}</p>}
 
       {tab === 'cargos' && (
         <>

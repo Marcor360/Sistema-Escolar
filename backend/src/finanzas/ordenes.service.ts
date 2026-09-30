@@ -46,13 +46,29 @@ export class OrdenesService {
       }),
     );
 
-    const charge = await this.openpay.crearCargoRedirect({
-      monto: saldo,
-      descripcion: cargo.descripcion,
-      ordenId: `ORD-${orden.id}`,
-      clienteNombre: cargo.alumno.usuario.nombreCompleto,
-      clienteEmail: cargo.alumno.usuario.email,
-    });
+    let charge;
+    try {
+      charge = await this.openpay.crearCargoRedirect({
+        monto: saldo,
+        descripcion: cargo.descripcion,
+        ordenId: `ORD-${orden.id}`,
+        clienteNombre: cargo.alumno.usuario.nombreCompleto,
+        clienteEmail: cargo.alumno.usuario.email,
+      });
+    } catch (error) {
+      // Conserva el intento local fallido. Si hubo timeout, conciliación debe buscar
+      // ORD-{id} en Openpay antes de autorizar un nuevo intento de cobro.
+      orden.estatus = 'FALLIDA';
+      await this.ordenes.save(orden).catch(() => undefined);
+      await this.bitacora.registrar(
+        user.sub,
+        'FALLO_CREAR_ORDEN',
+        'orden_pago',
+        orden.id,
+        `ORD-${orden.id}: fallo o timeout al crear cargo Openpay; requiere conciliación`,
+      ).catch(() => undefined);
+      throw error;
+    }
 
     orden.idExterno = charge.id;
     orden.urlPago = charge.payment_method?.url ?? null;
@@ -97,19 +113,21 @@ export class OrdenesService {
 
     switch (payload.type) {
       case 'charge.succeeded': {
-        orden.estatus = 'COMPLETADA';
-        await this.ordenes.save(orden);
-        const pago = await this.pagos.registrarDePasarela(
+        const resultado = await this.pagos.registrarDePasarela(
           orden,
           Number(payload.transaction?.amount ?? orden.monto),
           idExterno,
         );
-        await this.notificaciones.crear(
-          orden.alumno.usuarioId,
-          'Pago confirmado',
-          `Tu pago de $${pago.monto} MXN (${orden.descripcion}) fue confirmado.`,
-          'FINANCIERA',
-        );
+        orden.estatus = 'COMPLETADA';
+        await this.ordenes.save(orden);
+        if (resultado.creado) {
+          await this.notificaciones.crear(
+            orden.alumno.usuarioId,
+            'Pago confirmado',
+            `Tu pago de $${resultado.pago.monto} MXN (${orden.descripcion}) fue confirmado.`,
+            'FINANCIERA',
+          );
+        }
         break;
       }
       case 'charge.failed':

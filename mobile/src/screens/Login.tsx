@@ -37,12 +37,19 @@ export default function LoginScreen() {
         <Text style={estilos.etiqueta}>Correo institucional</Text>
         <TextInput
           style={estilos.input} autoCapitalize="none" keyboardType="email-address"
-          value={email} onChangeText={setEmail}
+          value={email} onChangeText={setEmail} accessibilityLabel="Correo institucional"
         />
         <Text style={estilos.etiqueta}>Contraseña</Text>
-        <TextInput style={estilos.input} secureTextEntry value={password} onChangeText={setPassword} />
-        {error !== '' && <Text style={estilos.error}>{error}</Text>}
-        <TouchableOpacity style={[estilos.boton, { backgroundColor: marca.colorPrimario }]} onPress={entrar} disabled={enviando}>
+        <TextInput style={estilos.input} secureTextEntry value={password} onChangeText={setPassword} accessibilityLabel="Contraseña" />
+        {error !== '' && <Text style={estilos.error} accessibilityRole="alert">{error}</Text>}
+        <TouchableOpacity
+          style={[estilos.boton, { backgroundColor: marca.colorPrimario }]}
+          onPress={entrar}
+          disabled={enviando}
+          accessibilityRole="button"
+          accessibilityLabel={enviando ? 'Verificando credenciales' : 'Entrar'}
+          accessibilityState={{ disabled: enviando }}
+        >
           <Text style={estilos.botonTexto}>{enviando ? 'Verificando…' : 'Entrar'}</Text>
         </TouchableOpacity>
       </View>

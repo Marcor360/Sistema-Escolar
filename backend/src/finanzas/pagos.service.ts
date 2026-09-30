@@ -1,11 +1,11 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { Pago } from '../entities/pago.entity';
 import { OrdenPago } from '../entities/orden-pago.entity';
+import { BitacoraFinanciera } from '../entities/bitacora-financiera.entity';
 import { AlumnosService } from '../alumnos/alumnos.service';
 import { CargosService } from './cargos.service';
-import { BitacoraFinancieraService } from './bitacora-financiera.service';
 import { JwtUser } from '../common/current-user.decorator';
 import { ScopeService } from '../planteles/scope.service';
 import { ListarPagosDto, RegistrarPagoDto } from './finanzas.dto';
@@ -17,8 +17,8 @@ export class PagosService {
     @InjectRepository(Pago) private readonly pagos: Repository<Pago>,
     private readonly alumnos: AlumnosService,
     private readonly cargos: CargosService,
-    private readonly bitacora: BitacoraFinancieraService,
     private readonly scope: ScopeService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async listar(query: ListarPagosDto, user: JwtUser) {
@@ -43,39 +43,78 @@ export class PagosService {
       const cargo = await this.cargos.obtener(dto.cargoId);
       if (cargo.alumnoId !== dto.alumnoId) throw new BadRequestException('El cargo no pertenece al alumno indicado');
     }
-    const pago = await this.pagos.save(
-      this.pagos.create({
-        alumnoId: dto.alumnoId,
-        cargoId: dto.cargoId ?? null,
-        monto: dto.monto,
-        metodo: dto.metodo,
-        referencia: dto.referencia ?? null,
-        estatus: 'CONFIRMADO',
-        fechaPago: new Date(),
-        registradoPorId: user.sub,
-      }),
-    );
-    if (dto.cargoId) await this.cargos.recalcularEstatus(dto.cargoId);
-    await this.bitacora.registrar(user.sub, 'PAGO_MANUAL', 'pago', pago.id, `$${dto.monto} ${dto.metodo}`);
-    return pago;
+    return this.dataSource.transaction(async (manager) => {
+      const pagos = manager.getRepository(Pago);
+      const pago = await pagos.save(
+        pagos.create({
+          alumnoId: dto.alumnoId,
+          cargoId: dto.cargoId ?? null,
+          monto: dto.monto,
+          metodo: dto.metodo,
+          referencia: dto.referencia ?? null,
+          estatus: 'CONFIRMADO',
+          fechaPago: new Date(),
+          registradoPorId: user.sub,
+        }),
+      );
+      if (dto.cargoId) await this.cargos.recalcularEstatus(dto.cargoId, manager);
+      await manager.getRepository(BitacoraFinanciera).insert({
+        usuarioId: user.sub,
+        accion: 'PAGO_MANUAL',
+        entidad: 'pago',
+        entidadId: pago.id,
+        detalle: `$${dto.monto} ${dto.metodo}`,
+      });
+      return pago;
+    });
   }
 
   /** Pago confirmado por la pasarela (lo invoca el procesamiento del webhook). */
   async registrarDePasarela(orden: OrdenPago, monto: number, referencia: string) {
-    const pago = await this.pagos.save(
-      this.pagos.create({
-        alumnoId: orden.alumnoId,
-        cargoId: orden.cargoId,
-        ordenPagoId: orden.id,
-        monto,
-        metodo: 'PASARELA',
-        referencia,
-        estatus: 'CONFIRMADO',
-        fechaPago: new Date(),
-      }),
-    );
-    if (orden.cargoId) await this.cargos.recalcularEstatus(orden.cargoId);
-    await this.bitacora.registrar(null, 'PAGO_PASARELA', 'pago', pago.id, `openpay=${referencia} $${monto}`);
-    return pago;
+    const existente = await this.pagos.findOne({ where: { ordenPagoId: orden.id } });
+    if (existente) {
+      // Recalcular repara estados derivados y se confirma en la misma transacción.
+      if (orden.cargoId) {
+        await this.dataSource.transaction((manager) => this.cargos.recalcularEstatus(orden.cargoId!, manager));
+      }
+      return { pago: existente, creado: false };
+    }
+
+    try {
+      const pago = await this.dataSource.transaction(async (manager) => {
+        const pagos = manager.getRepository(Pago);
+        const nuevo = await pagos.save(
+          pagos.create({
+            alumnoId: orden.alumnoId,
+            cargoId: orden.cargoId,
+            ordenPagoId: orden.id,
+            monto,
+            metodo: 'PASARELA',
+            referencia,
+            estatus: 'CONFIRMADO',
+            fechaPago: new Date(),
+          }),
+        );
+        if (orden.cargoId) await this.cargos.recalcularEstatus(orden.cargoId, manager);
+        await manager.getRepository(BitacoraFinanciera).insert({
+          usuarioId: null,
+          accion: 'PAGO_PASARELA',
+          entidad: 'pago',
+          entidadId: nuevo.id,
+          detalle: `openpay=${referencia} $${monto}`,
+        });
+        return nuevo;
+      });
+      return { pago, creado: true };
+    } catch (error) {
+      // Dos reintentos concurrentes pueden pasar la consulta anterior. El índice
+      // único elige al ganador; la transacción perdedora se revierte antes de leerlo.
+      const pagoConcurrente = await this.pagos.findOne({ where: { ordenPagoId: orden.id } });
+      if (!pagoConcurrente) throw error;
+      if (orden.cargoId) {
+        await this.dataSource.transaction((manager) => this.cargos.recalcularEstatus(orden.cargoId!, manager));
+      }
+      return { pago: pagoConcurrente, creado: false };
+    }
   }
 }

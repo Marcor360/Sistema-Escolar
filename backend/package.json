@@ -12,7 +12,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint \"src/**/*.ts\"",
     "format": "prettier --write \"src/**/*.ts\"",
-    "test": "jest"
+    "test": "jest",
+    "test:integration": "jest --config jest.integration.config.cjs --runInBand"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.15",

@@ -82,7 +82,12 @@ export default function TareasScreen() {
               texto={item.entrega ? `${item.entrega.estatus}${item.entrega.calificacion !== null ? ` · ${item.entrega.calificacion}` : ''}` : 'Sin entregar'}
               tono={tono(item)}
             />
-            <TouchableOpacity style={estilos.boton} onPress={() => entregar(item)}>
+            <TouchableOpacity
+              style={estilos.boton}
+              onPress={() => entregar(item)}
+              accessibilityRole="button"
+              accessibilityLabel={`${item.entrega ? 'Reemplazar entrega' : 'Entregar archivo'}: ${item.titulo}`}
+            >
               <Text style={estilos.botonTexto}>{item.entrega ? 'Reemplazar entrega' : 'Entregar archivo'}</Text>
             </TouchableOpacity>
           </Tarjeta>
