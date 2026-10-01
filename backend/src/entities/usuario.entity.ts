@@ -14,6 +14,7 @@ export class Usuario {
   @Column({ length: 80, nullable: true }) apellidoMaterno: string | null;
   @Column({ length: 20, nullable: true }) telefono: string | null;
   @Column({ default: true }) activo: boolean;
+  @Column({ name: 'session_version', type: 'int', default: 0 }) sessionVersion: number;
 
   @ManyToMany(() => Rol, { eager: true })
   @JoinTable({

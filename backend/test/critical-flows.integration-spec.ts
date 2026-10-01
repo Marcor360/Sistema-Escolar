@@ -2,12 +2,12 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { NestFactory } from '@nestjs/core';
 import { AddressInfo } from 'net';
 import { basename, resolve } from 'path';
-import { unlinkSync } from 'fs';
+import { readFileSync, unlinkSync } from 'fs';
 import * as bcrypt from 'bcryptjs';
 import { DataSource } from 'typeorm';
 import {
   Alumno, Cargo, CicloEscolar, ConceptoPago, Grupo, GrupoMateria, Inscripcion,
-  Materia, Material, Notificacion, OrdenPago, Pago, Plantel, Rol, Usuario, UsuarioPlantel,
+  Docente, Materia, Material, Notificacion, OrdenPago, Pago, Plantel, Rol, Usuario, UsuarioPlantel,
 } from '../src/entities';
 import { AppModule } from '../src/app.module';
 
@@ -43,6 +43,53 @@ async function esperarYCrearBaseSqlServer(): Promise<void> {
   }
 }
 
+async function instalarBaseline(): Promise<void> {
+  const raiz = resolve(process.cwd(), '..');
+  if (process.env.DB_TYPE === 'mssql') {
+    const sql = require('mssql');
+    const pool = await new sql.ConnectionPool({
+      user: process.env.DB_USER,
+      password: process.env.DB_PASS,
+      server: process.env.DB_HOST ?? 'localhost',
+      port: Number(process.env.DB_PORT) || 1433,
+      database: dbName,
+      options: { encrypt: process.env.DB_ENCRYPT === 'true', trustServerCertificate: process.env.DB_TRUST_SERVER_CERTIFICATE === 'true' },
+      connectionTimeout: 10000,
+    }).connect();
+    try {
+      const contenido = readFileSync(resolve(raiz, 'database/sqlserver/baseline_v1.sql'), 'utf8');
+      const tablas = await pool.request().query('SELECT COUNT(*) AS total FROM sys.tables');
+      if (tablas.recordset[0].total !== 0) throw new Error('La base de integración SQL Server no está vacía');
+      for (const lote of contenido.split(/^\s*GO\s*$/im).map((parte: string) => parte.trim()).filter(Boolean)) {
+        await pool.request().query(lote);
+      }
+    } finally {
+      await pool.close();
+    }
+    return;
+  }
+
+  const mysql = require('mysql2/promise');
+  const conexion = await mysql.createConnection({
+    host: process.env.DB_HOST,
+    port: Number(process.env.DB_PORT) || 3306,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    database: dbName,
+    multipleStatements: true,
+  });
+  try {
+    const [tablas] = await conexion.query(
+      'SELECT COUNT(*) AS total FROM information_schema.tables WHERE table_schema = DATABASE()',
+    );
+    if (Number(tablas[0].total) !== 0) throw new Error('La base de integración MySQL no está vacía');
+    const contenido = readFileSync(resolve(raiz, 'database/mysql/baseline_v1.sql'), 'utf8');
+    await conexion.query(contenido);
+  } finally {
+    await conexion.end();
+  }
+}
+
 describe('Integración de flujos críticos (base aislada)', () => {
   let app: NestExpressApplication;
   let dataSource: DataSource;
@@ -51,8 +98,10 @@ describe('Integración de flujos críticos (base aislada)', () => {
   let plantelId: number;
   let otroPlantelId: number;
   let adminId: number;
+  let superadminId: number;
   let alumnoId: number;
   let alumnoUsuarioId: number;
+  let docenteFueraDeAlcanceId: number;
   let ordenId: number;
   let cargoWebhookId: number;
   let archivoPrueba: string | undefined;
@@ -91,13 +140,14 @@ describe('Integración de flujos críticos (base aislada)', () => {
     if (!/^escolar_integration_[a-z0-9_]+$/i.test(dbName)) {
       throw new Error('DB_NAME debe comenzar con escolar_integration_; se rechaza cualquier otra base');
     }
-    if (process.env.DB_SYNC !== 'true' || process.env.NODE_ENV === 'production') {
-      throw new Error('La integración solo se permite en base aislada con NODE_ENV de pruebas y DB_SYNC=true');
+    if (process.env.DB_SYNC !== 'false' || process.env.NODE_ENV === 'production') {
+      throw new Error('La integración exige DB_SYNC=false y una base aislada con baseline instalado');
     }
     process.env.NODE_ENV = 'test';
     process.env.JWT_SECRET = process.env.JWT_SECRET || 'solo-para-pruebas-integrales';
     process.env.UPLOADS_DIR = process.env.UPLOADS_DIR || 'uploads';
     if (process.env.DB_TYPE === 'mssql') await esperarYCrearBaseSqlServer();
+    await instalarBaseline();
 
     app = await NestFactory.create<NestExpressApplication>(AppModule, { logger: false });
     await app.listen(0, '127.0.0.1');
@@ -120,6 +170,8 @@ describe('Integración de flujos críticos (base aislada)', () => {
     const administrativo = await obtenerRol('ADMINISTRATIVO', 'Administrativo');
     const finanzas = await obtenerRol('FINANZAS', 'Finanzas');
     const alumnoRole = await obtenerRol('ALUMNO', 'Alumno');
+    const maestroRole = await obtenerRol('MAESTRO', 'Maestro');
+    const superadminRole = await obtenerRol('SUPERADMIN', 'Superadmin');
 
     const usuarios = dataSource.getRepository(Usuario);
     const password = 'Integracion_Segura_42!';
@@ -131,6 +183,26 @@ describe('Integración de flujos críticos (base aislada)', () => {
     adminId = admin.id;
     await dataSource.getRepository(UsuarioPlantel).save(
       dataSource.getRepository(UsuarioPlantel).create({ usuarioId: admin.id, plantelId, activo: true }),
+    );
+
+    const superadmin = await usuarios.save(usuarios.create({
+      email: `root_${sufijo}@example.invalid`, passwordHash, nombre: 'Superadmin', apellidoPaterno: 'Integración',
+      apellidoMaterno: null, telefono: null, activo: true, roles: [superadminRole],
+    }));
+    superadminId = superadmin.id;
+
+    const docenteUsuario = await usuarios.save(usuarios.create({
+      email: `docente_${sufijo}@example.invalid`, passwordHash, nombre: 'Docente', apellidoPaterno: 'Fuera',
+      apellidoMaterno: null, telefono: null, activo: true, roles: [maestroRole],
+    }));
+    const docenteFuera = await dataSource.getRepository(Docente).save(
+      dataSource.getRepository(Docente).create({ usuarioId: docenteUsuario.id, numEmpleado: `D${sufijo}` }),
+    );
+    docenteFueraDeAlcanceId = docenteFuera.id;
+    await dataSource.getRepository(UsuarioPlantel).save(
+      dataSource.getRepository(UsuarioPlantel).create({
+        usuarioId: docenteUsuario.id, plantelId: otroPlantelId, activo: true,
+      }),
     );
 
     const alumnoUsuario = await usuarios.save(usuarios.create({
@@ -194,6 +266,37 @@ describe('Integración de flujos críticos (base aislada)', () => {
     expect(fueraDeAlcance.response.status).toBe(403);
   });
 
+  it('rechaza consultar, editar o dar de baja docentes fuera del alcance del plantel', async () => {
+    const admin = await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId });
+    const token = await login(admin.email, 'Integracion_Segura_42!');
+
+    const detalle = await api(`/docentes/${docenteFueraDeAlcanceId}`, { token });
+    const edicion = await api(`/docentes/${docenteFueraDeAlcanceId}`, {
+      method: 'PATCH', token, body: { especialidad: 'Cambio no autorizado' },
+    });
+    const baja = await api(`/docentes/${docenteFueraDeAlcanceId}`, { method: 'DELETE', token });
+
+    expect(detalle.response.status).toBe(403);
+    expect(edicion.response.status).toBe(403);
+    expect(baja.response.status).toBe(403);
+  });
+
+  it('revierte la cuenta si falla el alta del expediente relacionado', async () => {
+    const superadmin = await dataSource.getRepository(Usuario).findOneByOrFail({ id: superadminId });
+    const token = await login(superadmin.email, 'Integracion_Segura_42!');
+    const email = `rollback_${sufijo}@example.invalid`;
+    const resultado = await api('/alumnos', {
+      method: 'POST', token,
+      body: {
+        email, password: 'Integracion_Segura_42!', nombre: 'Rollback', apellidoPaterno: 'Prueba',
+        matricula: `R${sufijo}`, plantelId: 2147483000,
+      },
+    });
+
+    expect(resultado.response.status).toBeGreaterThanOrEqual(400);
+    expect(await dataSource.getRepository(Usuario).findOneBy({ email })).toBeNull();
+  });
+
   it('expone disponibilidad con verificación real de la base', async () => {
     const health = await api('/health');
     expect(health.response.status).toBe(200);
@@ -245,6 +348,28 @@ describe('Integración de flujos críticos (base aislada)', () => {
       expect.objectContaining({ grupoMateriaId, parcial: 1, calificacion: 92 }),
     ]));
     expect(await dataSource.getRepository(Inscripcion).countBy({ alumnoId, grupoId, estatus: 'ACTIVA' })).toBe(1);
+  });
+
+  it('genera una sola colegiatura si dos solicitudes llegan simultaneamente', async () => {
+    const admin = await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId });
+    const token = await login(admin.email, 'Integracion_Segura_42!');
+    const ciclo = await dataSource.getRepository(CicloEscolar).findOneByOrFail({ clave: `C${sufijo}` });
+    const conceptos = dataSource.getRepository(ConceptoPago);
+    await conceptos.save(conceptos.create({
+      clave: 'COL', nombre: 'Colegiatura integracion', tipo: 'COLEGIATURA', montoBase: 100,
+    }));
+    const body = { cicloId: ciclo.id, periodo: '2026-09', monto: 100 };
+    const [primera, segunda] = await Promise.all([
+      api('/finanzas/cargos/generar-colegiaturas', { method: 'POST', token, body }),
+      api('/finanzas/cargos/generar-colegiaturas', { method: 'POST', token, body }),
+    ]);
+
+    expect(primera.response.status).toBe(201);
+    expect(segunda.response.status).toBe(201);
+    expect(primera.data.generados + segunda.data.generados).toBe(1);
+    expect(await dataSource.getRepository(Cargo).countBy({
+      claveGeneracion: `COLEGIATURA:${ciclo.id}:${alumnoId}:2026-09`,
+    })).toBe(1);
   });
 
   it('registra un cargo y un pago parcial desde el flujo financiero', async () => {

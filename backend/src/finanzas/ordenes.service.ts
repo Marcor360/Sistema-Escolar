@@ -66,6 +66,7 @@ export class OrdenesService {
         'orden_pago',
         orden.id,
         `ORD-${orden.id}: fallo o timeout al crear cargo Openpay; requiere conciliación`,
+        cargo.alumno.plantelId,
       ).catch(() => undefined);
       throw error;
     }
@@ -75,7 +76,9 @@ export class OrdenesService {
     orden.estatus = 'PENDIENTE';
     orden.expiraEn = charge.due_date ? new Date(charge.due_date) : null;
     await this.ordenes.save(orden);
-    await this.bitacora.registrar(user.sub, 'CREAR_ORDEN', 'orden_pago', orden.id, `openpay=${charge.id} $${saldo}`);
+    await this.bitacora.registrar(
+      user.sub, 'CREAR_ORDEN', 'orden_pago', orden.id, `openpay=${charge.id} $${saldo}`, cargo.alumno.plantelId,
+    );
     return orden;
   }
 

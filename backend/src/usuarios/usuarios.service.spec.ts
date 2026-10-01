@@ -41,3 +41,22 @@ describe('UsuariosService.listado — alcance de alumnos por rol', () => {
     expect(llamadasExists).toHaveLength(0);
   });
 });
+
+describe('UsuariosService.actualizar revoca sesiones', () => {
+  it('invalida los tokens previos al reactivar una cuenta desactivada', async () => {
+    const cuenta = {
+      id: 1, email: 'a@escuela.mx', passwordHash: 'hash', nombre: 'A', apellidoPaterno: 'B',
+      apellidoMaterno: null, telefono: null, activo: false, sessionVersion: 2, roles: [],
+    };
+    const usuarios = {
+      findOne: jest.fn().mockResolvedValue(cuenta),
+      save: jest.fn(async (usuario) => usuario),
+    };
+    const service = new UsuariosService(usuarios as any, {} as any, {} as any, {} as any, {} as any, {} as any);
+
+    const resultado = await service.actualizar(1, { activo: true } as any);
+
+    expect(resultado.sessionVersion).toBe(3);
+    expect(resultado.activo).toBe(true);
+  });
+});

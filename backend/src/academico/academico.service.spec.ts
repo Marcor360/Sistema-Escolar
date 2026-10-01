@@ -8,6 +8,7 @@ function crearServicio(overrides: {
   calificaciones?: any;
   actividades?: any;
   materiales?: any;
+  docentes?: any;
   scope?: any;
 }) {
   return new AcademicoService(
@@ -20,8 +21,9 @@ function crearServicio(overrides: {
     overrides.calificaciones ?? ({} as any),
     overrides.actividades ?? ({} as any),
     overrides.materiales ?? ({} as any),
-    {} as any,
+    overrides.docentes ?? ({} as any),
     overrides.scope ?? ({ validarGestion: jest.fn().mockResolvedValue(undefined) } as any),
+    {} as any,
   );
 }
 
@@ -85,6 +87,19 @@ describe('AcademicoService.actualizarGrupo', () => {
   });
 });
 
+describe('AcademicoService.alcance de grupo', () => {
+  it('rechaza consultar alumnos si el plantel del grupo queda fuera del alcance', async () => {
+    const grupos = { findOne: jest.fn().mockResolvedValue({ id: 22, plantelId: 9 }) };
+    const inscripciones = { find: jest.fn() };
+    const scope = { validarGestion: jest.fn().mockRejectedValue(new ForbiddenException()) };
+    const service = crearServicio({ grupos, inscripciones, scope });
+
+    await expect(service.alumnosDeGrupo(22, { sub: 1, roles: ['ADMINISTRATIVO'] } as any))
+      .rejects.toThrow(ForbiddenException);
+    expect(inscripciones.find).not.toHaveBeenCalled();
+  });
+});
+
 describe('AcademicoService.listarGrupos', () => {
   it('excluye grupos inactivos por defecto', async () => {
     const grupos = { findAndCount: jest.fn().mockResolvedValue([[], 0]) };
@@ -96,5 +111,22 @@ describe('AcademicoService.listarGrupos', () => {
     expect(grupos.findAndCount).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.objectContaining({ activo: true }) }),
     );
+  });
+
+  it('limita los grupos de MAESTRO a los que tienen una materia asignada', async () => {
+    const grupos = { findAndCount: jest.fn().mockResolvedValue([[], 0]) };
+    const grupoMaterias = { find: jest.fn().mockResolvedValue([{ grupoId: 6 }, { grupoId: 9 }]) };
+    const docentes = { obtenerPorUsuario: jest.fn().mockResolvedValue({ id: 3 }) };
+    const scope = { resolverFiltro: jest.fn().mockResolvedValue([2]) };
+    const service = crearServicio({ grupos, grupoMaterias, docentes, scope });
+
+    await service.listarGrupos(
+      { sub: 7, roles: ['MAESTRO'] } as any,
+      { pagina: 1, porPagina: 20 } as any,
+    );
+
+    expect(grupos.findAndCount).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ id: expect.anything(), plantelId: expect.anything() }),
+    }));
   });
 });

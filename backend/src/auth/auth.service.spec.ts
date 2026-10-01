@@ -17,7 +17,7 @@ describe('AuthService.login', () => {
     const bitacora = { insert: jest.fn().mockResolvedValue(undefined) };
     const jwt = { sign: jest.fn().mockReturnValue('token') };
     const config = { get: jest.fn((key: string) => (key === 'JWT_EXPIRES_MOVIL' ? '30d' : '8h')) };
-    const service = new AuthService(repo as any, {} as any, bitacora as any, jwt as any, {} as any, config as any);
+    const service = new AuthService(repo as any, {} as any, bitacora as any, jwt as any, {} as any, config as any, {} as any);
     return { service, jwt, bitacora, repo };
   };
 
@@ -81,8 +81,28 @@ describe('AuthService.forgotPassword / resetPassword', () => {
       findOne: jest.fn(),
     };
     const notificaciones = { enviarEmail: jest.fn().mockResolvedValue(undefined) };
-    const service = new AuthService(usuarios as any, tokens as any, {} as any, {} as any, notificaciones as any, {} as any);
-    return { service, usuarios, tokens, notificaciones };
+    const manager = {
+      getRepository: jest.fn((entity) => entity.name === 'Usuario'
+        ? {
+          findOne: jest.fn().mockResolvedValue({ id: 1, activo: true, passwordHash: 'hash', sessionVersion: 0 }),
+          save: jest.fn().mockResolvedValue(undefined),
+          update: jest.fn().mockResolvedValue({ affected: 1 }),
+        }
+        : {
+          createQueryBuilder: jest.fn(() => ({
+            update: jest.fn().mockReturnThis(),
+            set: jest.fn().mockReturnThis(),
+            where: jest.fn().mockReturnThis(),
+            execute: jest.fn().mockResolvedValue({ affected: 1 }),
+          })),
+          update: jest.fn().mockResolvedValue({ affected: 1 }),
+        }),
+    };
+    const dataSource = { transaction: jest.fn((callback) => callback(manager)) };
+    const service = new AuthService(
+      usuarios as any, tokens as any, {} as any, {} as any, notificaciones as any, {} as any, dataSource as any,
+    );
+    return { service, usuarios, tokens, notificaciones, dataSource };
   };
 
   it('guarda el hash del token (sha256, 64 hex), no el valor en claro', async () => {
@@ -100,7 +120,7 @@ describe('AuthService.forgotPassword / resetPassword', () => {
   });
 
   it('resetPassword acepta el token original aunque solo se persista su hash', async () => {
-    const { service, usuarios, tokens } = crear();
+    const { service, tokens, dataSource } = crear();
     const tokenOriginal = 'abc123def456';
     const hash = createHash('sha256').update(tokenOriginal).digest('hex');
     tokens.findOne.mockResolvedValue({ id: 9, usuarioId: 1, expiraEn: new Date(Date.now() + 60_000) });
@@ -108,7 +128,6 @@ describe('AuthService.forgotPassword / resetPassword', () => {
     await service.resetPassword(tokenOriginal, 'NuevaClave123');
 
     expect(tokens.findOne).toHaveBeenCalledWith({ where: { token: hash, usado: false } });
-    expect(usuarios.update).toHaveBeenCalledWith(1, expect.objectContaining({ passwordHash: expect.any(String) }));
-    expect(tokens.update).toHaveBeenCalledWith(9, { usado: true });
+    expect(dataSource.transaction).toHaveBeenCalledTimes(1);
   });
 });

@@ -13,7 +13,7 @@ Este documento distingue código presente de operación real. “Implementado”
 | Finanzas y Openpay | Flujos de cargo, pago y webhook implementados; pagos, recálculo y bitácora son transaccionales; webhook idempotente | Aplicar migración nueva, probar sandbox con reintentos y completar conciliación antes de producción |
 | SMTP | Envío condicional implementado | Credenciales, dominio remitente, entrega y rebotes dependen del proveedor |
 | Reportes | PDF y Excel implementados | Revisar formatos y datos contra formatos institucionales reales |
-| Base de datos | Entidades y esquemas de referencia MySQL/SQL Server presentes; migraciones incrementales manuales; suite de integración configurada para ambos motores en CI | Falta un baseline ejecutable para una base vacía, observar CI con motores reales y aplicar migraciones en el servidor elegido |
+| Base de datos | Entidades, baselines instalables v1 y migraciones incrementales para MySQL/SQL Server; integración instala el baseline con `DB_SYNC=false` | Falta observar CI con motores reales, validar el camino de actualización desde bases históricas y aplicar migraciones aprobadas en el servidor elegido |
 | ETL certweb | Carga parcial de planteles y alumnos; modo de simulación disponible | Confirmar esquema de origen, completar usuarios/docentes/grupos y probar contra ambos destinos reales |
 | Producción | Variables de configuración y compilación disponibles | Hosting, dominio, TLS, respaldos, monitoreo, almacenamiento duradero y cuentas externas aún dependen de decisiones/credenciales |
 | Pruebas | Unitarias y una suite HTTP con base real configurada para MySQL/SQL Server en CI | Falta observar los jobs de integración y ampliar casos de actividad/entrega y más límites de permisos |
@@ -30,4 +30,4 @@ Este documento distingue código presente de operación real. “Implementado”
 
 ## Verificación conocida
 
-La suite unitaria del backend pasó después de los cambios (14 suites, 47 pruebas), igual que lint y typecheck. El portal pasó lint/build y la app móvil pasó `tsc --noEmit`. El ETL pasó tres pruebas de cursores simulados. Se agregó una suite HTTP que prepara una base efímera y ejercita autenticación, alcance por plantel, inscripción, calificaciones, pagos, descarga firmada y reintentos de Openpay. No pudo ejecutarse en este equipo porque no hay motor de base de datos local; la validación real queda para los jobs de CI.
+La suite unitaria del backend pasó después de esta revisión (18 suites, 65 pruebas), junto con lint y typecheck. El archivo de integración también compila y Jest lo descubre. La suite HTTP instala el baseline versionado y ejercita autenticación, alcance por plantel, operaciones académicas, generación concurrente de colegiaturas, pagos, descarga firmada y reintentos de Openpay; aquí no pudo ejecutarse porque los puertos locales MySQL (3306) y SQL Server (1433) no están disponibles. La ejecución real del baseline contra ambos motores queda configurada en los jobs de CI.

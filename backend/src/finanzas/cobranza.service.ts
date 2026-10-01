@@ -27,19 +27,23 @@ export class CobranzaService {
     const institucion = this.config.get<string>('NOMBRE_INSTITUCION') || 'Institución';
 
     const adeudos = await this.cargos.adeudos(user);
-    const porAlumno = new Map<number, { nombre: string; email: string; usuarioId: number; saldo: number }>();
+    const porAlumno = new Map<number, {
+      nombre: string; email: string; usuarioId: number; saldo: number; plantelId: number;
+    }>();
     for (const cargo of adeudos) {
       const actual = porAlumno.get(cargo.alumnoId) ?? {
         nombre: cargo.alumno.usuario.nombreCompleto,
         email: cargo.alumno.usuario.email,
         usuarioId: cargo.alumno.usuarioId,
         saldo: 0,
+        plantelId: cargo.alumno.plantelId,
       };
       actual.saldo = redondear(actual.saldo + cargo.saldo);
       porAlumno.set(cargo.alumnoId, actual);
     }
 
     let enviados = 0;
+    const enviadosPorPlantel = new Map<number, number>();
     for (const datos of porAlumno.values()) {
       const html = plantilla.cuerpoHtml
         .replace(/{{nombre}}/g, datos.nombre)
@@ -52,8 +56,11 @@ export class CobranzaService {
         `Presentas un saldo pendiente de $${datos.saldo.toFixed(2)} MXN.`, 'FINANCIERA',
       );
       enviados++;
+      enviadosPorPlantel.set(datos.plantelId, (enviadosPorPlantel.get(datos.plantelId) ?? 0) + 1);
     }
-    await this.bitacora.registrar(user.sub, 'AVISOS_COBRANZA', 'notificacion', null, `avisos=${enviados}`);
+    await Promise.all([...enviadosPorPlantel].map(([plantelId, cantidad]) => this.bitacora.registrar(
+      user.sub, 'AVISOS_COBRANZA', 'notificacion', null, `avisos=${cantidad}`, plantelId,
+    )));
     return { enviados };
   }
 }

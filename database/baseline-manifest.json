@@ -1,0 +1,40 @@
+{
+    "baseline":  "v1",
+    "estado":  "schema actual al 2026-09-29",
+    "motores":  {
+                    "mysql":  {
+                                  "archivo":  "database/mysql/baseline_v1.sql",
+                                  "incluye":  [
+                                                  "migracion_bitacora_plantel.sql",
+                                                  "migracion_bitacora_resultado.sql",
+                                                  "migracion_calendario_creador.sql",
+                                                  "migracion_cargos_idempotencia.sql",
+                                                  "migracion_configuracion_marca.sql",
+                                                  "migracion_grupos_ciclo_vida.sql",
+                                                  "migracion_indices.sql",
+                                                  "migracion_legacy_id.sql",
+                                                  "migracion_pago_orden_unico.sql",
+                                                  "migracion_plantel_detalle.sql",
+                                                  "migracion_planteles_alcance.sql",
+                                                  "migracion_version_sesion.sql"
+                                              ]
+                              },
+                    "sqlserver":  {
+                                      "archivo":  "database/sqlserver/baseline_v1.sql",
+                                      "incluye":  [
+                                                      "migracion_bitacora_plantel.sql",
+                                                      "migracion_bitacora_resultado.sql",
+                                                      "migracion_calendario_creador.sql",
+                                                      "migracion_cargos_idempotencia.sql",
+                                                      "migracion_configuracion_marca.sql",
+                                                      "migracion_grupos_ciclo_vida.sql",
+                                                      "migracion_indices.sql",
+                                                      "migracion_legacy_id.sql",
+                                                      "migracion_pago_orden_unico.sql",
+                                                      "migracion_plantel_detalle.sql",
+                                                      "migracion_planteles_alcance.sql",
+                                                      "migracion_version_sesion.sql"
+                                                  ]
+                                  }
+                }
+}

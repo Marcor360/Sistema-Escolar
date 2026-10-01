@@ -9,6 +9,7 @@ import { Alumno } from '../entities/alumno.entity';
 import { Calificacion } from '../entities/calificacion.entity';
 import { Actividad } from '../entities/actividad.entity';
 import { Material } from '../entities/material.entity';
+import { UsuarioPlantel } from '../entities/usuario-plantel.entity';
 import { AcademicoService } from './academico.service';
 import { AcademicoController } from './academico.controller';
 import { DocentesModule } from '../docentes/docentes.module';
@@ -18,6 +19,7 @@ import { PlantelesModule } from '../planteles/planteles.module';
   imports: [
     TypeOrmModule.forFeature([
       CicloEscolar, Materia, Grupo, GrupoMateria, Inscripcion, Alumno, Calificacion, Actividad, Material,
+      UsuarioPlantel,
     ]),
     DocentesModule,
     PlantelesModule,

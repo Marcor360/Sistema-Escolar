@@ -1,6 +1,6 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Like, Repository } from 'typeorm';
+import { DataSource, Like, Repository } from 'typeorm';
 import { Alumno } from '../entities/alumno.entity';
 import { Inscripcion } from '../entities/inscripcion.entity';
 import { GrupoMateria } from '../entities/grupo-materia.entity';
@@ -17,6 +17,7 @@ export class AlumnosService {
     @InjectRepository(GrupoMateria) private readonly grupoMaterias: Repository<GrupoMateria>,
     private readonly usuarios: UsuariosService,
     private readonly scope: ScopeService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async listar(query: ListarAlumnosDto, user?: JwtUser) {
@@ -37,7 +38,22 @@ export class AlumnosService {
   async obtener(id: number, user?: JwtUser) {
     const alumno = await this.alumnos.findOne({ where: { id } });
     if (!alumno) throw new NotFoundException('Alumno no encontrado');
-    if (user) await this.scope.validarGestion(user, alumno.plantelId);
+    if (user) {
+      const maestroPuro = user.roles.includes('MAESTRO') &&
+        !user.roles.some((rol) => ['SUPERADMIN', 'ADMINISTRATIVO', 'FINANZAS'].includes(rol));
+      if (maestroPuro) {
+        const permitido = await this.inscripciones.createQueryBuilder('i')
+          .where('i.alumno_id = :alumnoId', { alumnoId: id })
+          .andWhere('i.estatus = :estatus', { estatus: 'ACTIVA' })
+          .andWhere(
+            'EXISTS (SELECT 1 FROM grupo_materias gm INNER JOIN docentes d ON d.id = gm.docente_id WHERE gm.grupo_id = i.grupo_id AND d.usuario_id = :usuarioId)',
+            { usuarioId: user.sub },
+          )
+          .getCount();
+        if (!permitido) throw new ForbiddenException('El alumno no pertenece a uno de tus grupos');
+      }
+      await this.scope.validarGestion(user, alumno.plantelId);
+    }
     return alumno;
   }
 
@@ -52,17 +68,18 @@ export class AlumnosService {
     const existe = await this.alumnos.findOne({ where: { matricula: dto.matricula }, withDeleted: true });
     if (existe) throw new ConflictException('La matrícula ya está registrada');
 
-    const usuario = await this.usuarios.crear({
-      email: dto.email,
-      password: dto.password,
-      nombre: dto.nombre,
-      apellidoPaterno: dto.apellidoPaterno,
-      apellidoMaterno: dto.apellidoMaterno,
-      telefono: dto.telefono,
-      roles: ['ALUMNO'],
-    });
-    return this.alumnos.save(
-      this.alumnos.create({
+    return this.dataSource.transaction(async (manager) => {
+      const usuario = await this.usuarios.crear({
+        email: dto.email,
+        password: dto.password,
+        nombre: dto.nombre,
+        apellidoPaterno: dto.apellidoPaterno,
+        apellidoMaterno: dto.apellidoMaterno,
+        telefono: dto.telefono,
+        roles: ['ALUMNO'],
+      }, manager);
+      const alumnos = manager.getRepository(Alumno);
+      return alumnos.save(alumnos.create({
         usuarioId: usuario.id,
         plantelId: dto.plantelId,
         matricula: dto.matricula,
@@ -71,39 +88,55 @@ export class AlumnosService {
         tutorNombre: dto.tutorNombre ?? null,
         tutorTelefono: dto.tutorTelefono ?? null,
         direccion: dto.direccion ?? null,
-      }),
-    );
+      }));
+    });
   }
 
   async actualizar(id: number, dto: ActualizarAlumnoDto, user?: JwtUser) {
-    const alumno = await this.obtener(id, user);
-    if (dto.plantelId && user) await this.scope.validarGestion(user, dto.plantelId);
-    if (dto.nombre || dto.apellidoPaterno || dto.apellidoMaterno || dto.telefono) {
-      await this.usuarios.actualizar(alumno.usuarioId, {
-        nombre: dto.nombre,
-        apellidoPaterno: dto.apellidoPaterno,
-        apellidoMaterno: dto.apellidoMaterno,
-        telefono: dto.telefono,
+    return this.dataSource.transaction(async (manager) => {
+      const alumnos = manager.getRepository(Alumno);
+      const alumno = await alumnos.findOne({ where: { id } });
+      if (!alumno) throw new NotFoundException('Alumno no encontrado');
+      if (user) {
+        await this.scope.validarGestion(user, alumno.plantelId);
+        if (dto.plantelId) await this.scope.validarGestion(user, dto.plantelId);
+      }
+      if (dto.nombre || dto.apellidoPaterno || dto.apellidoMaterno || dto.telefono) {
+        await this.usuarios.actualizar(alumno.usuarioId, {
+          nombre: dto.nombre,
+          apellidoPaterno: dto.apellidoPaterno,
+          apellidoMaterno: dto.apellidoMaterno,
+          telefono: dto.telefono,
+        }, manager);
+      }
+      Object.assign(alumno, {
+        curp: dto.curp ?? alumno.curp,
+        fechaNacimiento: dto.fechaNacimiento ?? alumno.fechaNacimiento,
+        tutorNombre: dto.tutorNombre ?? alumno.tutorNombre,
+        tutorTelefono: dto.tutorTelefono ?? alumno.tutorTelefono,
+        direccion: dto.direccion ?? alumno.direccion,
+        plantelId: dto.plantelId ?? alumno.plantelId,
+        estatus: dto.estatus ?? alumno.estatus,
       });
-    }
-    Object.assign(alumno, {
-      curp: dto.curp ?? alumno.curp,
-      fechaNacimiento: dto.fechaNacimiento ?? alumno.fechaNacimiento,
-      tutorNombre: dto.tutorNombre ?? alumno.tutorNombre,
-      tutorTelefono: dto.tutorTelefono ?? alumno.tutorTelefono,
-      direccion: dto.direccion ?? alumno.direccion,
-      plantelId: dto.plantelId ?? alumno.plantelId,
-      estatus: dto.estatus ?? alumno.estatus,
+      return alumnos.save(alumno);
     });
-    return this.alumnos.save(alumno);
   }
 
   async baja(id: number, user?: JwtUser) {
-    const alumno = await this.obtener(id, user);
-    alumno.estatus = 'BAJA';
-    await this.alumnos.save(alumno);
-    await this.alumnos.softDelete(id);
-    return { ok: true };
+    return this.dataSource.transaction(async (manager) => {
+      const alumnos = manager.getRepository(Alumno);
+      const alumno = await alumnos.findOne({ where: { id } });
+      if (!alumno) throw new NotFoundException('Alumno no encontrado');
+      if (user) await this.scope.validarGestion(user, alumno.plantelId);
+      alumno.estatus = 'BAJA';
+      await alumnos.save(alumno);
+      await alumnos.softDelete(id);
+      await manager.getRepository(Inscripcion).update(
+        { alumnoId: id, estatus: 'ACTIVA' }, { estatus: 'BAJA' },
+      );
+      await this.usuarios.actualizar(alumno.usuarioId, { activo: false }, manager);
+      return { ok: true };
+    });
   }
 
   /** Materias del alumno en sus grupos con inscripción activa. */

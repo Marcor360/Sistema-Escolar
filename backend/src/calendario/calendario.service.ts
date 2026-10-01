@@ -40,7 +40,27 @@ export class CalendarioService {
       );
     } else {
       const planteles = await this.scope.resolverFiltro(user, plantelId);
-      if (planteles !== null) qb.andWhere('(e.plantel_id IS NULL OR e.plantel_id IN (:...planteles))', { planteles });
+      const maestroPuro = user.roles.includes('MAESTRO') &&
+        !user.roles.some((rol) => ['SUPERADMIN', 'ADMINISTRATIVO', 'FINANZAS'].includes(rol));
+      if (maestroPuro) {
+        const docente = await this.docentes.findOne({ where: { usuarioId: user.sub } });
+        const grupos = docente
+          ? await this.grupoMaterias.find({ where: { docenteId: docente.id } })
+          : [];
+        const grupoIds = [...new Set(grupos.map((grupo) => grupo.grupoId))];
+        if (planteles !== null && grupoIds.length > 0) {
+          qb.andWhere(
+            '((e.grupo_id IS NULL AND (e.plantel_id IS NULL OR e.plantel_id IN (:...planteles))) OR e.grupo_id IN (:...grupoIds))',
+            { planteles, grupoIds },
+          );
+        } else if (planteles !== null) {
+          qb.andWhere('(e.grupo_id IS NULL AND (e.plantel_id IS NULL OR e.plantel_id IN (:...planteles)))', { planteles });
+        } else if (grupoIds.length > 0) {
+          qb.andWhere('(e.grupo_id IS NULL OR e.grupo_id IN (:...grupoIds))', { grupoIds });
+        }
+      } else if (planteles !== null) {
+        qb.andWhere('(e.plantel_id IS NULL OR e.plantel_id IN (:...planteles))', { planteles });
+      }
       else if (plantelId) qb.andWhere('(e.plantel_id IS NULL OR e.plantel_id = :plantelId)', { plantelId });
     }
     return qb.orderBy('e.fecha_inicio', 'ASC').take(500).getMany();

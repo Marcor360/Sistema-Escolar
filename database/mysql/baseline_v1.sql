@@ -1,11 +1,9 @@
+-- Baseline instalable v1. Aplicar sobre una base vacia ya creada; no modifica schema.sql documental.
 -- =====================================================================
 -- Sistema Escolar Multiplataforma (MVP) — Esquema MySQL 8.x
 -- Equivalente 1:1 con database/sqlserver/schema.sql y con las
 -- entidades TypeORM del backend (naming: snake_case).
 -- =====================================================================
-CREATE DATABASE IF NOT EXISTS escolar CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE escolar;
-
 -- ---------- Seguridad / usuarios ----------
 CREATE TABLE roles (
   id INT AUTO_INCREMENT PRIMARY KEY,

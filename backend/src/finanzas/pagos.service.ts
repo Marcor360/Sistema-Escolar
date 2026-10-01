@@ -38,7 +38,7 @@ export class PagosService {
 
   /** Pago manual de ventanilla (efectivo/transferencia/tarjeta). */
   async registrarManual(dto: RegistrarPagoDto, user: JwtUser) {
-    await this.alumnos.obtener(dto.alumnoId, user);
+    const alumno = await this.alumnos.obtener(dto.alumnoId, user);
     if (dto.cargoId) {
       const cargo = await this.cargos.obtener(dto.cargoId);
       if (cargo.alumnoId !== dto.alumnoId) throw new BadRequestException('El cargo no pertenece al alumno indicado');
@@ -60,6 +60,7 @@ export class PagosService {
       if (dto.cargoId) await this.cargos.recalcularEstatus(dto.cargoId, manager);
       await manager.getRepository(BitacoraFinanciera).insert({
         usuarioId: user.sub,
+        plantelId: alumno.plantelId,
         accion: 'PAGO_MANUAL',
         entidad: 'pago',
         entidadId: pago.id,
@@ -98,6 +99,7 @@ export class PagosService {
         if (orden.cargoId) await this.cargos.recalcularEstatus(orden.cargoId, manager);
         await manager.getRepository(BitacoraFinanciera).insert({
           usuarioId: null,
+          plantelId: orden.alumno.plantelId,
           accion: 'PAGO_PASARELA',
           entidad: 'pago',
           entidadId: nuevo.id,

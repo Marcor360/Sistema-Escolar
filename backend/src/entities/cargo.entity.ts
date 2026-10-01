@@ -26,6 +26,8 @@ export class Cargo {
   ciclo: CicloEscolar | null;
   @Index('idx_cargo_periodo') @Column({ type: 'char', length: 7, nullable: true })
   periodo: string | null; // YYYY-MM
+  @Index('uq_cargos_clave_generacion', { unique: true, where: 'clave_generacion IS NOT NULL' })
+  @Column({ length: 80, nullable: true }) claveGeneracion: string | null;
   @Column({ length: 200 }) descripcion: string;
   @Column('decimal', { precision: 12, scale: 2, transformer: decimalTransformer }) monto: number;
   @Column('decimal', { precision: 12, scale: 2, default: 0, transformer: decimalTransformer })

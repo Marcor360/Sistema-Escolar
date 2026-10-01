@@ -15,7 +15,7 @@ export class ReportesController {
   constructor(private readonly service: ReportesService) {}
 
   @Get('resumen')
-  @Roles('ADMINISTRATIVO', 'FINANZAS', 'MAESTRO')
+  @Roles('ADMINISTRATIVO', 'FINANZAS')
   resumen(@CurrentUser() user: JwtUser, @Query('plantelId') plantelId?: string) {
     return this.service.resumen(user, plantelId ? Number(plantelId) : undefined);
   }

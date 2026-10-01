@@ -22,7 +22,10 @@ describe('OrdenesService.crear', () => {
   });
 
   it('para personal (FINANZAS), valida el alumno del cargo vía alumnos.obtener (alcance de plantel)', async () => {
-    const cargo = { id: 1, alumnoId: 10, descripcion: 'Colegiatura', alumno: { usuario: { nombreCompleto: 'X Y', email: 'x@escuela.mx' } } };
+    const cargo = {
+      id: 1, alumnoId: 10, descripcion: 'Colegiatura',
+      alumno: { plantelId: 2, usuario: { nombreCompleto: 'X Y', email: 'x@escuela.mx' } },
+    };
     const cargos = { obtener: jest.fn().mockResolvedValue(cargo), saldoDeCargo: jest.fn().mockResolvedValue(500) };
     const alumnos = {
       obtenerPorUsuario: jest.fn().mockRejectedValue(new Error('el usuario no tiene expediente de alumno')),
@@ -42,7 +45,7 @@ describe('OrdenesService.crear', () => {
     const error = new Error('Openpay no disponible');
     const cargo = {
       id: 1, alumnoId: 10, descripcion: 'Colegiatura',
-      alumno: { usuario: { nombreCompleto: 'X Y', email: 'x@escuela.mx' } },
+      alumno: { plantelId: 2, usuario: { nombreCompleto: 'X Y', email: 'x@escuela.mx' } },
     };
     const cargos = { obtener: jest.fn().mockResolvedValue(cargo), saldoDeCargo: jest.fn().mockResolvedValue(500) };
     const alumnos = {
@@ -64,7 +67,7 @@ describe('OrdenesService.crear', () => {
     expect(ordenes.save.mock.calls[1][0].estatus).toBe('FALLIDA');
     expect(bitacora.registrar).toHaveBeenCalledWith(
       77, 'FALLO_CREAR_ORDEN', 'orden_pago', 19,
-      'ORD-19: fallo o timeout al crear cargo Openpay; requiere conciliación',
+      'ORD-19: fallo o timeout al crear cargo Openpay; requiere conciliación', 2,
     );
   });
 });
@@ -74,7 +77,7 @@ describe('OrdenesService.procesarWebhook', () => {
     const orden = {
       id: 12,
       idExterno: 'ch_12',
-      alumno: { usuarioId: 8 },
+      alumno: { usuarioId: 8, plantelId: 2 },
       monto: 125,
       descripcion: 'Colegiatura',
       estatus: 'PENDIENTE',

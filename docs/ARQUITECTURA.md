@@ -18,7 +18,7 @@ tipos portables y `DB_TYPE` (mysql|mssql) selecciona el driver sin tocar código
 `database/` incluye ambos esquemas SQL equivalentes (23 tablas, snake_case vía
 `typeorm-naming-strategies`).
 
-**Autorización.** JWT (passport-jwt) + guard de roles declarativo
+**Autorización.** JWT (passport-jwt), validación del usuario activo y roles vigentes en base por solicitud, más guard de roles declarativo
 (`@Roles('FINANZAS')`). `SUPERADMIN` tiene acceso total. Reglas de dominio:
 ALUMNO es excluyente con roles de personal; el maestro solo opera sobre los
 grupo-materia que tiene asignados (validación de propiedad en servicios).

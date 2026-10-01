@@ -1,10 +1,15 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as nodemailer from 'nodemailer';
 import { Notificacion } from '../entities/notificacion.entity';
 import { Usuario } from '../entities/usuario.entity';
+import { Alumno } from '../entities/alumno.entity';
+import { UsuarioPlantel } from '../entities/usuario-plantel.entity';
+import { JwtUser } from '../common/current-user.decorator';
+import { ScopeService } from '../planteles/scope.service';
+import { In } from 'typeorm';
 
 @Injectable()
 export class NotificacionesService {
@@ -14,6 +19,9 @@ export class NotificacionesService {
   constructor(
     @InjectRepository(Notificacion) private readonly repo: Repository<Notificacion>,
     @InjectRepository(Usuario) private readonly usuarios: Repository<Usuario>,
+    @InjectRepository(Alumno) private readonly alumnos: Repository<Alumno>,
+    @InjectRepository(UsuarioPlantel) private readonly usuarioPlanteles: Repository<UsuarioPlantel>,
+    private readonly scope: ScopeService,
     private readonly config: ConfigService,
   ) {
     const host = this.config.get<string>('SMTP_HOST');
@@ -44,7 +52,7 @@ export class NotificacionesService {
   }
 
   /** Difusión a usuarios específicos o a todos los que tengan un rol. */
-  async difundir(titulo: string, mensaje: string, opts: { usuarioIds?: number[]; rol?: string }) {
+  async difundir(titulo: string, mensaje: string, opts: { usuarioIds?: number[]; rol?: string }, user: JwtUser) {
     let ids = opts.usuarioIds ?? [];
     if (opts.rol) {
       const usuarios = await this.usuarios
@@ -55,6 +63,23 @@ export class NotificacionesService {
       ids = ids.concat(usuarios.map((u) => u.id));
     }
     ids = [...new Set(ids)];
+    if (ids.length === 0) return { enviadas: 0 };
+    if (!user.roles.includes('SUPERADMIN')) {
+      const permitidos = await this.scope.plantelesDe(user);
+      if (permitidos === null) throw new ForbiddenException('No se pudo determinar el alcance del usuario');
+      const [asignaciones, alumnos] = await Promise.all([
+        this.usuarioPlanteles.find({ where: { usuarioId: In(ids), plantelId: In(permitidos), activo: true } }),
+        this.alumnos.find({ where: { usuarioId: In(ids), plantelId: In(permitidos) } }),
+      ]);
+      const visibles = new Set([
+        ...asignaciones.map((a) => a.usuarioId),
+        ...alumnos.map((a) => a.usuarioId),
+      ]);
+      if (opts.usuarioIds?.some((id) => !visibles.has(id))) {
+        throw new ForbiddenException('Uno o más destinatarios quedan fuera del alcance de tus planteles');
+      }
+      ids = ids.filter((id) => visibles.has(id));
+    }
     if (ids.length === 0) return { enviadas: 0 };
     await this.repo.insert(ids.map((usuarioId) => ({ usuarioId, titulo, mensaje })));
     return { enviadas: ids.length };

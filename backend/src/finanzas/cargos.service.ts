@@ -14,6 +14,12 @@ import { AplicarRecargosDto, CrearCargoDto, GenerarColegiaturasDto, ListarCargos
 
 const redondear = (n: number) => Math.round(n * 100) / 100;
 
+function esConflictoUnico(error: unknown): boolean {
+  const e = error as { code?: string; errno?: number; number?: number; originalError?: { info?: { number?: number } } };
+  return e?.code === 'ER_DUP_ENTRY' || e?.errno === 1062 || e?.number === 2601 || e?.number === 2627 ||
+    e?.originalError?.info?.number === 2601 || e?.originalError?.info?.number === 2627;
+}
+
 export interface CargoConSaldo extends Cargo {
   total: number;
   pagado: number;
@@ -81,7 +87,7 @@ export class CargosService {
 
   async crear(dto: CrearCargoDto, user: JwtUser) {
     await this.conceptos.obtener(dto.conceptoId);
-    await this.alumnos.obtener(dto.alumnoId, user);
+    const alumno = await this.alumnos.obtener(dto.alumnoId, user);
     const cargo = await this.cargos.save(
       this.cargos.create({
         alumnoId: dto.alumnoId,
@@ -94,7 +100,9 @@ export class CargosService {
         fechaVencimiento: dto.fechaVencimiento ?? null,
       }),
     );
-    await this.bitacora.registrar(user.sub, 'CREAR_CARGO', 'cargo', cargo.id, `${dto.descripcion} $${dto.monto}`);
+    await this.bitacora.registrar(
+      user.sub, 'CREAR_CARGO', 'cargo', cargo.id, `${dto.descripcion} $${dto.monto}`, alumno.plantelId,
+    );
     return cargo;
   }
 
@@ -124,9 +132,18 @@ export class CargosService {
 
     const existentes = await this.cargos.find({
       select: { alumnoId: true },
-      where: { conceptoId: concepto.id, periodo: dto.periodo, alumnoId: In(alumnoIds) },
+      where: { conceptoId: concepto.id, cicloId: dto.cicloId, periodo: dto.periodo, alumnoId: In(alumnoIds) },
     });
     const yaGenerados = new Set(existentes.map((c) => c.alumnoId));
+    const plantelPorAlumno = new Map(inscripciones.map((i) => [i.alumnoId, i.alumno.plantelId]));
+    const resumenPlantel = new Map<number, { generados: number; omitidos: number }>();
+    for (const alumnoId of alumnoIds) {
+      const plantelId = plantelPorAlumno.get(alumnoId);
+      if (plantelId === undefined) continue;
+      const resumen = resumenPlantel.get(plantelId) ?? { generados: 0, omitidos: 0 };
+      if (yaGenerados.has(alumnoId)) resumen.omitidos++;
+      resumenPlantel.set(plantelId, resumen);
+    }
 
     const dia = String(dto.diaVencimiento ?? 5).padStart(2, '0');
     const vencimiento = `${dto.periodo}-${dia}`;
@@ -138,18 +155,34 @@ export class CargosService {
           conceptoId: concepto.id,
           cicloId: dto.cicloId,
           periodo: dto.periodo,
+          claveGeneracion: `COLEGIATURA:${dto.cicloId}:${alumnoId}:${dto.periodo}`,
           descripcion: `Colegiatura ${dto.periodo}`,
           monto,
           fechaVencimiento: vencimiento,
         }),
       );
-    if (nuevos.length > 0) await this.cargos.save(nuevos);
+    let generados = 0;
+    let omitidosConcurrentes = 0;
+    for (const nuevo of nuevos) {
+      try {
+        await this.cargos.save(nuevo);
+        generados++;
+        const plantelId = plantelPorAlumno.get(nuevo.alumnoId);
+        if (plantelId !== undefined) resumenPlantel.get(plantelId)!.generados++;
+      } catch (error) {
+        if (!esConflictoUnico(error)) throw error;
+        omitidosConcurrentes++;
+        const plantelId = plantelPorAlumno.get(nuevo.alumnoId);
+        if (plantelId !== undefined) resumenPlantel.get(plantelId)!.omitidos++;
+      }
+    }
 
-    await this.bitacora.registrar(
+    await Promise.all([...resumenPlantel].map(([plantelId, resumen]) => this.bitacora.registrar(
       user.sub, 'GENERAR_COLEGIATURAS', 'cargo', null,
-      `periodo=${dto.periodo} generados=${nuevos.length}`,
-    );
-    return { generados: nuevos.length, omitidos: yaGenerados.size, vencimiento };
+      `periodo=${dto.periodo} generados=${resumen.generados} omitidos=${resumen.omitidos}`,
+      plantelId,
+    )));
+    return { generados, omitidos: yaGenerados.size + omitidosConcurrentes, vencimiento };
   }
 
   /** Aplica recargo a cargos vencidos sin liquidar (una sola vez por cargo). */
@@ -175,7 +208,14 @@ export class CargosService {
       modificados.push(cargo);
     }
     if (modificados.length > 0) await this.cargos.save(modificados);
-    await this.bitacora.registrar(user.sub, 'APLICAR_RECARGOS', 'cargo', null, `${porcentaje}% a ${modificados.length} cargos`);
+    const porPlantel = new Map<number, number>();
+    for (const cargo of modificados) {
+      const plantelId = cargo.alumno.plantelId;
+      porPlantel.set(plantelId, (porPlantel.get(plantelId) ?? 0) + 1);
+    }
+    await Promise.all([...porPlantel].map(([plantelId, cantidad]) => this.bitacora.registrar(
+      user.sub, 'APLICAR_RECARGOS', 'cargo', null, `${porcentaje}% a ${cantidad} cargos`, plantelId,
+    )));
     return { aplicados: modificados.length, porcentaje };
   }
 

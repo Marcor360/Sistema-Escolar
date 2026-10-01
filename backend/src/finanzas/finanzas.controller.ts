@@ -129,5 +129,5 @@ export class FinanzasController {
 
   @Get('bitacora')
   @ApiBearerAuth() @UseGuards(JwtAuthGuard, RolesGuard) @Roles('FINANZAS')
-  bitacoraFinanciera() { return this.bitacora.listar(); }
+  bitacoraFinanciera(@CurrentUser() user: JwtUser) { return this.bitacora.listar(user); }
 }

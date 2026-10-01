@@ -514,7 +514,7 @@ npm run seed                   # Crear datos demo (solo desarrollo)
 npm run lint                   # Validar código
 npm run typecheck              # Verificar tipos TypeScript
 npm test                       # Ejecutar tests Jest
-npm run test:integration       # Flujos HTTP con base escolar_integration_* aislada (DB_SYNC=true solo en pruebas)
+npm run test:integration       # Flujos HTTP sobre baseline en base escolar_integration_* aislada (DB_SYNC=false)
 ```
 
 ### Frontend Web

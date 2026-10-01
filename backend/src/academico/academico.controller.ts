@@ -68,23 +68,26 @@ export class AcademicoController {
     return this.service.eliminarGrupo(id, user);
   }
   @Get('grupo-materias') @Roles('ADMINISTRATIVO', 'FINANZAS')
-  listarGrupoMaterias() {
-    return this.service.listarGrupoMaterias();
+  listarGrupoMaterias(@CurrentUser() user: JwtUser) {
+    return this.service.listarGrupoMaterias(user);
   }
   @Get('grupos/:id/materias') @Roles('ADMINISTRATIVO', 'MAESTRO')
-  materiasDeGrupo(@Param('id', ParseIntPipe) id: number) {
-    return this.service.materiasDeGrupo(id);
+  materiasDeGrupo(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) {
+    return this.service.materiasDeGrupo(id, user);
   }
   @Post('grupos/:id/materias') @Roles('ADMINISTRATIVO')
-  asignarMateria(@Param('id', ParseIntPipe) id: number, @Body() dto: AsignarMateriaDto) {
-    return this.service.asignarMateria(id, dto);
+  asignarMateria(
+    @Param('id', ParseIntPipe) id: number, @Body() dto: AsignarMateriaDto, @CurrentUser() user: JwtUser,
+  ) {
+    return this.service.asignarMateria(id, dto, user);
   }
   @Patch('grupo-materias/:id/docente/:docenteId') @Roles('ADMINISTRATIVO')
   asignarDocente(
     @Param('id', ParseIntPipe) id: number,
     @Param('docenteId', ParseIntPipe) docenteId: number,
+    @CurrentUser() user: JwtUser,
   ) {
-    return this.service.asignarDocente(id, docenteId);
+    return this.service.asignarDocente(id, docenteId, user);
   }
   @Delete('grupo-materias/:id') @Roles('ADMINISTRATIVO')
   eliminarGrupoMateria(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) {
@@ -93,15 +96,15 @@ export class AcademicoController {
 
   // ---- Inscripciones ----
   @Get('grupos/:id/alumnos') @Roles('ADMINISTRATIVO', 'MAESTRO')
-  alumnosDeGrupo(@Param('id', ParseIntPipe) id: number) {
-    return this.service.alumnosDeGrupo(id);
+  alumnosDeGrupo(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) {
+    return this.service.alumnosDeGrupo(id, user);
   }
   @Post('grupos/:id/alumnos') @Roles('ADMINISTRATIVO')
   inscribir(@Param('id', ParseIntPipe) id: number, @Body() dto: InscribirAlumnoDto, @CurrentUser() user: JwtUser) {
     return this.service.inscribirAlumno(id, dto.alumnoId, user);
   }
   @Delete('inscripciones/:id') @Roles('ADMINISTRATIVO')
-  bajaInscripcion(@Param('id', ParseIntPipe) id: number) {
-    return this.service.bajaInscripcion(id);
+  bajaInscripcion(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) {
+    return this.service.bajaInscripcion(id, user);
   }
 }

@@ -2,7 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, UnauthorizedExcept
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import { createHash, randomUUID } from 'crypto';
 import { Usuario } from '../entities/usuario.entity';
@@ -21,6 +21,7 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly notificaciones: NotificacionesService,
     private readonly config: ConfigService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async login(email: string, password: string, portal: Portal = 'WEB', ip?: string) {
@@ -39,6 +40,7 @@ export class AuthService {
       email: usuario.email,
       nombre: usuario.nombreCompleto,
       roles,
+      ver: usuario.sessionVersion ?? 0,
     };
     const expiresIn = portal === 'MOVIL'
       ? this.config.get<string>('JWT_EXPIRES_MOVIL') || this.config.get<string>('JWT_EXPIRES') || '8h'
@@ -56,11 +58,19 @@ export class AuthService {
 
   /** Cambio de contraseña del propio usuario: exige la contraseña actual. */
   async cambiarPassword(usuarioId: number, actual: string, nueva: string) {
-    const usuario = await this.usuarios.findOne({ where: { id: usuarioId, activo: true } });
-    if (!usuario || !(await bcrypt.compare(actual, usuario.passwordHash))) {
-      throw new UnauthorizedException('La contraseña actual no es correcta');
-    }
-    await this.usuarios.update(usuarioId, { passwordHash: await bcrypt.hash(nueva, 10) });
+    await this.dataSource.transaction(async (manager) => {
+      const usuarios = manager.getRepository(Usuario);
+      const usuario = await usuarios.findOne({ where: { id: usuarioId, activo: true } });
+      if (!usuario || !(await bcrypt.compare(actual, usuario.passwordHash))) {
+        throw new UnauthorizedException('La contraseña actual no es correcta');
+      }
+      usuario.passwordHash = await bcrypt.hash(nueva, 10);
+      usuario.sessionVersion = (usuario.sessionVersion ?? 0) + 1;
+      await usuarios.save(usuario);
+      await manager.getRepository(PasswordResetToken).update(
+        { usuarioId, usado: false }, { usado: true },
+      );
+    });
     return { mensaje: 'Contraseña actualizada' };
   }
 
@@ -93,10 +103,25 @@ export class AuthService {
     if (!registro || registro.expiraEn < new Date()) {
       throw new BadRequestException('Token inválido o expirado');
     }
-    await this.usuarios.update(registro.usuarioId, {
-      passwordHash: await bcrypt.hash(password, 10),
+    await this.dataSource.transaction(async (manager) => {
+      const tokens = manager.getRepository(PasswordResetToken);
+      const consumo = await tokens.createQueryBuilder()
+        .update(PasswordResetToken)
+        .set({ usado: true })
+        .where('id = :id AND usado = :usado AND expiraEn > :ahora', {
+          id: registro.id, usado: false, ahora: new Date(),
+        })
+        .execute();
+      if (consumo.affected !== 1) throw new BadRequestException('Token inválido o expirado');
+
+      const usuarios = manager.getRepository(Usuario);
+      const usuario = await usuarios.findOne({ where: { id: registro.usuarioId, activo: true } });
+      if (!usuario) throw new UnauthorizedException('La cuenta ya no está activa');
+      usuario.passwordHash = await bcrypt.hash(password, 10);
+      usuario.sessionVersion = (usuario.sessionVersion ?? 0) + 1;
+      await usuarios.save(usuario);
+      await tokens.update({ usuarioId: registro.usuarioId, usado: false }, { usado: true });
     });
-    await this.tokens.update(registro.id, { usado: true });
     return { mensaje: 'Contraseña actualizada' };
   }
 

@@ -80,7 +80,7 @@ jobs:
       DB_USER: root
       DB_PASS: integration-root
       DB_NAME: escolar_integration_mysql
-      DB_SYNC: 'true'
+      DB_SYNC: 'false'
       JWT_SECRET: integration-only-secret
     steps:
       - uses: actions/checkout@v4
@@ -115,7 +115,7 @@ jobs:
       DB_USER: sa
       DB_PASS: Integration_Test_42!
       DB_NAME: escolar_integration_sqlserver
-      DB_SYNC: 'true'
+      DB_SYNC: 'false'
       DB_ENCRYPT: 'false'
       DB_TRUST_SERVER_CERTIFICATE: 'true'
       JWT_SECRET: integration-only-secret

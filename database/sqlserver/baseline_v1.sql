@@ -1,13 +1,9 @@
+-- Baseline instalable v1. Aplicar sobre una base vacia ya creada; no modifica schema.sql documental.
 -- =====================================================================
 -- Sistema Escolar Multiplataforma (MVP) — Esquema SQL Server 2019+
 -- Equivalente 1:1 con database/mysql/schema.sql.
 -- Nota: updated_at lo administra la aplicación (TypeORM @UpdateDateColumn).
 -- =====================================================================
-IF DB_ID('escolar') IS NULL CREATE DATABASE escolar;
-GO
-USE escolar;
-GO
-
 -- ---------- Seguridad / usuarios ----------
 CREATE TABLE roles (
   id INT IDENTITY(1,1) PRIMARY KEY,

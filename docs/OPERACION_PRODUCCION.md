@@ -21,13 +21,15 @@ En producción, inyectar las variables desde el gestor de secretos del proveedor
 
 La aplicación apaga Swagger y rechaza el secreto JWT de ejemplo en producción. El webhook admite autenticación Basic opcional; para producción debe configurarse y validarse con la cuenta real de Openpay antes de recibir pagos.
 
+Cada petición autenticada comprueba que la cuenta siga activa y tenga los roles vigentes. Cambiar o restablecer una contraseña incrementa `session_version` y revoca los JWT anteriores; las bases existentes deben aplicar `migracion_version_sesion.sql`. El rate limit actual usa almacenamiento en memoria del proceso; con varias réplicas se debe configurar almacenamiento compartido para mantener límites globales.
+
 La API exige TLS para la base cuando `NODE_ENV=production`: MySQL usa `DB_SSL=true` y valida el certificado (se puede indicar `DB_SSL_CA_PATH` para una CA privada); SQL Server requiere `DB_ENCRYPT=true` y `DB_TRUST_SERVER_CERTIFICATE=false`. La configuración de ejemplo conserva valores para desarrollo local.
 
 ## Base de datos y recuperación
 
 1. Elegir formalmente MySQL o SQL Server y fijar las versiones soportadas.
 2. Crear una base y un usuario de aplicación con los permisos mínimos requeridos.
-3. Resolver primero el baseline inicial: el repositorio todavía no tiene un instalador versionado para crear todas las tablas de una base vacía. `schema.sql` es solo documental y no se debe ejecutar completo.
+3. Para una base vacía, aplicar el baseline versionado correspondiente (`database/mysql/baseline_v1.sql` o `database/sqlserver/baseline_v1.sql`). Nunca aplicar un baseline a una base existente; `schema.sql` sigue siendo documental.
 4. En bases existentes, aplicar solo las migraciones pendientes mediante el procedimiento de [MIGRACIONES.md](MIGRACIONES.md), después de un respaldo verificado.
 5. Programar respaldos cifrados, retención y copia fuera del servidor principal.
 6. Probar restauraciones periódicas en un entorno aislado y registrar duración y resultado.

@@ -10,6 +10,7 @@ import { Alumno } from '../entities/alumno.entity';
 import { Calificacion } from '../entities/calificacion.entity';
 import { Actividad } from '../entities/actividad.entity';
 import { Material } from '../entities/material.entity';
+import { UsuarioPlantel } from '../entities/usuario-plantel.entity';
 import { DocentesService } from '../docentes/docentes.service';
 import { JwtUser } from '../common/current-user.decorator';
 import { ScopeService } from '../planteles/scope.service';
@@ -29,6 +30,7 @@ export class AcademicoService {
     @InjectRepository(Material) private readonly materiales: Repository<Material>,
     private readonly docentes: DocentesService,
     private readonly scope: ScopeService,
+    @InjectRepository(UsuarioPlantel) private readonly usuarioPlanteles: Repository<UsuarioPlantel>,
   ) {}
 
   // ---- Ciclos ----
@@ -63,8 +65,16 @@ export class AcademicoService {
     const porPagina = query.porPagina || 20;
     const planteles = await this.scope.resolverFiltro(user, query.plantelId);
     const puedeVerInactivos = user.roles.includes('ADMINISTRATIVO') || user.roles.includes('SUPERADMIN');
+    const maestroPuro = this.esMaestroLimitado(user);
+    const docente = maestroPuro ? await this.docentes.obtenerPorUsuario(user.sub) : null;
+    const grupoMateriaIds = docente
+      ? await this.grupoMaterias.find({ where: { docenteId: docente.id } })
+      : [];
+    const gruposDocente = [...new Set(grupoMateriaIds.map((gm) => gm.grupoId))];
+    if (maestroPuro && gruposDocente.length === 0) return { datos: [], total: 0, pagina, porPagina };
     const [datos, total] = await this.grupos.findAndCount({
       where: {
+        ...(maestroPuro ? { id: In(gruposDocente) } : {}),
         ...(query.cicloId ? { cicloId: query.cicloId } : {}),
         ...(planteles === null ? {} : { plantelId: In(planteles) }),
         ...(query.inactivos && puedeVerInactivos ? {} : { activo: true }),
@@ -104,16 +114,30 @@ export class AcademicoService {
   }
 
   /** Todas las asignaciones grupo-materia (captura de calificaciones del administrativo). */
-  listarGrupoMaterias() {
-    return this.grupoMaterias.find({ order: { grupoId: 'ASC' } });
+  async listarGrupoMaterias(user: JwtUser) {
+    const planteles = await this.scope.plantelesDe(user);
+    const docenteId = this.esMaestroLimitado(user)
+      ? (await this.docentes.obtenerPorUsuario(user.sub)).id
+      : null;
+    const asignaciones = await this.grupoMaterias.find({ order: { grupoId: 'ASC' } });
+    return asignaciones.filter((gm) =>
+      (planteles === null || planteles.includes(gm.grupo.plantelId)) &&
+      (docenteId === null || gm.docenteId === docenteId));
   }
 
-  async materiasDeGrupo(grupoId: number) {
-    return this.grupoMaterias.find({ where: { grupoId } });
+  async materiasDeGrupo(grupoId: number, user: JwtUser) {
+    await this.validarAccesoGrupo(grupoId, user);
+    const asignaciones = await this.grupoMaterias.find({ where: { grupoId } });
+    if (this.esMaestroLimitado(user)) {
+      const docente = await this.docentes.obtenerPorUsuario(user.sub);
+      return asignaciones.filter((gm) => gm.docenteId === docente.id);
+    }
+    return asignaciones;
   }
 
   /** Asigna una materia al grupo y, opcionalmente, el docente que la imparte. */
-  async asignarMateria(grupoId: number, dto: AsignarMateriaDto) {
+  async asignarMateria(grupoId: number, dto: AsignarMateriaDto, user: JwtUser) {
+    await this.validarAccesoGrupo(grupoId, user);
     const duplicado = await this.grupoMaterias.findOne({
       where: { grupoId, materiaId: dto.materiaId },
     });
@@ -123,10 +147,17 @@ export class AcademicoService {
     );
   }
 
-  async asignarDocente(grupoMateriaId: number, docenteId: number) {
+  async asignarDocente(grupoMateriaId: number, docenteId: number, user: JwtUser) {
     const gm = await this.grupoMaterias.findOne({ where: { id: grupoMateriaId } });
     if (!gm) throw new NotFoundException('Asignación grupo-materia no encontrada');
-    await this.docentes.obtener(docenteId);
+    await this.validarAccesoGrupo(gm.grupoId, user);
+    const docente = await this.docentes.obtener(docenteId, user);
+    if (!user.roles.includes('SUPERADMIN')) {
+      const asignacion = await this.usuarioPlanteles.findOne({
+        where: { usuarioId: docente.usuarioId, plantelId: gm.grupo.plantelId, activo: true },
+      });
+      if (!asignacion) throw new ForbiddenException('El docente no está asignado al plantel del grupo');
+    }
     gm.docenteId = docenteId;
     return this.grupoMaterias.save(gm);
   }
@@ -166,13 +197,34 @@ export class AcademicoService {
     return this.inscripciones.save(this.inscripciones.create({ grupoId, alumnoId }));
   }
 
-  alumnosDeGrupo(grupoId: number) {
+  async alumnosDeGrupo(grupoId: number, user: JwtUser) {
+    await this.validarAccesoGrupo(grupoId, user);
     return this.inscripciones.find({ where: { grupoId, estatus: 'ACTIVA' } });
   }
 
-  async bajaInscripcion(id: number) {
+  async bajaInscripcion(id: number, user: JwtUser) {
+    const inscripcion = await this.inscripciones.findOne({ where: { id } });
+    if (!inscripcion) throw new NotFoundException('Inscripción no encontrada');
+    await this.validarAccesoGrupo(inscripcion.grupoId, user);
     await this.inscripciones.update(id, { estatus: 'BAJA' });
     return { ok: true };
+  }
+
+  private esMaestroLimitado(user: JwtUser): boolean {
+    return user.roles.includes('MAESTRO') &&
+      !user.roles.some((rol) => ['SUPERADMIN', 'ADMINISTRATIVO', 'FINANZAS'].includes(rol));
+  }
+
+  private async validarAccesoGrupo(grupoId: number, user: JwtUser): Promise<void> {
+    const grupo = await this.grupos.findOne({ where: { id: grupoId } });
+    if (!grupo) throw new NotFoundException('Grupo no encontrado');
+    if (!this.esMaestroLimitado(user)) {
+      await this.scope.validarGestion(user, grupo.plantelId);
+      return;
+    }
+    const docente = await this.docentes.obtenerPorUsuario(user.sub);
+    const asignacion = await this.grupoMaterias.findOne({ where: { grupoId, docenteId: docente.id } });
+    if (!asignacion) throw new ForbiddenException('El grupo no está asignado a este docente');
   }
 
   /** Grupos-materia asignados al docente autenticado (panel maestro); excluye grupos dados de baja. */

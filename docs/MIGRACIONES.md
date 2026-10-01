@@ -22,14 +22,19 @@
 - `migracion_planteles_alcance.sql` debe preceder a `migracion_plantel_detalle.sql`.
 - `migracion_calendario_creador.sql` debe ejecutarse después de `migracion_plantel_detalle.sql`.
 - `migracion_pago_orden_unico.sql` requiere que exista `pagos.orden_pago_id`; se recomienda ejecutarla después de comprobar y resolver duplicados.
+- `migracion_cargos_idempotencia.sql` agrega una clave nullable y un índice único para evitar colegiaturas duplicadas concurrentes; no modifica cargos existentes.
+- `migracion_version_sesion.sql` agrega `usuarios.session_version`, que la API usa para revocar JWT después de cambios de contraseña.
 - `migracion_bitacora_resultado.sql` agrega resultado HTTP y entidad a bitácoras ya existentes; en una base recién creada `schema.sql` ya incluye esas columnas.
+- `migracion_bitacora_plantel.sql` agrega el ámbito institucional a la bitácora financiera; los eventos previos conservan `plantel_id=NULL` y solo quedan visibles para `SUPERADMIN`.
 - `migracion_configuracion_marca.sql`, `migracion_grupos_ciclo_vida.sql`, `migracion_indices.sql` y `migracion_legacy_id.sql` no declaran dependencias entre sí, pero se deben validar contra la versión real del esquema antes de aplicar.
 
 Las migraciones históricas que agregan columnas o índices no son idempotentes. No se deben volver a ejecutar si ya se aplicaron. En SQL Server, los `GO` se deben procesar con `sqlcmd` o una herramienta compatible; no enviar el archivo entero como una sola consulta de aplicación.
 
 ## Base vacía
 
-`docker-compose.yml` puede crear la base vacía `escolar`, pero `DB_SYNC=false` no crea tablas. El repositorio aún no contiene un baseline de instalación inicial ejecutable para una base vacía; las migraciones actuales son incrementales y presuponen una versión previa del esquema. Antes del primer despliegue se necesita definir y revisar un baseline versionado para ambos motores, respetando entidades TypeORM y sin ejecutar `schema.sql` completo. `npm run seed` requiere las tablas ya instaladas.
+Para una instalación nueva, crear primero una base vacía con el nombre aprobado y ejecutar exactamente una vez `database/mysql/baseline_v1.sql` o `database/sqlserver/baseline_v1.sql` según el motor. Son snapshots instalables versionados y no crean ni seleccionan bases por su cuenta. `database/baseline-manifest.json` registra qué migraciones ya están incluidas: no volver a aplicarlas sobre `baseline_v1`. `schema.sql` permanece como referencia documental; nunca se usa como instalador. `npm run seed` requiere que el baseline haya terminado correctamente.
+
+La suite de integración instala estos baselines en bases cuyo nombre empieza por `escolar_integration_`, exige que no tengan tablas y arranca la API con `DB_SYNC=false`. La CI valida ambos motores. En una base ya existente, no ejecutar un baseline: inspeccionar su versión y aplicar solo las migraciones incrementales pendientes.
 
 ## Aplicación manual
 

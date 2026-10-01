@@ -1,6 +1,6 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { Docente } from '../entities/docente.entity';
 import { UsuariosService } from '../usuarios/usuarios.service';
 import { ActualizarDocenteDto, CrearDocenteDto, ListarDocentesDto } from './docentes.dto';
@@ -16,6 +16,7 @@ export class DocentesService {
     @InjectRepository(UsuarioPlantel) private readonly asignaciones: Repository<UsuarioPlantel>,
     private readonly usuarios: UsuariosService,
     private readonly scope: ScopeService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async listar(user: JwtUser, query: ListarDocentesDto) {
@@ -42,10 +43,25 @@ export class DocentesService {
     return { datos, total, pagina, porPagina };
   }
 
-  async obtener(id: number) {
+  async obtener(id: number, user?: JwtUser, exigirTodosLosPlanteles = false) {
     const docente = await this.docentes.findOne({ where: { id } });
     if (!docente) throw new NotFoundException('Docente no encontrado');
+    if (user) await this.validarAlcanceDocente(docente.usuarioId, user, exigirTodosLosPlanteles);
     return docente;
+  }
+
+  private async validarAlcanceDocente(
+    usuarioId: number, user: JwtUser, exigirTodosLosPlanteles = false,
+  ): Promise<void> {
+    if (user.roles.includes('SUPERADMIN')) return;
+    const permitidos = await this.scope.plantelesDe(user);
+    const asignaciones = await this.asignaciones.find({ where: { usuarioId, activo: true } });
+    if (permitidos === null) return;
+    if (exigirTodosLosPlanteles && asignaciones.some((a) => !permitidos.includes(a.plantelId))) {
+      throw new ForbiddenException('No puedes modificar un docente asignado a planteles fuera de tu alcance');
+    }
+    if (asignaciones.some((a) => permitidos.includes(a.plantelId))) return;
+    throw new ForbiddenException('El docente no pertenece a un plantel dentro de tu alcance');
   }
 
   async obtenerPorUsuario(usuarioId: number) {
@@ -60,52 +76,68 @@ export class DocentesService {
     const existe = await this.docentes.findOne({ where: { numEmpleado: dto.numEmpleado }, withDeleted: true });
     if (existe) throw new ConflictException('El número de empleado ya está registrado');
 
-    const usuario = await this.usuarios.crear({
-      email: dto.email,
-      password: dto.password,
-      nombre: dto.nombre,
-      apellidoPaterno: dto.apellidoPaterno,
-      apellidoMaterno: dto.apellidoMaterno,
-      telefono: dto.telefono,
-      roles: ['MAESTRO'],
-    });
-    const docente = await this.docentes.save(
-      this.docentes.create({
-        usuarioId: usuario.id,
-        numEmpleado: dto.numEmpleado,
-        cedulaProfesional: dto.cedulaProfesional ?? null,
-        especialidad: dto.especialidad ?? null,
-      }),
-    );
-    await this.asignaciones.save(plantelIds.map((plantelId) => this.asignaciones.create({
-      usuarioId: usuario.id, plantelId, activo: true,
-    })));
-    return docente;
-  }
-
-  async actualizar(id: number, dto: ActualizarDocenteDto) {
-    const docente = await this.obtener(id);
-    if (dto.nombre || dto.apellidoPaterno || dto.apellidoMaterno || dto.telefono) {
-      await this.usuarios.actualizar(docente.usuarioId, {
+    return this.dataSource.transaction(async (manager) => {
+      const usuario = await this.usuarios.crear({
+        email: dto.email,
+        password: dto.password,
         nombre: dto.nombre,
         apellidoPaterno: dto.apellidoPaterno,
         apellidoMaterno: dto.apellidoMaterno,
         telefono: dto.telefono,
-      });
-    }
-    Object.assign(docente, {
-      cedulaProfesional: dto.cedulaProfesional ?? docente.cedulaProfesional,
-      especialidad: dto.especialidad ?? docente.especialidad,
-      estatus: dto.estatus ?? docente.estatus,
+        roles: ['MAESTRO'],
+      }, manager);
+      const docentes = manager.getRepository(Docente);
+      const docente = await docentes.save(docentes.create({
+        usuarioId: usuario.id,
+        numEmpleado: dto.numEmpleado,
+        cedulaProfesional: dto.cedulaProfesional ?? null,
+        especialidad: dto.especialidad ?? null,
+      }));
+      const asignaciones = manager.getRepository(UsuarioPlantel);
+      await asignaciones.save(plantelIds.map((plantelId) => asignaciones.create({
+        usuarioId: usuario.id, plantelId, activo: true,
+      })));
+      return docente;
     });
-    return this.docentes.save(docente);
   }
 
-  async baja(id: number) {
-    const docente = await this.obtener(id);
-    docente.estatus = 'BAJA';
-    await this.docentes.save(docente);
-    await this.docentes.softDelete(id);
-    return { ok: true };
+  async actualizar(id: number, dto: ActualizarDocenteDto, user: JwtUser) {
+    return this.dataSource.transaction(async (manager) => {
+      const docentes = manager.getRepository(Docente);
+      const docente = await docentes.findOne({ where: { id } });
+      if (!docente) throw new NotFoundException('Docente no encontrado');
+      await this.validarAlcanceDocente(docente.usuarioId, user, true);
+      if (dto.nombre || dto.apellidoPaterno || dto.apellidoMaterno || dto.telefono) {
+        await this.usuarios.actualizar(docente.usuarioId, {
+          nombre: dto.nombre,
+          apellidoPaterno: dto.apellidoPaterno,
+          apellidoMaterno: dto.apellidoMaterno,
+          telefono: dto.telefono,
+        }, manager);
+      }
+      Object.assign(docente, {
+        cedulaProfesional: dto.cedulaProfesional ?? docente.cedulaProfesional,
+        especialidad: dto.especialidad ?? docente.especialidad,
+        estatus: dto.estatus ?? docente.estatus,
+      });
+      return docentes.save(docente);
+    });
+  }
+
+  async baja(id: number, user: JwtUser) {
+    return this.dataSource.transaction(async (manager) => {
+      const docentes = manager.getRepository(Docente);
+      const docente = await docentes.findOne({ where: { id } });
+      if (!docente) throw new NotFoundException('Docente no encontrado');
+      await this.validarAlcanceDocente(docente.usuarioId, user, true);
+      docente.estatus = 'BAJA';
+      await docentes.save(docente);
+      await docentes.softDelete(id);
+      await manager.getRepository(UsuarioPlantel).update(
+        { usuarioId: docente.usuarioId, activo: true }, { activo: false },
+      );
+      await this.usuarios.actualizar(docente.usuarioId, { activo: false }, manager);
+      return { ok: true };
+    });
   }
 }

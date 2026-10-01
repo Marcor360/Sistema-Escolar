@@ -1,7 +1,7 @@
 import { PagosService } from './pagos.service';
 
 describe('PagosService.registrarDePasarela', () => {
-  const orden = { id: 12, alumnoId: 8, cargoId: 3 } as any;
+  const orden = { id: 12, alumnoId: 8, cargoId: 3, alumno: { plantelId: 2 } } as any;
 
   it('reutiliza el pago si Openpay reenvía el webhook', async () => {
     const pago = { id: 40, ordenPagoId: 12 };

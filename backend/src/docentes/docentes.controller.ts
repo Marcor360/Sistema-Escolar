@@ -18,10 +18,16 @@ export class DocentesController {
   @Get() listar(@CurrentUser() user: JwtUser, @Query() query: ListarDocentesDto) {
     return this.service.listar(user, query);
   }
-  @Get(':id') obtener(@Param('id', ParseIntPipe) id: number) { return this.service.obtener(id); }
-  @Post() crear(@Body() dto: CrearDocenteDto, @CurrentUser() user: JwtUser) { return this.service.crear(dto, user); }
-  @Patch(':id') actualizar(@Param('id', ParseIntPipe) id: number, @Body() dto: ActualizarDocenteDto) {
-    return this.service.actualizar(id, dto);
+  @Get(':id') obtener(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) {
+    return this.service.obtener(id, user);
   }
-  @Delete(':id') baja(@Param('id', ParseIntPipe) id: number) { return this.service.baja(id); }
+  @Post() crear(@Body() dto: CrearDocenteDto, @CurrentUser() user: JwtUser) { return this.service.crear(dto, user); }
+  @Patch(':id') actualizar(
+    @Param('id', ParseIntPipe) id: number, @Body() dto: ActualizarDocenteDto, @CurrentUser() user: JwtUser,
+  ) {
+    return this.service.actualizar(id, dto, user);
+  }
+  @Delete(':id') baja(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) {
+    return this.service.baja(id, user);
+  }
 }

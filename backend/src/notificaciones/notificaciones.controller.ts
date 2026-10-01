@@ -33,10 +33,10 @@ export class NotificacionesController {
 
   @Post('difundir')
   @Roles('ADMINISTRATIVO')
-  difundir(@Body() dto: DifundirDto) {
+  difundir(@Body() dto: DifundirDto, @CurrentUser() user: JwtUser) {
     return this.service.difundir(dto.titulo, dto.mensaje, {
       usuarioIds: dto.usuarioIds,
       rol: dto.rol,
-    });
+    }, user);
   }
 }

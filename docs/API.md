@@ -114,7 +114,7 @@ GET `/calendario?desde&hasta` (autenticado) · POST/DELETE (MAESTRO, ADMINISTRAT
 
 ## Notificaciones
 GET `/notificaciones/mias` · PATCH `/notificaciones/:id/leer` ·
-POST `/notificaciones/difundir` (ADMINISTRATIVO; por `usuarioIds` o `rol`).
+POST `/notificaciones/difundir` (ADMINISTRATIVO; por `usuarioIds` o `rol`, limitado a destinatarios de sus planteles).
 
 ## Finanzas
 | Método | Ruta | Rol | Notas |
@@ -130,10 +130,10 @@ POST `/notificaciones/difundir` (ADMINISTRATIVO; por `usuarioIds` o `rol`).
 | POST | /finanzas/webhook/openpay | público* | Confirmación idempotente (*Basic Auth opcional en desarrollo; requerida en producción*) |
 | GET | /finanzas/adeudos | FINANZAS, ADMINISTRATIVO | Cargos con saldo |
 | POST | /finanzas/avisos-cobranza | FINANZAS | Correo con plantilla + notificación in-app |
-| GET | /finanzas/bitacora | FINANZAS | Bitácora de movimientos financieros |
+| GET | /finanzas/bitacora | FINANZAS | Bitácora financiera limitada a los planteles asignados |
 
 ## Reportes
-- GET `/reportes/resumen`: KPIs del panel.
+- GET `/reportes/resumen` (ADMINISTRATIVO, FINANZAS): KPIs académicos y financieros de los planteles asignados.
 - GET `/reportes/boleta/:alumnoId`: boleta PDF (parciales y promedios).
 - GET `/reportes/grupo-materias/:id/calificaciones.xlsx`: concentrado de la clase
   (parciales, final, promedio); el maestro solo descarga sus clases.
