@@ -5,6 +5,10 @@ import axios, { AxiosInstance } from 'axios';
 export interface OpenpayCharge {
   id: string;
   status: string;
+  order_id?: string;
+  amount?: number;
+  currency?: string;
+  transaction_type?: string;
   payment_method?: { url?: string };
   due_date?: string;
 }
@@ -43,6 +47,7 @@ export class OpenpayService {
     ordenId: string;
     clienteNombre: string;
     clienteEmail: string;
+    clienteIp?: string;
   }): Promise<OpenpayCharge> {
     if (!this.http) {
       throw new ServiceUnavailableException(
@@ -55,12 +60,25 @@ export class OpenpayService {
       currency: 'MXN',
       description: params.descripcion,
       order_id: params.ordenId,
-      confirm: 'false',
+      confirm: false,
       send_email: false,
       redirect_url: this.config.get<string>('OPENPAY_REDIRECT_URL') || 'http://localhost:5173/pago-completado',
       customer: { name: params.clienteNombre, email: params.clienteEmail },
+    }, {
+      headers: params.clienteIp ? { 'X-Forwarded-For': params.clienteIp } : undefined,
     });
     this.logger.log(`Orden ${params.ordenId}: cargo Openpay ${data.id} (${data.status})`);
     return data;
+  }
+
+  /** Busca una solicitud cuyo POST pudo haber terminado en Openpay tras un timeout local. */
+  async buscarCargoPorOrden(ordenId: string): Promise<OpenpayCharge | null> {
+    if (!this.http) {
+      throw new ServiceUnavailableException('Pasarela no configurada para conciliación');
+    }
+    const { data } = await this.http.get<OpenpayCharge[]>('/charges', {
+      params: { order_id: ordenId, limit: 10 },
+    });
+    return data.find((cargo) => cargo.order_id === ordenId) ?? null;
   }
 }

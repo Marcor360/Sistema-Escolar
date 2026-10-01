@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { api } from '../api/client';
+import { api, mensajeDeError } from '../api/client';
 import { fechaHora } from '../utils/formato';
 
 interface Notificacion {
@@ -15,9 +15,16 @@ interface Notificacion {
 export function Campana() {
   const [lista, setLista] = useState<Notificacion[]>([]);
   const [abierta, setAbierta] = useState(false);
+  const [error, setError] = useState('');
   const contenedor = useRef<HTMLDivElement>(null);
 
-  const cargar = () => api.get<Notificacion[]>('/notificaciones/mias').then((r) => setLista(r.data));
+  const cargar = async () => {
+    try {
+      const { data } = await api.get<Notificacion[]>('/notificaciones/mias');
+      setLista(data);
+      setError('');
+    } catch (err) { setError(mensajeDeError(err)); }
+  };
 
   useEffect(() => { cargar(); }, []);
 
@@ -34,8 +41,11 @@ export function Campana() {
 
   const leer = async (notificacion: Notificacion) => {
     if (notificacion.leida) return;
-    await api.patch(`/notificaciones/${notificacion.id}/leer`);
-    setLista((previa) => previa.map((n) => (n.id === notificacion.id ? { ...n, leida: true } : n)));
+    try {
+      await api.patch(`/notificaciones/${notificacion.id}/leer`);
+      setLista((previa) => previa.map((n) => (n.id === notificacion.id ? { ...n, leida: true } : n)));
+      setError('');
+    } catch (err) { setError(mensajeDeError(err)); }
   };
 
   return (
@@ -50,6 +60,7 @@ export function Campana() {
       {abierta && (
         <div className="campana-panel">
           <p className="campana-titulo">Notificaciones</p>
+          {error && <p className="mensaje-error" role="alert">{error} <button className="boton secundario chico" onClick={cargar}>Reintentar</button></p>}
           {lista.length === 0 && <p className="campana-vacia">Sin notificaciones.</p>}
           {lista.slice(0, 15).map((n) => (
             <button

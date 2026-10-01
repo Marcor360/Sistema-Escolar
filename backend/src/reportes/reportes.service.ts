@@ -91,6 +91,7 @@ export class ReportesService {
     if (gm.docenteId !== docente.id) {
       throw new ForbiddenException('La materia no está asignada a este docente');
     }
+    if (!gm.grupo.activo) throw new ForbiddenException('El grupo no está activo');
     return gm;
   }
 
@@ -166,8 +167,8 @@ export class ReportesService {
         .createQueryBuilder('a')
         .where('a.id = :alumnoId', { alumnoId })
         .andWhere(
-          'EXISTS (SELECT 1 FROM inscripciones i INNER JOIN grupo_materias gm ON gm.grupo_id = i.grupo_id INNER JOIN docentes d ON d.id = gm.docente_id WHERE i.alumno_id = a.id AND i.estatus = :inscripcionActiva AND d.usuario_id = :actorId)',
-          { inscripcionActiva: 'ACTIVA', actorId: user.sub },
+          'EXISTS (SELECT 1 FROM inscripciones i INNER JOIN grupos g ON g.id = i.grupo_id AND g.activo = :grupoActivo INNER JOIN grupo_materias gm ON gm.grupo_id = i.grupo_id INNER JOIN docentes d ON d.id = gm.docente_id WHERE i.alumno_id = a.id AND i.estatus = :inscripcionActiva AND d.usuario_id = :actorId)',
+          { grupoActivo: true, inscripcionActiva: 'ACTIVA', actorId: user.sub },
         )
         .getCount();
       if (!permitido) throw new ForbiddenException('El alumno no pertenece a uno de tus grupos');

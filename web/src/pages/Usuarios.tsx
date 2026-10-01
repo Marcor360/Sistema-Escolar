@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { Encabezado } from '../components/Encabezado';
@@ -29,27 +29,30 @@ export default function UsuariosPage() {
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
 
-  const cargar = async (pagina = 1, tipoActual = tipo) => {
+  const cargar = useCallback(async (pagina = 1, tipoActual: Tipo = 'ALUMNO', plantelActual = '', termino = '') => {
     setError('');
     try {
       const { data } = await api.get<Resultado>('/usuarios/listado', {
-        params: { tipo: tipoActual, pagina, porPagina: 20, ...(plantelId ? { plantelId } : {}), ...(buscar ? { buscar } : {}) },
+        params: { tipo: tipoActual, pagina, porPagina: 20, ...(plantelActual ? { plantelId: plantelActual } : {}), ...(termino ? { buscar: termino } : {}) },
       });
       setResultado(data);
     } catch (err) { setError(mensajeDeError(err)); }
-  };
+  }, []);
   useEffect(() => {
-    api.get<Plantel[]>('/planteles/mios').then((r) => setPlanteles(r.data));
-    cargar();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    api.get<Plantel[]>('/planteles/mios').then((r) => setPlanteles(r.data)).catch((err) => setError(mensajeDeError(err)));
+    cargar(1, 'ALUMNO', '', '');
+  }, [cargar]);
 
-  const cambiarTipo = (nuevo: Tipo) => { setTipo(nuevo); setResultado({ datos: [], total: 0, pagina: 1, porPagina: 20 }); cargar(1, nuevo); };
+  const cambiarTipo = (nuevo: Tipo) => {
+    setTipo(nuevo); setResultado({ datos: [], total: 0, pagina: 1, porPagina: 20 });
+    cargar(1, nuevo, plantelId, buscar);
+  };
   const alternarRol = (rol: string) => setRolesElegidos((r) => r.includes(rol) ? r.filter((x) => x !== rol) : [...r, rol]);
   const crear = async (e: FormEvent) => {
     e.preventDefault(); setError(''); setMensaje('');
     try {
       await api.post('/usuarios', { ...form, roles: rolesElegidos });
-      setMensaje(`Cuenta ${form.email} creada`); setForm(FORM_INICIAL); await cargar();
+      setMensaje(`Cuenta ${form.email} creada`); setForm(FORM_INICIAL); await cargar(1, tipo, plantelId, buscar);
     } catch (err) { setError(mensajeDeError(err)); }
   };
 
@@ -70,14 +73,14 @@ export default function UsuariosPage() {
     </div>
     <div className="fila" style={{ marginBottom: 14 }}>
       <div className="campo"><label>Plantel</label><select value={plantelId} onChange={(e) => setPlantelId(e.target.value)}><option value="">Todos</option>{planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div>
-      <div className="campo"><label>Buscar</label><input value={buscar} onChange={(e) => setBuscar(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && cargar(1)} /></div>
-      <button className="boton secundario" onClick={() => cargar(1)}>Aplicar</button>
+      <div className="campo"><label>Buscar</label><input value={buscar} onChange={(e) => setBuscar(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && cargar(1, tipo, plantelId, buscar)} /></div>
+      <button className="boton secundario" onClick={() => cargar(1, tipo, plantelId, buscar)}>Aplicar</button>
     </div>
 
     <table className="tabla"><thead><tr><th>Identificador</th><th>Nombre</th><th>Correo</th><th>Plantel(es)</th><th>Roles/Estatus</th></tr></thead><tbody>
       {resultado.datos.map((fila) => <tr key={fila.id}><td>{fila.matricula ?? fila.numEmpleado ?? fila.id}</td><td>{fila.nombre}</td><td>{fila.correo}</td><td>{fila.plantel ?? fila.planteles?.join(', ') ?? '—'}</td><td>{fila.roles?.join(', ') ?? fila.estatus ?? (fila.activo ? 'ACTIVO' : 'INACTIVO')}</td></tr>)}
       {!resultado.datos.length && <tr><td className="vacio" colSpan={5}>Sin resultados.</td></tr>}
     </tbody></table>
-    <Paginador total={resultado.total} pagina={resultado.pagina} porPagina={resultado.porPagina} onCambio={(pagina) => cargar(pagina)} />
+    <Paginador total={resultado.total} pagina={resultado.pagina} porPagina={resultado.porPagina} onCambio={(pagina) => cargar(pagina, tipo, plantelId, buscar)} />
   </>;
 }

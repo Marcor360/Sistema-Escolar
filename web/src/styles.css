@@ -17,6 +17,17 @@
 
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; }
+.skip-link {
+  position: fixed;
+  z-index: 1000;
+  top: 8px;
+  left: 8px;
+  padding: 10px 14px;
+  color: #fff;
+  background: var(--pizarra-2);
+  transform: translateY(-160%);
+}
+.skip-link:focus { transform: translateY(0); }
 body {
   margin: 0;
   background: var(--papel);
@@ -155,7 +166,7 @@ input, select, textarea {
   color: var(--tinta);
   min-width: 140px;
 }
-input:focus, select:focus, textarea:focus, button:focus-visible {
+input:focus, select:focus, textarea:focus, button:focus-visible, a:focus-visible, [role='tabpanel']:focus-visible {
   outline: 2px solid var(--dorado);
   outline-offset: 1px;
 }

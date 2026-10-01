@@ -19,7 +19,7 @@ export class DocentesController {
     return this.service.listar(user, query);
   }
   @Get(':id') obtener(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) {
-    return this.service.obtener(id, user);
+    return this.service.obtenerParaApi(id, user);
   }
   @Post() crear(@Body() dto: CrearDocenteDto, @CurrentUser() user: JwtUser) { return this.service.crear(dto, user); }
   @Patch(':id') actualizar(

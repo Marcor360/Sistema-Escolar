@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsArray, IsInt, IsNumber, IsOptional, IsString, Max, Min, ValidateNested } from 'class-validator';
+import { ArrayNotEmpty, ArrayUnique, IsArray, IsInt, IsNumber, IsOptional, IsString, Max, Min, ValidateNested } from 'class-validator';
 
 export class ItemCapturaDto {
   @IsInt() alumnoId: number;
@@ -10,6 +10,7 @@ export class ItemCapturaDto {
 export class CapturaCalificacionesDto {
   @IsInt() grupoMateriaId: number;
   @IsInt() @Min(0) @Max(3) parcial: number;
-  @IsArray() @ValidateNested({ each: true }) @Type(() => ItemCapturaDto)
+  @IsArray() @ArrayNotEmpty() @ArrayUnique((item: ItemCapturaDto) => item.alumnoId)
+  @ValidateNested({ each: true }) @Type(() => ItemCapturaDto)
   items: ItemCapturaDto[];
 }

@@ -1,4 +1,5 @@
-import { Body, Controller, Get, HttpCode, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Request } from 'express';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 import { ConceptosService } from './conceptos.service';
@@ -9,7 +10,7 @@ import { CobranzaService } from './cobranza.service';
 import { BitacoraFinancieraService } from './bitacora-financiera.service';
 import { OpenpayWebhookGuard } from './openpay-webhook.guard';
 import {
-  AplicarRecargosDto, ConceptoDto, CrearCargoDto, CrearOrdenDto,
+  AplicarRecargosDto, ActualizarConceptoDto, ConceptoDto, CrearCargoDto, CrearOrdenDto,
   GenerarColegiaturasDto, ListarCargosDto, ListarPagosDto, RegistrarPagoDto,
 } from './finanzas.dto';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
@@ -47,8 +48,8 @@ export class FinanzasController {
 
   @Post('ordenes')
   @ApiBearerAuth() @UseGuards(JwtAuthGuard, RolesGuard) @Roles('ALUMNO', 'FINANZAS')
-  crearOrden(@Body() dto: CrearOrdenDto, @CurrentUser() user: JwtUser) {
-    return this.ordenes.crear(dto.cargoId, user);
+  crearOrden(@Body() dto: CrearOrdenDto, @CurrentUser() user: JwtUser, @Req() req: Request) {
+    return this.ordenes.crear(dto.cargoId, user, req.ip);
   }
 
   @Get('ordenes/:id')
@@ -68,7 +69,7 @@ export class FinanzasController {
 
   @Patch('conceptos/:id')
   @ApiBearerAuth() @UseGuards(JwtAuthGuard, RolesGuard) @Roles('FINANZAS')
-  actualizarConcepto(@Param('id', ParseIntPipe) id: number, @Body() dto: Partial<ConceptoDto>) {
+  actualizarConcepto(@Param('id', ParseIntPipe) id: number, @Body() dto: ActualizarConceptoDto) {
     return this.conceptos.actualizar(id, dto);
   }
 

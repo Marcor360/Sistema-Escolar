@@ -36,9 +36,12 @@ describe('AuthService.login', () => {
   });
 
   it('firma token en caso feliz', async () => {
-    const { service, jwt } = await crear(['ADMINISTRATIVO']);
+    const { service, jwt, repo } = await crear(['ADMINISTRATIVO']);
     await expect(service.login('demo@escuela.mx', 'Correcta123', 'WEB')).resolves.toMatchObject({ accessToken: 'token' });
     expect(jwt.sign).toHaveBeenCalledWith(expect.objectContaining({ roles: ['ADMINISTRATIVO'] }), { expiresIn: '8h' });
+    expect(repo.findOne).toHaveBeenCalledWith(expect.objectContaining({
+      select: expect.arrayContaining(['passwordHash']),
+    }));
   });
 
   it('permite alumno en MOVIL', async () => {

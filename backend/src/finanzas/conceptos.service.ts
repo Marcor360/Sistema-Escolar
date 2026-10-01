@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConceptoPago } from '../entities/concepto-pago.entity';
-import { ConceptoDto } from './finanzas.dto';
+import { ActualizarConceptoDto, ConceptoDto } from './finanzas.dto';
 
 /** Única responsabilidad: catálogo de conceptos de cobro. */
 @Injectable()
@@ -20,7 +20,7 @@ export class ConceptosService {
     return this.repo.save(this.repo.create(dto));
   }
 
-  async actualizar(id: number, dto: Partial<ConceptoDto>) {
+  async actualizar(id: number, dto: ActualizarConceptoDto) {
     await this.repo.update(id, dto);
     return this.repo.findOne({ where: { id } });
   }

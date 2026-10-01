@@ -510,7 +510,7 @@ etl/
 cd backend
 npm install                    # Instalar dependencias
 npm run start:dev              # Desarrollo (http://localhost:3000/api)
-npm run seed                   # Crear datos demo (solo desarrollo)
+ALLOW_DEV_SEED=true npm run seed  # Crear datos demo deliberadamente (solo development/test)
 npm run lint                   # Validar código
 npm run typecheck              # Verificar tipos TypeScript
 npm test                       # Ejecutar tests Jest

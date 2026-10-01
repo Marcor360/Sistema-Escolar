@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { Encabezado } from '../components/Encabezado';
@@ -24,9 +24,15 @@ export default function PlantelesPage() {
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
 
-  const cargar = () => api.get<Plantel[]>('/planteles').then((r) => setPlanteles(r.data));
-  const seleccionar = (id: number) => api.get<Detalle>(`/planteles/${id}`).then((r) => setDetalle(r.data));
-  useEffect(() => { cargar(); }, []);
+  const cargar = useCallback(async () => {
+    try { const { data } = await api.get<Plantel[]>('/planteles'); setPlanteles(data); }
+    catch (err) { setError(mensajeDeError(err)); }
+  }, []);
+  const seleccionar = async (id: number) => {
+    try { const { data } = await api.get<Detalle>(`/planteles/${id}`); setDetalle(data); }
+    catch (err) { setError(mensajeDeError(err)); }
+  };
+  useEffect(() => { void cargar(); }, [cargar]);
 
   const crear = async (e: FormEvent) => {
     e.preventDefault(); setError(''); setMensaje('');

@@ -56,8 +56,17 @@ export default function CalendarioPage() {
 
   const eliminar = async (evento: Evento) => {
     if (!confirm(`¿Eliminar el evento "${evento.titulo}"?`)) return;
-    await api.delete(`/calendario/${evento.id}`);
-    recargar();
+    setError('');
+    try { await api.delete(`/calendario/${evento.id}`); recargar(); }
+    catch (err) { setError(mensajeDeError(err)); }
+  };
+
+  const filtrarEventos = async () => {
+    setError('');
+    try {
+      const { data } = await api.get<Evento[]>('/calendario', { params: filtroPlantel ? { plantelId: filtroPlantel } : {} });
+      setEventos(data);
+    } catch (err) { setError(mensajeDeError(err)); }
   };
 
   return (
@@ -92,7 +101,7 @@ export default function CalendarioPage() {
         </form>
       </section>
 
-      <div className="fila" style={{ marginBottom: 12 }}><div className="campo"><label>Ver plantel</label><select value={filtroPlantel} onChange={(e) => setFiltroPlantel(e.target.value)}><option value="">Todos</option>{planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div><button className="boton secundario" onClick={() => api.get('/calendario', { params: filtroPlantel ? { plantelId: filtroPlantel } : {} }).then((r) => setEventos(r.data))}>Aplicar</button></div>
+      <div className="fila" style={{ marginBottom: 12 }}><div className="campo"><label>Ver plantel</label><select value={filtroPlantel} onChange={(e) => setFiltroPlantel(e.target.value)}><option value="">Todos</option>{planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div><button className="boton secundario" onClick={filtrarEventos}>Aplicar</button></div>
 
       <table className="tabla">
         <thead><tr><th>Fecha</th><th>Evento</th><th>Ámbito</th><th>Tipo</th><th>Descripción</th><th className="derecha">Acciones</th></tr></thead>

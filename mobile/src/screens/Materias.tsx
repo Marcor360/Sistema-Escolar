@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { FlatList, Linking, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { api, archivosBase } from '../api/client';
+import { api, archivosBase, mensajeDeError } from '../api/client';
 import { colores } from '../theme';
 import { base, Sello, Tarjeta, Vacio } from './comunes';
 
@@ -24,11 +24,14 @@ export default function MateriasScreen() {
   const [cargando, setCargando] = useState(false);
   const [abierta, setAbierta] = useState<number | null>(null);
   const [materialesPor, setMaterialesPor] = useState<Record<number, Material[]>>({});
+  const [error, setError] = useState('');
 
   const cargar = useCallback(() => {
+    setError('');
     setCargando(true);
     api.get<Materia[]>('/alumnos/me/materias')
       .then((r) => setMaterias(r.data))
+      .catch((fallo) => setError(mensajeDeError(fallo)))
       .finally(() => setCargando(false));
   }, []);
 
@@ -39,19 +42,24 @@ export default function MateriasScreen() {
     if (abierta === materia.id) { setAbierta(null); return; }
     setAbierta(materia.id);
     if (!materialesPor[materia.id]) {
-      const { data } = await api.get<Material[]>(`/grupo-materias/${materia.id}/materiales`);
-      setMaterialesPor((previos) => ({ ...previos, [materia.id]: data }));
+      try {
+        const { data } = await api.get<Material[]>(`/grupo-materias/${materia.id}/materiales`);
+        setMaterialesPor((previos) => ({ ...previos, [materia.id]: data }));
+      } catch (fallo) { setError(mensajeDeError(fallo)); }
     }
   };
 
   /** Pide un enlace firmado de corta vida y lo abre (los materiales ya no son públicos). */
   const abrirMaterial = async (materialId: number) => {
-    const { data } = await api.get<{ url: string }>(`/archivos/materiales/${materialId}/enlace`);
-    Linking.openURL(`${archivosBase}${data.url}`);
+    try {
+      const { data } = await api.get<{ url: string }>(`/archivos/materiales/${materialId}/enlace`);
+      await Linking.openURL(`${archivosBase}${data.url}`);
+    } catch (fallo) { setError(mensajeDeError(fallo)); }
   };
 
   return (
     <View style={base.pantalla}>
+      {error !== '' && <Text accessibilityRole="alert" style={estilos.error}>{error}</Text>}
       <FlatList
         data={materias}
         keyExtractor={(m) => String(m.id)}
@@ -107,6 +115,7 @@ export default function MateriasScreen() {
 }
 
 const estilos = StyleSheet.create({
+  error: { color: colores.peligro, backgroundColor: '#fff', borderColor: colores.peligro, borderWidth: 1, padding: 10, marginBottom: 8 },
   materiales: {
     marginTop: 10,
     paddingTop: 10,

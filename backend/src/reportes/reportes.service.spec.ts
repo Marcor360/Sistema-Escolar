@@ -64,5 +64,26 @@ describe('ReportesService.boletaPdf', () => {
     await expect(service.boletaPdf(2, maestroUser, {} as any)).rejects.toThrow(
       'El alumno no pertenece a uno de tus grupos',
     );
+    expect(qb.andWhere).toHaveBeenCalledWith(expect.stringContaining('INNER JOIN grupos g'), {
+      grupoActivo: true, inscripcionActiva: 'ACTIVA', actorId: maestroUser.sub,
+    });
+  });
+});
+
+describe('ReportesService.calificacionesExcel', () => {
+  it('bloquea al MAESTRO en un grupo inactivo', async () => {
+    const grupoMaterias = { findOne: jest.fn().mockResolvedValue({
+      id: 9, docenteId: 4, grupo: { activo: false },
+    }) };
+    const docentes = { obtenerPorUsuario: jest.fn().mockResolvedValue({ id: 4 }) };
+    const calificaciones = { find: jest.fn() };
+    const service = new ReportesService(
+      {} as any, {} as any, {} as any, grupoMaterias as any, calificaciones as any,
+      {} as any, {} as any, docentes as any, {} as any, {} as any, {} as any,
+    );
+
+    await expect(service.calificacionesExcel(9, maestroUser, {} as any))
+      .rejects.toThrow('El grupo no está activo');
+    expect(calificaciones.find).not.toHaveBeenCalled();
   });
 });

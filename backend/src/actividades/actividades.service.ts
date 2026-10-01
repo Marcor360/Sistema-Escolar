@@ -38,6 +38,7 @@ export class ActividadesService {
     if (gm.docenteId !== docente.id) {
       throw new ForbiddenException('La materia no está asignada a este docente');
     }
+    if (!gm.grupo.activo) throw new ForbiddenException('El grupo no está activo');
     return gm;
   }
 
@@ -45,6 +46,7 @@ export class ActividadesService {
     const alumno = await this.alumnos.obtenerPorUsuario(user.sub);
     const gm = await this.grupoMaterias.findOne({ where: { id: grupoMateriaId } });
     if (!gm) throw new NotFoundException('Grupo-materia no encontrado');
+    if (!gm.grupo.activo) throw new ForbiddenException('El grupo no está activo');
     const inscripcion = await this.inscripciones.findOne({
       where: { alumnoId: alumno.id, grupoId: gm.grupoId, estatus: 'ACTIVA' },
     });
@@ -149,10 +151,11 @@ export class ActividadesService {
     const gms = await this.grupoMaterias.find({
       where: { grupoId: In(inscripciones.map((i) => i.grupoId)) },
     });
-    if (gms.length === 0) return [];
+    const gruposActivos = gms.filter((gm) => gm.grupo.activo);
+    if (gruposActivos.length === 0) return [];
 
     const actividades = await this.actividades.find({
-      where: { grupoMateriaId: In(gms.map((g) => g.id)), activo: true },
+      where: { grupoMateriaId: In(gruposActivos.map((g) => g.id)), activo: true },
       order: { fechaEntrega: 'ASC' },
     });
     if (actividades.length === 0) return [];

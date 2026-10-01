@@ -13,7 +13,7 @@ const materialConGrupo = (grupoId: number, docenteUsuarioId: number | null) => (
   mime: 'application/pdf',
   grupoMateria: {
     docente: docenteUsuarioId ? { usuarioId: docenteUsuarioId } : null,
-    grupo: { id: grupoId, plantelId: 1 },
+    grupo: { id: grupoId, plantelId: 1, activo: true },
   },
 });
 
@@ -25,7 +25,7 @@ const entregaDe = (alumnoUsuarioId: number, docenteUsuarioId: number | null) => 
   actividad: {
     grupoMateria: {
       docente: docenteUsuarioId ? { usuarioId: docenteUsuarioId } : null,
-      grupo: { id: 3, plantelId: 1 },
+      grupo: { id: 3, plantelId: 1, activo: true },
     },
   },
 });
@@ -68,6 +68,15 @@ describe('ArchivosService', () => {
     await expect(service.enlaceMaterial(1, maestroUser)).resolves.toMatchObject({
       url: '/api/archivos/materiales/1?t=firmado',
     });
+  });
+
+  it('rechaza al maestro dueño si el grupo del material está inactivo', async () => {
+    const { service, materialesRepo } = crearService();
+    const material = materialConGrupo(7, maestroUser.sub);
+    material.grupoMateria.grupo.activo = false;
+    materialesRepo.findOne.mockResolvedValue(material);
+
+    await expect(service.enlaceMaterial(1, maestroUser)).rejects.toBeInstanceOf(ForbiddenException);
   });
 
   it('rechaza el streaming si el token trae un id distinto al de la ruta', async () => {

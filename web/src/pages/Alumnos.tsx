@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { Encabezado } from '../components/Encabezado';
 import { Paginador } from '../components/Paginador';
@@ -28,20 +28,21 @@ export default function AlumnosPage() {
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
 
-  const cargar = (pagina = 1, termino = buscar) => {
+  const cargar = useCallback((pagina = 1, termino = '', filtroPlantel = '') => {
     setCargando(true);
+    setError('');
     api.get<Resultado>('/alumnos', {
-      params: { pagina, ...(termino ? { buscar: termino } : {}), ...(plantelId ? { plantelId } : {}) },
+      params: { pagina, ...(termino ? { buscar: termino } : {}), ...(filtroPlantel ? { plantelId: filtroPlantel } : {}) },
     })
       .then((r) => setResultado(r.data))
       .catch((err) => setError(mensajeDeError(err)))
       .finally(() => setCargando(false));
-  };
+  }, []);
 
   useEffect(() => {
-    api.get<Plantel[]>('/planteles/mios').then((r) => setPlanteles(r.data));
+    api.get<Plantel[]>('/planteles/mios').then((r) => setPlanteles(r.data)).catch((err) => setError(mensajeDeError(err)));
     cargar(1, '');
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cargar]);
 
   const crear = async (e: FormEvent) => {
     e.preventDefault();
@@ -57,7 +58,7 @@ export default function AlumnosPage() {
       });
       setMensaje(`Alumno ${form.matricula} registrado`);
       setForm(FORM_INICIAL);
-      cargar();
+      cargar(1, buscar, plantelId);
     } catch (err) { setError(mensajeDeError(err)); }
   };
 
@@ -69,7 +70,7 @@ export default function AlumnosPage() {
   const baja = async (alumno: Alumno) => {
     if (!confirm(`¿Dar de baja a ${alumno.usuario.nombre} ${alumno.usuario.apellidoPaterno}?`)) return;
     await api.delete(`/alumnos/${alumno.id}`);
-    cargar();
+    cargar(1, buscar, plantelId);
   };
 
   /** Descarga la boleta PDF con el token de sesión y la abre en otra pestaña. */
@@ -127,10 +128,10 @@ export default function AlumnosPage() {
           <input
             value={buscar}
             onChange={(e) => setBuscar(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && cargar()}
+            onKeyDown={(e) => e.key === 'Enter' && cargar(1, buscar, plantelId)}
           />
         </div>
-        <button className="boton secundario" onClick={() => cargar()}>Buscar</button>
+        <button className="boton secundario" onClick={() => cargar(1, buscar, plantelId)}>Buscar</button>
       </div>
 
       <table className="tabla">
@@ -159,7 +160,7 @@ export default function AlumnosPage() {
           {cargando && <tr><td className="vacio" colSpan={6}>Cargando…</td></tr>}
         </tbody>
       </table>
-      <Paginador total={resultado.total} pagina={resultado.pagina} porPagina={resultado.porPagina} onCambio={(pagina) => cargar(pagina)} />
+      <Paginador total={resultado.total} pagina={resultado.pagina} porPagina={resultado.porPagina} onCambio={(pagina) => cargar(pagina, buscar, plantelId)} />
     </>
   );
 }

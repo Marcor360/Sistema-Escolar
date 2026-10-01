@@ -22,6 +22,45 @@ describe('CargosService.saldoDeCargo / totalDeCargo', () => {
   });
 });
 
+describe('CargosService.adeudos minimiza datos del alumno', () => {
+  it('no devuelve CURP, tutor, dirección ni correo en el reporte financiero', async () => {
+    const cargo = {
+      id: 1, alumnoId: 10, conceptoId: 2, cicloId: null, periodo: '2026-09', claveGeneracion: 'interno',
+      descripcion: 'Colegiatura', monto: 100, descuento: 0, recargo: 0, fechaVencimiento: null,
+      estatus: 'PENDIENTE',
+      alumno: {
+        id: 10, usuarioId: 80, plantelId: 3, matricula: 'A010', curp: 'CURP-PRIVADA',
+        fechaNacimiento: '2010-01-01', tutorNombre: 'Tutor privado', tutorTelefono: '5550000000',
+        direccion: 'Dirección privada', estatus: 'ACTIVO',
+        usuario: { nombre: 'Ana', apellidoPaterno: 'López', nombreCompleto: 'Ana López', email: 'ana@example.invalid' },
+      },
+    };
+    const query = {
+      leftJoinAndSelect: jest.fn().mockReturnThis(), where: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(), andWhere: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue([cargo]),
+    };
+    const pagosQuery = {
+      select: jest.fn().mockReturnThis(), addSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(), andWhere: jest.fn().mockReturnThis(),
+      groupBy: jest.fn().mockReturnThis(), getRawMany: jest.fn().mockResolvedValue([]),
+    };
+    const scope = { resolverFiltro: jest.fn().mockResolvedValue([3]) };
+    const service = new CargosService(
+      { createQueryBuilder: jest.fn().mockReturnValue(query) } as any,
+      { createQueryBuilder: jest.fn().mockReturnValue(pagosQuery) } as any,
+      {} as any, {} as any, {} as any, {} as any, {} as any, scope as any,
+    );
+
+    const respuesta = await service.adeudos({ sub: 4, roles: ['FINANZAS'] } as any);
+
+    expect(respuesta[0].alumno).toMatchObject({ matricula: 'A010', usuario: { nombreCompleto: 'Ana López' } });
+    for (const datoPrivado of ['CURP-PRIVADA', 'Tutor privado', '5550000000', 'Dirección privada', 'ana@example.invalid']) {
+      expect(JSON.stringify(respuesta)).not.toContain(datoPrivado);
+    }
+  });
+});
+
 describe('CargosService.aplicarRecargos', () => {
   it('calcula (monto - descuento) x porcentaje/100 en cargos vencidos sin recargo previo', async () => {
     const cargo = {

@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { Encabezado } from '../components/Encabezado';
@@ -23,26 +23,32 @@ export default function CalificacionesPage() {
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
 
-  useEffect(() => {
+  const cargarClases = useCallback(() => {
     // El maestro ve sus clases; control escolar captura en cualquiera (una sola petición)
     const ruta = tieneRol('MAESTRO') && !tieneRol('ADMINISTRATIVO')
       ? '/academico/mis-grupos'
       : '/academico/grupo-materias';
-    api.get<GrupoMateria[]>(ruta).then((r) => setClases(r.data));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    api.get<GrupoMateria[]>(ruta)
+      .then((r) => setClases(r.data))
+      .catch((err) => setError(mensajeDeError(err)));
+  }, [tieneRol]);
+
+  useEffect(() => { cargarClases(); }, [cargarClases]);
 
   const cargarAlumnos = async () => {
     setMensaje(''); setError('');
     const clase = clases.find((c) => c.id === Number(claseId));
     if (!clase) return;
-    const [insc, previas] = await Promise.all([
-      api.get<Inscripcion[]>(`/academico/grupos/${clase.grupo.id}/alumnos`),
-      api.get<Registro[]>(`/calificaciones/grupo-materia/${clase.id}`, { params: { parcial } }),
-    ]);
-    setAlumnos(insc.data);
-    const mapa: Record<number, string> = {};
-    for (const r of previas.data) mapa[r.alumnoId] = String(r.calificacion);
-    setValores(mapa);
+    try {
+      const [insc, previas] = await Promise.all([
+        api.get<Inscripcion[]>(`/academico/grupos/${clase.grupo.id}/alumnos`),
+        api.get<Registro[]>(`/calificaciones/grupo-materia/${clase.id}`, { params: { parcial } }),
+      ]);
+      setAlumnos(insc.data);
+      const mapa: Record<number, string> = {};
+      for (const r of previas.data) mapa[r.alumnoId] = String(r.calificacion);
+      setValores(mapa);
+    } catch (err) { setError(mensajeDeError(err)); }
   };
 
   /** Concentrado de la clase (parciales, final y promedio) en Excel. */
@@ -81,6 +87,8 @@ export default function CalificacionesPage() {
   return (
     <>
       <Encabezado titulo="Captura de calificaciones" detalle="Registro por grupo-materia y parcial" />
+      {error && <p className="mensaje-error" role="alert">{error}</p>}
+      {mensaje && <p className="mensaje-ok" role="status">{mensaje}</p>}
 
       <section className="panel">
         <div className="fila">
@@ -125,8 +133,6 @@ export default function CalificacionesPage() {
               ))}
             </tbody>
           </table>
-          {error && <p className="mensaje-error">{error}</p>}
-          {mensaje && <p className="mensaje-ok">{mensaje}</p>}
           <button className="boton">Guardar calificaciones</button>
         </form>
       )}

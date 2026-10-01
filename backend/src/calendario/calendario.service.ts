@@ -39,29 +39,37 @@ export class CalendarioService {
         { plantelAlumno: alumno.plantelId, gruposAlumno: grupos },
       );
     } else {
-      const planteles = await this.scope.resolverFiltro(user, plantelId);
       const maestroPuro = user.roles.includes('MAESTRO') &&
         !user.roles.some((rol) => ['SUPERADMIN', 'ADMINISTRATIVO', 'FINANZAS'].includes(rol));
       if (maestroPuro) {
         const docente = await this.docentes.findOne({ where: { usuarioId: user.sub } });
-        const grupos = docente
+        const asignaciones = docente
           ? await this.grupoMaterias.find({ where: { docenteId: docente.id } })
           : [];
-        const grupoIds = [...new Set(grupos.map((grupo) => grupo.grupoId))];
-        if (planteles !== null && grupoIds.length > 0) {
-          qb.andWhere(
-            '((e.grupo_id IS NULL AND (e.plantel_id IS NULL OR e.plantel_id IN (:...planteles))) OR e.grupo_id IN (:...grupoIds))',
-            { planteles, grupoIds },
-          );
-        } else if (planteles !== null) {
-          qb.andWhere('(e.grupo_id IS NULL AND (e.plantel_id IS NULL OR e.plantel_id IN (:...planteles)))', { planteles });
-        } else if (grupoIds.length > 0) {
-          qb.andWhere('(e.grupo_id IS NULL OR e.grupo_id IN (:...grupoIds))', { grupoIds });
+        const gruposActivos = asignaciones.filter((asignacion) => asignacion.grupo.activo);
+        const grupoIds = [...new Set(gruposActivos.map((grupo) => grupo.grupoId))];
+        const plantelesDocente = [...new Set(gruposActivos.map((grupo) => grupo.grupo.plantelId))];
+        if (plantelId !== undefined && !plantelesDocente.includes(plantelId)) {
+          throw new ForbiddenException('El plantel solicitado no contiene grupos activos asignados a este docente');
         }
-      } else if (planteles !== null) {
-        qb.andWhere('(e.plantel_id IS NULL OR e.plantel_id IN (:...planteles))', { planteles });
+        if (plantelId !== undefined) {
+          const gruposDelPlantel = gruposActivos.filter((grupo) => grupo.grupo.plantelId === plantelId);
+          const gruposFiltrados = [...new Set(gruposDelPlantel.map((grupo) => grupo.grupoId))];
+          qb.andWhere('(e.plantel_id IS NULL OR e.plantel_id = :plantelId OR e.grupo_id IN (:...grupoIds))', {
+            plantelId, grupoIds: gruposFiltrados,
+          });
+        } else if (grupoIds.length > 0) {
+          qb.andWhere('(e.plantel_id IS NULL OR e.plantel_id IN (:...planteles) OR e.grupo_id IN (:...grupoIds))', {
+            planteles: plantelesDocente, grupoIds,
+          });
+        } else {
+          qb.andWhere('(e.plantel_id IS NULL AND e.grupo_id IS NULL)');
+        }
+      } else {
+        const planteles = await this.scope.resolverFiltro(user, plantelId);
+        if (planteles !== null) qb.andWhere('(e.plantel_id IS NULL OR e.plantel_id IN (:...planteles))', { planteles });
+        else if (plantelId) qb.andWhere('(e.plantel_id IS NULL OR e.plantel_id = :plantelId)', { plantelId });
       }
-      else if (plantelId) qb.andWhere('(e.plantel_id IS NULL OR e.plantel_id = :plantelId)', { plantelId });
     }
     return qb.orderBy('e.fecha_inicio', 'ASC').take(500).getMany();
   }
@@ -75,6 +83,7 @@ export class CalendarioService {
       const docente = await this.docentes.findOne({ where: { usuarioId: user.sub } });
       const gm = docente ? await this.grupoMaterias.findOne({ where: { grupoId: dto.grupoId, docenteId: docente.id } }) : null;
       if (!gm) throw new ForbiddenException('Solo puedes crear eventos para tus grupos');
+      if (!gm.grupo.activo) throw new ForbiddenException('No puedes crear eventos para un grupo inactivo');
       plantelId = gm.grupo.plantelId;
     } else if (!superadmin) {
       if (!plantelId) throw new ForbiddenException('Solo SUPERADMIN puede crear eventos globales');
@@ -85,6 +94,7 @@ export class CalendarioService {
     if (dto.grupoId) {
       const grupo = await this.grupos.findOne({ where: { id: dto.grupoId } });
       if (!grupo) throw new NotFoundException('Grupo no encontrado');
+      if (maestroPuro && !grupo.activo) throw new ForbiddenException('No puedes crear eventos para un grupo inactivo');
       if (plantelId && grupo.plantelId !== plantelId) throw new ForbiddenException('El grupo no pertenece al plantel indicado');
       plantelId = grupo.plantelId;
     }

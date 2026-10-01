@@ -24,7 +24,7 @@ export class AlumnosController {
   @Get('me/perfil')
   @Roles('ALUMNO')
   miPerfil(@CurrentUser() user: JwtUser) {
-    return this.service.obtenerPorUsuario(user.sub);
+    return this.service.perfilPropio(user.sub);
   }
 
   // --- Control escolar ---
@@ -37,7 +37,7 @@ export class AlumnosController {
   @Get(':id')
   @Roles('ADMINISTRATIVO', 'FINANZAS', 'MAESTRO')
   obtener(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) {
-    return this.service.obtener(id, user);
+    return this.service.obtenerParaApi(id, user);
   }
 
   @Post()

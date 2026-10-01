@@ -1,4 +1,4 @@
-import { api } from '../api/client';
+import { api, mensajeDeError } from '../api/client';
 import { Encabezado } from '../components/Encabezado';
 import { useDatos } from '../hooks/useDatos';
 import { pesos, fechaHora } from '../utils/formato';
@@ -28,14 +28,16 @@ export default function DashboardPage() {
     () => api.get('/planteles/mios').then((r) => r.data),
     [],
   );
-  const { datos: resumen, cargando, error, recargar, setDatos: setResumen } = useDatos<Resumen | null>(
+  const { datos: resumen, cargando, error, recargar, setDatos: setResumen, setError } = useDatos<Resumen | null>(
     () => api.get('/reportes/resumen').then((r) => r.data),
     null,
   );
   const filtrarPlantel = (valor: string) => {
     setPlantelId(valor);
+    setError('');
     api.get('/reportes/resumen', { params: valor ? { plantelId: valor } : {} })
-      .then((r) => setResumen(r.data));
+      .then((r) => setResumen(r.data))
+      .catch((err) => setError(mensajeDeError(err)));
   };
   const hoy = new Date();
   const en30dias = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);

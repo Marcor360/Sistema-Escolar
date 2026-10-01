@@ -25,7 +25,9 @@ export class PagosService {
     const pagina = query.pagina || 1;
     const porPagina = query.porPagina || 20;
     const planteles = await this.scope.resolverFiltro(user);
-    const qb = this.pagos.createQueryBuilder('p').innerJoinAndSelect('p.alumno', 'a');
+    const qb = this.pagos.createQueryBuilder('p')
+      .innerJoinAndSelect('p.alumno', 'a')
+      .leftJoinAndSelect('a.usuario', 'u');
     if (planteles !== null) qb.andWhere('a.plantel_id IN (:...planteles)', { planteles });
     if (query.alumnoId) qb.andWhere('p.alumno_id = :alumnoId', { alumnoId: query.alumnoId });
     const [datos, total] = await qb
@@ -33,7 +35,25 @@ export class PagosService {
       .skip((pagina - 1) * porPagina)
       .take(porPagina)
       .getManyAndCount();
-    return { datos, total, pagina, porPagina };
+    return {
+      datos: datos.map((pago) => ({
+        id: pago.id,
+        monto: pago.monto,
+        metodo: pago.metodo,
+        referencia: pago.referencia,
+        estatus: pago.estatus,
+        fechaPago: pago.fechaPago,
+        alumno: {
+          id: pago.alumno.id,
+          matricula: pago.alumno.matricula,
+          usuario: {
+            nombre: pago.alumno.usuario.nombre,
+            apellidoPaterno: pago.alumno.usuario.apellidoPaterno,
+          },
+        },
+      })),
+      total, pagina, porPagina,
+    };
   }
 
   /** Pago manual de ventanilla (efectivo/transferencia/tarjeta). */

@@ -8,7 +8,7 @@ import { Rol } from './rol.entity';
 export class Usuario {
   @PrimaryGeneratedColumn() id: number;
   @Column({ length: 120, unique: true }) email: string;
-  @Column({ length: 100 }) passwordHash: string;
+  @Column({ length: 100, select: false }) passwordHash: string;
   @Column({ length: 80 }) nombre: string;
   @Column({ length: 80 }) apellidoPaterno: string;
   @Column({ length: 80, nullable: true }) apellidoMaterno: string | null;

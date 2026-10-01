@@ -1,8 +1,8 @@
 import { useCallback, useState } from 'react';
 import { FlatList, RefreshControl, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { api } from '../api/client';
-import { base, Tarjeta, Vacio } from './comunes';
+import { api, mensajeDeError } from '../api/client';
+import { base, ErrorCarga, Tarjeta, Vacio } from './comunes';
 
 interface Calificacion {
   id: number;
@@ -14,11 +14,14 @@ interface Calificacion {
 export default function CalificacionesScreen() {
   const [registros, setRegistros] = useState<Calificacion[]>([]);
   const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState('');
 
   const cargar = useCallback(() => {
+    setError('');
     setCargando(true);
     api.get<Calificacion[]>('/calificaciones/mias')
       .then((r) => setRegistros(r.data))
+      .catch((fallo) => setError(mensajeDeError(fallo)))
       .finally(() => setCargando(false));
   }, []);
 
@@ -36,6 +39,7 @@ export default function CalificacionesScreen() {
 
   return (
     <View style={base.pantalla}>
+      {error !== '' && <ErrorCarga mensaje={error} reintentar={cargar} />}
       <FlatList
         data={filas}
         keyExtractor={([clave]) => clave}

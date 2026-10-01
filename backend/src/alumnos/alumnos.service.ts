@@ -1,6 +1,6 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Like, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { Alumno } from '../entities/alumno.entity';
 import { Inscripcion } from '../entities/inscripcion.entity';
 import { GrupoMateria } from '../entities/grupo-materia.entity';
@@ -23,16 +23,45 @@ export class AlumnosService {
   async listar(query: ListarAlumnosDto, user?: JwtUser) {
     const pagina = query.pagina || 1;
     const porPagina = query.porPagina || 20;
-    const planteles = user ? await this.scope.resolverFiltro(user, query.plantelId) : null;
-    const base = planteles === null ? {} : { plantelId: this.scope.condicion(planteles) };
-    const where = query.buscar ? { ...base, matricula: Like(`%${query.buscar}%`) } : base;
-    const [datos, total] = await this.alumnos.findAndCount({
-      where,
-      order: { id: 'DESC' },
-      skip: (pagina - 1) * porPagina,
-      take: porPagina,
-    });
-    return { datos, total, pagina, porPagina };
+    const maestroPuro = user?.roles.includes('MAESTRO') &&
+      !user.roles.some((rol) => ['SUPERADMIN', 'ADMINISTRATIVO', 'FINANZAS'].includes(rol));
+    const planteles = user && !maestroPuro ? await this.scope.resolverFiltro(user, query.plantelId) : null;
+    const qb = this.alumnos.createQueryBuilder('a')
+      .leftJoinAndSelect('a.usuario', 'u')
+      .leftJoinAndSelect('a.plantel', 'p');
+    if (planteles !== null) qb.andWhere('a.plantel_id IN (:...planteles)', { planteles });
+
+    if (maestroPuro) {
+      qb.andWhere(
+        'EXISTS (SELECT 1 FROM inscripciones i INNER JOIN grupos g ON g.id = i.grupo_id AND g.activo = :grupoActivo INNER JOIN grupo_materias gm ON gm.grupo_id = i.grupo_id INNER JOIN docentes d ON d.id = gm.docente_id WHERE i.alumno_id = a.id AND i.estatus = :estatusInscripcion AND d.usuario_id = :docenteUsuarioId)',
+        { grupoActivo: true, estatusInscripcion: 'ACTIVA', docenteUsuarioId: user.sub },
+      );
+    }
+    if (query.buscar?.trim()) {
+      qb.andWhere('(a.matricula LIKE :buscar OR u.nombre LIKE :buscar OR u.apellido_paterno LIKE :buscar OR u.apellido_materno LIKE :buscar)', {
+        buscar: `%${query.buscar.trim()}%`,
+      });
+    }
+    const [datos, total] = await qb.orderBy('a.id', 'DESC')
+      .skip((pagina - 1) * porPagina)
+      .take(porPagina)
+      .getManyAndCount();
+    const administrativo = user?.roles.some((rol) => ['ADMINISTRATIVO', 'SUPERADMIN'].includes(rol)) ?? false;
+    return {
+      datos: datos.map((a) => ({
+        id: a.id,
+        matricula: a.matricula,
+        estatus: a.estatus,
+        usuario: {
+          nombre: a.usuario.nombre,
+          apellidoPaterno: a.usuario.apellidoPaterno,
+          apellidoMaterno: a.usuario.apellidoMaterno,
+          ...(administrativo ? { email: a.usuario.email } : {}),
+        },
+        plantel: a.plantel ? { id: a.plantel.id, nombre: a.plantel.nombre } : null,
+      })),
+      total, pagina, porPagina,
+    };
   }
 
   async obtener(id: number, user?: JwtUser) {
@@ -46,21 +75,65 @@ export class AlumnosService {
           .where('i.alumno_id = :alumnoId', { alumnoId: id })
           .andWhere('i.estatus = :estatus', { estatus: 'ACTIVA' })
           .andWhere(
-            'EXISTS (SELECT 1 FROM grupo_materias gm INNER JOIN docentes d ON d.id = gm.docente_id WHERE gm.grupo_id = i.grupo_id AND d.usuario_id = :usuarioId)',
-            { usuarioId: user.sub },
+            'EXISTS (SELECT 1 FROM grupos g INNER JOIN grupo_materias gm ON gm.grupo_id = g.id INNER JOIN docentes d ON d.id = gm.docente_id WHERE g.id = i.grupo_id AND g.activo = :grupoActivo AND d.usuario_id = :usuarioId)',
+            { grupoActivo: true, usuarioId: user.sub },
           )
           .getCount();
         if (!permitido) throw new ForbiddenException('El alumno no pertenece a uno de tus grupos');
       }
-      await this.scope.validarGestion(user, alumno.plantelId);
+      if (!maestroPuro) await this.scope.validarGestion(user, alumno.plantelId);
     }
     return alumno;
+  }
+
+  async obtenerParaApi(id: number, user: JwtUser) {
+    const alumno = await this.obtener(id, user);
+    const publico = {
+      id: alumno.id,
+      matricula: alumno.matricula,
+      estatus: alumno.estatus,
+      plantelId: alumno.plantelId,
+      plantel: alumno.plantel ? { id: alumno.plantel.id, nombre: alumno.plantel.nombre } : null,
+      usuario: {
+        id: alumno.usuario.id,
+        nombre: alumno.usuario.nombre,
+        apellidoPaterno: alumno.usuario.apellidoPaterno,
+        apellidoMaterno: alumno.usuario.apellidoMaterno,
+      },
+    };
+    if (!user.roles.some((rol) => ['ADMINISTRATIVO', 'SUPERADMIN'].includes(rol))) return publico;
+    return {
+      ...publico,
+      curp: alumno.curp,
+      fechaNacimiento: alumno.fechaNacimiento,
+      tutorNombre: alumno.tutorNombre,
+      tutorTelefono: alumno.tutorTelefono,
+      direccion: alumno.direccion,
+      usuario: { ...publico.usuario, email: alumno.usuario.email, telefono: alumno.usuario.telefono },
+    };
   }
 
   async obtenerPorUsuario(usuarioId: number) {
     const alumno = await this.alumnos.findOne({ where: { usuarioId } });
     if (!alumno) throw new NotFoundException('El usuario no tiene expediente de alumno');
     return alumno;
+  }
+
+  async perfilPropio(usuarioId: number) {
+    const alumno = await this.obtenerPorUsuario(usuarioId);
+    return {
+      id: alumno.id,
+      matricula: alumno.matricula,
+      estatus: alumno.estatus,
+      curp: alumno.curp,
+      tutorNombre: alumno.tutorNombre,
+      usuario: {
+        nombre: alumno.usuario.nombre,
+        apellidoPaterno: alumno.usuario.apellidoPaterno,
+        nombreCompleto: alumno.usuario.nombreCompleto,
+        email: alumno.usuario.email,
+      },
+    };
   }
 
   async crear(dto: CrearAlumnoDto, user?: JwtUser) {
@@ -146,11 +219,7 @@ export class AlumnosService {
       where: { alumnoId: alumno.id, estatus: 'ACTIVA' },
     });
     if (inscripciones.length === 0) return [];
-    const materias: GrupoMateria[] = [];
-    for (const insc of inscripciones) {
-      const gms = await this.grupoMaterias.find({ where: { grupoId: insc.grupoId } });
-      materias.push(...gms);
-    }
-    return materias;
+    const grupoIds = [...new Set(inscripciones.map((insc) => insc.grupoId))];
+    return this.grupoMaterias.find({ where: { grupoId: In(grupoIds) }, order: { grupoId: 'ASC', materiaId: 'ASC' } });
   }
 }

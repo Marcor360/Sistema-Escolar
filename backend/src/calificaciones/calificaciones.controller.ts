@@ -37,7 +37,7 @@ export class CalificacionesController {
   }
 
   @Get('alumno/:id')
-  @Roles('ADMINISTRATIVO', 'MAESTRO', 'FINANZAS')
+  @Roles('ADMINISTRATIVO', 'MAESTRO')
   porAlumno(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) {
     return this.service.porAlumno(id, user);
   }

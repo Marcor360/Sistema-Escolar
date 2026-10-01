@@ -14,7 +14,7 @@ Resume lo que la API implementa hoy. No sustituye la autorización del servidor:
 
 - `RolesGuard` permite todos los endpoints requeridos a `SUPERADMIN`.
 - `ScopeService` resuelve planteles asignados y rechaza IDs fuera de alcance en servidor.
-- El docente valida sus grupos-materia al listar grupos, alumnos, actividades, materiales y calificaciones.
+- El docente valida sus grupos-materia y que el grupo permanezca activo al consultar alumnos, actividades, materiales y calificaciones.
 - Las operaciones globales sobre expedientes docentes se rechazan si incluyen asignaciones fuera del alcance del actor.
 - La difusión administrativa filtra destinatarios por planteles asignados; el resumen financiero no está disponible para `MAESTRO`.
 - La bitácora financiera se filtra por plantel; los eventos históricos sin plantel asociado solo son visibles para `SUPERADMIN`.

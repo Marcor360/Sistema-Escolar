@@ -21,7 +21,7 @@ export class ReportesController {
   }
 
   @Get('boleta/:alumnoId')
-  @Roles('ADMINISTRATIVO', 'MAESTRO', 'FINANZAS', 'ALUMNO')
+  @Roles('ADMINISTRATIVO', 'MAESTRO', 'ALUMNO')
   boleta(@Param('alumnoId', ParseIntPipe) alumnoId: number, @CurrentUser() user: JwtUser, @Res() res: Response) {
     return this.service.boletaPdf(alumnoId, user, res);
   }

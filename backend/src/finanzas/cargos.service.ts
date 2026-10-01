@@ -66,7 +66,9 @@ export class CargosService {
     const pagina = query.pagina || 1;
     const porPagina = query.porPagina || 20;
     const planteles = await this.scope.resolverFiltro(user);
-    const qb = this.cargos.createQueryBuilder('c').innerJoinAndSelect('c.alumno', 'a');
+    const qb = this.cargos.createQueryBuilder('c')
+      .innerJoinAndSelect('c.alumno', 'a')
+      .leftJoinAndSelect('a.usuario', 'u');
     if (planteles !== null) qb.andWhere('a.plantel_id IN (:...planteles)', { planteles });
     if (query.alumnoId) qb.andWhere('c.alumno_id = :alumnoId', { alumnoId: query.alumnoId });
     if (query.estatus) qb.andWhere('c.estatus = :estatus', { estatus: query.estatus });
@@ -76,7 +78,10 @@ export class CargosService {
       .skip((pagina - 1) * porPagina)
       .take(porPagina)
       .getManyAndCount();
-    return { datos, total, pagina, porPagina };
+    return {
+      datos: datos.map((cargo) => this.proyectarCargoFinanciero(cargo)),
+      total, pagina, porPagina,
+    };
   }
 
   async obtener(id: number) {
@@ -237,7 +242,7 @@ export class CargosService {
   }
 
   /** Cargos con saldo pendiente en todo el plantel (sin N+1). */
-  async adeudos(user?: JwtUser, plantelId?: number): Promise<CargoConSaldo[]> {
+  async adeudos(user?: JwtUser, plantelId?: number, incluirContacto = false): Promise<CargoConSaldo[]> {
     const planteles = user ? await this.scope.resolverFiltro(user, plantelId) : null;
     const qb = this.cargos
       .createQueryBuilder('c')
@@ -252,7 +257,7 @@ export class CargosService {
       .map((cargo) => {
         const total = this.totalDeCargo(cargo);
         const abonado = pagado.get(cargo.id) ?? 0;
-        return { ...cargo, total, pagado: abonado, saldo: redondear(total - abonado) } as CargoConSaldo;
+        return this.proyectarCargoFinanciero({ ...cargo, total, pagado: abonado, saldo: redondear(total - abonado) }, incluirContacto) as CargoConSaldo;
       })
       .filter((c) => c.saldo > 0);
   }
@@ -273,14 +278,58 @@ export class CargosService {
         .filter((p) => p.cargoId === cargo.id && p.estatus === 'CONFIRMADO')
         .reduce((sum, p) => sum + p.monto, 0);
       const total = this.totalDeCargo(cargo);
-      return { ...cargo, total, pagado: redondear(pagado), saldo: redondear(total - pagado) };
+      return this.proyectarCargoFinanciero({
+        ...cargo, total, pagado: redondear(pagado), saldo: redondear(total - pagado),
+      });
     });
     const saldoTotal = redondear(detalle.reduce((sum, c) => sum + c.saldo, 0));
-    return { alumno, cargos: detalle, pagos, saldoTotal };
+    return {
+      alumno: this.proyectarAlumnoFinanciero(alumno),
+      cargos: detalle,
+      pagos: pagos.map((pago) => ({
+        id: pago.id, monto: pago.monto, metodo: pago.metodo, referencia: pago.referencia,
+        estatus: pago.estatus, fechaPago: pago.fechaPago,
+      })),
+      saldoTotal,
+    };
   }
 
   async miEstadoDeCuenta(user: JwtUser) {
     const alumno = await this.alumnos.obtenerPorUsuario(user.sub);
     return this.estadoDeCuenta(alumno.id);
+  }
+
+  private proyectarAlumnoFinanciero(alumno: Cargo['alumno'], incluirContacto = false) {
+    return {
+      id: alumno.id,
+      matricula: alumno.matricula,
+      estatus: alumno.estatus,
+      plantelId: alumno.plantelId,
+      ...(incluirContacto ? { usuarioId: alumno.usuarioId } : {}),
+      usuario: alumno.usuario ? {
+        nombre: alumno.usuario.nombre,
+        apellidoPaterno: alumno.usuario.apellidoPaterno,
+        nombreCompleto: alumno.usuario.nombreCompleto,
+        ...(incluirContacto ? { email: alumno.usuario.email } : {}),
+      } : undefined,
+    };
+  }
+
+  private proyectarCargoFinanciero(cargo: Cargo & { total?: number; pagado?: number; saldo?: number }, incluirContacto = false) {
+    return {
+      id: cargo.id,
+      alumnoId: cargo.alumnoId,
+      conceptoId: cargo.conceptoId,
+      cicloId: cargo.cicloId,
+      periodo: cargo.periodo,
+      descripcion: cargo.descripcion,
+      monto: cargo.monto,
+      descuento: cargo.descuento,
+      recargo: cargo.recargo,
+      fechaVencimiento: cargo.fechaVencimiento,
+      estatus: cargo.estatus,
+      alumno: this.proyectarAlumnoFinanciero(cargo.alumno, incluirContacto),
+      ...('total' in cargo ? { total: cargo.total, pagado: cargo.pagado, saldo: cargo.saldo } : {}),
+    };
   }
 }

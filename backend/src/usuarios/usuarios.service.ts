@@ -13,6 +13,10 @@ import { JwtUser } from '../common/current-user.decorator';
 import { ScopeService } from '../planteles/scope.service';
 import { ListadoUsuariosDto } from './usuarios.dto';
 
+type UsuarioPublico = Pick<
+  Usuario, 'id' | 'email' | 'nombre' | 'apellidoPaterno' | 'apellidoMaterno' | 'telefono' | 'activo' | 'roles' | 'nombreCompleto'
+>;
+
 @Injectable()
 export class UsuariosService {
   constructor(
@@ -25,7 +29,7 @@ export class UsuariosService {
   ) {}
 
   listar() {
-    return this.usuarios.find({ order: { id: 'DESC' } });
+    return this.usuarios.find({ order: { id: 'DESC' } }).then((usuarios) => usuarios.map((u) => this.proyectar(u)));
   }
 
   async listado(query: ListadoUsuariosDto, user: JwtUser) {
@@ -49,8 +53,8 @@ export class UsuariosService {
       .leftJoinAndSelect('a.plantel', 'p');
     if (maestroPuro) {
       qb.andWhere(
-        'EXISTS (SELECT 1 FROM inscripciones i INNER JOIN grupo_materias gm ON gm.grupo_id = i.grupo_id INNER JOIN docentes d ON d.id = gm.docente_id WHERE i.alumno_id = a.id AND i.estatus = :activa AND d.usuario_id = :actorId)',
-        { activa: 'ACTIVA', actorId: user.sub },
+        'EXISTS (SELECT 1 FROM inscripciones i INNER JOIN grupos g ON g.id = i.grupo_id AND g.activo = :grupoActivo INNER JOIN grupo_materias gm ON gm.grupo_id = i.grupo_id INNER JOIN docentes d ON d.id = gm.docente_id WHERE i.alumno_id = a.id AND i.estatus = :activa AND d.usuario_id = :actorId)',
+        { grupoActivo: true, activa: 'ACTIVA', actorId: user.sub },
       );
       if (query.plantelId) qb.andWhere('a.plantel_id = :plantelId', { plantelId: query.plantelId });
     } else {
@@ -74,7 +78,7 @@ export class UsuariosService {
     );
     this.aplicarBusqueda(qb, query.buscar, 'd.num_empleado');
     const [filas, total] = await qb.orderBy('d.id', 'DESC').skip((pagina - 1) * porPagina).take(porPagina).getManyAndCount();
-    const nombres = await this.plantelesPorUsuario(filas.map((d) => d.usuarioId));
+    const nombres = await this.plantelesPorUsuario(filas.map((d) => d.usuarioId), planteles);
     return { datos: filas.map((d) => ({
       id: d.id, numEmpleado: d.numEmpleado, nombre: d.usuario.nombreCompleto,
       correo: d.usuario.email, planteles: nombres.get(d.usuarioId) ?? [], estatus: d.estatus,
@@ -93,7 +97,7 @@ export class UsuariosService {
     );
     this.aplicarBusqueda(qb, query.buscar);
     const [filas, total] = await qb.orderBy('u.id', 'DESC').skip((pagina - 1) * porPagina).take(porPagina).getManyAndCount();
-    const nombres = await this.plantelesPorUsuario(filas.map((u) => u.id));
+    const nombres = await this.plantelesPorUsuario(filas.map((u) => u.id), planteles);
     return { datos: filas.map((u) => ({
       id: u.id, nombre: u.nombreCompleto, correo: u.email,
       roles: u.roles.map((r) => r.clave), planteles: nombres.get(u.id) ?? [], activo: u.activo,
@@ -106,10 +110,15 @@ export class UsuariosService {
     qb.andWhere(`(${campos.map((campo) => `${campo} LIKE :buscar`).join(' OR ')})`, { buscar: `%${buscar.trim()}%` });
   }
 
-  private async plantelesPorUsuario(usuarioIds: number[]) {
+  private async plantelesPorUsuario(usuarioIds: number[], planteles?: number[] | null) {
     const mapa = new Map<number, string[]>();
     if (!usuarioIds.length) return mapa;
-    const filas = await this.asignaciones.find({ where: { usuarioId: In(usuarioIds), activo: true } });
+    const filas = await this.asignaciones.find({
+      where: {
+        usuarioId: In(usuarioIds), activo: true,
+        ...(planteles === undefined || planteles === null ? {} : { plantelId: In(planteles) }),
+      },
+    });
     for (const fila of filas) mapa.set(fila.usuarioId, [...(mapa.get(fila.usuarioId) ?? []), fila.plantel.nombre]);
     return mapa;
   }
@@ -117,11 +126,11 @@ export class UsuariosService {
   async obtener(id: number) {
     const usuario = await this.usuarios.findOne({ where: { id } });
     if (!usuario) throw new NotFoundException('Usuario no encontrado');
-    return usuario;
+    return this.proyectar(usuario);
   }
 
   /** Reutilizable por Alumnos/Docentes para crear la cuenta asociada. */
-  async crear(dto: CrearUsuarioDto, manager?: EntityManager): Promise<Usuario> {
+  async crear(dto: CrearUsuarioDto, manager?: EntityManager): Promise<UsuarioPublico> {
     const usuarios = manager?.getRepository(Usuario) ?? this.usuarios;
     const existe = await usuarios.findOne({ where: { email: dto.email }, withDeleted: true });
     if (existe) throw new ConflictException('El correo ya está registrado');
@@ -136,7 +145,7 @@ export class UsuariosService {
       telefono: dto.telefono ?? null,
       roles,
     });
-    return usuarios.save(usuario);
+    return this.proyectar(await usuarios.save(usuario));
   }
 
   async actualizar(id: number, dto: ActualizarUsuarioDto, manager?: EntityManager) {
@@ -154,7 +163,7 @@ export class UsuariosService {
       telefono: dto.telefono ?? usuario.telefono,
       activo: dto.activo ?? usuario.activo,
     });
-    return usuarios.save(usuario);
+    return this.proyectar(await usuarios.save(usuario));
   }
 
   async desactivar(id: number) {
@@ -169,5 +178,19 @@ export class UsuariosService {
       throw new ConflictException('El rol ALUMNO no puede combinarse con roles de personal');
     }
     return (manager?.getRepository(Rol) ?? this.roles).find({ where: { clave: In(claves) } });
+  }
+
+  private proyectar(usuario: Usuario): UsuarioPublico {
+    return {
+      id: usuario.id,
+      email: usuario.email,
+      nombre: usuario.nombre,
+      apellidoPaterno: usuario.apellidoPaterno,
+      apellidoMaterno: usuario.apellidoMaterno,
+      telefono: usuario.telefono,
+      activo: usuario.activo,
+      roles: usuario.roles,
+      nombreCompleto: usuario.nombreCompleto,
+    };
   }
 }

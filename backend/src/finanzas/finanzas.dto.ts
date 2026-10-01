@@ -20,6 +20,14 @@ export class ConceptoDto {
   @IsNumber() @Min(0) montoBase: number;
 }
 
+export class ActualizarConceptoDto {
+  @IsOptional() @IsString() clave?: string;
+  @IsOptional() @IsString() nombre?: string;
+  @IsOptional() @IsIn(['INSCRIPCION', 'COLEGIATURA', 'RECARGO', 'DESCUENTO', 'BECA', 'OTRO'])
+  tipo?: 'INSCRIPCION' | 'COLEGIATURA' | 'RECARGO' | 'DESCUENTO' | 'BECA' | 'OTRO';
+  @IsOptional() @IsNumber() @Min(0) montoBase?: number;
+}
+
 export class CrearCargoDto {
   @IsInt() alumnoId: number;
   @IsInt() conceptoId: number;

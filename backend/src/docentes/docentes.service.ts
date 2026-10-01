@@ -33,11 +33,13 @@ export class DocentesService {
       .skip((pagina - 1) * porPagina)
       .take(porPagina)
       .getManyAndCount();
-    const asignaciones = docentes.length ? await this.asignaciones.find({
+    const todasLasAsignaciones = docentes.length ? await this.asignaciones.find({
       where: { usuarioId: In(docentes.map((d) => d.usuarioId)), activo: true },
     }) : [];
-    const datos = docentes.map((d) => ({
-      ...d,
+    const asignaciones = planteles === null
+      ? todasLasAsignaciones
+      : todasLasAsignaciones.filter((a) => planteles.includes(a.plantelId));
+    const datos = docentes.map((d) => this.proyectarDocente(d, {
       planteles: asignaciones.filter((a) => a.usuarioId === d.usuarioId).map((a) => a.plantel.nombre),
     }));
     return { datos, total, pagina, porPagina };
@@ -48,6 +50,10 @@ export class DocentesService {
     if (!docente) throw new NotFoundException('Docente no encontrado');
     if (user) await this.validarAlcanceDocente(docente.usuarioId, user, exigirTodosLosPlanteles);
     return docente;
+  }
+
+  async obtenerParaApi(id: number, user: JwtUser) {
+    return this.proyectarDocente(await this.obtener(id, user));
   }
 
   private async validarAlcanceDocente(
@@ -97,7 +103,7 @@ export class DocentesService {
       await asignaciones.save(plantelIds.map((plantelId) => asignaciones.create({
         usuarioId: usuario.id, plantelId, activo: true,
       })));
-      return docente;
+      return this.proyectarDocente(docente);
     });
   }
 
@@ -120,7 +126,7 @@ export class DocentesService {
         especialidad: dto.especialidad ?? docente.especialidad,
         estatus: dto.estatus ?? docente.estatus,
       });
-      return docentes.save(docente);
+      return this.proyectarDocente(await docentes.save(docente));
     });
   }
 
@@ -139,5 +145,26 @@ export class DocentesService {
       await this.usuarios.actualizar(docente.usuarioId, { activo: false }, manager);
       return { ok: true };
     });
+  }
+
+  private proyectarDocente(docente: Docente, extra: { planteles?: string[] } = {}) {
+    return {
+      id: docente.id,
+      numEmpleado: docente.numEmpleado,
+      cedulaProfesional: docente.cedulaProfesional,
+      especialidad: docente.especialidad,
+      estatus: docente.estatus,
+      ...(docente.usuario ? {
+        usuario: {
+          id: docente.usuario.id,
+          email: docente.usuario.email,
+          nombre: docente.usuario.nombre,
+          apellidoPaterno: docente.usuario.apellidoPaterno,
+          apellidoMaterno: docente.usuario.apellidoMaterno,
+          telefono: docente.usuario.telefono,
+        },
+      } : {}),
+      ...extra,
+    };
   }
 }

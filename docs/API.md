@@ -1,7 +1,7 @@
 # API — Sistema Escolar MVP
 
 Base: `http://localhost:3000/api` · Autenticación: `Authorization: Bearer <token>` ·
-Documentación interactiva: `/api/docs` (Swagger). `SUPERADMIN` accede a todo.
+Documentación interactiva: `/api/docs` (Swagger). Los DTO anotados con validadores generan sus esquemas al compilar mediante el plugin oficial `@nestjs/swagger`. `SUPERADMIN` accede a todo.
 
 Para el resumen por rol y las decisiones que requieren validación institucional, consulta
 [MATRIZ_ACCESO.md](MATRIZ_ACCESO.md).
@@ -72,7 +72,8 @@ CRUD en `/docentes`. `GET /docentes?plantelId=&pagina=&porPagina=` está paginad
   materias/docentes e inscripciones. `GET /academico/grupos?cicloId=&plantelId=&pagina=&porPagina=&inactivos=`
   está paginado; excluye grupos dados de baja (`activo=false`) salvo que se pida
   `inactivos=true`, permitido solo a ADMINISTRATIVO/SUPERADMIN. `mis-grupos` aplica la
-  misma exclusión.
+  misma exclusión. Las consultas directas de actividades, materiales y calificaciones
+  de MAESTRO también requieren que el grupo siga activo.
 - `PATCH /academico/grupos/:id` (ADMINISTRATIVO): edita `nombre`, `grado`, `turno`,
   `cicloId`; no permite cambiar el plantel del grupo. Valida alcance por plantel.
 - `DELETE /academico/grupos/:id` (ADMINISTRATIVO): baja lógica (`activo=false`).
@@ -111,6 +112,8 @@ y pertenencia) en el propio streaming.
 
 ## Calendario
 GET `/calendario?desde&hasta` (autenticado) · POST/DELETE (MAESTRO, ADMINISTRATIVO).
+El MAESTRO recibe eventos globales y de planteles/grupos donde conserva grupos activos; sin
+grupos activos solo recibe los eventos globales. No puede crear eventos en grupos inactivos.
 
 ## Notificaciones
 GET `/notificaciones/mias` · PATCH `/notificaciones/:id/leer` ·
@@ -126,8 +129,8 @@ POST `/notificaciones/difundir` (ADMINISTRATIVO; por `usuarioIds` o `rol`, limit
 | GET | /finanzas/alumnos/:id/estado-cuenta | FINANZAS, ADMINISTRATIVO | Totales, pagado y saldo por cargo |
 | GET | /finanzas/me/estado-cuenta | ALUMNO | Estado de cuenta propio |
 | GET/POST | /finanzas/pagos | FINANZAS, ADMINISTRATIVO (solo GET) | Pago manual actualiza estatus del cargo; GET paginado |
-| POST | /finanzas/ordenes | ALUMNO, FINANZAS | Crea cargo Openpay y devuelve `urlPago`; si Openpay falla, la orden queda `FALLIDA` |
-| POST | /finanzas/webhook/openpay | público* | Confirmación idempotente (*Basic Auth opcional en desarrollo; requerida en producción*) |
+| POST | /finanzas/ordenes | ALUMNO, FINANZAS | Crea cargo Openpay y devuelve `urlPago`; los timeouts ambiguos conservan la orden local para conciliación y los reintentos no crean un segundo cargo |
+| POST | /finanzas/webhook/openpay | público* | Confirma `order_id`, monto, moneda y tipo; el procesamiento es idempotente (*Basic Auth opcional en desarrollo; requerida en producción*) |
 | GET | /finanzas/adeudos | FINANZAS, ADMINISTRATIVO | Cargos con saldo |
 | POST | /finanzas/avisos-cobranza | FINANZAS | Correo con plantilla + notificación in-app |
 | GET | /finanzas/bitacora | FINANZAS | Bitácora financiera limitada a los planteles asignados |

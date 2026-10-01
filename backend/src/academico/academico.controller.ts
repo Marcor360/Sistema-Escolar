@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query,
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AcademicoService } from './academico.service';
 import {
-  ActualizarGrupoDto, AsignarMateriaDto, CicloDto, GrupoDto, InscribirAlumnoDto, ListarGruposDto, MateriaDto,
+  ActualizarCicloDto, ActualizarGrupoDto, ActualizarMateriaDto, AsignarMateriaDto, CicloDto, GrupoDto, InscribirAlumnoDto, ListarGruposDto, MateriaDto,
 } from './academico.dto';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { RolesGuard } from '../common/roles.guard';
@@ -24,22 +24,24 @@ export class AcademicoController {
   }
 
   // ---- Ciclos ----
-  @Get('ciclos') listarCiclos() { return this.service.listarCiclos(); }
+  @Get('ciclos') @Roles('ADMINISTRATIVO', 'FINANZAS', 'MAESTRO')
+  listarCiclos() { return this.service.listarCiclos(); }
   @Post('ciclos') @Roles('ADMINISTRATIVO') crearCiclo(@Body() dto: CicloDto) {
     return this.service.crearCiclo(dto);
   }
   @Patch('ciclos/:id') @Roles('ADMINISTRATIVO')
-  actualizarCiclo(@Param('id', ParseIntPipe) id: number, @Body() dto: Partial<CicloDto>) {
+  actualizarCiclo(@Param('id', ParseIntPipe) id: number, @Body() dto: ActualizarCicloDto) {
     return this.service.actualizarCiclo(id, dto);
   }
 
   // ---- Materias ----
-  @Get('materias') listarMaterias() { return this.service.listarMaterias(); }
+  @Get('materias') @Roles('ADMINISTRATIVO', 'FINANZAS', 'MAESTRO')
+  listarMaterias() { return this.service.listarMaterias(); }
   @Post('materias') @Roles('ADMINISTRATIVO') crearMateria(@Body() dto: MateriaDto) {
     return this.service.crearMateria(dto);
   }
   @Patch('materias/:id') @Roles('ADMINISTRATIVO')
-  actualizarMateria(@Param('id', ParseIntPipe) id: number, @Body() dto: Partial<MateriaDto>) {
+  actualizarMateria(@Param('id', ParseIntPipe) id: number, @Body() dto: ActualizarMateriaDto) {
     return this.service.actualizarMateria(id, dto);
   }
   @Delete('materias/:id') @Roles('ADMINISTRATIVO')

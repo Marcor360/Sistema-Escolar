@@ -111,7 +111,7 @@ export class ArchivosService {
       await this.scope.validarGestion(user, grupo.plantelId);
       return;
     }
-    if (user.roles.includes('MAESTRO') && material.grupoMateria.docente?.usuarioId === user.sub) return;
+    if (user.roles.includes('MAESTRO') && material.grupoMateria.docente?.usuarioId === user.sub && grupo.activo) return;
     if (user.roles.includes('ALUMNO') && (await this.alumnoInscritoEnGrupo(grupo.id, user.sub))) return;
     throw new ForbiddenException('No tienes acceso a este material');
   }
@@ -123,7 +123,7 @@ export class ArchivosService {
       await this.scope.validarGestion(user, grupo.plantelId);
       return;
     }
-    if (user.roles.includes('MAESTRO') && entrega.actividad.grupoMateria.docente?.usuarioId === user.sub) return;
+    if (user.roles.includes('MAESTRO') && entrega.actividad.grupoMateria.docente?.usuarioId === user.sub && grupo.activo) return;
     if (user.roles.includes('ALUMNO') && entrega.alumno.usuarioId === user.sub) return;
     throw new ForbiddenException('No tienes acceso a esta entrega');
   }
@@ -135,8 +135,8 @@ export class ArchivosService {
       .where('i.grupo_id = :grupoId', { grupoId })
       .andWhere('i.estatus = :activa', { activa: 'ACTIVA' })
       .andWhere(
-        'EXISTS (SELECT 1 FROM alumnos al WHERE al.id = i.alumno_id AND al.usuario_id = :usuarioId)',
-        { usuarioId },
+        'EXISTS (SELECT 1 FROM alumnos al INNER JOIN grupos g ON g.id = i.grupo_id WHERE al.id = i.alumno_id AND al.usuario_id = :usuarioId AND g.activo = :grupoActivo)',
+        { usuarioId, grupoActivo: true },
       )
       .getCount();
     return total > 0;

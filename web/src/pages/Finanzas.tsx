@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { FormEvent, KeyboardEvent, useCallback, useEffect, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { pesos, selloDeCargo } from '../utils/formato';
 import { Encabezado } from '../components/Encabezado';
@@ -36,24 +36,47 @@ export default function FinanzasPage() {
   const [formColegiaturas, setFormColegiaturas] = useState({ cicloId: '', periodo: '' });
   const [formPago, setFormPago] = useState({ alumnoId: '', cargoId: '', monto: '', metodo: 'EFECTIVO', referencia: '' });
   const [cargosAlumno, setCargosAlumno] = useState<Cargo[]>([]);
+  const navegarTabs = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    const botones = Array.from(document.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+    const indice = botones.indexOf(event.currentTarget);
+    const avance = event.key === 'ArrowRight' ? 1 : -1;
+    const siguiente = botones[(indice + avance + botones.length) % botones.length];
+    event.preventDefault();
+    siguiente.focus();
+    siguiente.click();
+  };
 
-  const cargarCatalogos = useCallback(() => {
-    api.get<{ datos: Alumno[] }>('/alumnos', { params: { porPagina: 100 } }).then((r) => setAlumnos(r.data.datos));
-    api.get<Concepto[]>('/finanzas/conceptos').then((r) => setConceptos(r.data));
-    api.get<Ciclo[]>('/academico/ciclos').then((r) => setCiclos(r.data));
+  const cargarCatalogos = useCallback(async () => {
+    try {
+      const [alumnosR, conceptosR, ciclosR] = await Promise.all([
+        api.get<{ datos: Alumno[] }>('/alumnos', { params: { porPagina: 100 } }),
+        api.get<Concepto[]>('/finanzas/conceptos'),
+        api.get<Ciclo[]>('/academico/ciclos'),
+      ]);
+      setAlumnos(alumnosR.data.datos);
+      setConceptos(conceptosR.data);
+      setCiclos(ciclosR.data);
+    } catch (err) { setError(mensajeDeError(err)); }
   }, []);
   const cargarCargos = useCallback(
-    (pagina = 1) => api.get<ResultadoCargos>('/finanzas/cargos', { params: { pagina } }).then((r) => setResultadoCargos(r.data)),
+    async (pagina = 1) => {
+      try { const { data } = await api.get<ResultadoCargos>('/finanzas/cargos', { params: { pagina } }); setResultadoCargos(data); }
+      catch (err) { setError(mensajeDeError(err)); }
+    },
     [],
   );
   const cargarPagos = useCallback(
-    (pagina = 1) => api.get<ResultadoPagos>('/finanzas/pagos', { params: { pagina } }).then((r) => setResultadoPagos(r.data)),
+    async (pagina = 1) => {
+      try { const { data } = await api.get<ResultadoPagos>('/finanzas/pagos', { params: { pagina } }); setResultadoPagos(data); }
+      catch (err) { setError(mensajeDeError(err)); }
+    },
     [],
   );
-  const cargarDatos = useCallback(() => {
-    cargarCargos();
-    cargarPagos();
-    api.get<Adeudo[]>('/finanzas/adeudos').then((r) => setAdeudos(r.data));
+  const cargarDatos = useCallback(async () => {
+    await Promise.all([cargarCargos(), cargarPagos()]);
+    try { const { data } = await api.get<Adeudo[]>('/finanzas/adeudos'); setAdeudos(data); }
+    catch (err) { setError(mensajeDeError(err)); }
   }, [cargarCargos, cargarPagos]);
   useEffect(() => { cargarCatalogos(); cargarDatos(); }, [cargarCatalogos, cargarDatos]);
 
@@ -61,7 +84,8 @@ export default function FinanzasPage() {
   useEffect(() => {
     if (!formPago.alumnoId) { setCargosAlumno([]); return; }
     api.get<ResultadoCargos>('/finanzas/cargos', { params: { alumnoId: formPago.alumnoId, porPagina: 100 } })
-      .then((r) => setCargosAlumno(r.data.datos));
+      .then((r) => setCargosAlumno(r.data.datos))
+      .catch((err) => setError(mensajeDeError(err)));
   }, [formPago.alumnoId]);
 
   const limpiarAvisos = () => { setError(''); setMensaje(''); };
@@ -131,30 +155,33 @@ export default function FinanzasPage() {
   };
 
   const descargarExcel = async () => {
-    const { data } = await api.get('/reportes/adeudos.xlsx', { responseType: 'blob' });
-    const url = URL.createObjectURL(data);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'adeudos.xlsx';
-    a.click();
-    URL.revokeObjectURL(url);
+    limpiarAvisos();
+    try {
+      const { data } = await api.get('/reportes/adeudos.xlsx', { responseType: 'blob' });
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'adeudos.xlsx';
+      a.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (err) { setError(mensajeDeError(err)); }
   };
 
   return (
     <>
       <Encabezado titulo="Finanzas" detalle="Cargos, pagos, adeudos y cobranza" />
 
-      <div className="tabs" role="tablist">
-        <button className={tab === 'cargos' ? 'activa' : ''} onClick={() => setTab('cargos')}>Cargos</button>
-        <button className={tab === 'pagos' ? 'activa' : ''} onClick={() => setTab('pagos')}>Pagos</button>
-        <button className={tab === 'adeudos' ? 'activa' : ''} onClick={() => setTab('adeudos')}>Adeudos y cobranza</button>
+      <div className="tabs" role="tablist" aria-label="Secciones de finanzas">
+        <button id="tab-cargos" role="tab" aria-selected={tab === 'cargos'} aria-controls="panel-cargos" tabIndex={tab === 'cargos' ? 0 : -1} className={tab === 'cargos' ? 'activa' : ''} onKeyDown={navegarTabs} onClick={() => setTab('cargos')}>Cargos</button>
+        <button id="tab-pagos" role="tab" aria-selected={tab === 'pagos'} aria-controls="panel-pagos" tabIndex={tab === 'pagos' ? 0 : -1} className={tab === 'pagos' ? 'activa' : ''} onKeyDown={navegarTabs} onClick={() => setTab('pagos')}>Pagos</button>
+        <button id="tab-adeudos" role="tab" aria-selected={tab === 'adeudos'} aria-controls="panel-adeudos" tabIndex={tab === 'adeudos' ? 0 : -1} className={tab === 'adeudos' ? 'activa' : ''} onKeyDown={navegarTabs} onClick={() => setTab('adeudos')}>Adeudos y cobranza</button>
       </div>
 
       {error && <p className="mensaje-error" role="alert">{error}</p>}
       {mensaje && <p className="mensaje-ok" role="status">{mensaje}</p>}
 
       {tab === 'cargos' && (
-        <>
+        <div id="panel-cargos" role="tabpanel" aria-labelledby="tab-cargos" tabIndex={0}>
           <section className="panel">
             <h2>Nuevo cargo individual</h2>
             <form onSubmit={crearCargo} className="fila">
@@ -230,11 +257,11 @@ export default function FinanzasPage() {
             </tbody>
           </table>
           <Paginador total={resultadoCargos.total} pagina={resultadoCargos.pagina} porPagina={resultadoCargos.porPagina} onCambio={cargarCargos} />
-        </>
+        </div>
       )}
 
       {tab === 'pagos' && (
-        <>
+        <div id="panel-pagos" role="tabpanel" aria-labelledby="tab-pagos" tabIndex={0}>
           <section className="panel">
             <h2>Registrar pago manual</h2>
             <form onSubmit={registrarPago} className="fila">
@@ -284,11 +311,11 @@ export default function FinanzasPage() {
             </tbody>
           </table>
           <Paginador total={resultadoPagos.total} pagina={resultadoPagos.pagina} porPagina={resultadoPagos.porPagina} onCambio={cargarPagos} />
-        </>
+        </div>
       )}
 
       {tab === 'adeudos' && (
-        <>
+        <div id="panel-adeudos" role="tabpanel" aria-labelledby="tab-adeudos" tabIndex={0}>
           <div className="acciones" style={{ marginBottom: 14 }}>
             <button className="boton" onClick={enviarAvisos}>Enviar avisos de cobranza</button>
             <button className="boton secundario" onClick={descargarExcel}>Descargar Excel de adeudos</button>
@@ -310,7 +337,7 @@ export default function FinanzasPage() {
               {adeudos.length === 0 && <tr><td className="vacio" colSpan={7}>Sin adeudos: todos los cargos están cubiertos.</td></tr>}
             </tbody>
           </table>
-        </>
+        </div>
       )}
     </>
   );

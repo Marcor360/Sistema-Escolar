@@ -14,7 +14,13 @@ import { UsuarioPlantel } from '../entities/usuario-plantel.entity';
 import { DocentesService } from '../docentes/docentes.service';
 import { JwtUser } from '../common/current-user.decorator';
 import { ScopeService } from '../planteles/scope.service';
-import { ActualizarGrupoDto, AsignarMateriaDto, CicloDto, GrupoDto, ListarGruposDto, MateriaDto } from './academico.dto';
+import { ActualizarCicloDto, ActualizarGrupoDto, ActualizarMateriaDto, AsignarMateriaDto, CicloDto, GrupoDto, ListarGruposDto, MateriaDto } from './academico.dto';
+
+function esConflictoUnico(error: unknown): boolean {
+  const e = error as { code?: string; errno?: number; number?: number; originalError?: { info?: { number?: number } } };
+  return e?.code === 'ER_DUP_ENTRY' || e?.errno === 1062 || e?.number === 2601 || e?.number === 2627 ||
+    e?.originalError?.info?.number === 2601 || e?.originalError?.info?.number === 2627;
+}
 
 @Injectable()
 export class AcademicoService {
@@ -41,7 +47,7 @@ export class AcademicoService {
     return this.ciclos.save(this.ciclos.create({ ...dto, activo: dto.activo ?? false }));
   }
 
-  async actualizarCiclo(id: number, dto: Partial<CicloDto>) {
+  async actualizarCiclo(id: number, dto: ActualizarCicloDto) {
     if (dto.activo) await this.ciclos.update({ activo: true }, { activo: false });
     await this.ciclos.update(id, dto);
     return this.ciclos.findOne({ where: { id } });
@@ -50,7 +56,7 @@ export class AcademicoService {
   // ---- Materias ----
   listarMaterias() { return this.materias.find({ where: { activo: true }, order: { clave: 'ASC' } }); }
   crearMateria(dto: MateriaDto) { return this.materias.save(this.materias.create(dto)); }
-  async actualizarMateria(id: number, dto: Partial<MateriaDto>) {
+  async actualizarMateria(id: number, dto: ActualizarMateriaDto) {
     await this.materias.update(id, dto);
     return this.materias.findOne({ where: { id } });
   }
@@ -63,9 +69,9 @@ export class AcademicoService {
   async listarGrupos(user: JwtUser, query: ListarGruposDto) {
     const pagina = query.pagina || 1;
     const porPagina = query.porPagina || 20;
-    const planteles = await this.scope.resolverFiltro(user, query.plantelId);
-    const puedeVerInactivos = user.roles.includes('ADMINISTRATIVO') || user.roles.includes('SUPERADMIN');
     const maestroPuro = this.esMaestroLimitado(user);
+    const planteles = maestroPuro ? null : await this.scope.resolverFiltro(user, query.plantelId);
+    const puedeVerInactivos = user.roles.includes('ADMINISTRATIVO') || user.roles.includes('SUPERADMIN');
     const docente = maestroPuro ? await this.docentes.obtenerPorUsuario(user.sub) : null;
     const grupoMateriaIds = docente
       ? await this.grupoMaterias.find({ where: { docenteId: docente.id } })
@@ -87,14 +93,24 @@ export class AcademicoService {
   }
   async crearGrupo(dto: GrupoDto, user: JwtUser) {
     await this.scope.validarGestion(user, dto.plantelId);
-    return this.grupos.save(this.grupos.create(dto));
+    try {
+      return await this.grupos.save(this.grupos.create(dto));
+    } catch (error) {
+      if (esConflictoUnico(error)) throw new ConflictException('Ya existe un grupo con ese nombre en el ciclo');
+      throw error;
+    }
   }
 
   async actualizarGrupo(id: number, dto: ActualizarGrupoDto, user: JwtUser) {
     const grupo = await this.grupos.findOne({ where: { id } });
     if (!grupo) throw new NotFoundException('Grupo no encontrado');
     await this.scope.validarGestion(user, grupo.plantelId);
-    await this.grupos.update(id, dto);
+    try {
+      await this.grupos.update(id, dto);
+    } catch (error) {
+      if (esConflictoUnico(error)) throw new ConflictException('Ya existe un grupo con ese nombre en el ciclo');
+      throw error;
+    }
     return this.grupos.findOne({ where: { id } });
   }
 
@@ -119,10 +135,14 @@ export class AcademicoService {
     const docenteId = this.esMaestroLimitado(user)
       ? (await this.docentes.obtenerPorUsuario(user.sub)).id
       : null;
-    const asignaciones = await this.grupoMaterias.find({ order: { grupoId: 'ASC' } });
-    return asignaciones.filter((gm) =>
-      (planteles === null || planteles.includes(gm.grupo.plantelId)) &&
-      (docenteId === null || gm.docenteId === docenteId));
+    if (planteles?.length === 0) return [];
+    return this.grupoMaterias.find({
+      where: {
+        ...(planteles === null ? {} : { grupo: { plantelId: In(planteles) } }),
+        ...(docenteId === null ? {} : { docenteId }),
+      },
+      order: { grupoId: 'ASC' },
+    });
   }
 
   async materiasDeGrupo(grupoId: number, user: JwtUser) {
@@ -137,14 +157,30 @@ export class AcademicoService {
 
   /** Asigna una materia al grupo y, opcionalmente, el docente que la imparte. */
   async asignarMateria(grupoId: number, dto: AsignarMateriaDto, user: JwtUser) {
-    await this.validarAccesoGrupo(grupoId, user);
+    const grupo = await this.grupos.findOne({ where: { id: grupoId } });
+    if (!grupo) throw new NotFoundException('Grupo no encontrado');
+    await this.scope.validarGestion(user, grupo.plantelId);
     const duplicado = await this.grupoMaterias.findOne({
       where: { grupoId, materiaId: dto.materiaId },
     });
     if (duplicado) throw new ConflictException('La materia ya está asignada a este grupo');
-    return this.grupoMaterias.save(
-      this.grupoMaterias.create({ grupoId, materiaId: dto.materiaId, docenteId: dto.docenteId ?? null }),
-    );
+    if (dto.docenteId !== undefined) {
+      const docente = await this.docentes.obtener(dto.docenteId, user);
+      if (!user.roles.includes('SUPERADMIN')) {
+        const asignacion = await this.usuarioPlanteles.findOne({
+          where: { usuarioId: docente.usuarioId, plantelId: grupo.plantelId, activo: true },
+        });
+        if (!asignacion) throw new ForbiddenException('El docente no está asignado al plantel del grupo');
+      }
+    }
+    try {
+      return await this.grupoMaterias.save(
+        this.grupoMaterias.create({ grupoId, materiaId: dto.materiaId, docenteId: dto.docenteId ?? null }),
+      );
+    } catch (error) {
+      if (esConflictoUnico(error)) throw new ConflictException('La materia ya está asignada a este grupo');
+      throw error;
+    }
   }
 
   async asignarDocente(grupoMateriaId: number, docenteId: number, user: JwtUser) {
@@ -194,12 +230,33 @@ export class AcademicoService {
     if (alumno.plantelId !== grupo.plantelId) throw new ForbiddenException('El alumno no pertenece al plantel del grupo');
     const duplicada = await this.inscripciones.findOne({ where: { grupoId, alumnoId } });
     if (duplicada) throw new ConflictException('El alumno ya está inscrito en este grupo');
-    return this.inscripciones.save(this.inscripciones.create({ grupoId, alumnoId }));
+    try {
+      return await this.inscripciones.save(this.inscripciones.create({ grupoId, alumnoId }));
+    } catch (error) {
+      if (esConflictoUnico(error)) throw new ConflictException('El alumno ya está inscrito en este grupo');
+      throw error;
+    }
   }
 
   async alumnosDeGrupo(grupoId: number, user: JwtUser) {
     await this.validarAccesoGrupo(grupoId, user);
-    return this.inscripciones.find({ where: { grupoId, estatus: 'ACTIVA' } });
+    const inscripciones = await this.inscripciones.find({ where: { grupoId, estatus: 'ACTIVA' } });
+    return inscripciones.map((inscripcion) => ({
+      id: inscripcion.id,
+      alumnoId: inscripcion.alumnoId,
+      grupoId: inscripcion.grupoId,
+      estatus: inscripcion.estatus,
+      fechaInscripcion: inscripcion.fechaInscripcion,
+      alumno: {
+        id: inscripcion.alumno.id,
+        matricula: inscripcion.alumno.matricula,
+        estatus: inscripcion.alumno.estatus,
+        usuario: {
+          nombre: inscripcion.alumno.usuario.nombre,
+          apellidoPaterno: inscripcion.alumno.usuario.apellidoPaterno,
+        },
+      },
+    }));
   }
 
   async bajaInscripcion(id: number, user: JwtUser) {
@@ -225,6 +282,7 @@ export class AcademicoService {
     const docente = await this.docentes.obtenerPorUsuario(user.sub);
     const asignacion = await this.grupoMaterias.findOne({ where: { grupoId, docenteId: docente.id } });
     if (!asignacion) throw new ForbiddenException('El grupo no está asignado a este docente');
+    if (!grupo.activo) throw new ForbiddenException('El grupo no está activo');
   }
 
   /** Grupos-materia asignados al docente autenticado (panel maestro); excluye grupos dados de baja. */

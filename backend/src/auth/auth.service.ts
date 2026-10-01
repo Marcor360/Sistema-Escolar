@@ -25,7 +25,10 @@ export class AuthService {
   ) {}
 
   async login(email: string, password: string, portal: Portal = 'WEB', ip?: string) {
-    const usuario = await this.usuarios.findOne({ where: { email, activo: true } });
+    const usuario = await this.usuarios.findOne({
+      where: { email, activo: true },
+      select: ['id', 'email', 'passwordHash', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'sessionVersion'],
+    });
     if (!usuario || !(await bcrypt.compare(password, usuario.passwordHash))) {
       await this.registrarLoginFallido(usuario?.id ?? null, 'FALLIDO', ip);
       throw new UnauthorizedException('Credenciales inválidas');
@@ -51,16 +54,26 @@ export class AuthService {
   async me(user: JwtUser) {
     const usuario = await this.usuarios.findOne({ where: { id: user.sub } });
     if (!usuario) throw new UnauthorizedException();
-    const rest: Partial<Usuario> = { ...usuario };
-    delete rest.passwordHash;
-    return { ...rest, nombreCompleto: usuario.nombreCompleto };
+    return {
+      id: usuario.id,
+      email: usuario.email,
+      nombre: usuario.nombre,
+      apellidoPaterno: usuario.apellidoPaterno,
+      apellidoMaterno: usuario.apellidoMaterno,
+      nombreCompleto: usuario.nombreCompleto,
+      telefono: usuario.telefono,
+      activo: usuario.activo,
+      roles: usuario.roles.map((rol) => ({ id: rol.id, clave: rol.clave, nombre: rol.nombre })),
+    };
   }
 
   /** Cambio de contraseña del propio usuario: exige la contraseña actual. */
   async cambiarPassword(usuarioId: number, actual: string, nueva: string) {
     await this.dataSource.transaction(async (manager) => {
       const usuarios = manager.getRepository(Usuario);
-      const usuario = await usuarios.findOne({ where: { id: usuarioId, activo: true } });
+      const usuario = await usuarios.findOne({
+        where: { id: usuarioId, activo: true }, select: ['id', 'passwordHash', 'sessionVersion'],
+      });
       if (!usuario || !(await bcrypt.compare(actual, usuario.passwordHash))) {
         throw new UnauthorizedException('La contraseña actual no es correcta');
       }
@@ -115,7 +128,9 @@ export class AuthService {
       if (consumo.affected !== 1) throw new BadRequestException('Token inválido o expirado');
 
       const usuarios = manager.getRepository(Usuario);
-      const usuario = await usuarios.findOne({ where: { id: registro.usuarioId, activo: true } });
+      const usuario = await usuarios.findOne({
+        where: { id: registro.usuarioId, activo: true }, select: ['id', 'passwordHash', 'sessionVersion'],
+      });
       if (!usuario) throw new UnauthorizedException('La cuenta ya no está activa');
       usuario.passwordHash = await bcrypt.hash(password, 10);
       usuario.sessionVersion = (usuario.sessionVersion ?? 0) + 1;

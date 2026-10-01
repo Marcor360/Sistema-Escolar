@@ -46,12 +46,17 @@ export default function MaestroPage() {
     setClaseActiva(clase);
     setEntregas(null);
     setActividadActiva(null);
-    const [acts, mats] = await Promise.all([
-      api.get<Actividad[]>(`/grupo-materias/${clase.id}/actividades`),
-      api.get<Material[]>(`/grupo-materias/${clase.id}/materiales`),
-    ]);
-    setActividades(acts.data);
-    setMateriales(mats.data);
+    setError('');
+    setActividades([]);
+    setMateriales([]);
+    try {
+      const [acts, mats] = await Promise.all([
+        api.get<Actividad[]>(`/grupo-materias/${clase.id}/actividades`),
+        api.get<Material[]>(`/grupo-materias/${clase.id}/materiales`),
+      ]);
+      setActividades(acts.data);
+      setMateriales(mats.data);
+    } catch (err) { setError(mensajeDeError(err)); }
   };
 
   /** Sube material de apoyo (PDF, documentos, imágenes) para la clase activa. */

@@ -9,8 +9,9 @@ function crearServicio(overrides: {
   actividades?: any;
   materiales?: any;
   docentes?: any;
+  usuarioPlanteles?: any;
   scope?: any;
-}) {
+  }) {
   return new AcademicoService(
     {} as any,
     {} as any,
@@ -23,7 +24,7 @@ function crearServicio(overrides: {
     overrides.materiales ?? ({} as any),
     overrides.docentes ?? ({} as any),
     overrides.scope ?? ({ validarGestion: jest.fn().mockResolvedValue(undefined) } as any),
-    {} as any,
+    overrides.usuarioPlanteles ?? ({} as any),
   );
 }
 
@@ -100,6 +101,35 @@ describe('AcademicoService.alcance de grupo', () => {
   });
 });
 
+describe('AcademicoService.asignarMateria', () => {
+  it('convierte duplicados concurrentes de grupo-materia en conflicto controlado', async () => {
+    const grupos = { findOne: jest.fn().mockResolvedValue({ id: 1, plantelId: 5 }) };
+    const grupoMaterias = {
+      findOne: jest.fn().mockResolvedValue(null), create: jest.fn((d) => d),
+      save: jest.fn().mockRejectedValue({ number: 2601 }),
+    };
+    const service = crearServicio({ grupos, grupoMaterias });
+    await expect(service.asignarMateria(1, { materiaId: 2 } as any, {
+      sub: 7, roles: ['ADMINISTRATIVO'],
+    } as any)).rejects.toThrow(ConflictException);
+  });
+
+  it('rechaza asignar un docente de otro plantel a la materia', async () => {
+    const grupos = { findOne: jest.fn().mockResolvedValue({ id: 1, plantelId: 5 }) };
+    const grupoMaterias = {
+      findOne: jest.fn().mockResolvedValue(null), create: jest.fn(), save: jest.fn(),
+    };
+    const docentes = { obtener: jest.fn().mockResolvedValue({ id: 8, usuarioId: 90 }) };
+    const usuarioPlanteles = { findOne: jest.fn().mockResolvedValue(null) };
+    const service = crearServicio({ grupos, grupoMaterias, docentes, usuarioPlanteles });
+
+    await expect(service.asignarMateria(1, { materiaId: 2, docenteId: 8 } as any, {
+      sub: 7, roles: ['ADMINISTRATIVO'],
+    } as any)).rejects.toThrow(ForbiddenException);
+    expect(grupoMaterias.save).not.toHaveBeenCalled();
+  });
+});
+
 describe('AcademicoService.listarGrupos', () => {
   it('excluye grupos inactivos por defecto', async () => {
     const grupos = { findAndCount: jest.fn().mockResolvedValue([[], 0]) };
@@ -117,7 +147,7 @@ describe('AcademicoService.listarGrupos', () => {
     const grupos = { findAndCount: jest.fn().mockResolvedValue([[], 0]) };
     const grupoMaterias = { find: jest.fn().mockResolvedValue([{ grupoId: 6 }, { grupoId: 9 }]) };
     const docentes = { obtenerPorUsuario: jest.fn().mockResolvedValue({ id: 3 }) };
-    const scope = { resolverFiltro: jest.fn().mockResolvedValue([2]) };
+    const scope = { resolverFiltro: jest.fn() };
     const service = crearServicio({ grupos, grupoMaterias, docentes, scope });
 
     await service.listarGrupos(
@@ -126,7 +156,8 @@ describe('AcademicoService.listarGrupos', () => {
     );
 
     expect(grupos.findAndCount).toHaveBeenCalledWith(expect.objectContaining({
-      where: expect.objectContaining({ id: expect.anything(), plantelId: expect.anything() }),
+      where: expect.objectContaining({ id: expect.anything(), activo: true }),
     }));
+    expect(scope.resolverFiltro).not.toHaveBeenCalled();
   });
 });

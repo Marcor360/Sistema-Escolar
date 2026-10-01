@@ -26,7 +26,7 @@ export class CobranzaService {
     if (!plantilla) throw new BadRequestException('Falta la plantilla AVISO_ADEUDO');
     const institucion = this.config.get<string>('NOMBRE_INSTITUCION') || 'Institución';
 
-    const adeudos = await this.cargos.adeudos(user);
+    const adeudos = await this.cargos.adeudos(user, undefined, true);
     const porAlumno = new Map<number, {
       nombre: string; email: string; usuarioId: number; saldo: number; plantelId: number;
     }>();

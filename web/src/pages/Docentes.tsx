@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { Encabezado } from '../components/Encabezado';
 import { Paginador } from '../components/Paginador';
@@ -26,9 +26,16 @@ export default function DocentesPage() {
   const [form, setForm] = useState(FORM_INICIAL);
   const [error, setError] = useState('');
 
-  const cargar = (pagina = 1, plantelId = filtroPlantel) =>
-    api.get<Resultado>('/docentes', { params: { pagina, ...(plantelId ? { plantelId } : {}) } }).then((r) => setResultado(r.data));
-  useEffect(() => { cargar(); api.get<Plantel[]>('/planteles/mios').then((r) => setPlanteles(r.data)); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const cargar = useCallback((pagina = 1, plantelId = '') => {
+    setError('');
+    api.get<Resultado>('/docentes', { params: { pagina, ...(plantelId ? { plantelId } : {}) } })
+      .then((r) => setResultado(r.data))
+      .catch((err) => setError(mensajeDeError(err)));
+  }, []);
+  useEffect(() => {
+    cargar(1, '');
+    api.get<Plantel[]>('/planteles/mios').then((r) => setPlanteles(r.data)).catch((err) => setError(mensajeDeError(err)));
+  }, [cargar]);
 
   const crear = async (e: FormEvent) => {
     e.preventDefault();
@@ -37,7 +44,7 @@ export default function DocentesPage() {
       await api.post('/docentes', { ...form, plantelIds, especialidad: form.especialidad || undefined });
       setForm(FORM_INICIAL);
       setPlantelIds([]);
-      cargar();
+      cargar(1, filtroPlantel);
     } catch (err) { setError(mensajeDeError(err)); }
   };
 
@@ -49,7 +56,7 @@ export default function DocentesPage() {
   const baja = async (docente: Docente) => {
     if (!confirm(`¿Dar de baja al docente ${docente.numEmpleado}?`)) return;
     await api.delete(`/docentes/${docente.id}`);
-    cargar();
+    cargar(1, filtroPlantel);
   };
 
   return (
@@ -76,7 +83,7 @@ export default function DocentesPage() {
         {error && <p className="mensaje-error">{error}</p>}
       </section>
 
-      <div className="fila" style={{ marginBottom: 12 }}><div className="campo"><label>Filtrar por plantel</label><select value={filtroPlantel} onChange={(e) => setFiltroPlantel(e.target.value)}><option value="">Todos</option>{planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div><button className="boton secundario" onClick={() => cargar(1)}>Aplicar</button></div>
+      <div className="fila" style={{ marginBottom: 12 }}><div className="campo"><label>Filtrar por plantel</label><select value={filtroPlantel} onChange={(e) => setFiltroPlantel(e.target.value)}><option value="">Todos</option>{planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div><button className="boton secundario" onClick={() => cargar(1, filtroPlantel)}>Aplicar</button></div>
 
       <table className="tabla">
         <thead>
@@ -97,7 +104,7 @@ export default function DocentesPage() {
           {resultado.datos.length === 0 && <tr><td className="vacio" colSpan={7}>Sin docentes registrados.</td></tr>}
         </tbody>
       </table>
-      <Paginador total={resultado.total} pagina={resultado.pagina} porPagina={resultado.porPagina} onCambio={(pagina) => cargar(pagina)} />
+      <Paginador total={resultado.total} pagina={resultado.pagina} porPagina={resultado.porPagina} onCambio={(pagina) => cargar(pagina, filtroPlantel)} />
     </>
   );
 }

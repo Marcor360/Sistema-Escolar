@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { Encabezado } from '../components/Encabezado';
 
@@ -12,11 +12,17 @@ export default function MateriasPage() {
   const [formCiclo, setFormCiclo] = useState({ clave: '', nombre: '', fechaInicio: '', fechaFin: '' });
   const [error, setError] = useState('');
 
-  const cargar = () => {
-    api.get<Materia[]>('/academico/materias').then((r) => setMaterias(r.data));
-    api.get<Ciclo[]>('/academico/ciclos').then((r) => setCiclos(r.data));
-  };
-  useEffect(() => { cargar(); }, []);
+  const cargar = useCallback(async () => {
+    setError('');
+    try {
+      const [materiasR, ciclosR] = await Promise.all([
+        api.get<Materia[]>('/academico/materias'), api.get<Ciclo[]>('/academico/ciclos'),
+      ]);
+      setMaterias(materiasR.data);
+      setCiclos(ciclosR.data);
+    } catch (err) { setError(mensajeDeError(err)); }
+  }, []);
+  useEffect(() => { void cargar(); }, [cargar]);
 
   const crearMateria = async (e: FormEvent) => {
     e.preventDefault();

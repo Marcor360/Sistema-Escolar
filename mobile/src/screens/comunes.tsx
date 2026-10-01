@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colores } from '../theme';
 
 export function Tarjeta({ children }: { children: React.ReactNode }) {
@@ -17,6 +17,17 @@ export function Vacio({ mensaje }: { mensaje: string }) {
   return <Text style={base.vacio}>{mensaje}</Text>;
 }
 
+export function ErrorCarga({ mensaje, reintentar }: { mensaje: string; reintentar: () => void }) {
+  return (
+    <View accessibilityRole="alert" style={base.errorCarga}>
+      <Text style={base.errorTexto}>{mensaje}</Text>
+      <Pressable onPress={reintentar} accessibilityRole="button" accessibilityLabel="Reintentar carga">
+        <Text style={base.reintentar}>Reintentar</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 export const base = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: colores.papel, padding: 16 },
   tarjeta: {
@@ -30,5 +41,8 @@ export const base = StyleSheet.create({
     fontSize: 10, letterSpacing: 0.5, textTransform: 'uppercase', marginTop: 6,
   },
   vacio: { color: colores.gris, textAlign: 'center', marginTop: 40, paddingHorizontal: 20 },
+  errorCarga: { backgroundColor: '#fff', borderWidth: 1, borderColor: colores.peligro, padding: 12, marginBottom: 10 },
+  errorTexto: { color: colores.peligro, marginBottom: 8 },
+  reintentar: { color: colores.pizarra, textDecorationLine: 'underline', fontWeight: '600' },
   monto: { fontVariant: ['tabular-nums'], fontWeight: '600', color: colores.tinta },
 });

@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { Encabezado } from '../components/Encabezado';
 import { Paginador } from '../components/Paginador';
@@ -30,25 +30,38 @@ export default function GruposPage() {
   const [alumnoId, setAlumnoId] = useState('');
   const [error, setError] = useState('');
 
-  const cargar = (pagina = 1, plantelId = filtroPlantel) => {
-    api.get<Ciclo[]>('/academico/ciclos').then((r) => setCiclos(r.data));
-    api.get<ResultadoGrupos>('/academico/grupos', { params: { pagina, ...(plantelId ? { plantelId } : {}) } }).then((r) => setResultado(r.data));
-    api.get<Plantel[]>('/planteles/mios').then((r) => setPlanteles(r.data));
-    api.get<Materia[]>('/academico/materias').then((r) => setMaterias(r.data));
-    api.get<{ datos: Docente[] }>('/docentes', { params: { porPagina: 100 } }).then((r) => setDocentes(r.data.datos));
-    api.get<{ datos: Alumno[] }>('/alumnos', { params: { porPagina: 100 } }).then((r) => setAlumnos(r.data.datos));
-  };
-  useEffect(() => { cargar(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const cargar = useCallback(async (pagina = 1, plantelId = '') => {
+    setError('');
+    try {
+      const [ciclosR, gruposR, plantelesR, materiasR, docentesR, alumnosR] = await Promise.all([
+        api.get<Ciclo[]>('/academico/ciclos'),
+        api.get<ResultadoGrupos>('/academico/grupos', { params: { pagina, ...(plantelId ? { plantelId } : {}) } }),
+        api.get<Plantel[]>('/planteles/mios'),
+        api.get<Materia[]>('/academico/materias'),
+        api.get<{ datos: Docente[] }>('/docentes', { params: { porPagina: 100 } }),
+        api.get<{ datos: Alumno[] }>('/alumnos', { params: { porPagina: 100 } }),
+      ]);
+      setCiclos(ciclosR.data);
+      setResultado(gruposR.data);
+      setPlanteles(plantelesR.data);
+      setMaterias(materiasR.data);
+      setDocentes(docentesR.data.datos);
+      setAlumnos(alumnosR.data.datos);
+    } catch (err) { setError(mensajeDeError(err)); }
+  }, []);
+  useEffect(() => { cargar(1, ''); }, [cargar]);
 
   const abrirGrupo = async (grupo: Grupo) => {
     setSeleccionado(grupo);
     setError('');
-    const [gms, insc] = await Promise.all([
-      api.get<GrupoMateria[]>(`/academico/grupos/${grupo.id}/materias`),
-      api.get<Inscripcion[]>(`/academico/grupos/${grupo.id}/alumnos`),
-    ]);
-    setAsignaciones(gms.data);
-    setInscritos(insc.data);
+    try {
+      const [gms, insc] = await Promise.all([
+        api.get<GrupoMateria[]>(`/academico/grupos/${grupo.id}/materias`),
+        api.get<Inscripcion[]>(`/academico/grupos/${grupo.id}/alumnos`),
+      ]);
+      setAsignaciones(gms.data);
+      setInscritos(insc.data);
+    } catch (err) { setError(mensajeDeError(err)); }
   };
 
   const crearGrupo = async (e: FormEvent) => {
@@ -63,7 +76,7 @@ export default function GruposPage() {
         turno: formGrupo.turno,
       });
       setFormGrupo({ cicloId: '', plantelId: '', nombre: '', grado: '', turno: 'MATUTINO' });
-      cargar();
+      cargar(1, filtroPlantel);
     } catch (err) { setError(mensajeDeError(err)); }
   };
 
@@ -135,7 +148,7 @@ export default function GruposPage() {
             {planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
           </select>
         </div>
-        <button className="boton secundario" onClick={() => cargar(1)}>Aplicar</button>
+        <button className="boton secundario" onClick={() => cargar(1, filtroPlantel)}>Aplicar</button>
       </div>
 
       <table className="tabla" style={{ marginBottom: 24 }}>
@@ -152,7 +165,7 @@ export default function GruposPage() {
           {resultado.datos.length === 0 && <tr><td className="vacio" colSpan={6}>Sin grupos. Crea el primero con el formulario.</td></tr>}
         </tbody>
       </table>
-      <Paginador total={resultado.total} pagina={resultado.pagina} porPagina={resultado.porPagina} onCambio={(pagina) => cargar(pagina)} />
+      <Paginador total={resultado.total} pagina={resultado.pagina} porPagina={resultado.porPagina} onCambio={(pagina) => cargar(pagina, filtroPlantel)} />
 
       {seleccionado && (
         <>

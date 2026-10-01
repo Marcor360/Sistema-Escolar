@@ -29,12 +29,13 @@ export function Shell() {
 
   return (
     <div className="shell">
+      <a className="skip-link" href="#contenido-principal">Saltar al contenido principal</a>
       <aside className="lateral">
         {marca.logoUrl
           ? <img className="logo-marca" src={archivosBase + marca.logoUrl} alt={marca.nombreInstitucion} />
           : <div className="monograma" aria-hidden>{marca.nombreCorto}</div>}
         <p className="lateral-titulo">{marca.nombreInstitucion}</p>
-        <nav>
+        <nav aria-label="Navegación principal">
           {secciones
             .filter((s) => tieneRol(...s.roles))
             .map((s) => (
@@ -55,7 +56,7 @@ export function Shell() {
           </button>
         </div>
       </aside>
-      <main className="contenido">
+      <main className="contenido" id="contenido-principal" tabIndex={-1}>
         <div className="barra-superior">
           <Campana />
         </div>

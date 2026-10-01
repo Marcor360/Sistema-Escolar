@@ -4,7 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import * as DocumentPicker from 'expo-document-picker';
 import { api, mensajeDeError } from '../api/client';
 import { colores } from '../theme';
-import { base, Sello, Tarjeta, Vacio } from './comunes';
+import { base, ErrorCarga, Sello, Tarjeta, Vacio } from './comunes';
 
 interface Tarea {
   id: number;
@@ -19,11 +19,14 @@ interface Tarea {
 export default function TareasScreen() {
   const [tareas, setTareas] = useState<Tarea[]>([]);
   const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState('');
 
   const cargar = useCallback(() => {
+    setError('');
     setCargando(true);
     api.get<Tarea[]>('/alumnos/me/tareas')
       .then((r) => setTareas(r.data))
+      .catch((fallo) => setError(mensajeDeError(fallo)))
       .finally(() => setCargando(false));
   }, []);
 
@@ -61,6 +64,7 @@ export default function TareasScreen() {
 
   return (
     <View style={base.pantalla}>
+      {error !== '' && <ErrorCarga mensaje={error} reintentar={cargar} />}
       <FlatList
         data={tareas}
         keyExtractor={(t) => String(t.id)}

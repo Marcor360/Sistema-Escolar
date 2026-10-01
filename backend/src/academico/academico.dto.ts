@@ -16,9 +16,24 @@ export class CicloDto {
   @IsOptional() @IsBoolean() activo?: boolean;
 }
 
+export class ActualizarCicloDto {
+  @IsOptional() @IsString() clave?: string;
+  @IsOptional() @IsString() nombre?: string;
+  @IsOptional() @IsString() fechaInicio?: string;
+  @IsOptional() @IsString() fechaFin?: string;
+  @IsOptional() @IsBoolean() activo?: boolean;
+}
+
 export class MateriaDto {
   @IsString() clave: string;
   @IsString() nombre: string;
+  @IsOptional() @IsString() descripcion?: string;
+  @IsOptional() @IsInt() creditos?: number;
+}
+
+export class ActualizarMateriaDto {
+  @IsOptional() @IsString() clave?: string;
+  @IsOptional() @IsString() nombre?: string;
   @IsOptional() @IsString() descripcion?: string;
   @IsOptional() @IsInt() creditos?: number;
 }

@@ -32,7 +32,20 @@ const dataSource = new DataSource({
   ...(type === 'mssql' ? { options: { encrypt: false, trustServerCertificate: true } } : {}),
 } as any);
 
+export function validarEjecucionSeed(env: NodeJS.ProcessEnv = process.env): void {
+  if (env.NODE_ENV === 'production') {
+    throw new Error('El seed está deshabilitado en producción');
+  }
+  if (!['development', 'test'].includes(env.NODE_ENV ?? '')) {
+    throw new Error('El seed solo se permite en desarrollo o pruebas');
+  }
+  if (env.ALLOW_DEV_SEED !== 'true') {
+    throw new Error('Define ALLOW_DEV_SEED=true para ejecutar deliberadamente el seed');
+  }
+}
+
 async function main() {
+  validarEjecucionSeed();
   await dataSource.initialize();
   console.log(`Conectado a ${type} — sembrando datos…`);
 
@@ -100,7 +113,6 @@ async function main() {
       apellidoPaterno: ap,
       roles: rolClaves.map((c) => roles.get(c)!),
     }));
-    console.log(`  usuario: ${email} / ${password}`);
     return usuario;
   };
 
@@ -220,7 +232,9 @@ async function main() {
   await dataSource.destroy();
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

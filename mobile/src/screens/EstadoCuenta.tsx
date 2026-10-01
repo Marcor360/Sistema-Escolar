@@ -4,7 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { api, mensajeDeError } from '../api/client';
 import { colores } from '../theme';
 import { pesos } from '../formato';
-import { base, Sello, Tarjeta, Vacio } from './comunes';
+import { base, ErrorCarga, Sello, Tarjeta, Vacio } from './comunes';
 
 interface CargoDetalle {
   id: number; descripcion: string; fechaVencimiento: string | null;
@@ -19,11 +19,14 @@ interface Estado {
 export default function EstadoCuentaScreen() {
   const [estado, setEstado] = useState<Estado | null>(null);
   const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState('');
 
   const cargar = useCallback(() => {
+    setError('');
     setCargando(true);
     api.get<Estado>('/finanzas/me/estado-cuenta')
       .then((r) => setEstado(r.data))
+      .catch((fallo) => setError(mensajeDeError(fallo)))
       .finally(() => setCargando(false));
   }, []);
 
@@ -50,6 +53,7 @@ export default function EstadoCuentaScreen() {
       style={base.pantalla}
       refreshControl={<RefreshControl refreshing={cargando} onRefresh={cargar} />}
     >
+      {error !== '' && <ErrorCarga mensaje={error} reintentar={cargar} />}
       {estado && (
         <>
           <View style={estilos.resumen}>

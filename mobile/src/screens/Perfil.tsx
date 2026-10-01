@@ -4,7 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { api, mensajeDeError } from '../api/client';
 import { useSesion } from '../sesion';
 import { colores } from '../theme';
-import { base, Tarjeta } from './comunes';
+import { base, ErrorCarga, Tarjeta } from './comunes';
 
 interface Perfil {
   matricula: string;
@@ -19,6 +19,14 @@ export default function PerfilScreen() {
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [actual, setActual] = useState('');
   const [nueva, setNueva] = useState('');
+  const [errorPerfil, setErrorPerfil] = useState('');
+
+  const cargarPerfil = useCallback(() => {
+    setErrorPerfil('');
+    api.get<Perfil>('/alumnos/me/perfil')
+      .then((r) => setPerfil(r.data))
+      .catch((fallo) => { setPerfil(null); setErrorPerfil(mensajeDeError(fallo)); });
+  }, []);
 
   const cambiarPassword = async () => {
     if (nueva.length < 8) { Alert.alert('Revisa la contraseña', 'La nueva contraseña debe tener al menos 8 caracteres.'); return; }
@@ -33,12 +41,13 @@ export default function PerfilScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      api.get<Perfil>('/alumnos/me/perfil').then((r) => setPerfil(r.data)).catch(() => setPerfil(null));
-    }, []),
+      cargarPerfil();
+    }, [cargarPerfil]),
   );
 
   return (
     <ScrollView style={base.pantalla}>
+      {errorPerfil !== '' && <ErrorCarga mensaje={errorPerfil} reintentar={cargarPerfil} />}
       <Tarjeta>
         <Text style={base.tituloTarjeta}>{sesion?.nombre}</Text>
         <Text style={base.secundario}>{sesion?.email}</Text>

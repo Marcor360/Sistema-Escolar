@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { api } from '../api/client';
+import { api, mensajeDeError } from '../api/client';
 import { useSesion } from '../sesion';
 import { colores } from '../theme';
 import { pesos } from '../formato';
@@ -19,8 +19,10 @@ export default function InicioScreen() {
   const [avisos, setAvisos] = useState<Aviso[]>([]);
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState('');
 
   const cargar = useCallback(() => {
+    setError('');
     setCargando(true);
     const hoy = new Date().toISOString();
     const en30 = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -36,6 +38,7 @@ export default function InicioScreen() {
         setAvisos(notifs.data);
         setEventos(cal.data);
       })
+      .catch((fallo) => setError(mensajeDeError(fallo)))
       .finally(() => setCargando(false));
   }, []);
 
@@ -55,6 +58,14 @@ export default function InicioScreen() {
       refreshControl={<RefreshControl refreshing={cargando} onRefresh={cargar} />}
     >
       <Text style={estilos.saludo}>Hola, {nombre}</Text>
+      {error !== '' && (
+        <View accessibilityRole="alert" style={estilos.error}>
+          <Text style={estilos.errorTexto}>{error}</Text>
+          <TouchableOpacity onPress={cargar} accessibilityRole="button" accessibilityLabel="Reintentar cargar inicio">
+            <Text style={estilos.reintentar}>Reintentar</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <View style={estilos.resumen}>
         <View style={estilos.kpi}>
@@ -105,6 +116,9 @@ export default function InicioScreen() {
 }
 
 const estilos = StyleSheet.create({
+  error: { borderWidth: 1, borderColor: colores.peligro, padding: 12, marginBottom: 12, backgroundColor: '#fff' },
+  errorTexto: { color: colores.peligro, marginBottom: 8 },
+  reintentar: { color: colores.pizarra, textDecorationLine: 'underline', fontWeight: '600' },
   saludo: { fontSize: 22, color: colores.tinta, marginBottom: 12, fontWeight: '600' },
   resumen: { flexDirection: 'row', gap: 10, marginBottom: 18 },
   kpi: {

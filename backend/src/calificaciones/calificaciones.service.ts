@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { Calificacion } from '../entities/calificacion.entity';
 import { GrupoMateria } from '../entities/grupo-materia.entity';
 import { DocentesService } from '../docentes/docentes.service';
@@ -19,6 +19,7 @@ export class CalificacionesService {
     private readonly docentes: DocentesService,
     private readonly alumnos: AlumnosService,
     private readonly scope: ScopeService,
+    private readonly dataSource: DataSource,
   ) {}
 
   private async validarGrupoMateria(grupoMateriaId: number, user: JwtUser) {
@@ -31,6 +32,7 @@ export class CalificacionesService {
     ) {
       const docente = await this.docentes.obtenerPorUsuario(user.sub);
       if (gm.docenteId !== docente.id) throw new ForbiddenException('La materia no está asignada a este docente');
+      if (!gm.grupo.activo) throw new ForbiddenException('El grupo no está activo');
       return gm;
     }
     await this.scope.validarGestion(user, gm.grupo.plantelId);
@@ -41,34 +43,41 @@ export class CalificacionesService {
   async capturar(dto: CapturaCalificacionesDto, user: JwtUser) {
     const gm = await this.validarGrupoMateria(dto.grupoMateriaId, user);
 
-    const resultados: Calificacion[] = [];
-    for (const item of dto.items) {
-      const inscrito = await this.inscripciones.findOne({
-        where: { alumnoId: item.alumnoId, grupoId: gm.grupoId, estatus: 'ACTIVA' },
+    const ids = [...new Set(dto.items.map((item) => item.alumnoId))];
+    return this.dataSource.transaction(async (manager) => {
+      const inscripciones = manager.getRepository(Inscripcion);
+      const activos = await inscripciones.find({
+        where: { alumnoId: In(ids), grupoId: gm.grupoId, estatus: 'ACTIVA' },
       });
-      if (!inscrito) throw new ForbiddenException('El alumno no está inscrito de forma activa en el grupo');
-      const existente = await this.repo.findOne({
-        where: { alumnoId: item.alumnoId, grupoMateriaId: dto.grupoMateriaId, parcial: dto.parcial },
-      });
-      const registro = existente ?? this.repo.create({
-        alumnoId: item.alumnoId,
-        grupoMateriaId: dto.grupoMateriaId,
-        parcial: dto.parcial,
-      });
-      registro.calificacion = item.calificacion;
-      registro.observaciones = item.observaciones ?? registro.observaciones ?? null;
-      registro.capturadaPorId = user.sub;
-      resultados.push(await this.repo.save(registro));
-    }
-    return { capturadas: resultados.length };
+      const activosIds = new Set(activos.map((i) => i.alumnoId));
+      if (ids.some((id) => !activosIds.has(id))) {
+        throw new ForbiddenException('Todos los alumnos deben estar inscritos de forma activa en el grupo');
+      }
+      const calificaciones = manager.getRepository(Calificacion);
+      for (const item of dto.items) {
+        const existente = await calificaciones.findOne({
+          where: { alumnoId: item.alumnoId, grupoMateriaId: dto.grupoMateriaId, parcial: dto.parcial },
+          lock: { mode: 'pessimistic_write' },
+        });
+        const registro = existente ?? calificaciones.create({
+          alumnoId: item.alumnoId, grupoMateriaId: dto.grupoMateriaId, parcial: dto.parcial,
+        });
+        registro.calificacion = item.calificacion;
+        registro.observaciones = item.observaciones ?? registro.observaciones ?? null;
+        registro.capturadaPorId = user.sub;
+        await calificaciones.save(registro);
+      }
+      return { capturadas: dto.items.length };
+    });
   }
 
   async porGrupoMateria(grupoMateriaId: number, user: JwtUser, parcial?: number) {
     await this.validarGrupoMateria(grupoMateriaId, user);
-    return this.repo.find({
+    const registros = await this.repo.find({
       where: parcial !== undefined ? { grupoMateriaId, parcial } : { grupoMateriaId },
       order: { alumnoId: 'ASC', parcial: 'ASC' },
     });
+    return registros.map((registro) => this.proyectar(registro));
   }
 
   async porAlumno(alumnoId: number, user: JwtUser) {
@@ -78,22 +87,54 @@ export class CalificacionesService {
       !user.roles.some((rol) => ['SUPERADMIN', 'ADMINISTRATIVO', 'FINANZAS'].includes(rol))
     ) {
       const docente = await this.docentes.obtenerPorUsuario(user.sub);
-      const permitido = await this.inscripciones
-        .createQueryBuilder('i')
-        .innerJoin(GrupoMateria, 'gm', 'gm.grupo_id = i.grupo_id')
-        .where('i.alumno_id = :alumnoId', { alumnoId })
-        .andWhere('i.estatus = :estatus', { estatus: 'ACTIVA' })
-        .andWhere('gm.docente_id = :docenteId', { docenteId: docente.id })
-        .getCount();
-      if (!permitido) throw new ForbiddenException('El alumno no pertenece a uno de tus grupos');
+      const asignaciones = await this.grupoMaterias.find({ where: { docenteId: docente.id } });
+      const asignacionesActivas = asignaciones.filter((gm) => gm.grupo.activo);
+      const grupoIds = [...new Set(asignacionesActivas.map((gm) => gm.grupoId))];
+      if (grupoIds.length === 0) throw new ForbiddenException('El alumno no pertenece a uno de tus grupos');
+      const inscripcionesActivas = await this.inscripciones.find({
+        where: { alumnoId, grupoId: In(grupoIds), estatus: 'ACTIVA' },
+      });
+      const gruposActivos = new Set(inscripcionesActivas.map((i) => i.grupoId));
+      const grupoMateriaIds = asignacionesActivas.filter((gm) => gruposActivos.has(gm.grupoId)).map((gm) => gm.id);
+      if (grupoMateriaIds.length === 0) throw new ForbiddenException('El alumno no pertenece a uno de tus grupos');
+      const registros = await this.repo.find({
+        where: { alumnoId, grupoMateriaId: In(grupoMateriaIds) },
+        order: { grupoMateriaId: 'ASC', parcial: 'ASC' },
+      });
+      return registros.map((registro) => this.proyectar(registro));
     } else if (!user.roles.includes('SUPERADMIN')) {
       await this.scope.validarGestion(user, alumno.plantelId);
     }
-    return this.repo.find({ where: { alumnoId }, order: { grupoMateriaId: 'ASC', parcial: 'ASC' } });
+    const registros = await this.repo.find({ where: { alumnoId }, order: { grupoMateriaId: 'ASC', parcial: 'ASC' } });
+    return registros.map((registro) => this.proyectar(registro));
   }
 
   async mias(user: JwtUser) {
     const alumno = await this.alumnos.obtenerPorUsuario(user.sub);
-    return this.repo.find({ where: { alumnoId: alumno.id }, order: { grupoMateriaId: 'ASC', parcial: 'ASC' } });
+    const registros = await this.repo.find({ where: { alumnoId: alumno.id }, order: { grupoMateriaId: 'ASC', parcial: 'ASC' } });
+    return registros.map((registro) => this.proyectar(registro));
+  }
+
+  private proyectar(registro: Calificacion) {
+    return {
+      id: registro.id,
+      alumnoId: registro.alumnoId,
+      grupoMateriaId: registro.grupoMateriaId,
+      parcial: registro.parcial,
+      calificacion: registro.calificacion,
+      observaciones: registro.observaciones,
+      grupoMateria: registro.grupoMateria ? {
+        id: registro.grupoMateria.id,
+        grupo: registro.grupoMateria.grupo ? {
+          id: registro.grupoMateria.grupo.id,
+          nombre: registro.grupoMateria.grupo.nombre,
+        } : undefined,
+        materia: registro.grupoMateria.materia ? {
+          id: registro.grupoMateria.materia.id,
+          clave: registro.grupoMateria.materia.clave,
+          nombre: registro.grupoMateria.materia.nombre,
+        } : undefined,
+      } : undefined,
+    };
   }
 }

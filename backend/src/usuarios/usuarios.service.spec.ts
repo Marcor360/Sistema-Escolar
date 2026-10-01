@@ -56,7 +56,18 @@ describe('UsuariosService.actualizar revoca sesiones', () => {
 
     const resultado = await service.actualizar(1, { activo: true } as any);
 
-    expect(resultado.sessionVersion).toBe(3);
     expect(resultado.activo).toBe(true);
+    expect(usuarios.save).toHaveBeenCalledWith(expect.objectContaining({ sessionVersion: 3 }));
+    expect(resultado).not.toHaveProperty('sessionVersion');
+    expect(resultado).not.toHaveProperty('passwordHash');
+  });
+
+  it('no devuelve passwordHash al obtener un usuario', async () => {
+    const usuarios = { findOne: jest.fn().mockResolvedValue({
+      id: 1, email: 'a@escuela.mx', passwordHash: 'secreto', nombre: 'A',
+    }) };
+    const service = new UsuariosService(usuarios as any, {} as any, {} as any, {} as any, {} as any, {} as any);
+
+    await expect(service.obtener(1)).resolves.not.toHaveProperty('passwordHash');
   });
 });
