@@ -37,7 +37,9 @@ describe('AuthService.login', () => {
 
   it('firma token en caso feliz', async () => {
     const { service, jwt, repo } = await crear(['ADMINISTRATIVO']);
-    await expect(service.login('demo@escuela.mx', 'Correcta123', 'WEB')).resolves.toMatchObject({ accessToken: 'token' });
+    const respuesta = await service.login('demo@escuela.mx', 'Correcta123', 'WEB');
+    expect(respuesta).toMatchObject({ accessToken: 'token' });
+    expect(JSON.stringify(respuesta)).not.toContain('passwordHash');
     expect(jwt.sign).toHaveBeenCalledWith(expect.objectContaining({ roles: ['ADMINISTRATIVO'] }), { expiresIn: '8h' });
     expect(repo.findOne).toHaveBeenCalledWith(expect.objectContaining({
       select: expect.arrayContaining(['passwordHash']),
@@ -71,6 +73,20 @@ describe('AuthService.login', () => {
     const { service, bitacora } = await crear(['ALUMNO']);
     bitacora.insert.mockRejectedValue(new Error('bd caída'));
     await expect(service.login('demo@escuela.mx', 'Correcta123', 'MOVIL')).resolves.toMatchObject({ accessToken: 'token' });
+  });
+
+  it('me devuelve solo los campos de perfil aunque el repositorio incluya el hash', async () => {
+    const repo = { findOne: jest.fn().mockResolvedValue({
+      id: 1, email: 'demo@escuela.mx', passwordHash: 'hash-privado', nombre: 'Demo',
+      apellidoPaterno: 'Usuario', apellidoMaterno: null, telefono: null, activo: true,
+      roles: [{ id: 1, clave: 'ADMINISTRATIVO', nombre: 'Administrativo' }],
+    }) };
+    const service = new AuthService(repo as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
+
+    const respuesta = await service.me({ sub: 1, email: 'demo@escuela.mx', nombre: 'Demo Usuario', roles: ['ADMINISTRATIVO'] });
+
+    expect(JSON.stringify(respuesta)).not.toContain('hash-privado');
+    expect(respuesta).not.toHaveProperty('passwordHash');
   });
 });
 

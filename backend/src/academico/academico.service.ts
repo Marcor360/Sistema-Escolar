@@ -147,12 +147,11 @@ export class AcademicoService {
 
   async materiasDeGrupo(grupoId: number, user: JwtUser) {
     await this.validarAccesoGrupo(grupoId, user);
-    const asignaciones = await this.grupoMaterias.find({ where: { grupoId } });
     if (this.esMaestroLimitado(user)) {
       const docente = await this.docentes.obtenerPorUsuario(user.sub);
-      return asignaciones.filter((gm) => gm.docenteId === docente.id);
+      return this.grupoMaterias.find({ where: { grupoId, docenteId: docente.id } });
     }
-    return asignaciones;
+    return this.grupoMaterias.find({ where: { grupoId } });
   }
 
   /** Asigna una materia al grupo y, opcionalmente, el docente que la imparte. */
@@ -221,10 +220,10 @@ export class AcademicoService {
   }
 
   // ---- Inscripciones ----
-  async inscribirAlumno(grupoId: number, alumnoId: number, user?: JwtUser) {
+  async inscribirAlumno(grupoId: number, alumnoId: number, user: JwtUser) {
     const grupo = await this.grupos.findOne({ where: { id: grupoId } });
     if (!grupo) throw new NotFoundException('Grupo no encontrado');
-    if (user) await this.scope.validarGestion(user, grupo.plantelId);
+    await this.scope.validarGestion(user, grupo.plantelId);
     const alumno = await this.alumnos.findOne({ where: { id: alumnoId } });
     if (!alumno) throw new NotFoundException('Alumno no encontrado');
     if (alumno.plantelId !== grupo.plantelId) throw new ForbiddenException('El alumno no pertenece al plantel del grupo');

@@ -45,10 +45,10 @@ export class DocentesService {
     return { datos, total, pagina, porPagina };
   }
 
-  async obtener(id: number, user?: JwtUser, exigirTodosLosPlanteles = false) {
+  async obtener(id: number, user: JwtUser, exigirTodosLosPlanteles = false) {
     const docente = await this.docentes.findOne({ where: { id } });
     if (!docente) throw new NotFoundException('Docente no encontrado');
-    if (user) await this.validarAlcanceDocente(docente.usuarioId, user, exigirTodosLosPlanteles);
+    await this.validarAlcanceDocente(docente.usuarioId, user, exigirTodosLosPlanteles);
     return docente;
   }
 
