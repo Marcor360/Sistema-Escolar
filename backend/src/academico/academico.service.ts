@@ -1,6 +1,6 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { CicloEscolar } from '../entities/ciclo-escolar.entity';
 import { Materia } from '../entities/materia.entity';
 import { Grupo } from '../entities/grupo.entity';
@@ -37,20 +37,29 @@ export class AcademicoService {
     private readonly docentes: DocentesService,
     private readonly scope: ScopeService,
     @InjectRepository(UsuarioPlantel) private readonly usuarioPlanteles: Repository<UsuarioPlantel>,
+    private readonly dataSource: DataSource,
   ) {}
 
   // ---- Ciclos ----
   listarCiclos() { return this.ciclos.find({ order: { fechaInicio: 'DESC' } }); }
 
   async crearCiclo(dto: CicloDto) {
-    if (dto.activo) await this.ciclos.update({ activo: true }, { activo: false });
-    return this.ciclos.save(this.ciclos.create({ ...dto, activo: dto.activo ?? false }));
+    return this.dataSource.transaction('SERIALIZABLE', async (manager) => {
+      const ciclos = manager.getRepository(CicloEscolar);
+      if (dto.activo) await ciclos.update({ activo: true }, { activo: false });
+      return ciclos.save(ciclos.create({ ...dto, activo: dto.activo ?? false }));
+    });
   }
 
   async actualizarCiclo(id: number, dto: ActualizarCicloDto) {
-    if (dto.activo) await this.ciclos.update({ activo: true }, { activo: false });
-    await this.ciclos.update(id, dto);
-    return this.ciclos.findOne({ where: { id } });
+    return this.dataSource.transaction('SERIALIZABLE', async (manager) => {
+      const ciclos = manager.getRepository(CicloEscolar);
+      const actual = await ciclos.findOne({ where: { id } });
+      if (!actual) throw new NotFoundException('Ciclo escolar no encontrado');
+      if (dto.activo) await ciclos.update({ activo: true }, { activo: false });
+      await ciclos.update(id, dto);
+      return ciclos.findOne({ where: { id } });
+    });
   }
 
   // ---- Materias ----

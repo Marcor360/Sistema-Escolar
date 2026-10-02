@@ -7,7 +7,7 @@ export function Tarjeta({ children }: { children: React.ReactNode }) {
 
 export function Sello({ texto, tono }: { texto: string; tono: 'ok' | 'aviso' | 'mal' | 'neutro' }) {
   const color =
-    tono === 'ok' ? colores.exito : tono === 'aviso' ? colores.dorado : tono === 'mal' ? colores.peligro : colores.gris;
+    tono === 'ok' ? colores.exito : tono === 'aviso' ? colores.avisoTexto : tono === 'mal' ? colores.peligro : colores.gris;
   return (
     <Text style={[base.sello, { color, borderColor: color }]}>{texto}</Text>
   );
@@ -21,7 +21,7 @@ export function ErrorCarga({ mensaje, reintentar }: { mensaje: string; reintenta
   return (
     <View accessibilityRole="alert" style={base.errorCarga}>
       <Text style={base.errorTexto}>{mensaje}</Text>
-      <Pressable onPress={reintentar} accessibilityRole="button" accessibilityLabel="Reintentar carga">
+      <Pressable style={base.botonAccesible} onPress={reintentar} accessibilityRole="button" accessibilityLabel="Reintentar carga">
         <Text style={base.reintentar}>Reintentar</Text>
       </Pressable>
     </View>
@@ -44,5 +44,6 @@ export const base = StyleSheet.create({
   errorCarga: { backgroundColor: '#fff', borderWidth: 1, borderColor: colores.peligro, padding: 12, marginBottom: 10 },
   errorTexto: { color: colores.peligro, marginBottom: 8 },
   reintentar: { color: colores.pizarra, textDecorationLine: 'underline', fontWeight: '600' },
+  botonAccesible: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start', paddingHorizontal: 8 },
   monto: { fontVariant: ['tabular-nums'], fontWeight: '600', color: colores.tinta },
 });

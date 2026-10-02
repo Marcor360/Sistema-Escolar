@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { JwtModule } from '@nestjs/jwt';
+import { JwtModule, JwtSignOptions } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Usuario } from '../entities/usuario.entity';
@@ -25,7 +25,8 @@ import { NotificacionesModule } from '../notificaciones/notificaciones.module';
         if (process.env.NODE_ENV === 'production' && secret === 'cambiar-en-produccion') {
           throw new Error('Seguridad: define un JWT_SECRET real en producción');
         }
-        return { secret, signOptions: { expiresIn: config.get<string>('JWT_EXPIRES') || '8h' } };
+        const expiresIn = config.get<string>('JWT_EXPIRES') || '8h';
+        return { secret, signOptions: { expiresIn: expiresIn as JwtSignOptions['expiresIn'] } };
       },
     }),
   ],

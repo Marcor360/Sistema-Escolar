@@ -81,6 +81,7 @@ body {
 .lateral nav a {
   color: #c8d2cd;
   text-decoration: none;
+  min-height: 44px;
   padding: 9px 24px;
   border-left: 3px solid transparent;
   font-size: 13.5px;
@@ -166,6 +167,7 @@ input, select, textarea {
   color: var(--tinta);
   min-width: 140px;
 }
+input, select { min-height: 44px; }
 input:focus, select:focus, textarea:focus, button:focus-visible, a:focus-visible, [role='tabpanel']:focus-visible {
   outline: 2px solid var(--dorado);
   outline-offset: 1px;
@@ -174,6 +176,7 @@ input:focus, select:focus, textarea:focus, button:focus-visible, a:focus-visible
 .boton {
   font: inherit;
   padding: 8px 16px;
+  min-height: 44px;
   border: 1px solid var(--pizarra);
   background: var(--pizarra);
   color: #fff;
@@ -204,7 +207,7 @@ input:focus, select:focus, textarea:focus, button:focus-visible, a:focus-visible
   border: 1px solid currentColor;
 }
 .sello.ok { color: var(--exito); }
-.sello.aviso { color: var(--dorado); }
+.sello.aviso { color: #76510A; }
 .sello.mal { color: var(--peligro); }
 .sello.neutro { color: #5c6a66; }
 
@@ -217,6 +220,7 @@ input:focus, select:focus, textarea:focus, button:focus-visible, a:focus-visible
   font: inherit;
   border: none;
   background: none;
+  min-height: 44px;
   padding: 9px 16px;
   cursor: pointer;
   color: #5c6a66;
@@ -237,7 +241,7 @@ input:focus, select:focus, textarea:focus, button:focus-visible, a:focus-visible
   background: var(--pizarra);
 }
 .login-caja {
-  width: 360px;
+  width: min(360px, calc(100vw - 32px));
   background: var(--papel);
   padding: 36px 32px;
   border-top: 4px solid var(--dorado);
@@ -307,6 +311,8 @@ input:focus, select:focus, textarea:focus, button:focus-visible, a:focus-visible
   font-size: 17px;
   background: #fff;
   border: 1px solid var(--linea);
+  min-height: 44px;
+  min-width: 44px;
   padding: 6px 10px;
   cursor: pointer;
   position: relative;
@@ -354,6 +360,7 @@ input:focus, select:focus, textarea:focus, button:focus-visible, a:focus-visible
   background: none;
   border: none;
   border-bottom: 1px solid var(--linea);
+  min-height: 44px;
   padding: 10px 14px;
   cursor: pointer;
 }
@@ -385,6 +392,7 @@ input:focus, select:focus, textarea:focus, button:focus-visible, a:focus-visible
   display: block;
   width: 100%;
   margin-top: 12px;
+  min-height: 44px;
   font: inherit;
   font-size: 13px;
   background: none;

@@ -1,6 +1,6 @@
 import * as bcrypt from 'bcryptjs';
 import { createHash } from 'crypto';
-import { UnauthorizedException } from '@nestjs/common';
+import { Logger, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 
 const usuario = async (roles: string[]) => ({
@@ -136,6 +136,20 @@ describe('AuthService.forgotPassword / resetPassword', () => {
     expect(guardado.token).toMatch(/^[0-9a-f]{64}$/);
     expect(guardado.token).not.toBe(tokenEnClaro);
     expect(guardado.token).toBe(createHash('sha256').update(tokenEnClaro).digest('hex'));
+  });
+
+  it('mantiene la respuesta genérica y registra el fallo si SMTP no entrega el correo', async () => {
+    const { service, usuarios, notificaciones } = crear();
+    usuarios.findOne.mockResolvedValue({ id: 1, email: 'demo@escuela.mx', nombre: 'Demo' });
+    notificaciones.enviarEmail.mockRejectedValue(new Error('SMTP no disponible'));
+    const registrarError = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+
+    await expect(service.forgotPassword('demo@escuela.mx')).resolves.toEqual({
+      mensaje: 'Si el correo existe, se enviaron instrucciones',
+    });
+
+    expect(registrarError).toHaveBeenCalled();
+    registrarError.mockRestore();
   });
 
   it('resetPassword acepta el token original aunque solo se persista su hash', async () => {

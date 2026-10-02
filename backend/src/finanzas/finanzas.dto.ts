@@ -55,7 +55,7 @@ export class AplicarRecargosDto {
 export class RegistrarPagoDto {
   @IsInt() alumnoId: number;
   @IsOptional() @IsInt() cargoId?: number;
-  @IsNumber() @Min(0.01) monto: number;
+  @IsNumber({ maxDecimalPlaces: 2 }) @Min(0.01) monto: number;
   @IsIn(['EFECTIVO', 'TRANSFERENCIA', 'TARJETA'])
   metodo: 'EFECTIVO' | 'TRANSFERENCIA' | 'TARJETA';
   @IsOptional() @IsString() referencia?: string;

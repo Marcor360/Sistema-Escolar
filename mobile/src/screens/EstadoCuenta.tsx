@@ -113,7 +113,7 @@ const estilos = StyleSheet.create({
   subtitulo: { fontSize: 13, color: colores.gris, textTransform: 'uppercase', letterSpacing: 0.6, marginVertical: 10 },
   boton: {
     marginTop: 10, alignSelf: 'flex-start', backgroundColor: colores.dorado,
-    paddingHorizontal: 14, paddingVertical: 8,
+    minHeight: 44, justifyContent: 'center', paddingHorizontal: 14, paddingVertical: 8,
   },
   botonTexto: { color: colores.pizarraOscuro, fontSize: 13, fontWeight: '600' },
 });

@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { FlatList, RefreshControl, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { api, mensajeDeError } from '../api/client';
 import { base, ErrorCarga, Tarjeta, Vacio } from './comunes';
@@ -14,13 +14,14 @@ interface Calificacion {
 export default function CalificacionesScreen() {
   const [registros, setRegistros] = useState<Calificacion[]>([]);
   const [cargando, setCargando] = useState(false);
+  const [cargaInicialCompleta, setCargaInicialCompleta] = useState(false);
   const [error, setError] = useState('');
 
   const cargar = useCallback(() => {
     setError('');
     setCargando(true);
     api.get<Calificacion[]>('/calificaciones/mias')
-      .then((r) => setRegistros(r.data))
+      .then((r) => { setRegistros(r.data); setCargaInicialCompleta(true); })
       .catch((fallo) => setError(mensajeDeError(fallo)))
       .finally(() => setCargando(false));
   }, []);
@@ -44,7 +45,9 @@ export default function CalificacionesScreen() {
         data={filas}
         keyExtractor={([clave]) => clave}
         refreshControl={<RefreshControl refreshing={cargando} onRefresh={cargar} />}
-        ListEmptyComponent={<Vacio mensaje="Aún no hay calificaciones capturadas." />}
+        ListEmptyComponent={cargaInicialCompleta && !error
+          ? <Vacio mensaje="Aún no hay calificaciones capturadas." />
+          : !cargaInicialCompleta && !error ? <ActivityIndicator accessibilityLabel="Cargando calificaciones" /> : null}
         renderItem={({ item: [clave, materia] }) => {
           const promedio =
             materia.parciales.reduce((s, p) => s + p.calificacion, 0) / materia.parciales.length;

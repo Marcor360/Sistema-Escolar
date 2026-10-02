@@ -25,15 +25,20 @@ export class NotificacionesService {
     private readonly config: ConfigService,
   ) {
     const host = this.config.get<string>('SMTP_HOST');
+    const port = Number(this.config.get('SMTP_PORT')) || 587;
+    const user = this.config.get<string>('SMTP_USER');
+    const pass = this.config.get<string>('SMTP_PASS');
+    const from = this.config.get<string>('SMTP_FROM');
+    if (this.config.get<string>('NODE_ENV') === 'production' && (!host || !user || !pass || !from)) {
+      throw new Error('SMTP_HOST, SMTP_USER, SMTP_PASS y SMTP_FROM son obligatorios en produccion');
+    }
+    if ((user && !pass) || (!user && pass)) throw new Error('SMTP_USER y SMTP_PASS deben configurarse juntos');
     if (host) {
       this.transporter = nodemailer.createTransport({
         host,
-        port: Number(this.config.get('SMTP_PORT')) || 587,
-        secure: false,
-        auth: {
-          user: this.config.get<string>('SMTP_USER'),
-          pass: this.config.get<string>('SMTP_PASS'),
-        },
+        port,
+        secure: port === 465,
+        ...(user && pass ? { auth: { user, pass } } : {}),
       });
     }
   }

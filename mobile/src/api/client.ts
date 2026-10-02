@@ -1,6 +1,7 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
+export { mensajeDeError } from './errores';
 
 const baseURL =
   process.env.EXPO_PUBLIC_API_URL ||
@@ -32,12 +33,6 @@ api.interceptors.response.use(
     return Promise.reject(error);
   },
 );
-
-export function mensajeDeError(error: unknown): string {
-  const data = (error as { response?: { data?: { message?: string | string[] } } }).response?.data;
-  if (Array.isArray(data?.message)) return data.message.join(', ');
-  return data?.message || 'Ocurrió un error inesperado';
-}
 
 /** Base sin /api, para abrir archivos servidos en /uploads. */
 export const archivosBase = baseURL.replace(/\/api$/, '');

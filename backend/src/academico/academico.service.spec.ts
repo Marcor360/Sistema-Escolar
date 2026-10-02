@@ -25,6 +25,7 @@ function crearServicio(overrides: {
     overrides.docentes ?? ({} as any),
     overrides.scope ?? ({ validarGestion: jest.fn().mockResolvedValue(undefined) } as any),
     overrides.usuarioPlanteles ?? ({} as any),
+    {} as any,
   );
 }
 

@@ -399,7 +399,28 @@ describe('Integración de flujos críticos (base aislada)', () => {
     expect(health.data).toEqual({ status: 'ok', database: 'ok' });
   });
 
-  it('inscribe a un alumno, captura una calificación y la muestra en su portal', async () => {
+  it('mantiene un solo ciclo activo al crear y actualizar ciclos', async () => {
+    const admin = await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId });
+    const token = await login(admin.email, 'Integracion_Segura_42!');
+    const primero = await api('/academico/ciclos', {
+      method: 'POST', token,
+      body: { clave: `A${sufijo}`, nombre: 'Ciclo activo uno', fechaInicio: '2026-08-01', fechaFin: '2027-07-31', activo: true },
+    });
+    const segundo = await api('/academico/ciclos', {
+      method: 'POST', token,
+      body: { clave: `B${sufijo}`, nombre: 'Ciclo activo dos', fechaInicio: '2027-08-01', fechaFin: '2028-07-31', activo: true },
+    });
+    expect(primero.response.status).toBe(201);
+    expect(segundo.response.status).toBe(201);
+    expect(await dataSource.getRepository(CicloEscolar).countBy({ activo: true })).toBe(1);
+    const reactivado = await api(`/academico/ciclos/${primero.data.id}`, {
+      method: 'PATCH', token, body: { activo: true },
+    });
+    expect(reactivado.response.status).toBe(200);
+    expect(await dataSource.getRepository(CicloEscolar).countBy({ activo: true })).toBe(1);
+  });
+
+  it('inscribe a un alumno, captura una calificaci??n y la muestra en su portal', async () => {
     const admin = await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId });
     const alumnoUsuario = await dataSource.getRepository(Usuario).findOneByOrFail({ id: alumnoUsuarioId });
     const tokenAdmin = await login(admin.email, 'Integracion_Segura_42!');
@@ -518,7 +539,34 @@ describe('Integración de flujos críticos (base aislada)', () => {
     })).toBe(1);
   });
 
-  it('registra un cargo y un pago parcial desde el flujo financiero', async () => {
+  it('evita pago manual sobre una orden pendiente y deduplica webhooks concurrentes', async () => {
+    const orden = await dataSource.getRepository(OrdenPago).findOneByOrFail({ id: ordenId });
+    const admin = await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId });
+    const token = await login(admin.email, 'Integracion_Segura_42!');
+    const pagoManual = await api('/finanzas/pagos', {
+      method: 'POST', token,
+      body: { alumnoId, cargoId: cargoWebhookId, monto: 125, metodo: 'EFECTIVO', referencia: `MAN${sufijo}` },
+    });
+    expect(pagoManual.response.status).toBe(409);
+
+    const evento = { type: 'charge.succeeded', transaction: {
+      id: orden.idExterno, order_id: `ORD-${orden.id}`, amount: 125,
+      currency: 'MXN', transaction_type: 'charge', status: 'completed',
+    } };
+    const [primera, segunda] = await Promise.all([
+      api('/finanzas/webhook/openpay', { method: 'POST', body: evento }),
+      api('/finanzas/webhook/openpay', { method: 'POST', body: evento }),
+    ]);
+
+    expect(primera.response.status).toBe(200);
+    expect(segunda.response.status).toBe(200);
+    expect(await dataSource.getRepository(Pago).countBy({ ordenPagoId: ordenId })).toBe(1);
+    expect(await dataSource.getRepository(Notificacion).countBy({ usuarioId: alumnoUsuarioId })).toBe(1);
+    expect((await dataSource.getRepository(OrdenPago).findOneByOrFail({ id: ordenId })).estatus).toBe('COMPLETADA');
+    expect((await dataSource.getRepository(Cargo).findOneByOrFail({ id: cargoWebhookId })).estatus).toBe('PAGADO');
+  });
+
+  it('acepta pagos parciales y rechaza exceder el saldo restante', async () => {
     const admin = await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId });
     const token = await login(admin.email, 'Integracion_Segura_42!');
     const concepto = await api('/finanzas/conceptos', {
@@ -534,17 +582,19 @@ describe('Integración de flujos críticos (base aislada)', () => {
       },
     });
     expect(cargo.response.status).toBe(201);
-    const pago = await api('/finanzas/pagos', {
+
+    const parcial = await api('/finanzas/pagos', {
       method: 'POST', token,
       body: { alumnoId, cargoId: cargo.data.id, monto: 50, metodo: 'TRANSFERENCIA', referencia: `INT${sufijo}` },
     });
-    expect(pago.response.status).toBe(201);
+    expect(parcial.response.status).toBe(201);
+    const excedente = await api('/finanzas/pagos', {
+      method: 'POST', token,
+      body: { alumnoId, cargoId: cargo.data.id, monto: 150.01, metodo: 'EFECTIVO', referencia: `EXC${sufijo}` },
+    });
+    expect(excedente.response.status).toBe(400);
     expect((await dataSource.getRepository(Cargo).findOneByOrFail({ id: cargo.data.id })).estatus).toBe('PARCIAL');
-    const estado = await api(`/finanzas/alumnos/${alumnoId}/estado-cuenta`, { token });
-    expect(estado.response.status).toBe(200);
-    expect(estado.data.cargos).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: cargo.data.id, pagado: 50, saldo: 150 }),
-    ]));
+    expect(await dataSource.getRepository(Pago).countBy({ cargoId: cargo.data.id })).toBe(1);
   });
 
   it('entrega materiales solo a un alumno inscrito y sirve el enlace firmado', async () => {
@@ -570,23 +620,6 @@ describe('Integración de flujos críticos (base aislada)', () => {
     const descarga = await fetch(new URL(enlace.data.url, baseUrl));
     expect(descarga.status).toBe(200);
     expect(await descarga.text()).toBe('archivo de prueba');
-  });
-
-  it('registra un único pago y aviso si Openpay reenvía charge.succeeded', async () => {
-    const orden = await dataSource.getRepository(OrdenPago).findOneByOrFail({ id: ordenId });
-      const evento = { type: 'charge.succeeded', transaction: {
-        id: orden.idExterno, order_id: `ORD-${orden.id}`, amount: 125,
-        currency: 'MXN', transaction_type: 'charge', status: 'completed',
-      } };
-    const primera = await api('/finanzas/webhook/openpay', { method: 'POST', body: evento });
-    const segunda = await api('/finanzas/webhook/openpay', { method: 'POST', body: evento });
-
-    expect(primera.response.status).toBe(200);
-    expect(segunda.response.status).toBe(200);
-    expect(await dataSource.getRepository(Pago).countBy({ ordenPagoId: ordenId })).toBe(1);
-    expect(await dataSource.getRepository(Notificacion).countBy({ usuarioId: alumnoUsuarioId })).toBe(1);
-    expect((await dataSource.getRepository(OrdenPago).findOneByOrFail({ id: ordenId })).estatus).toBe('COMPLETADA');
-    expect((await dataSource.getRepository(Cargo).findOneByOrFail({ id: cargoWebhookId })).estatus).toBe('PAGADO');
   });
 
   it('revoca JWT anteriores tras bajas de alumno/docente y cambio de contraseña', async () => {

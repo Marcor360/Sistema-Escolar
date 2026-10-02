@@ -92,16 +92,16 @@ const estilos = StyleSheet.create({
   },
   input: {
     borderWidth: 1, borderColor: '#B9C0BA', backgroundColor: '#fff',
-    paddingHorizontal: 10, paddingVertical: 8, color: colores.tinta,
+    minHeight: 44, paddingHorizontal: 10, paddingVertical: 8, color: colores.tinta,
   },
   botonPrimario: {
     marginTop: 12, alignSelf: 'flex-start', backgroundColor: colores.pizarra,
-    paddingHorizontal: 14, paddingVertical: 9,
+    minHeight: 44, justifyContent: 'center', paddingHorizontal: 14, paddingVertical: 9,
   },
   botonPrimarioTexto: { color: '#fff', fontSize: 13 },
   boton: {
     marginTop: 8, alignSelf: 'flex-start', borderWidth: 1, borderColor: colores.peligro,
-    paddingHorizontal: 14, paddingVertical: 9,
+    minHeight: 44, justifyContent: 'center', paddingHorizontal: 14, paddingVertical: 9,
   },
   botonTexto: { color: colores.peligro, fontSize: 13 },
 });

@@ -5,6 +5,7 @@ export const colores = {
   papel: '#F7F8F6',
   tinta: '#1C2528',
   dorado: '#C79A3C',
+  avisoTexto: '#76510A',
   linea: '#D8DCD6',
   exito: '#2E7D5B',
   peligro: '#B4452F',

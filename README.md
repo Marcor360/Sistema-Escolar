@@ -510,7 +510,7 @@ etl/
 cd backend
 npm install                    # Instalar dependencias
 npm run start:dev              # Desarrollo (http://localhost:3000/api)
-ALLOW_DEV_SEED=true npm run seed  # Crear datos demo deliberadamente (solo development/test)
+ALLOW_DEV_SEED=true npm run seed  # Solo local: requiere 5 contraseñas distintas de 16+ caracteres en backend/.env
 npm run lint                   # Validar código
 npm run typecheck              # Verificar tipos TypeScript
 npm test                       # Ejecutar tests Jest
@@ -531,7 +531,7 @@ npm run lint                   # Validar código
 cd mobile
 npm install                    # Instalar dependencias
 npx expo start                 # Iniciar Expo
-npm run lint                   # Validar código
+npx tsc --noEmit               # Verificar TypeScript
 ```
 
 ### Base de Datos

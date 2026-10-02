@@ -1,9 +1,9 @@
 import { useCallback, useState } from 'react';
-import { FlatList, Linking, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, Linking, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { api, archivosBase, mensajeDeError } from '../api/client';
 import { colores } from '../theme';
-import { base, Sello, Tarjeta, Vacio } from './comunes';
+import { base, ErrorCarga, Sello, Tarjeta, Vacio } from './comunes';
 
 interface Materia {
   id: number;
@@ -22,6 +22,7 @@ interface Material {
 export default function MateriasScreen() {
   const [materias, setMaterias] = useState<Materia[]>([]);
   const [cargando, setCargando] = useState(false);
+  const [cargaInicialCompleta, setCargaInicialCompleta] = useState(false);
   const [abierta, setAbierta] = useState<number | null>(null);
   const [materialesPor, setMaterialesPor] = useState<Record<number, Material[]>>({});
   const [error, setError] = useState('');
@@ -30,7 +31,7 @@ export default function MateriasScreen() {
     setError('');
     setCargando(true);
     api.get<Materia[]>('/alumnos/me/materias')
-      .then((r) => setMaterias(r.data))
+      .then((r) => { setMaterias(r.data); setCargaInicialCompleta(true); })
       .catch((fallo) => setError(mensajeDeError(fallo)))
       .finally(() => setCargando(false));
   }, []);
@@ -59,12 +60,14 @@ export default function MateriasScreen() {
 
   return (
     <View style={base.pantalla}>
-      {error !== '' && <Text accessibilityRole="alert" style={estilos.error}>{error}</Text>}
+      {error !== '' && <ErrorCarga mensaje={error} reintentar={cargar} />}
       <FlatList
         data={materias}
         keyExtractor={(m) => String(m.id)}
         refreshControl={<RefreshControl refreshing={cargando} onRefresh={cargar} />}
-        ListEmptyComponent={<Vacio mensaje="Aún no tienes materias: control escolar te inscribirá a un grupo." />}
+        ListEmptyComponent={cargaInicialCompleta && !error
+          ? <Vacio mensaje="Aún no tienes materias: control escolar te inscribirá a un grupo." />
+          : !cargaInicialCompleta && !error ? <ActivityIndicator accessibilityLabel="Cargando materias" /> : null}
         renderItem={({ item }) => {
           const desplegada = abierta === item.id;
           const materiales = materialesPor[item.id];
@@ -115,7 +118,6 @@ export default function MateriasScreen() {
 }
 
 const estilos = StyleSheet.create({
-  error: { color: colores.peligro, backgroundColor: '#fff', borderColor: colores.peligro, borderWidth: 1, padding: 10, marginBottom: 8 },
   materiales: {
     marginTop: 10,
     paddingTop: 10,
@@ -129,7 +131,7 @@ const estilos = StyleSheet.create({
     color: colores.gris,
     marginBottom: 6,
   },
-  material: { paddingVertical: 7 },
+  material: { minHeight: 44, justifyContent: 'center', paddingVertical: 7 },
   materialTitulo: { fontSize: 13.5, color: colores.pizarra, fontWeight: '600' },
-  indicador: { marginTop: 10, fontSize: 12, color: colores.dorado, fontWeight: '600' },
+  indicador: { marginTop: 10, fontSize: 12, color: colores.avisoTexto, fontWeight: '600' },
 });

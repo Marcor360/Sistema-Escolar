@@ -126,7 +126,8 @@ describe('OrdenesService.procesarWebhook', () => {
     })).resolves.toEqual({ ok: true });
 
     expect(pagos.registrarDePasarela).toHaveBeenCalledTimes(1);
-    expect(orden.estatus).toBe('COMPLETADA');
+    expect(orden.estatus).toBe('PENDIENTE');
+    expect(ordenes.save).not.toHaveBeenCalled();
     expect(notificaciones.crear).not.toHaveBeenCalled();
   });
 

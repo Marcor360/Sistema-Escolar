@@ -70,9 +70,9 @@ const estilos = StyleSheet.create({
   etiqueta: { fontSize: 11, letterSpacing: 0.6, textTransform: 'uppercase', color: colores.gris, marginBottom: 4 },
   input: {
     borderWidth: 1, borderColor: '#B9C0BA', backgroundColor: '#fff',
-    paddingHorizontal: 10, paddingVertical: 9, marginBottom: 14, color: colores.tinta,
+    minHeight: 44, paddingHorizontal: 10, paddingVertical: 9, marginBottom: 14, color: colores.tinta,
   },
   error: { color: colores.peligro, marginBottom: 10 },
-  boton: { backgroundColor: colores.pizarra, paddingVertical: 12, alignItems: 'center' },
+  boton: { minHeight: 44, backgroundColor: colores.pizarra, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' },
   botonTexto: { color: '#fff', fontSize: 15 },
 });

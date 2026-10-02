@@ -40,3 +40,27 @@ describe('NotificacionesService.difundir alcance', () => {
     expect(repo.insert).toHaveBeenCalledWith([{ usuarioId: 20, titulo: 'Aviso', mensaje: 'Mensaje' }]);
   });
 });
+
+describe('NotificacionesService configuración de correo', () => {
+  const dependencias = [ {} as any, {} as any, {} as any, {} as any, {} as any ];
+
+  it('exige SMTP completo en producción', () => {
+    const service = () => new NotificacionesService(
+      ...(dependencias as [any, any, any, any, any]),
+      { get: (key: string) => key === 'NODE_ENV' ? 'production' : undefined } as any,
+    );
+
+    expect(service).toThrow('SMTP_HOST, SMTP_USER, SMTP_PASS y SMTP_FROM');
+  });
+
+  it('acepta credenciales SMTP completas en producción', () => {
+    const values: Record<string, string> = {
+      NODE_ENV: 'production', SMTP_HOST: 'smtp.example.mx', SMTP_USER: 'app',
+      SMTP_PASS: 'secret', SMTP_FROM: 'Colegio <no-reply@example.mx>', SMTP_PORT: '587',
+    };
+    expect(() => new NotificacionesService(
+      ...(dependencias as [any, any, any, any, any]),
+      { get: (key: string) => values[key] } as any,
+    )).not.toThrow();
+  });
+});

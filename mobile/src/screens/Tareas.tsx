@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Alert, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import * as DocumentPicker from 'expo-document-picker';
 import { api, mensajeDeError } from '../api/client';
@@ -19,13 +19,14 @@ interface Tarea {
 export default function TareasScreen() {
   const [tareas, setTareas] = useState<Tarea[]>([]);
   const [cargando, setCargando] = useState(false);
+  const [cargaInicialCompleta, setCargaInicialCompleta] = useState(false);
   const [error, setError] = useState('');
 
   const cargar = useCallback(() => {
     setError('');
     setCargando(true);
     api.get<Tarea[]>('/alumnos/me/tareas')
-      .then((r) => setTareas(r.data))
+      .then((r) => { setTareas(r.data); setCargaInicialCompleta(true); })
       .catch((fallo) => setError(mensajeDeError(fallo)))
       .finally(() => setCargando(false));
   }, []);
@@ -69,7 +70,9 @@ export default function TareasScreen() {
         data={tareas}
         keyExtractor={(t) => String(t.id)}
         refreshControl={<RefreshControl refreshing={cargando} onRefresh={cargar} />}
-        ListEmptyComponent={<Vacio mensaje="Sin tareas pendientes por ahora." />}
+        ListEmptyComponent={cargaInicialCompleta && !error
+          ? <Vacio mensaje="Sin tareas pendientes por ahora." />
+          : !cargaInicialCompleta && !error ? <ActivityIndicator accessibilityLabel="Cargando tareas" /> : null}
         renderItem={({ item }) => (
           <Tarjeta>
             <Text style={base.tituloTarjeta}>{item.titulo}</Text>
@@ -104,7 +107,7 @@ export default function TareasScreen() {
 const estilos = StyleSheet.create({
   boton: {
     marginTop: 10, alignSelf: 'flex-start', backgroundColor: colores.pizarra,
-    paddingHorizontal: 14, paddingVertical: 8,
+    minHeight: 44, justifyContent: 'center', paddingHorizontal: 14, paddingVertical: 8,
   },
   botonTexto: { color: '#fff', fontSize: 13 },
 });

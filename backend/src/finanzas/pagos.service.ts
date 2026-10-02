@@ -1,8 +1,9 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { Pago } from '../entities/pago.entity';
 import { OrdenPago } from '../entities/orden-pago.entity';
+import { Cargo } from '../entities/cargo.entity';
 import { BitacoraFinanciera } from '../entities/bitacora-financiera.entity';
 import { AlumnosService } from '../alumnos/alumnos.service';
 import { CargosService } from './cargos.service';
@@ -59,11 +60,29 @@ export class PagosService {
   /** Pago manual de ventanilla (efectivo/transferencia/tarjeta). */
   async registrarManual(dto: RegistrarPagoDto, user: JwtUser) {
     const alumno = await this.alumnos.obtener(dto.alumnoId, user);
-    if (dto.cargoId) {
-      const cargo = await this.cargos.obtener(dto.cargoId);
-      if (cargo.alumnoId !== dto.alumnoId) throw new BadRequestException('El cargo no pertenece al alumno indicado');
-    }
     return this.dataSource.transaction(async (manager) => {
+      if (dto.cargoId) {
+        const cargo = await manager.getRepository(Cargo).findOne({
+          where: { id: dto.cargoId }, lock: { mode: 'pessimistic_write' },
+        });
+        if (!cargo) throw new NotFoundException('Cargo no encontrado');
+        if (cargo.alumnoId !== dto.alumnoId) {
+          throw new BadRequestException('El cargo no pertenece al alumno indicado');
+        }
+        if (cargo.estatus === 'CANCELADO') throw new BadRequestException('No se puede pagar un cargo cancelado');
+
+        const ordenPendiente = await manager.getRepository(OrdenPago).findOne({
+          where: { cargoId: cargo.id, estatus: In(['CREADA', 'PENDIENTE']) },
+        });
+        if (ordenPendiente) {
+          throw new ConflictException('El cargo tiene una orden Openpay pendiente; espera su resultado antes de registrar otro pago');
+        }
+        const saldo = await this.cargos.saldoDeCargo(cargo, manager);
+        if (Math.round(dto.monto * 100) > Math.round(saldo * 100)) {
+          throw new BadRequestException(`El pago excede el saldo pendiente de $${saldo.toFixed(2)}`);
+        }
+      }
+
       const pagos = manager.getRepository(Pago);
       const pago = await pagos.save(
         pagos.create({
@@ -84,59 +103,82 @@ export class PagosService {
         accion: 'PAGO_MANUAL',
         entidad: 'pago',
         entidadId: pago.id,
-        detalle: `$${dto.monto} ${dto.metodo}`,
+        detalle: dto.cargoId
+          ? `$${dto.monto} ${dto.metodo} cargo=${dto.cargoId}`
+          : `$${dto.monto} ${dto.metodo} sin_cargo; pago_no_aplicado`,
       });
       return pago;
     });
   }
 
   /** Pago confirmado por la pasarela (lo invoca el procesamiento del webhook). */
-  async registrarDePasarela(orden: OrdenPago, monto: number, referencia: string) {
-    const existente = await this.pagos.findOne({ where: { ordenPagoId: orden.id } });
-    if (existente) {
-      // Recalcular repara estados derivados y se confirma en la misma transacción.
-      if (orden.cargoId) {
-        await this.dataSource.transaction((manager) => this.cargos.recalcularEstatus(orden.cargoId!, manager));
-      }
-      return { pago: existente, creado: false };
-    }
-
-    try {
-      const pago = await this.dataSource.transaction(async (manager) => {
-        const pagos = manager.getRepository(Pago);
-        const nuevo = await pagos.save(
-          pagos.create({
-            alumnoId: orden.alumnoId,
-            cargoId: orden.cargoId,
-            ordenPagoId: orden.id,
-            monto,
-            metodo: 'PASARELA',
-            referencia,
-            estatus: 'CONFIRMADO',
-            fechaPago: new Date(),
-          }),
-        );
-        if (orden.cargoId) await this.cargos.recalcularEstatus(orden.cargoId, manager);
-        await manager.getRepository(BitacoraFinanciera).insert({
-          usuarioId: null,
-          plantelId: orden.alumno.plantelId,
-          accion: 'PAGO_PASARELA',
-          entidad: 'pago',
-          entidadId: nuevo.id,
-          detalle: `openpay=${referencia} $${monto}`,
-        });
-        return nuevo;
+  async registrarDePasarela(
+    orden: OrdenPago, monto: number, referencia: string, payloadWebhook = orden.payloadWebhook ?? '',
+  ) {
+    return this.dataSource.transaction(async (manager) => {
+      // Lock order is cargo first, then order, across manual and online payments.
+      const cargo = orden.cargoId
+        ? await manager.getRepository(Cargo).findOne({
+          where: { id: orden.cargoId }, lock: { mode: 'pessimistic_write' },
+        })
+        : null;
+      const ordenActual = await manager.getRepository(OrdenPago).findOne({
+        where: { id: orden.id }, lock: { mode: 'pessimistic_write' },
       });
-      return { pago, creado: true };
-    } catch (error) {
-      // Dos reintentos concurrentes pueden pasar la consulta anterior. El índice
-      // único elige al ganador; la transacción perdedora se revierte antes de leerlo.
-      const pagoConcurrente = await this.pagos.findOne({ where: { ordenPagoId: orden.id } });
-      if (!pagoConcurrente) throw error;
-      if (orden.cargoId) {
-        await this.dataSource.transaction((manager) => this.cargos.recalcularEstatus(orden.cargoId!, manager));
+      if (!ordenActual) throw new NotFoundException('Orden no encontrada');
+      if (ordenActual.cargoId !== orden.cargoId || ordenActual.alumnoId !== orden.alumnoId) {
+        throw new ConflictException('La orden cambió y requiere conciliación');
       }
-      return { pago: pagoConcurrente, creado: false };
-    }
+
+      const pagos = manager.getRepository(Pago);
+      const existente = await pagos.findOne({ where: { ordenPagoId: ordenActual.id } });
+      if (existente) {
+        if (cargo && existente.cargoId === cargo.id) await this.cargos.recalcularEstatus(cargo.id, manager);
+        ordenActual.estatus = 'COMPLETADA';
+        ordenActual.idExterno = referencia;
+        ordenActual.payloadWebhook = payloadWebhook;
+        await manager.getRepository(OrdenPago).save(ordenActual);
+        return { pago: existente, creado: false, aplicado: existente.cargoId !== null };
+      }
+      if (ordenActual.estatus === 'COMPLETADA') {
+        throw new ConflictException('La orden ya no admite una confirmacion de pago');
+      }
+      if (ordenActual.cargoId && !cargo) throw new NotFoundException('Cargo de la orden no encontrado');
+      if (Math.round(Number(ordenActual.monto) * 100) !== Math.round(monto * 100)) {
+        throw new BadRequestException('El importe confirmado no coincide con la orden');
+      }
+
+      // If an external payment already consumed the balance, keep the captured
+      // funds as an unapplied receipt linked to the order for financial review.
+      const saldo = cargo ? await this.cargos.saldoDeCargo(cargo, manager) : 0;
+      const aplicado = !!cargo && Math.round(monto * 100) <= Math.round(saldo * 100);
+      const nuevo = await pagos.save(pagos.create({
+        alumnoId: ordenActual.alumnoId,
+        cargoId: aplicado ? ordenActual.cargoId : null,
+        ordenPagoId: ordenActual.id,
+        monto,
+        metodo: 'PASARELA',
+        referencia,
+        estatus: 'CONFIRMADO',
+        fechaPago: new Date(),
+      }));
+      ordenActual.estatus = 'COMPLETADA';
+      ordenActual.idExterno = referencia;
+      ordenActual.payloadWebhook = payloadWebhook;
+      await manager.getRepository(OrdenPago).save(ordenActual);
+      if (aplicado && cargo) await this.cargos.recalcularEstatus(cargo.id, manager);
+      await manager.getRepository(BitacoraFinanciera).insert({
+        usuarioId: null,
+        plantelId: orden.alumno.plantelId,
+        accion: aplicado ? 'PAGO_PASARELA' : 'PAGO_PASARELA_NO_APLICADO',
+        entidad: 'pago',
+        entidadId: nuevo.id,
+        detalle: aplicado
+          ? `openpay=${referencia} $${monto}`
+          : `openpay=${referencia} $${monto}; orden=${ordenActual.id}; saldo_insuficiente_para_aplicar`,
+      });
+      return { pago: nuevo, creado: true, aplicado };
+    });
   }
+
 }

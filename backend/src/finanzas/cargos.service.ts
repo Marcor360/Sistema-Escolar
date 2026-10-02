@@ -236,8 +236,8 @@ export class CargosService {
   }
 
   /** Saldo vivo de un cargo (para órdenes de pago). */
-  async saldoDeCargo(cargo: Cargo): Promise<number> {
-    const pagado = (await this.pagadoPorCargo([cargo.id])).get(cargo.id) ?? 0;
+  async saldoDeCargo(cargo: Cargo, manager?: EntityManager): Promise<number> {
+    const pagado = (await this.pagadoPorCargo([cargo.id], manager)).get(cargo.id) ?? 0;
     return redondear(this.totalDeCargo(cargo) - pagado);
   }
 

@@ -27,7 +27,7 @@ const dataSource = new DataSource({
   password: process.env.DB_PASS || '',
   database: process.env.DB_NAME || 'escolar',
   entities: [join(__dirname, '..', 'entities', '*.entity{.ts,.js}')],
-  synchronize: process.env.DB_SYNC === 'true',
+  synchronize: false,
   namingStrategy: new SnakeNamingStrategy(),
   ...(type === 'mssql' ? { options: { encrypt: false, trustServerCertificate: true } } : {}),
 } as any);
@@ -44,8 +44,29 @@ export function validarEjecucionSeed(env: NodeJS.ProcessEnv = process.env): void
   }
 }
 
+
+export function obtenerPasswordsSeed(env: NodeJS.ProcessEnv = process.env): Record<string, string> {
+  const passwords = {
+    admin: env.SEED_ADMIN_PASSWORD,
+    coordinacion: env.SEED_COORDINACION_PASSWORD,
+    docente: env.SEED_DOCENTE_PASSWORD,
+    alumno1: env.SEED_ALUMNO1_PASSWORD,
+    alumno2: env.SEED_ALUMNO2_PASSWORD,
+  };
+  const faltantes = Object.entries(passwords).filter(([, password]) => !password?.trim()).map(([key]) => key);
+  if (faltantes.length) throw new Error(`Configura secretos para las cuentas seed faltantes: ${faltantes.join(', ')}`);
+  if (Object.values(passwords).some((password) => password!.trim().length < 16)) {
+    throw new Error('Cada cuenta seed requiere una contrasena de al menos 16 caracteres');
+  }
+  if (new Set(Object.values(passwords)).size !== Object.values(passwords).length) {
+    throw new Error('Cada cuenta seed debe tener una contrasena distinta');
+  }
+  return passwords as Record<string, string>;
+}
+
 async function main() {
   validarEjecucionSeed();
+  const passwords = obtenerPasswordsSeed();
   await dataSource.initialize();
   console.log(`Conectado a ${type} — sembrando datos…`);
 
@@ -105,31 +126,28 @@ async function main() {
   const usuariosRepo = dataSource.getRepository(Usuario);
   const crearUsuario = async (email: string, password: string, nombre: string, ap: string, rolClaves: string[]) => {
     let usuario = await usuariosRepo.findOne({ where: { email } });
-    if (usuario) return usuario;
-    usuario = await usuariosRepo.save(usuariosRepo.create({
-      email,
-      passwordHash: await bcrypt.hash(password, 10),
-      nombre,
-      apellidoPaterno: ap,
-      roles: rolClaves.map((c) => roles.get(c)!),
-    }));
-    return usuario;
+    if (!usuario) usuario = usuariosRepo.create({ email, nombre, apellidoPaterno: ap });
+    usuario.passwordHash = await bcrypt.hash(password, 10);
+    usuario.nombre = nombre;
+    usuario.apellidoPaterno = ap;
+    usuario.roles = rolClaves.map((c) => roles.get(c)!);
+    return usuariosRepo.save(usuario);
   };
 
   const admin = await crearUsuario(
     process.env.SEED_ADMIN_EMAIL || 'admin@escuela.mx',
-    process.env.SEED_ADMIN_PASSWORD || 'Admin123!',
+    passwords.admin,
     'Administrador', 'General',
     ['SUPERADMIN', 'ADMINISTRATIVO', 'FINANZAS'],
   );
   void admin;
 
   const coordinadora = await crearUsuario(
-    'coordinacion.naucalpan@escuela.mx', 'Coordina123!', 'Coordinación', 'Naucalpan', ['ADMINISTRATIVO'],
+    'coordinacion.naucalpan@escuela.mx', passwords.coordinacion, 'Coordinación', 'Naucalpan', ['ADMINISTRATIVO'],
   );
-  const uDocente = await crearUsuario('maestro@escuela.mx', 'Maestro123!', 'Laura', 'Mendoza', ['MAESTRO']);
-  const uAlumno1 = await crearUsuario('alumno1@escuela.mx', 'Alumno123!', 'Carlos', 'Ramírez', ['ALUMNO']);
-  const uAlumno2 = await crearUsuario('alumno2@escuela.mx', 'Alumno123!', 'María', 'Torres', ['ALUMNO']);
+  const uDocente = await crearUsuario('maestro@escuela.mx', passwords.docente, 'Laura', 'Mendoza', ['MAESTRO']);
+  const uAlumno1 = await crearUsuario('alumno1@escuela.mx', passwords.alumno1, 'Carlos', 'Ramírez', ['ALUMNO']);
+  const uAlumno2 = await crearUsuario('alumno2@escuela.mx', passwords.alumno2, 'María', 'Torres', ['ALUMNO']);
 
   // ---- Planteles demo (solo desarrollo) ----
   const plantelesRepo = dataSource.getRepository(Plantel);

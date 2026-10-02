@@ -38,14 +38,20 @@ export class OrdenesService {
 
     const reserva = await this.dataSource.transaction(async (manager) => {
       const cargos = manager.getRepository(Cargo);
-      await cargos.findOne({ where: { id: cargo.id }, lock: { mode: 'pessimistic_write' } });
+      const cargoBloqueado = await cargos.findOne({
+        where: { id: cargo.id }, lock: { mode: 'pessimistic_write' },
+      });
+      if (!cargoBloqueado) throw new NotFoundException('Cargo no encontrado');
+      if (cargoBloqueado.estatus === 'CANCELADO') {
+        throw new BadRequestException('No se puede generar una orden para un cargo cancelado');
+      }
       const existente = await manager.getRepository(OrdenPago).findOne({
         where: [{ cargoId: cargo.id, estatus: 'CREADA' }, { cargoId: cargo.id, estatus: 'PENDIENTE' }],
       });
       if (existente) {
         return { orden: existente, previa: true };
       }
-      const saldoActual = await this.cargos.saldoDeCargo(cargo);
+      const saldoActual = await this.cargos.saldoDeCargo(cargoBloqueado, manager);
       if (saldoActual <= 0) throw new BadRequestException('El cargo no tiene saldo pendiente');
       const repo = manager.getRepository(OrdenPago);
       return { orden: await repo.save(repo.create({
@@ -169,69 +175,102 @@ export class OrdenesService {
   }
 
   /** Webhook de Openpay: verificación inicial y eventos de transacción. */
-  async procesarWebhook(payload: Record<string, any>) {
-    if (payload?.type === 'verification') return { ok: true };
+  async procesarWebhook(payload: unknown) {
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return { ok: true, ignorado: true };
+    const evento = payload as Record<string, unknown>;
+    if (evento.type === 'verification') return { ok: true };
+    if (typeof evento.type !== 'string' || !evento.transaction || typeof evento.transaction !== 'object' ||
+        Array.isArray(evento.transaction)) return { ok: true, ignorado: true };
 
-    const idExterno: string | undefined = payload?.transaction?.id;
-    if (!idExterno) return { ok: true, ignorado: true };
+    const tx = evento.transaction as Record<string, unknown>;
+    const idExterno = typeof tx.id === 'string' && tx.id.length > 0 && tx.id.length <= 60 ? tx.id : null;
+    const idOrden = typeof tx.order_id === 'string' ? tx.order_id : '';
+    const monto = typeof tx.amount === 'number' ? tx.amount : Number.NaN;
+    const estatusPasarela = typeof tx.status === 'string' ? tx.status : '';
+    if (!idExterno || !Number.isFinite(monto) || monto <= 0) return { ok: true, ignorado: true };
 
     let orden = await this.ordenes.findOne({ where: { idExterno } });
-    if (!orden && payload.transaction?.order_id?.startsWith('ORD-')) {
-      const localId = Number(payload.transaction.order_id.slice(4));
-      if (Number.isSafeInteger(localId)) orden = await this.ordenes.findOne({ where: { id: localId } });
+    if (!orden) {
+      const match = /^ORD-(\d+)$/.exec(idOrden);
+      const localId = match ? Number(match[1]) : Number.NaN;
+      if (Number.isSafeInteger(localId) && localId > 0) {
+        orden = await this.ordenes.findOne({ where: { id: localId } });
+      }
     }
     if (!orden) return { ok: true, ignorado: true };
-    const tx = payload.transaction;
     const expectedOrderId = `ORD-${orden.id}`;
-    if (tx.order_id !== expectedOrderId || tx.currency !== 'MXN' || tx.transaction_type !== 'charge' ||
-        !Number.isFinite(Number(tx.amount)) || Math.round(Number(tx.amount) * 100) !== Math.round(Number(orden.monto) * 100)) {
+    if (idOrden !== expectedOrderId || tx.currency !== 'MXN' || tx.transaction_type !== 'charge' ||
+        Math.round(monto * 100) !== Math.round(Number(orden.monto) * 100)) {
       return { ok: true, ignorado: true };
     }
-    if (['COMPLETADA', 'FALLIDA', 'CANCELADA', 'EXPIRADA'].includes(orden.estatus)) return { ok: true };
-    // Allowlist only operational metadata; never persist cardholder or address fields.
-    orden.payloadWebhook = JSON.stringify({ type: payload.type, id: tx.id, order_id: tx.order_id,
-      amount: tx.amount, currency: tx.currency, transaction_type: tx.transaction_type, status: tx.status }).slice(0, 2000);
     if (orden.idExterno && orden.idExterno !== idExterno) return { ok: true, ignorado: true };
-    orden.idExterno = idExterno;
+    if (['COMPLETADA', 'FALLIDA', 'CANCELADA', 'EXPIRADA'].includes(orden.estatus)) return { ok: true };
 
-    switch (payload.type) {
+    // Persist only allowlisted operational metadata; never cardholder/address data.
+    const payloadSeguro = JSON.stringify({
+      type: evento.type,
+      id: idExterno,
+      order_id: idOrden,
+      amount: monto,
+      currency: 'MXN',
+      transaction_type: 'charge',
+      status: estatusPasarela,
+    }).slice(0, 2000);
+
+    switch (evento.type) {
       case 'charge.succeeded': {
-        if (tx.status !== 'completed') return { ok: true, ignorado: true };
-        const resultado = await this.pagos.registrarDePasarela(
-          orden,
-          Number(tx.amount),
-          idExterno,
-        );
-        orden.estatus = 'COMPLETADA';
-        await this.ordenes.save(orden);
+        if (estatusPasarela !== 'completed') return { ok: true, ignorado: true };
+        const resultado = await this.pagos.registrarDePasarela(orden, monto, idExterno, payloadSeguro);
         if (resultado.creado) {
           await this.notificaciones.crear(
             orden.alumno.usuarioId,
-            'Pago confirmado',
-            `Tu pago de $${resultado.pago.monto} MXN (${orden.descripcion}) fue confirmado.`,
+            resultado.aplicado ? 'Pago confirmado' : 'Pago recibido para revision',
+            resultado.aplicado
+              ? `Tu pago de $${resultado.pago.monto} MXN (${orden.descripcion}) fue confirmado.`
+              : `Recibimos tu pago de $${resultado.pago.monto} MXN (${orden.descripcion}), pero el saldo cambio y Finanzas debe aplicarlo.`,
             'FINANCIERA',
           );
         }
         break;
       }
       case 'charge.failed':
-        if (tx.status !== 'failed') return { ok: true, ignorado: true };
-        orden.estatus = 'FALLIDA';
-        await this.ordenes.save(orden);
-        break;
+        if (estatusPasarela !== 'failed') return { ok: true, ignorado: true };
+        return this.actualizarEstatusWebhook(orden, 'FALLIDA', idExterno, payloadSeguro);
       case 'charge.cancelled':
-        if (!['cancelled', 'canceled'].includes(tx.status)) return { ok: true, ignorado: true };
-        orden.estatus = 'CANCELADA';
-        await this.ordenes.save(orden);
-        break;
+        if (!['cancelled', 'canceled'].includes(estatusPasarela)) return { ok: true, ignorado: true };
+        return this.actualizarEstatusWebhook(orden, 'CANCELADA', idExterno, payloadSeguro);
       case 'transaction.expired':
-        if (tx.status !== 'expired') return { ok: true, ignorado: true };
-        orden.estatus = 'EXPIRADA';
-        await this.ordenes.save(orden);
-        break;
+        if (estatusPasarela !== 'expired') return { ok: true, ignorado: true };
+        return this.actualizarEstatusWebhook(orden, 'EXPIRADA', idExterno, payloadSeguro);
       default:
-        await this.ordenes.save(orden);
+        return { ok: true, ignorado: true };
     }
     return { ok: true };
   }
+
+  private async actualizarEstatusWebhook(
+    orden: OrdenPago,
+    estatus: 'FALLIDA' | 'CANCELADA' | 'EXPIRADA',
+    idExterno: string,
+    payload: string,
+  ) {
+    await this.dataSource.transaction(async (manager) => {
+      if (orden.cargoId) {
+        await manager.getRepository(Cargo).findOne({
+          where: { id: orden.cargoId }, lock: { mode: 'pessimistic_write' },
+        });
+      }
+      const repo = manager.getRepository(OrdenPago);
+      const actual = await repo.findOne({ where: { id: orden.id }, lock: { mode: 'pessimistic_write' } });
+      if (!actual || actual.estatus === 'COMPLETADA' || actual.estatus === 'FALLIDA' ||
+          actual.estatus === 'CANCELADA' || actual.estatus === 'EXPIRADA') return;
+      if (actual.idExterno && actual.idExterno !== idExterno) return;
+      actual.estatus = estatus;
+      actual.idExterno = idExterno;
+      actual.payloadWebhook = payload;
+      await repo.save(actual);
+    });
+    return { ok: true };
+  }
+
 }

@@ -1,4 +1,5 @@
 import axios from 'axios';
+export { mensajeDeError } from './errores';
 
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
@@ -25,13 +26,6 @@ api.interceptors.response.use(
     return Promise.reject(error);
   },
 );
-
-/** Extrae un mensaje legible de un error de la API. */
-export function mensajeDeError(error: unknown): string {
-  const data = (error as { response?: { data?: { message?: string | string[] } } }).response?.data;
-  if (Array.isArray(data?.message)) return data.message.join(', ');
-  return data?.message || 'Ocurrió un error inesperado';
-}
 
 /** Pide un enlace firmado de corta vida y lo abre en una pestaña nueva (sin exponer /uploads). */
 export async function abrirArchivo(tipo: 'materiales' | 'entregas', id: number): Promise<void> {

@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { api, mensajeDeError } from '../api/client';
 import { useSesion } from '../sesion';
@@ -19,6 +19,7 @@ export default function InicioScreen() {
   const [avisos, setAvisos] = useState<Aviso[]>([]);
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [cargando, setCargando] = useState(false);
+  const [cargaInicialCompleta, setCargaInicialCompleta] = useState(false);
   const [error, setError] = useState('');
 
   const cargar = useCallback(() => {
@@ -37,6 +38,7 @@ export default function InicioScreen() {
         setSaldo(estado.data.saldoTotal);
         setAvisos(notifs.data);
         setEventos(cal.data);
+        setCargaInicialCompleta(true);
       })
       .catch((fallo) => setError(mensajeDeError(fallo)))
       .finally(() => setCargando(false));
@@ -46,8 +48,12 @@ export default function InicioScreen() {
 
   const leerAviso = async (aviso: Aviso) => {
     if (aviso.leida) return;
-    await api.patch(`/notificaciones/${aviso.id}/leer`);
-    setAvisos((previos) => previos.map((a) => (a.id === aviso.id ? { ...a, leida: true } : a)));
+    try {
+      await api.patch(`/notificaciones/${aviso.id}/leer`);
+      setAvisos((previos) => previos.map((a) => (a.id === aviso.id ? { ...a, leida: true } : a)));
+    } catch (fallo) {
+      setError(mensajeDeError(fallo));
+    }
   };
 
   const nombre = sesion?.nombre.split(' ')[0] ?? '';
@@ -67,20 +73,23 @@ export default function InicioScreen() {
         </View>
       )}
 
-      <View style={estilos.resumen}>
-        <View style={estilos.kpi}>
-          <Text style={estilos.kpiValor}>{pendientes}</Text>
-          <Text style={estilos.kpiEtiqueta}>Tareas por entregar</Text>
+      {!cargaInicialCompleta && !error && <ActivityIndicator accessibilityLabel="Cargando inicio" />}
+      {cargaInicialCompleta && (
+        <View style={estilos.resumen}>
+          <View style={estilos.kpi}>
+            <Text style={estilos.kpiValor}>{pendientes}</Text>
+            <Text style={estilos.kpiEtiqueta}>Tareas por entregar</Text>
+          </View>
+          <View style={estilos.kpi}>
+            <Text style={estilos.kpiValor}>{pesos(saldo)}</Text>
+            <Text style={estilos.kpiEtiqueta}>Saldo pendiente</Text>
+          </View>
         </View>
-        <View style={estilos.kpi}>
-          <Text style={estilos.kpiValor}>{pesos(saldo)}</Text>
-          <Text style={estilos.kpiEtiqueta}>Saldo pendiente</Text>
-        </View>
-      </View>
+      )}
 
-      <Text style={estilos.subtitulo}>Avisos</Text>
-      {avisos.length === 0 && <Text style={base.secundario}>Sin avisos por ahora.</Text>}
-      {avisos.slice(0, 5).map((aviso) => (
+      {cargaInicialCompleta && <Text style={estilos.subtitulo}>Avisos</Text>}
+      {cargaInicialCompleta && avisos.length === 0 && <Text style={base.secundario}>Sin avisos por ahora.</Text>}
+      {cargaInicialCompleta && avisos.slice(0, 5).map((aviso) => (
         <TouchableOpacity
           key={aviso.id}
           onPress={() => leerAviso(aviso)}
@@ -98,9 +107,9 @@ export default function InicioScreen() {
         </TouchableOpacity>
       ))}
 
-      <Text style={estilos.subtitulo}>Próximos eventos</Text>
-      {eventos.length === 0 && <Text style={[base.secundario, { marginBottom: 24 }]}>Sin eventos en los próximos 30 días.</Text>}
-      {eventos.slice(0, 5).map((ev) => (
+      {cargaInicialCompleta && <Text style={estilos.subtitulo}>Próximos eventos</Text>}
+      {cargaInicialCompleta && eventos.length === 0 && <Text style={[base.secundario, { marginBottom: 24 }]}>Sin eventos en los próximos 30 días.</Text>}
+      {cargaInicialCompleta && eventos.slice(0, 5).map((ev) => (
         <Tarjeta key={ev.id}>
           <Text style={base.tituloTarjeta}>{ev.titulo}</Text>
           <Text style={base.secundario}>

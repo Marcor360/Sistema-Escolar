@@ -20,6 +20,7 @@ jobs:
           cache: npm
           cache-dependency-path: backend/package-lock.json
       - run: npm ci
+      - run: npm audit
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run build
@@ -38,7 +39,9 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci
+      - run: npm audit
       - run: npm run lint
+      - run: npm test
       - run: npm run build
 
   mobile:
@@ -54,7 +57,11 @@ jobs:
           cache: npm
           cache-dependency-path: mobile/package-lock.json
       - run: npm ci
+      - name: Revisión de vulnerabilidades npm
+        run: node ../scripts/check-mobile-audit.cjs
+      - run: npm test
       - run: npx tsc --noEmit
+      - run: npx expo export --platform android --output-dir .expo/export
 
   integration-mysql:
     runs-on: ubuntu-latest
@@ -104,6 +111,9 @@ jobs:
           MSSQL_SA_PASSWORD: Integration_Test_42!
         ports:
           - 1433:1433
+        options: >-
+          --health-cmd="/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Integration_Test_42!' -C -Q 'SELECT 1' || exit 1"
+          --health-interval=10s --health-timeout=5s --health-retries=20 --health-start-period=30s
     defaults:
       run:
         working-directory: backend
