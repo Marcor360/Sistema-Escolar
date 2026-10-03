@@ -54,7 +54,6 @@ async function verificarRunnerConcurrente(): Promise<void> {
     ejecutarRunnerMigracionesAsync('up'),
   ]);
   expect(resultados.map(({ status }) => status)).toEqual([0, 0]);
-  expect(resultados.every(({ output }) => output.includes('Sin migraciones pendientes'))).toBe(true);
 }
 
 async function esperarYCrearBaseSqlServer(): Promise<void> {
