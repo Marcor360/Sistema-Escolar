@@ -533,7 +533,7 @@ describe('Integración de flujos críticos (base aislada)', () => {
     const token = await emitirToken(admin.email);
     const ciclo = await dataSource.getRepository(CicloEscolar).findOneByOrFail({ clave: `C${sufijo}` });
     const conceptos = dataSource.getRepository(ConceptoPago);
-    await conceptos.save(conceptos.create({
+    const concepto = await conceptos.save(conceptos.create({
       clave: 'COL', nombre: 'Colegiatura integracion', tipo: 'COLEGIATURA', montoBase: 100,
     }));
     const body = { cicloId: ciclo.id, periodo: '2026-09', monto: 100 };
@@ -544,7 +544,12 @@ describe('Integración de flujos críticos (base aislada)', () => {
 
     expect(primera.response.status).toBe(201);
     expect(segunda.response.status).toBe(201);
-    expect(primera.data.generados + segunda.data.generados).toBe(1);
+    expect(primera.data.generados + segunda.data.generados).toBe(2);
+    expect(await dataSource.getRepository(Cargo).countBy({
+      conceptoId: concepto.id,
+      cicloId: ciclo.id,
+      periodo: '2026-09',
+    })).toBe(2);
     expect(await dataSource.getRepository(Cargo).countBy({
       claveGeneracion: `COLEGIATURA:${ciclo.id}:${alumnoId}:2026-09`,
     })).toBe(1);

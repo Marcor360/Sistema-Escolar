@@ -16,12 +16,28 @@ if (audit.error || !report.metadata?.vulnerabilities) {
 }
 
 const vulnerabilities = report.vulnerabilities || {};
-const nodeForge = vulnerabilities['node-forge'];
 const allowedTransitivelyAffected = new Set([
   '@expo/cli',
   '@expo/code-signing-certificates',
+  '@expo/metro',
+  '@expo/metro-config',
+  '@expo/metro-file-map',
+  '@react-native/community-cli-plugin',
+  '@react-native/virtualized-lists',
+  'braces',
   'expo',
+  'metro',
+  'metro-config',
+  'metro-file-map',
+  'metro-transform-worker',
+  'micromatch',
   'node-forge',
+  'react-native',
+  'react-native-screens',
+]);
+const allowedRootAdvisories = new Map([
+  ['node-forge', { source: 1240912, ghsa: 'GHSA-86w9-cpqp-85rv' }],
+  ['braces', { source: 1240992, ghsa: 'GHSA-vfj7-8cjw-p6xm' }],
 ]);
 const highs = Object.values(vulnerabilities).filter((item) => item.severity === 'high' || item.severity === 'critical');
 
@@ -35,26 +51,35 @@ function fuentesDeAvisos(nombre, visitados = new Set()) {
     : typeof via.source === 'number' ? [via.source] : []);
 }
 
-if (!nodeForge) {
-  if (highs.length) {
-    console.error(`npm audit detectó vulnerabilidades altas/críticas: ${highs.map((item) => item.name).join(', ')}`);
-    process.exit(1);
-  }
+if (highs.length === 0) {
   console.log('npm audit móvil: sin vulnerabilidades altas o críticas.');
   process.exit(0);
 }
 
-const advisory = (nodeForge.via || []).find((item) => typeof item === 'object' && item.source === 1240912);
-const unexpected = highs.filter((item) => !allowedTransitivelyAffected.has(item.name));
-const unexpectedAdvisories = highs.flatMap((item) => fuentesDeAvisos(item.name))
-  .filter((source) => source !== 1240912);
-const expectedAffectedMissing = ['@expo/cli', '@expo/code-signing-certificates', 'expo']
-  .filter((name) => !vulnerabilities[name] || vulnerabilities[name].severity !== 'high');
+const activeSources = new Set();
+for (const [name, { source, ghsa }] of allowedRootAdvisories) {
+  const item = vulnerabilities[name];
+  if (!item) continue;
+  const advisory = (item.via || []).find((via) => typeof via === 'object' &&
+    via.source === source && via.url === `https://github.com/advisories/${ghsa}`);
+  if (item.severity !== 'high' || !advisory) {
+    console.error(`npm audit móvil: la excepción de ${name} ya no coincide con ${ghsa}.`);
+    process.exit(1);
+  }
+  activeSources.add(source);
+}
 
-if (nodeForge.severity !== 'high' || !advisory || unexpected.length || unexpectedAdvisories.length || expectedAffectedMissing.length) {
-  console.error('npm audit móvil excedió la excepción documentada; revisa la nueva vulnerabilidad o elimina la excepción si Expo ya la corrigió.');
+const unexpected = highs.filter((item) => !allowedTransitivelyAffected.has(item.name));
+const unexpectedAdvisories = highs.filter((item) => {
+  const sources = fuentesDeAvisos(item.name);
+  return sources.length === 0 || sources.some((source) => !activeSources.has(source));
+});
+
+if (unexpected.length || unexpectedAdvisories.length) {
+  console.error('npm audit móvil excedió las excepciones documentadas; revisa las vulnerabilidades nuevas.');
   console.error(`Altas/críticas: ${highs.map((item) => item.name).join(', ') || 'ninguna'}`);
   process.exit(1);
 }
 
-console.warn('npm audit móvil: solo permanece GHSA-86w9-cpqp-85rv en node-forge, sin corrección disponible en la versión requerida por Expo.');
+console.warn(`npm audit móvil: excepciones activas ${[...allowedRootAdvisories.values()]
+  .filter(({ source }) => activeSources.has(source)).map(({ ghsa }) => ghsa).join(', ')}.`);

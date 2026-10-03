@@ -24,7 +24,7 @@ Digitalizar y automatizar los procesos educativos con:
 | Tecnología | Versión | Función |
 |------------|---------|---------|
 | **Node.js** | 20+ | Runtime JavaScript |
-| **NestJS** | 10 | Framework API con arquitectura modular y dependencias inyectadas |
+| **NestJS** | 11 | Framework API con arquitectura modular y dependencias inyectadas |
 | **TypeORM** | - | ORM para gestión de base de datos con soporte MySQL/SQL Server |
 | **JWT** | passport-jwt | Autenticación con tokens firmados y expiración diferenciada por portal |
 | **Multer** | - | Manejo de archivos (materiales, entregas) con validación |
