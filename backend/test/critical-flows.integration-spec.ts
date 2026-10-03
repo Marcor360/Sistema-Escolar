@@ -5,7 +5,7 @@ import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { AddressInfo } from 'net';
 import { basename, resolve } from 'path';
 import { readFileSync, unlinkSync } from 'fs';
-import { spawnSync } from 'child_process';
+import { spawn, spawnSync } from 'child_process';
 import * as bcrypt from 'bcryptjs';
 import { DataSource } from 'typeorm';
 import {
@@ -29,6 +29,32 @@ function ejecutarRunnerMigraciones(accion: 'adopt' | 'up' | 'status'): string {
     throw new Error(`Falló el runner de migraciones (${accion}): ${resultado.stderr || resultado.stdout}`);
   }
   return resultado.stdout;
+}
+
+function ejecutarRunnerMigracionesAsync(accion: 'up'): Promise<{ status: number | null; output: string }> {
+  return new Promise((resolveProceso, rejectProceso) => {
+    const proceso = spawn(process.execPath, [
+      '-r', 'ts-node/register', '-r', 'tsconfig-paths/register',
+      'src/database/migrate.ts', accion,
+    ], {
+      cwd: resolve(process.cwd()),
+      env: { ...process.env, DB_SYNC: 'false', DB_MIGRATION_BASELINE: 'v1' },
+    });
+    let output = '';
+    proceso.stdout.on('data', (chunk: Buffer) => { output += chunk.toString(); });
+    proceso.stderr.on('data', (chunk: Buffer) => { output += chunk.toString(); });
+    proceso.once('error', rejectProceso);
+    proceso.once('close', (status) => resolveProceso({ status, output }));
+  });
+}
+
+async function verificarRunnerConcurrente(): Promise<void> {
+  const resultados = await Promise.all([
+    ejecutarRunnerMigracionesAsync('up'),
+    ejecutarRunnerMigracionesAsync('up'),
+  ]);
+  expect(resultados.map(({ status }) => status)).toEqual([0, 0]);
+  expect(resultados.every(({ output }) => output.includes('Sin migraciones pendientes'))).toBe(true);
 }
 
 async function esperarYCrearBaseSqlServer(): Promise<void> {
@@ -96,6 +122,7 @@ async function instalarBaseline(): Promise<void> {
     ejecutarRunnerMigraciones('adopt');
     ejecutarRunnerMigraciones('up');
     expect(ejecutarRunnerMigraciones('status')).toContain('Sin migraciones pendientes');
+    await verificarRunnerConcurrente();
     return;
   }
 
@@ -130,6 +157,7 @@ async function instalarBaseline(): Promise<void> {
   ejecutarRunnerMigraciones('adopt');
   ejecutarRunnerMigraciones('up');
   expect(ejecutarRunnerMigraciones('status')).toContain('Sin migraciones pendientes');
+  await verificarRunnerConcurrente();
 }
 
 describe('Integración de flujos críticos (base aislada)', () => {
