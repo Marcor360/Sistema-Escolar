@@ -49,8 +49,8 @@ Digitalizar y automatizar los procesos educativos con:
 ### Base de Datos
 | Motor | Características |
 |-------|-----------------|
-| **MySQL 8** | Motor predeterminado del entorno local; falta validación con instancia real en CI |
-| **SQL Server 2019+** | Esquema espejo; requiere pruebas de integración con el driver real |
+| **MySQL 8** | Motor predeterminado; integración HTTP validada en CI con MySQL 8.4 y `DB_SYNC=false` |
+| **SQL Server 2019+** | Esquema espejo; integración HTTP validada en CI con SQL Server 2022 y `DB_SYNC=false` |
 
 ### ETL (Migración)
 | Tecnología | Función |

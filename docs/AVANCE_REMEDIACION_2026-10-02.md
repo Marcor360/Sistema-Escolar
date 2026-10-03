@@ -2,17 +2,21 @@
 
 ## Fase 0 — estabilización de CI
 
-La ejecución GitHub Actions `1.8.2` (2 de octubre, run `37038935551`) confirmó que Backend, Mobile y ETL pasan; Web falló al iniciar workers `fork` de Vitest y las integraciones MySQL/SQL Server completaron el arranque y baseline, pero excedieron el límite estricto de cinco logins por IP durante la suite.
+La ejecución GitHub Actions `1.8.2` (run `37038935551`) mostró fallos de workers Vitest y límite de login. El commit `1.8.3` corrigió ambos; su run `37096455364` pasó 14 de 15 pruebas de integración por motor, y señaló una expectativa incorrecta sobre dos alumnos inscritos, además del aviso nuevo de `braces` en npm audit.
 
-Correcciones aplicadas en este árbol de trabajo:
+El [run `37097877896` del PR #1](https://github.com/Marcor360/Sistema-Escolar/actions/runs/37097877896), commit `88b9467`, terminó verde en los seis jobs: Backend, Web, Mobile, ETL, MySQL y SQL Server. Se verificó `DB_SYNC=false` en ambos jobs de base. Queda integrar el PR y comprobar el run de `main`.
+
+Correcciones aplicadas:
 
 - Web ejecuta Vitest con un worker para evitar fallos de creación de procesos en el runner Linux.
 - Las pruebas de integración generan JWT de fixture para los flujos protegidos y conservan una llamada real a `/auth/login`; no se cambia el límite de autenticación de cinco intentos.
 - Ambos jobs de base ya mantienen `DB_SYNC=false` y el baseline instalable en una base aislada. MySQL cuenta con health check de servicio; SQL Server cuenta con health check y reintentos con timeout para crear la base cuando el servidor queda listo.
+- La suite de colegiaturas concurrentes comprueba dos cargos únicos para los dos alumnos inscritos.
+- Backend y Web actualizaron Jest/TypeScript ESLint; `npm audit` completo reportó cero en CI. Web usa jsdom compatible con Node 20.
 
-Verificación local de este corte: backend lint, typecheck, build y 106 pruebas; web lint, 5 pruebas y build; mobile 2 pruebas, TypeScript y export Android; ETL 3 pruebas. El test de integración también compila sin errores. Esta máquina no tiene Docker ni puertos de base disponibles, por lo que los dos motores aún requieren una ejecución CI posterior a estos cambios. La Fase 0 permanece **PARCIAL** hasta que MySQL y SQL Server terminen verdes en Actions.
+Verificación local de este corte: backend lint, typecheck, build y 106 pruebas; web lint, 5 pruebas y build; mobile 2 pruebas, TypeScript y export Android; ETL 3 pruebas. El test de integración compila sin errores. La ejecución real de MySQL y SQL Server quedó certificada por Actions en el PR; esta máquina no tiene Docker.
 
-Después de la ejecución remota, la base de avisos npm incorporó `GHSA-vfj7-8cjw-p6xm` para `braces` hasta 3.0.3 y actualmente no declara una versión corregida. La auditoría local reporta altas solo en dependencias de desarrollo de backend/web; `npm audit --omit=dev` informa cero en ambos. El job remoto `1.8.2` aún había reportado cero al ejecutarse. Se conserva el chequeo completo y se documenta este hallazgo para resolverlo al existir actualización compatible; no se baja el umbral de auditoría.
+La base de avisos npm incorporó `GHSA-vfj7-8cjw-p6xm` para `braces` hasta 3.0.3 y actualmente no declara una versión corregida. Backend y Web eliminaron esa ruta transitiva al actualizar sus herramientas y mantienen `npm audit` completo. Mobile conserva dos excepciones exactas de Expo/Metro documentadas en `EXCEPCIONES_NPM_AUDIT.md`; otros avisos altos/críticos siguen fallando en CI.
 
 Este corte complementa `AUDITORIA.md`, cuya revisión inicial fue el 1 de octubre. Los cambios están en el árbol de trabajo y aún no se han desplegado ni validado con las cuentas o servicios institucionales.
 
@@ -28,7 +32,7 @@ Este corte complementa `AUDITORIA.md`, cuya revisión inicial fue el 1 de octubr
 
 ## Dependencias
 
-La auditoría npm local del 2 de octubre informa cero vulnerabilidades en backend y web. El móvil conserva una alerta alta transitiva GHSA-86w9-cpqp-85rv en `node-forge`, dentro de Expo 56; se documentó una excepción específica que hace fallar CI si aparece otra alerta alta/crítica o si la excepción ya no coincide. No se bajó Expo a una versión mayor incompatible.
+La auditoría npm del PR informa cero vulnerabilidades en backend y web. El móvil conserva dos alertas altas transitivas: GHSA-86w9-cpqp-85rv (`node-forge`) y GHSA-vfj7-8cjw-p6xm (`braces`), dentro de Expo/Metro. Las excepciones específicas hacen fallar CI si aparece otro aviso alto/crítico. No se bajó Expo a una versión incompatible.
 
 ## Verificación local
 
@@ -37,7 +41,7 @@ La auditoría npm local del 2 de octubre informa cero vulnerabilidades en backen
 - Móvil: revisión de auditoría conforme a la excepción, TypeScript y export Android completados.
 - ETL: 3 pruebas de adaptadores completadas.
 
-La integración HTTP contra MySQL y SQL Server sigue pendiente: esta máquina no tiene Docker ni servicios de base de datos. Los jobs están configurados en CI; deben quedar verdes en ambos motores.
+La integración HTTP pasó en MySQL y SQL Server en el run `37097877896` del PR #1. La ruta de actualización desde una base histórica sigue pendiente de prueba.
 
 ## Pendientes bloqueados por datos o responsables externos
 
@@ -48,7 +52,7 @@ La integración HTTP contra MySQL y SQL Server sigue pendiente: esta máquina no
 ## Pendientes técnicos del repositorio
 
 - No existe todavía un runner ni un registro automático de migraciones. Antes de implementarlo hay que acordar y probar el mecanismo en MySQL y SQL Server aislados.
-- La unicidad de grupos por ciclo/nombre no permite repetir el nombre en otro plantel. La corrección histórica exige retirar el índice vigente, acción no permitida por las instrucciones actuales; no se cambió el esquema.
+- La unicidad de grupos por ciclo/nombre no permite repetir el nombre en otro plantel. La corrección requiere una migración controlada que sustituya el índice vigente, tras revisar conflictos en los datos existentes.
 - La suite automatizada del portal cubre autorización de rutas y pruebas de mensajes de error, pero necesita más flujos de usuario. El móvil tiene pruebas de utilidades y bundle JavaScript, no compilación nativa firmada ni pruebas de interacción en dispositivo.
 
 No se declara el MVP listo para producción con este corte.
