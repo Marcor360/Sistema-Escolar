@@ -205,13 +205,11 @@ async function main() {
   if (!materia) materia = await materiasRepo.save(materiasRepo.create({ clave: 'MAT-101', nombre: 'Matemáticas I', creditos: 8 }));
 
   const gruposRepo = dataSource.getRepository(Grupo);
-  let grupo = await gruposRepo.findOne({ where: { cicloId: ciclo.id, nombre: '1-A' } });
+  let grupo = await gruposRepo.findOne({ where: { cicloId: ciclo.id, plantelId: naucalpan.id, nombre: '1-A' } });
   if (!grupo) grupo = gruposRepo.create({ cicloId: ciclo.id, plantelId: naucalpan.id, nombre: '1-A', grado: '1', turno: 'MATUTINO' });
-  grupo.plantelId = naucalpan.id;
   grupo = await gruposRepo.save(grupo);
-  let grupoB = await gruposRepo.findOne({ where: { cicloId: ciclo.id, nombre: '1-B' } });
+  let grupoB = await gruposRepo.findOne({ where: { cicloId: ciclo.id, plantelId: losReyes.id, nombre: '1-B' } });
   if (!grupoB) grupoB = await gruposRepo.save(gruposRepo.create({ cicloId: ciclo.id, plantelId: losReyes.id, nombre: '1-B', grado: '1', turno: 'MATUTINO' }));
-  else if (grupoB.plantelId !== losReyes.id) { grupoB.plantelId = losReyes.id; grupoB = await gruposRepo.save(grupoB); }
 
   const gmRepo = dataSource.getRepository(GrupoMateria);
   let gm = await gmRepo.findOne({ where: { grupoId: grupo.id, materiaId: materia.id } });

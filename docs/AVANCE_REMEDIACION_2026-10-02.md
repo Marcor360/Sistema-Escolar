@@ -52,7 +52,7 @@ La integración HTTP pasó en MySQL y SQL Server en el run `37097877896` del PR 
 ## Pendientes técnicos del repositorio
 
 - No existe todavía un runner ni un registro automático de migraciones. Antes de implementarlo hay que acordar y probar el mecanismo en MySQL y SQL Server aislados.
-- La unicidad de grupos por ciclo/nombre no permite repetir el nombre en otro plantel. La corrección requiere una migración controlada que sustituya el índice vigente, tras revisar conflictos en los datos existentes.
+- La corrección de unicidad por plantel ya cuenta con entidad y migraciones incrementales MySQL/SQL Server; queda revisar datos y aplicarla por entorno.
 - La suite automatizada del portal cubre autorización de rutas y pruebas de mensajes de error, pero necesita más flujos de usuario. El móvil tiene pruebas de utilidades y bundle JavaScript, no compilación nativa firmada ni pruebas de interacción en dispositivo.
 
 No se declara el MVP listo para producción con este corte.

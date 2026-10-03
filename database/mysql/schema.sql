@@ -139,7 +139,7 @@ CREATE TABLE grupos (
   turno VARCHAR(10) NULL,                          -- MATUTINO | VESPERTINO
   activo TINYINT(1) NOT NULL DEFAULT 1,             -- ver migracion_grupos_ciclo_vida.sql
   legacy_id BIGINT NULL,                           -- ver migracion_legacy_id.sql
-  UNIQUE KEY uq_grupo_ciclo_nombre (ciclo_id, nombre),
+  UNIQUE KEY uq_grupo_ciclo_plantel_nombre (ciclo_id, plantel_id, nombre),
   UNIQUE KEY uq_grupos_legacy (legacy_id),
   CONSTRAINT fk_gr_ciclo FOREIGN KEY (ciclo_id) REFERENCES ciclos_escolares(id),
   CONSTRAINT fk_gr_plantel FOREIGN KEY (plantel_id) REFERENCES planteles(id)

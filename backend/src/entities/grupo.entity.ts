@@ -3,7 +3,7 @@ import { CicloEscolar } from './ciclo-escolar.entity';
 import { Plantel } from './plantel.entity';
 
 @Entity('grupos')
-@Unique('uq_grupo_ciclo_nombre', ['cicloId', 'nombre'])
+@Unique('uq_grupo_ciclo_plantel_nombre', ['cicloId', 'plantelId', 'nombre'])
 export class Grupo {
   @PrimaryGeneratedColumn() id: number;
   @Column() cicloId: number;

@@ -65,6 +65,10 @@ async function instalarBaseline(): Promise<void> {
       for (const lote of contenido.split(/^\s*GO\s*$/im).map((parte: string) => parte.trim()).filter(Boolean)) {
         await pool.request().query(lote);
       }
+      const migracionGrupos = readFileSync(resolve(raiz, 'database/sqlserver/migracion_grupos_plantel_unique.sql'), 'utf8');
+      for (const lote of migracionGrupos.split(/^\s*GO\s*$/im).map((parte: string) => parte.trim()).filter(Boolean)) {
+        await pool.request().query(lote);
+      }
     } finally {
       await pool.close();
     }
@@ -87,6 +91,8 @@ async function instalarBaseline(): Promise<void> {
     if (Number(tablas[0].total) !== 0) throw new Error('La base de integración MySQL no está vacía');
     const contenido = readFileSync(resolve(raiz, 'database/mysql/baseline_v1.sql'), 'utf8');
     await conexion.query(contenido);
+    const migracionGrupos = readFileSync(resolve(raiz, 'database/mysql/migracion_grupos_plantel_unique.sql'), 'utf8');
+    await conexion.query(migracionGrupos);
   } finally {
     await conexion.end();
   }
@@ -454,6 +460,19 @@ describe('Integración de flujos críticos (base aislada)', () => {
       body: { cicloId: ciclo.data.id, plantelId, nombre: `G${sufijo}`, grado: '1' },
     });
     expect(grupo.response.status).toBe(201);
+    const tokenSuperadmin = await emitirToken(
+      (await dataSource.getRepository(Usuario).findOneByOrFail({ id: superadminId })).email,
+    );
+    const grupoMismoNombreOtroPlantel = await api('/academico/grupos', {
+      method: 'POST', token: tokenSuperadmin,
+      body: { cicloId: ciclo.data.id, plantelId: otroPlantelId, nombre: `G${sufijo}`, grado: '1' },
+    });
+    expect(grupoMismoNombreOtroPlantel.response.status).toBe(201);
+    const grupoDuplicadoMismoPlantel = await api('/academico/grupos', {
+      method: 'POST', token: tokenSuperadmin,
+      body: { cicloId: ciclo.data.id, plantelId, nombre: `G${sufijo}`, grado: '2' },
+    });
+    expect(grupoDuplicadoMismoPlantel.response.status).toBe(409);
     const grupoId = grupo.data.id;
     const asignacion = await api(`/academico/grupos/${grupoId}/materias`, {
       method: 'POST', token: tokenAdmin, body: { materiaId: materia.data.id },
