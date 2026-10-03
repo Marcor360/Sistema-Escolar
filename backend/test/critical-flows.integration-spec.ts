@@ -5,6 +5,7 @@ import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { AddressInfo } from 'net';
 import { basename, resolve } from 'path';
 import { readFileSync, unlinkSync } from 'fs';
+import { spawnSync } from 'child_process';
 import * as bcrypt from 'bcryptjs';
 import { DataSource } from 'typeorm';
 import {
@@ -14,6 +15,21 @@ import {
 import { AppModule } from '../src/app.module';
 
 const dbName = process.env.DB_NAME ?? '';
+
+function ejecutarRunnerMigraciones(accion: 'adopt' | 'up' | 'status'): string {
+  const resultado = spawnSync(process.execPath, [
+    '-r', 'ts-node/register', '-r', 'tsconfig-paths/register',
+    'src/database/migrate.ts', accion,
+  ], {
+    cwd: resolve(process.cwd()),
+    encoding: 'utf8',
+    env: { ...process.env, DB_SYNC: 'false', DB_MIGRATION_BASELINE: 'v1' },
+  });
+  if (resultado.status !== 0) {
+    throw new Error(`Falló el runner de migraciones (${accion}): ${resultado.stderr || resultado.stdout}`);
+  }
+  return resultado.stdout;
+}
 
 async function esperarYCrearBaseSqlServer(): Promise<void> {
   const sql = require('mssql');
@@ -65,13 +81,21 @@ async function instalarBaseline(): Promise<void> {
       for (const lote of contenido.split(/^\s*GO\s*$/im).map((parte: string) => parte.trim()).filter(Boolean)) {
         await pool.request().query(lote);
       }
-      const migracionGrupos = readFileSync(resolve(raiz, 'database/sqlserver/migracion_grupos_plantel_unique.sql'), 'utf8');
-      for (const lote of migracionGrupos.split(/^\s*GO\s*$/im).map((parte: string) => parte.trim()).filter(Boolean)) {
-        await pool.request().query(lote);
-      }
+      await pool.request().query(`
+        INSERT INTO planteles (clave, nombre) VALUES ('MIGRACION_FIXTURE', 'Plantel previo a migración');
+        INSERT INTO ciclos_escolares (clave, nombre, fecha_inicio, fecha_fin, activo)
+          VALUES ('MIGRACION_FIXTURE', 'Ciclo previo a migración', '2026-08-01', '2027-07-31', 0);
+        INSERT INTO grupos (ciclo_id, plantel_id, nombre)
+          SELECT c.id, p.id, 'GRUPO_MIGRACION_EXISTENTE'
+          FROM ciclos_escolares c CROSS JOIN planteles p
+          WHERE c.clave = 'MIGRACION_FIXTURE' AND p.clave = 'MIGRACION_FIXTURE';
+      `);
     } finally {
       await pool.close();
     }
+    ejecutarRunnerMigraciones('adopt');
+    ejecutarRunnerMigraciones('up');
+    expect(ejecutarRunnerMigraciones('status')).toContain('Sin migraciones pendientes');
     return;
   }
 
@@ -91,11 +115,21 @@ async function instalarBaseline(): Promise<void> {
     if (Number(tablas[0].total) !== 0) throw new Error('La base de integración MySQL no está vacía');
     const contenido = readFileSync(resolve(raiz, 'database/mysql/baseline_v1.sql'), 'utf8');
     await conexion.query(contenido);
-    const migracionGrupos = readFileSync(resolve(raiz, 'database/mysql/migracion_grupos_plantel_unique.sql'), 'utf8');
-    await conexion.query(migracionGrupos);
+    await conexion.query(`
+      INSERT INTO planteles (clave, nombre) VALUES ('MIGRACION_FIXTURE', 'Plantel previo a migración');
+      INSERT INTO ciclos_escolares (clave, nombre, fecha_inicio, fecha_fin, activo)
+        VALUES ('MIGRACION_FIXTURE', 'Ciclo previo a migración', '2026-08-01', '2027-07-31', 0);
+      INSERT INTO grupos (ciclo_id, plantel_id, nombre)
+        SELECT c.id, p.id, 'GRUPO_MIGRACION_EXISTENTE'
+        FROM ciclos_escolares c CROSS JOIN planteles p
+        WHERE c.clave = 'MIGRACION_FIXTURE' AND p.clave = 'MIGRACION_FIXTURE'
+    `);
   } finally {
     await conexion.end();
   }
+  ejecutarRunnerMigraciones('adopt');
+  ejecutarRunnerMigraciones('up');
+  expect(ejecutarRunnerMigraciones('status')).toContain('Sin migraciones pendientes');
 }
 
 describe('Integración de flujos críticos (base aislada)', () => {
@@ -266,6 +300,11 @@ describe('Integración de flujos críticos (base aislada)', () => {
       }),
     );
     ordenId = orden.id;
+  });
+
+  it('conserva los grupos preexistentes al actualizar el índice histórico', async () => {
+    const grupoExistente = await dataSource.getRepository(Grupo).findOneBy({ nombre: 'GRUPO_MIGRACION_EXISTENTE' });
+    expect(grupoExistente).toEqual(expect.objectContaining({ nombre: 'GRUPO_MIGRACION_EXISTENTE' }));
   });
 
   afterAll(async () => {

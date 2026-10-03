@@ -542,8 +542,9 @@ docker compose up -d mysql
 # SQL Server en Docker (alternativa)
 docker compose --profile mssql up -d sqlserver
 
-# Las migraciones actuales se aplican manualmente, con DB_SYNC=false.
-# Consulta docs/MIGRACIONES.md y usa una copia de respaldo antes de cada cambio.
+# Compila, revisa y aplica las migraciones pendientes con DB_SYNC=false.
+# npm run build; npm run db:migrate:status; npm run db:migrate
+# Consulta docs/MIGRACIONES.md; adopta un historial existente solo tras auditarlo.
 ```
 
 ---
