@@ -536,6 +536,10 @@ npx tsc --noEmit               # Verificar TypeScript
 
 ### Base de Datos
 ```bash
+# Copia .env.docker.example a .env y cambia las contraseñas de desarrollo.
+# Los puertos publicados por Compose quedan enlazados a 127.0.0.1.
+cp .env.docker.example .env
+
 # MySQL en Docker
 docker compose up -d mysql
 

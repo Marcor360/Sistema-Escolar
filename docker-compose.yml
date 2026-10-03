@@ -1,4 +1,4 @@
-# Infraestructura local de desarrollo.
+# Infraestructura local de desarrollo. Configura credenciales en .env.
 # MySQL por defecto:            docker compose up -d mysql
 # SQL Server (perfil opcional): docker compose --profile mssql up -d sqlserver
 services:
@@ -6,16 +6,16 @@ services:
     image: mysql:8.4
     container_name: escolar-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: escolar
-      MYSQL_USER: escolar
-      MYSQL_PASSWORD: escolar123
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Define MYSQL_ROOT_PASSWORD en .env}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-escolar}
+      MYSQL_USER: ${MYSQL_USER:-escolar}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Define MYSQL_PASSWORD en .env}
     ports:
-      - "3306:3306"
+      - "127.0.0.1:${MYSQL_PORT:-3306}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -p\"$${MYSQL_ROOT_PASSWORD}\""]
       interval: 10s
       retries: 10
 
@@ -25,9 +25,9 @@ services:
     profiles: ["mssql"]
     environment:
       ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: "Escolar123!"
+      MSSQL_SA_PASSWORD: ${SQLSERVER_SA_PASSWORD:?Define SQLSERVER_SA_PASSWORD en .env}
     ports:
-      - "1433:1433"
+      - "127.0.0.1:${SQLSERVER_PORT:-1433}:1433"
     volumes:
       - mssql_data:/var/opt/mssql
 

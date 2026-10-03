@@ -11,6 +11,7 @@ function crearServicio(overrides: {
   docentes?: any;
   usuarioPlanteles?: any;
   scope?: any;
+  dataSource?: any;
   }) {
   return new AcademicoService(
     {} as any,
@@ -25,9 +26,23 @@ function crearServicio(overrides: {
     overrides.docentes ?? ({} as any),
     overrides.scope ?? ({ validarGestion: jest.fn().mockResolvedValue(undefined) } as any),
     overrides.usuarioPlanteles ?? ({} as any),
-    {} as any,
+    overrides.dataSource ?? ({} as any),
   );
 }
+
+describe('AcademicoService.crearCiclo', () => {
+  it.each([
+    { code: 'ER_LOCK_DEADLOCK' },
+    { originalError: { info: { number: 1205 } } },
+    { driverError: { originalError: { info: { number: 1205 } } } },
+  ])('convierte conflictos transaccionales del motor en un conflicto reintentable', async (error) => {
+    const dataSource = { transaction: jest.fn().mockRejectedValue(error) };
+    const service = crearServicio({ dataSource });
+
+    await expect(service.crearCiclo({} as any)).rejects.toThrow(ConflictException);
+    expect(dataSource.transaction).toHaveBeenCalledWith('SERIALIZABLE', expect.any(Function));
+  });
+});
 
 describe('AcademicoService.eliminarGrupo', () => {
   it('rechaza la baja si el grupo tiene inscripciones activas', async () => {

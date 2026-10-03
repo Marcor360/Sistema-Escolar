@@ -22,6 +22,27 @@ function esConflictoUnico(error: unknown): boolean {
     e?.originalError?.info?.number === 2601 || e?.originalError?.info?.number === 2627;
 }
 
+function esConflictoTransaccional(error: unknown): boolean {
+  const e = error as {
+    code?: string;
+    errno?: number;
+    number?: number;
+    originalError?: { info?: { number?: number } };
+    driverError?: {
+      code?: string;
+      errno?: number;
+      number?: number;
+      originalError?: { info?: { number?: number } };
+    };
+  };
+  const code = e?.code ?? e?.driverError?.code;
+  const errno = e?.errno ?? e?.driverError?.errno;
+  const numero = e?.number ?? e?.originalError?.info?.number ??
+    e?.driverError?.number ?? e?.driverError?.originalError?.info?.number;
+  return code === 'ER_LOCK_DEADLOCK' || code === 'ER_LOCK_WAIT_TIMEOUT' ||
+    errno === 1205 || errno === 1213 || numero === 1205 || numero === 1222 || numero === 3960;
+}
+
 @Injectable()
 export class AcademicoService {
   constructor(
@@ -44,22 +65,36 @@ export class AcademicoService {
   listarCiclos() { return this.ciclos.find({ order: { fechaInicio: 'DESC' } }); }
 
   async crearCiclo(dto: CicloDto) {
-    return this.dataSource.transaction('SERIALIZABLE', async (manager) => {
-      const ciclos = manager.getRepository(CicloEscolar);
-      if (dto.activo) await ciclos.update({ activo: true }, { activo: false });
-      return ciclos.save(ciclos.create({ ...dto, activo: dto.activo ?? false }));
-    });
+    try {
+      return await this.dataSource.transaction('SERIALIZABLE', async (manager) => {
+        const ciclos = manager.getRepository(CicloEscolar);
+        if (dto.activo) await ciclos.update({ activo: true }, { activo: false });
+        return ciclos.save(ciclos.create({ ...dto, activo: dto.activo ?? false }));
+      });
+    } catch (error) {
+      if (esConflictoTransaccional(error)) {
+        throw new ConflictException('Otro cambio de ciclo ocurrió al mismo tiempo; vuelve a intentar');
+      }
+      throw error;
+    }
   }
 
   async actualizarCiclo(id: number, dto: ActualizarCicloDto) {
-    return this.dataSource.transaction('SERIALIZABLE', async (manager) => {
-      const ciclos = manager.getRepository(CicloEscolar);
-      const actual = await ciclos.findOne({ where: { id } });
-      if (!actual) throw new NotFoundException('Ciclo escolar no encontrado');
-      if (dto.activo) await ciclos.update({ activo: true }, { activo: false });
-      await ciclos.update(id, dto);
-      return ciclos.findOne({ where: { id } });
-    });
+    try {
+      return await this.dataSource.transaction('SERIALIZABLE', async (manager) => {
+        const ciclos = manager.getRepository(CicloEscolar);
+        const actual = await ciclos.findOne({ where: { id } });
+        if (!actual) throw new NotFoundException('Ciclo escolar no encontrado');
+        if (dto.activo) await ciclos.update({ activo: true }, { activo: false });
+        await ciclos.update(id, dto);
+        return ciclos.findOne({ where: { id } });
+      });
+    } catch (error) {
+      if (esConflictoTransaccional(error)) {
+        throw new ConflictException('Otro cambio de ciclo ocurrió al mismo tiempo; vuelve a intentar');
+      }
+      throw error;
+    }
   }
 
   // ---- Materias ----

@@ -56,3 +56,9 @@ La integración HTTP pasó en MySQL y SQL Server en el run `37097877896` del PR 
 - La suite automatizada del portal cubre autorización de rutas y pruebas de mensajes de error, pero necesita más flujos de usuario. El móvil tiene pruebas de utilidades y bundle JavaScript, no compilación nativa firmada ni pruebas de interacción en dispositivo.
 
 No se declara el MVP listo para producción con este corte.
+
+## Actualización del repositorio al 3 de octubre de 2026
+
+Este documento conserva los resultados observados el 2 de octubre. Desde ese corte, `main` incluye el runner protegido de migraciones (`db:migrate`, `db:migrate:status` y `db:migrate:adopt`), el manifiesto de baseline y el flujo `adopt/up/status` ejercitado por la suite de integración aislada en MySQL y SQL Server en CI. Por eso, la nota anterior de que no existía runner ya no describe el estado actual. El runner sigue sin rollback, no debe ejecutarse en paralelo y no se ha validado contra una base institucional histórica.
+
+La suite de integración ahora comprueba activación secuencial de ciclos en ambos motores. Se agregó un caso de activación concurrente; queda pendiente de la siguiente ejecución CI. La máquina local no tiene Docker instalado, así que esta revisión no ejecutó integraciones DB.

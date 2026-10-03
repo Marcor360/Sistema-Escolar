@@ -474,6 +474,21 @@ describe('Integración de flujos críticos (base aislada)', () => {
     });
     expect(reactivado.response.status).toBe(200);
     expect(await dataSource.getRepository(CicloEscolar).countBy({ activo: true })).toBe(1);
+
+    const ciclosConcurrentes = await Promise.all([
+      api('/academico/ciclos', {
+        method: 'POST', token,
+        body: { clave: `D${sufijo}`, nombre: 'Ciclo concurrente uno', fechaInicio: '2028-08-01', fechaFin: '2029-07-31', activo: true },
+      }),
+      api('/academico/ciclos', {
+        method: 'POST', token,
+        body: { clave: `E${sufijo}`, nombre: 'Ciclo concurrente dos', fechaInicio: '2029-08-01', fechaFin: '2030-07-31', activo: true },
+      }),
+    ]);
+    expect(ciclosConcurrentes.some(({ response }) => response.status === 201)).toBe(true);
+    expect(ciclosConcurrentes.every(({ response }) => [201, 409].includes(response.status))).toBe(true);
+    const ciclosActivosConcurrentes = await dataSource.getRepository(CicloEscolar).findBy({ activo: true });
+    expect(ciclosActivosConcurrentes.filter(({ clave }) => [`D${sufijo}`, `E${sufijo}`].includes(clave))).toHaveLength(1);
   });
 
   it('inscribe a un alumno, captura una calificaci??n y la muestra en su portal', async () => {
