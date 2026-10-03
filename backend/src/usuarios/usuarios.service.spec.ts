@@ -72,16 +72,16 @@ describe('UsuariosService.actualizar revoca sesiones', () => {
   });
 
   it('no devuelve passwordHash al listar usuarios aunque la consulta lo contenga', async () => {
-    const usuarios = { find: jest.fn().mockResolvedValue([{
+    const usuarios = { findAndCount: jest.fn().mockResolvedValue([[{
       id: 1, email: 'a@escuela.mx', passwordHash: 'hash-privado', nombre: 'A',
       apellidoPaterno: 'B', apellidoMaterno: null, telefono: null, activo: true,
       roles: [], nombreCompleto: 'A B',
-    }]) };
+    }], 1]) };
     const service = new UsuariosService(usuarios as any, {} as any, {} as any, {} as any, {} as any, {} as any);
 
-    const respuesta = await service.listar();
+    const respuesta = await service.listar({} as any);
 
     expect(JSON.stringify(respuesta)).not.toContain('hash-privado');
-    expect(respuesta[0]).not.toHaveProperty('passwordHash');
+    expect(respuesta.datos[0]).not.toHaveProperty('passwordHash');
   });
 });

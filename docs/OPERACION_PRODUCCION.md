@@ -72,3 +72,15 @@ La API ofrece `GET /api/health` sin autenticación; responde `200` cuando la con
 - [ ] Portal y aplicación probados en dispositivos y navegadores objetivo.
 - [ ] Alertas y procedimiento de incidentes asignados a responsables.
 - [ ] Publicación móvil configurada con cuentas de la institución.
+
+## Builds móviles con EAS
+
+`mobile/eas.json` define perfiles `development`, `preview` y `production`. Antes de compilar, vincular el proyecto a la cuenta EAS institucional y registrar `EXPO_PUBLIC_API_URL` en los entornos correspondientes. Esta variable se incorpora al bundle y debe ser una URL HTTPS accesible desde el dispositivo; nunca incluir credenciales en variables `EXPO_PUBLIC_*`.
+
+```sh
+cd mobile
+npx eas build --profile preview --platform android
+npx eas build --profile production --platform android
+```
+
+El perfil de producción incrementa automáticamente el número de build. La firma, las cuentas de tiendas, la URL API definitiva y la aceptación del build siguen pendientes de la institución.

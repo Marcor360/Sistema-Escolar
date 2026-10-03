@@ -1,6 +1,6 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, In, Repository } from 'typeorm';
+import { EntityManager, In, Repository, SelectQueryBuilder } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import { Usuario } from '../entities/usuario.entity';
 import { Rol } from '../entities/rol.entity';
@@ -12,6 +12,7 @@ import { UsuarioPlantel } from '../entities/usuario-plantel.entity';
 import { JwtUser } from '../common/current-user.decorator';
 import { ScopeService } from '../planteles/scope.service';
 import { ListadoUsuariosDto } from './usuarios.dto';
+import { PaginacionDto } from '../common/paginacion.dto';
 
 type UsuarioPublico = Pick<
   Usuario, 'id' | 'email' | 'nombre' | 'apellidoPaterno' | 'apellidoMaterno' | 'telefono' | 'activo' | 'roles' | 'nombreCompleto'
@@ -28,8 +29,13 @@ export class UsuariosService {
     private readonly scope: ScopeService,
   ) {}
 
-  listar() {
-    return this.usuarios.find({ order: { id: 'DESC' } }).then((usuarios) => usuarios.map((u) => this.proyectar(u)));
+  async listar(query: PaginacionDto) {
+    const pagina = query.pagina || 1;
+    const porPagina = Math.min(query.porPagina || 20, 100);
+    const [usuarios, total] = await this.usuarios.findAndCount({
+      order: { id: 'DESC' }, skip: (pagina - 1) * porPagina, take: porPagina,
+    });
+    return { datos: usuarios.map((usuario) => this.proyectar(usuario)), total, pagina, porPagina };
   }
 
   async listado(query: ListadoUsuariosDto, user: JwtUser) {
@@ -104,7 +110,7 @@ export class UsuariosService {
     })), total, pagina, porPagina };
   }
 
-  private aplicarBusqueda(qb: any, buscar?: string, extra?: string) {
+  private aplicarBusqueda<T extends object>(qb: SelectQueryBuilder<T>, buscar?: string, extra?: string) {
     if (!buscar?.trim()) return;
     const campos = ['u.nombre', 'u.apellido_paterno', 'u.email', ...(extra ? [extra] : [])];
     qb.andWhere(`(${campos.map((campo) => `${campo} LIKE :buscar`).join(' OR ')})`, { buscar: `%${buscar.trim()}%` });

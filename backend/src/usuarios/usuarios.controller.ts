@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query,
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { UsuariosService } from './usuarios.service';
 import { ActualizarUsuarioDto, CrearUsuarioDto, ListadoUsuariosDto } from './usuarios.dto';
+import { PaginacionDto } from '../common/paginacion.dto';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { RolesGuard } from '../common/roles.guard';
 import { Roles } from '../common/roles.decorator';
@@ -15,7 +16,7 @@ import { CurrentUser, JwtUser } from '../common/current-user.decorator';
 export class UsuariosController {
   constructor(private readonly service: UsuariosService) {}
 
-  @Get() listar() { return this.service.listar(); }
+  @Get() listar(@Query() query: PaginacionDto) { return this.service.listar(query); }
   @Get('listado')
   @Roles('ADMINISTRATIVO', 'FINANZAS', 'MAESTRO')
   listado(@Query() query: ListadoUsuariosDto, @CurrentUser() user: JwtUser) {

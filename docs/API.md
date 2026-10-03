@@ -29,7 +29,7 @@ defecto, más larga que `JWT_EXPIRES` del portal web). Los intentos de login fal
 
 ## Paginación
 Los listados paginados responden `{ datos, total, pagina, porPagina }` (`pagina` inicia
-en 1, `porPagina` por defecto 20, máximo 100). Aplica a: `GET /usuarios/listado`,
+en 1, `porPagina` por defecto 20, máximo 100). Aplica a: `GET /usuarios`, `GET /usuarios/listado`,
 `GET /alumnos`, `GET /academico/grupos`, `GET /docentes`, `GET /finanzas/cargos` y
 `GET /finanzas/pagos`. No aplica a `/calendario` (acotado por rango de fechas), a
 `/finanzas/adeudos` (alimenta el resumen del dashboard) ni a los endpoints móviles.
@@ -37,7 +37,8 @@ en 1, `porPagina` por defecto 20, máximo 100). Aplica a: `GET /usuarios/listado
 ## Usuarios (SUPERADMIN)
 CRUD en `/usuarios`. Regla de dominio: `ALUMNO` no se combina con roles de personal.
 
-- GET `/usuarios/listado` (ADMINISTRATIVO, FINANZAS, MAESTRO, SUPERADMIN) — paginado.
+- GET `/usuarios` (SUPERADMIN) — paginado; parámetros `pagina` y `porPagina`.
+- GET `/usuarios/listado` (ADMINISTRATIVO, FINANZAS, MAESTRO, SUPERADMIN) — paginado por tipo.
   Parámetros: `tipo` (`ALUMNO`|`DOCENTE`|`ADMINISTRATIVO`, requerido), `plantelId`,
   `buscar`, `pagina`, `porPagina`. Un `MAESTRO` sin rol de personal solo puede
   consultar `tipo=ALUMNO`, acotado a los alumnos inscritos en sus grupos.

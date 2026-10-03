@@ -1,0 +1,22 @@
+{
+  "build": {
+    "development": {
+      "distribution": "internal",
+      "environment": "development",
+      "env": { "APP_ENV": "development" }
+    },
+    "preview": {
+      "distribution": "internal",
+      "environment": "preview",
+      "env": { "APP_ENV": "preview" }
+    },
+    "production": {
+      "environment": "production",
+      "autoIncrement": true,
+      "env": { "APP_ENV": "production" }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
