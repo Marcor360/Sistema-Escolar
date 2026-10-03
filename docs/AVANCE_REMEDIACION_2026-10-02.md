@@ -1,5 +1,19 @@
 # Avance de remediación — 2 de octubre de 2026
 
+## Fase 0 — estabilización de CI
+
+La ejecución GitHub Actions `1.8.2` (2 de octubre, run `37038935551`) confirmó que Backend, Mobile y ETL pasan; Web falló al iniciar workers `fork` de Vitest y las integraciones MySQL/SQL Server completaron el arranque y baseline, pero excedieron el límite estricto de cinco logins por IP durante la suite.
+
+Correcciones aplicadas en este árbol de trabajo:
+
+- Web ejecuta Vitest con un worker para evitar fallos de creación de procesos en el runner Linux.
+- Las pruebas de integración generan JWT de fixture para los flujos protegidos y conservan una llamada real a `/auth/login`; no se cambia el límite de autenticación de cinco intentos.
+- Ambos jobs de base ya mantienen `DB_SYNC=false` y el baseline instalable en una base aislada. MySQL cuenta con health check de servicio; SQL Server cuenta con health check y reintentos con timeout para crear la base cuando el servidor queda listo.
+
+Verificación local de este corte: backend lint, typecheck, build y 106 pruebas; web lint, 5 pruebas y build; mobile 2 pruebas, TypeScript y export Android; ETL 3 pruebas. El test de integración también compila sin errores. Esta máquina no tiene Docker ni puertos de base disponibles, por lo que los dos motores aún requieren una ejecución CI posterior a estos cambios. La Fase 0 permanece **PARCIAL** hasta que MySQL y SQL Server terminen verdes en Actions.
+
+Después de la ejecución remota, la base de avisos npm incorporó `GHSA-vfj7-8cjw-p6xm` para `braces` hasta 3.0.3 y actualmente no declara una versión corregida. La auditoría local reporta altas solo en dependencias de desarrollo de backend/web; `npm audit --omit=dev` informa cero en ambos. El job remoto `1.8.2` aún había reportado cero al ejecutarse. Se conserva el chequeo completo y se documenta este hallazgo para resolverlo al existir actualización compatible; no se baja el umbral de auditoría.
+
 Este corte complementa `AUDITORIA.md`, cuya revisión inicial fue el 1 de octubre. Los cambios están en el árbol de trabajo y aún no se han desplegado ni validado con las cuentas o servicios institucionales.
 
 ## Riesgos corregidos en código

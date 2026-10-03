@@ -1,5 +1,6 @@
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { NestFactory } from '@nestjs/core';
+import { JwtService } from '@nestjs/jwt';
 import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { AddressInfo } from 'net';
 import { basename, resolve } from 'path';
@@ -128,12 +129,18 @@ describe('Integración de flujos críticos (base aislada)', () => {
     return { response, data };
   };
 
-  const login = async (email: string, password: string, portal: 'WEB' | 'MOVIL' = 'WEB') => {
-    const { response, data } = await api('/auth/login', {
-      method: 'POST', headers: { 'x-portal': portal }, body: { email, password },
+  const emitirToken = async (email: string) => {
+    const usuario = await dataSource.getRepository(Usuario).findOneOrFail({
+      where: { email },
+      relations: ['roles'],
     });
-    expect(response.status).toBe(201);
-    return data.accessToken as string;
+    return app.get(JwtService).sign({
+      sub: usuario.id,
+      email: usuario.email,
+      nombre: usuario.nombreCompleto,
+      roles: usuario.roles.map((rol) => rol.clave),
+      ver: usuario.sessionVersion ?? 0,
+    });
   };
 
   beforeAll(async () => {
@@ -266,7 +273,11 @@ describe('Integración de flujos críticos (base aislada)', () => {
   it('autentica y limita el detalle de planteles a las asignaciones del usuario', async () => {
     const password = 'Integracion_Segura_42!';
     const admin = await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId });
-    const token = await login(admin.email, password);
+    const inicioSesion = await api('/auth/login', {
+      method: 'POST', headers: { 'x-portal': 'WEB' }, body: { email: admin.email, password },
+    });
+    expect(inicioSesion.response.status).toBe(201);
+    const token = inicioSesion.data.accessToken as string;
 
     const perfil = await api('/auth/me', { token });
     expect(perfil.response.status).toBe(200);
@@ -284,8 +295,8 @@ describe('Integración de flujos críticos (base aislada)', () => {
   it('no serializa hashes en login, perfil, alumnos, docentes ni usuarios', async () => {
     const admin = await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId });
     const superadmin = await dataSource.getRepository(Usuario).findOneByOrFail({ id: superadminId });
-    const tokenAdmin = await login(admin.email, 'Integracion_Segura_42!');
-    const tokenRoot = await login(superadmin.email, 'Integracion_Segura_42!');
+    const tokenAdmin = await emitirToken(admin.email);
+    const tokenRoot = await emitirToken(superadmin.email);
     const inicioSesion = await api('/auth/login', {
       method: 'POST', headers: { 'x-portal': 'WEB' },
       body: { email: admin.email, password: 'Integracion_Segura_42!' },
@@ -321,7 +332,7 @@ describe('Integración de flujos críticos (base aislada)', () => {
 
   it('rechaza consultar, editar o dar de baja docentes fuera del alcance del plantel', async () => {
     const admin = await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId });
-    const token = await login(admin.email, 'Integracion_Segura_42!');
+    const token = await emitirToken(admin.email);
 
     const detalle = await api(`/docentes/${docenteFueraDeAlcanceId}`, { token });
     const edicion = await api(`/docentes/${docenteFueraDeAlcanceId}`, {
@@ -336,7 +347,7 @@ describe('Integración de flujos críticos (base aislada)', () => {
 
   it('ADMINISTRATIVO y FINANZAS no acceden a alumnos de otro plantel', async () => {
     const admin = await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId });
-    const token = await login(admin.email, 'Integracion_Segura_42!');
+    const token = await emitirToken(admin.email);
     const usuarioOtroPlantel = await dataSource.getRepository(Usuario).save(dataSource.getRepository(Usuario).create({
       email: `alumno_fuera_${sufijo}@example.invalid`, passwordHash: await bcrypt.hash('Integracion_Segura_42!', 4),
       nombre: 'Alumno', apellidoPaterno: 'Fuera', activo: true,
@@ -362,7 +373,7 @@ describe('Integración de flujos críticos (base aislada)', () => {
 
   it('FINANZAS recibe los datos mínimos del alumno para operar su cuenta', async () => {
     const finanzas = await dataSource.getRepository(Usuario).findOneByOrFail({ id: finanzasId });
-    const token = await login(finanzas.email, 'Integracion_Segura_42!');
+    const token = await emitirToken(finanzas.email);
     const [perfil, estado] = await Promise.all([
       api(`/alumnos/${alumnoId}`, { token }),
       api(`/finanzas/alumnos/${alumnoId}/estado-cuenta`, { token }),
@@ -379,7 +390,7 @@ describe('Integración de flujos críticos (base aislada)', () => {
 
   it('revierte la cuenta si falla el alta del expediente relacionado', async () => {
     const superadmin = await dataSource.getRepository(Usuario).findOneByOrFail({ id: superadminId });
-    const token = await login(superadmin.email, 'Integracion_Segura_42!');
+    const token = await emitirToken(superadmin.email);
     const email = `rollback_${sufijo}@example.invalid`;
     const resultado = await api('/alumnos', {
       method: 'POST', token,
@@ -401,7 +412,7 @@ describe('Integración de flujos críticos (base aislada)', () => {
 
   it('mantiene un solo ciclo activo al crear y actualizar ciclos', async () => {
     const admin = await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId });
-    const token = await login(admin.email, 'Integracion_Segura_42!');
+    const token = await emitirToken(admin.email);
     const primero = await api('/academico/ciclos', {
       method: 'POST', token,
       body: { clave: `A${sufijo}`, nombre: 'Ciclo activo uno', fechaInicio: '2026-08-01', fechaFin: '2027-07-31', activo: true },
@@ -423,8 +434,8 @@ describe('Integración de flujos críticos (base aislada)', () => {
   it('inscribe a un alumno, captura una calificaci??n y la muestra en su portal', async () => {
     const admin = await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId });
     const alumnoUsuario = await dataSource.getRepository(Usuario).findOneByOrFail({ id: alumnoUsuarioId });
-    const tokenAdmin = await login(admin.email, 'Integracion_Segura_42!');
-    const tokenAlumno = await login(alumnoUsuario.email, 'Integracion_Segura_42!', 'MOVIL');
+    const tokenAdmin = await emitirToken(admin.email);
+    const tokenAlumno = await emitirToken(alumnoUsuario.email);
     expect((await api('/academico/materias', { token: tokenAlumno })).response.status).toBe(403);
     expect((await api('/academico/ciclos', { token: tokenAlumno })).response.status).toBe(403);
 
@@ -472,7 +483,7 @@ describe('Integración de flujos críticos (base aislada)', () => {
 
   it('MAESTRO solo lista y consulta alumnos de sus grupos, aunque compartan plantel', async () => {
     const admin = await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId });
-    const tokenAdmin = await login(admin.email, 'Integracion_Segura_42!');
+    const tokenAdmin = await emitirToken(admin.email);
     const altaDocente = await api('/docentes', {
       method: 'POST', token: tokenAdmin,
       body: {
@@ -504,7 +515,7 @@ describe('Integración de flujos críticos (base aislada)', () => {
     });
     expect(inscripcion.response.status).toBe(201);
 
-    const tokenMaestro = await login(`maestro_scope_${sufijo}@example.invalid`, 'Integracion_Segura_42!');
+    const tokenMaestro = await emitirToken(`maestro_scope_${sufijo}@example.invalid`);
     const [listado, propio, ajeno] = await Promise.all([
       api('/alumnos', { token: tokenMaestro }),
       api(`/alumnos/${alumnoId}`, { token: tokenMaestro }),
@@ -519,7 +530,7 @@ describe('Integración de flujos críticos (base aislada)', () => {
 
   it('genera una sola colegiatura si dos solicitudes llegan simultaneamente', async () => {
     const admin = await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId });
-    const token = await login(admin.email, 'Integracion_Segura_42!');
+    const token = await emitirToken(admin.email);
     const ciclo = await dataSource.getRepository(CicloEscolar).findOneByOrFail({ clave: `C${sufijo}` });
     const conceptos = dataSource.getRepository(ConceptoPago);
     await conceptos.save(conceptos.create({
@@ -542,7 +553,7 @@ describe('Integración de flujos críticos (base aislada)', () => {
   it('evita pago manual sobre una orden pendiente y deduplica webhooks concurrentes', async () => {
     const orden = await dataSource.getRepository(OrdenPago).findOneByOrFail({ id: ordenId });
     const admin = await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId });
-    const token = await login(admin.email, 'Integracion_Segura_42!');
+    const token = await emitirToken(admin.email);
     const pagoManual = await api('/finanzas/pagos', {
       method: 'POST', token,
       body: { alumnoId, cargoId: cargoWebhookId, monto: 125, metodo: 'EFECTIVO', referencia: `MAN${sufijo}` },
@@ -568,7 +579,7 @@ describe('Integración de flujos críticos (base aislada)', () => {
 
   it('acepta pagos parciales y rechaza exceder el saldo restante', async () => {
     const admin = await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId });
-    const token = await login(admin.email, 'Integracion_Segura_42!');
+    const token = await emitirToken(admin.email);
     const concepto = await api('/finanzas/conceptos', {
       method: 'POST', token,
       body: { clave: `FM${sufijo}`, nombre: 'Cargo manual integración', tipo: 'COLEGIATURA', montoBase: 200 },
@@ -600,8 +611,8 @@ describe('Integración de flujos críticos (base aislada)', () => {
   it('entrega materiales solo a un alumno inscrito y sirve el enlace firmado', async () => {
     const admin = await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId });
     const alumnoUsuario = await dataSource.getRepository(Usuario).findOneByOrFail({ id: alumnoUsuarioId });
-    const tokenAdmin = await login(admin.email, 'Integracion_Segura_42!');
-    const tokenAlumno = await login(alumnoUsuario.email, 'Integracion_Segura_42!', 'MOVIL');
+    const tokenAdmin = await emitirToken(admin.email);
+    const tokenAlumno = await emitirToken(alumnoUsuario.email);
     const grupo = await dataSource.getRepository(Grupo).findOneByOrFail({ nombre: `G${sufijo}` });
     const asignacion = await dataSource.getRepository(GrupoMateria).findOneByOrFail({ grupoId: grupo.id });
     const formulario = new FormData();
@@ -624,7 +635,7 @@ describe('Integración de flujos críticos (base aislada)', () => {
 
   it('revoca JWT anteriores tras bajas de alumno/docente y cambio de contraseña', async () => {
     const admin = await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId });
-    const tokenAdmin = await login(admin.email, 'Integracion_Segura_42!');
+    const tokenAdmin = await emitirToken(admin.email);
     const altaAlumno = await api('/alumnos', {
       method: 'POST', token: tokenAdmin,
       body: {
@@ -632,7 +643,7 @@ describe('Integración de flujos críticos (base aislada)', () => {
         nombre: 'Baja', apellidoPaterno: 'Alumno', matricula: `B${sufijo}`, plantelId,
       },
     });
-    const tokenAlumno = await login(`baja_alumno_${sufijo}@example.invalid`, 'Integracion_Segura_42!', 'MOVIL');
+    const tokenAlumno = await emitirToken(`baja_alumno_${sufijo}@example.invalid`);
     const bajaAlumno = await api(`/alumnos/${altaAlumno.data.id}`, { method: 'DELETE', token: tokenAdmin });
     expect(bajaAlumno.response.status).toBe(200);
     expect((await api('/auth/me', { token: tokenAlumno })).response.status).toBe(401);
@@ -644,7 +655,7 @@ describe('Integración de flujos críticos (base aislada)', () => {
         nombre: 'Baja', apellidoPaterno: 'Docente', numEmpleado: `BD${sufijo}`, plantelIds: [plantelId],
       },
     });
-    const tokenDocente = await login(`baja_docente_${sufijo}@example.invalid`, 'Integracion_Segura_42!');
+    const tokenDocente = await emitirToken(`baja_docente_${sufijo}@example.invalid`);
     const bajaDocente = await api(`/docentes/${altaDocente.data.id}`, { method: 'DELETE', token: tokenAdmin });
     expect(bajaDocente.response.status).toBe(200);
     expect((await api('/auth/me', { token: tokenDocente })).response.status).toBe(401);
@@ -658,7 +669,7 @@ describe('Integración de flujos críticos (base aislada)', () => {
     await dataSource.getRepository(UsuarioPlantel).save(dataSource.getRepository(UsuarioPlantel).create({
       usuarioId: usuarioTemporal.id, plantelId, activo: true,
     }));
-    const tokenAnterior = await login(usuarioTemporal.email, 'Integracion_Segura_42!');
+    const tokenAnterior = await emitirToken(usuarioTemporal.email);
     const cambio = await api('/auth/cambiar-password', {
       method: 'POST', token: tokenAnterior,
       body: { actual: 'Integracion_Segura_42!', nueva: 'Integracion_Nueva_42!' },
