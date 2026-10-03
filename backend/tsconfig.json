@@ -10,7 +10,7 @@
     "esModuleInterop": true,
     "sourceMap": true,
     "outDir": "./dist",
-    "baseUrl": "./",
+    "rootDir": "./src",
     "incremental": false,
     "skipLibCheck": true,
     "strictBindCallApply": true,
