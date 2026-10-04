@@ -6,11 +6,11 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { mkdirSync } from 'fs';
-import { join } from 'path';
+import { uploadsPath } from './common/uploads-path';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const uploadsDir = join(process.cwd(), process.env.UPLOADS_DIR || 'uploads');
+  const uploadsDir = uploadsPath();
   mkdirSync(uploadsDir, { recursive: true }); // Multer no crea el destino por sí solo
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -41,7 +41,8 @@ async function bootstrap() {
   }
 
   const port = Number(process.env.PORT) || 3000;
-  await app.listen(port);
-  console.log(`API en http://localhost:${port}/api`);
+  const host = process.env.HOST || '0.0.0.0';
+  await app.listen(port, host);
+  console.log(`API en http://${host}:${port}/api`);
 }
 bootstrap();

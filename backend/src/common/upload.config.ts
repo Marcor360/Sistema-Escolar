@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { randomUUID } from 'crypto';
+import { uploadsPath } from './uploads-path';
 
 /** Límites del contrato: formatos y pesos definidos, sin almacenamiento ilimitado. */
 const EXTENSIONES_PERMITIDAS = [
@@ -10,7 +11,7 @@ const EXTENSIONES_PERMITIDAS = [
 ];
 
 // Evaluación perezosa: se lee al recibir cada archivo, con el .env ya cargado.
-const dirDestino = () => process.env.UPLOADS_DIR || './uploads';
+const dirDestino = () => uploadsPath();
 const maxBytes = () => (Number(process.env.MAX_UPLOAD_MB) || 5) * 1024 * 1024;
 
 export const uploadConfig = {

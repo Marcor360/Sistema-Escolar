@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { promises as fs } from 'fs';
 import { basename, join } from 'path';
+import { uploadsPath } from '../common/uploads-path';
 import { Repository } from 'typeorm';
 import { ConfiguracionMarca } from '../entities';
 import { ActualizarMarcaDto, MarcaPublicaDto } from './configuracion.dto';
@@ -59,7 +60,7 @@ export class ConfiguracionService {
   private async eliminarArchivo(url: string | null): Promise<void> {
     if (!url) return;
     try {
-      await fs.unlink(join(process.cwd(), process.env.UPLOADS_DIR || 'uploads', basename(url)));
+      await fs.unlink(join(uploadsPath(), basename(url)));
     } catch {
       // La limpieza es best-effort: una ausencia previa no invalida la configuración.
     }

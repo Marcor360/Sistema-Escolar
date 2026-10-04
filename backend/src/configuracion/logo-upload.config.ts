@@ -1,10 +1,11 @@
 import { BadRequestException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import { uploadsPath } from '../common/uploads-path';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 
 const EXTENSIONES_PERMITIDAS = ['.png', '.jpg', '.jpeg', '.webp'];
-const dirDestino = () => process.env.UPLOADS_DIR || './uploads';
+const dirDestino = () => uploadsPath();
 
 export const logoUploadConfig = {
   storage: diskStorage({

@@ -5,6 +5,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { createReadStream, existsSync } from 'fs';
 import { basename, extname, join } from 'path';
+import { uploadsPath } from '../common/uploads-path';
 import type { Response } from 'express';
 import { Material } from '../entities/material.entity';
 import { Entrega } from '../entities/entrega.entity';
@@ -172,7 +173,7 @@ export class ArchivosService {
   }
 
   private enviarArchivo(res: Response, archivoRuta: string, archivoNombre: string, mime = 'application/octet-stream') {
-    const uploadsDir = join(process.cwd(), this.config.get<string>('UPLOADS_DIR') || 'uploads');
+    const uploadsDir = uploadsPath(this.config.get<string>('UPLOADS_DIR') || 'uploads');
     const ruta = join(uploadsDir, basename(archivoRuta));
     if (!existsSync(ruta)) throw new NotFoundException('Archivo no encontrado');
     res.setHeader('Content-Type', mime);
