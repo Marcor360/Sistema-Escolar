@@ -63,11 +63,11 @@ Configura IIS, inicia el servicio y valida `/api/health` antes de utilizar `Depl
 
 ## Despliegue y respaldos
 
-`scripts/windows/Deploy-Staging.ps1` prepara una release desde un checkout con `backend/`, `web/` y `database/`, compila, detiene la API, respalda MySQL y uploads, consulta/aplica migraciones, cambia la junction y valida health. Ejemplo desde la raíz del checkout, después de configurar el servidor:
+`scripts/windows/Deploy-Staging.ps1` prepara una release desde un checkout con `backend/`, `web/` y `database/`, compila, detiene la API, respalda MySQL y uploads, consulta/aplica migraciones, cambia la junction y valida health. Para una actualización posterior a 1.10.0, define `$SiguienteVersion` con un semver nuevo y ejecuta desde la raíz del checkout:
 
 ```powershell
 .\scripts\windows\Deploy-Staging.ps1 `
-  -Version '1.10.1' `
+  -Version $SiguienteVersion `
   -Source 'C:\Builds\sistema-escolar-mvp' `
   -ApiBaseUrl 'https://api-staging.dominio.mx/api' `
   -HealthUrl 'https://api-staging.dominio.mx/api/health'
