@@ -23,7 +23,7 @@ Digitalizar y automatizar los procesos educativos con:
 ### Backend (API RESTful)
 | Tecnología | Versión | Función |
 |------------|---------|---------|
-| **Node.js** | 20+ | Runtime JavaScript |
+| **Node.js** | 24 LTS | Runtime JavaScript |
 | **NestJS** | 11 | Framework API con arquitectura modular y dependencias inyectadas |
 | **TypeORM** | - | ORM para gestión de base de datos con soporte MySQL/SQL Server |
 | **JWT** | passport-jwt | Autenticación con tokens firmados y expiración diferenciada por portal |
@@ -505,6 +505,8 @@ etl/
 
 ## 🚀 Comandos Útiles
 
+Usa **Node.js 24 LTS** para instalar dependencias, ejecutar pruebas y compilar los tres proyectos del repositorio. El CI usa esa versión para backend, web, móvil e integración con MySQL y SQL Server.
+
 ### Backend
 ```bash
 cd backend
@@ -553,6 +555,28 @@ docker compose --profile mssql up -d sqlserver
 
 ---
 
+## 🖥️ Staging en Windows Server
+
+La próxima versión **1.10.0** incorpora scripts versionados para Windows Server 2019 con IIS, API NestJS como servicio NSSM y MySQL 8.4. **El repositorio está preparado; el VPS y una restauración real todavía requieren validación.** La guía operativa completa está en [Staging en Windows e IIS](docs/STAGING_WINDOWS_IIS.md).
+
+Antes del primer despliegue, prepara DNS y el certificado HTTPS, MySQL con TLS, una base `escolar_staging` nueva y separada, y los archivos protegidos `C:\SistemaEscolar\config\backend.env` y `C:\SistemaEscolar\config\backup.env`. Usa [la plantilla del backend](backend/.env.staging.example) y [la del respaldo](scripts/windows/backup.env.example). `BACKUP_DB_USER` debe ser distinto de `DB_USER`. Instala el baseline y adopta su historial solo en una base nueva, siguiendo [Migraciones](docs/MIGRACIONES.md); nunca ejecutes `schema.sql` completo ni habilites `DB_SYNC=true` en staging.
+
+Desde una consola administrativa en el servidor, con Node 24, IIS, URL Rewrite, ARR, NSSM y el certificado ya instalados:
+
+```powershell
+$credential = Get-Credential '.\svc_escolar_api'
+.\scripts\windows\Initialize-Staging.ps1 -Version '1.10.0' -Source 'C:\Builds\sistema-escolar-mvp' -ServiceCredential $credential -ApiBaseUrl 'https://api-staging.dominio.mx/api'
+.\scripts\windows\Configure-IIS-Staging.ps1 -PortalHost 'sistema-staging.dominio.mx' -ApiHost 'api-staging.dominio.mx' -CertificateThumbprint '<huella-del-certificado>'
+Start-Service SistemaEscolarApi
+Invoke-WebRequest 'https://api-staging.dominio.mx/api/health'
+```
+
+El bootstrap crea o valida una cuenta local dedicada y le da acceso al código, al archivo de entorno y a las carpetas de uploads y logs. La API escucha en `127.0.0.1:3000`; IIS sirve React y hace proxy HTTPS hacia la API. Los uploads permanecen fuera de las releases en `C:\SistemaEscolar\data\uploads` y solo se descargan mediante enlaces firmados.
+
+Para versiones posteriores, usa [Deploy-Staging.ps1](scripts/windows/Deploy-Staging.ps1), que respalda la base y los uploads antes de migrar. [Restore-Staging.ps1](scripts/windows/Restore-Staging.ps1) exige una base de restauración `escolar_staging_restore_*` ya creada y vacía y un directorio nuevo bajo `restore-check`; consulta la guía para el comando y la comprobación del respaldo. Programa retención y copia externa cifrada por separado. El CI de Windows valida sintaxis y estructura de los scripts; la instalación del servicio, IIS, TLS, rollback y restauración se ensayan en el staging real antes de abrirlo a usuarios.
+
+---
+
 ## 📚 Documentación Adicional
 
 - **`docs/API.md`** — Endpoints detallados con roles requeridos
@@ -562,6 +586,7 @@ docker compose --profile mssql up -d sqlserver
 - **`docs/MATRIZ_ACCESO.md`** — Alcance actual por rol para validación institucional
 - **`docs/MIGRACIONES.md`** — Procedimiento manual seguro para MySQL y SQL Server
 - **`docs/OPERACION_PRODUCCION.md`** — Variables, respaldos, archivos e insumos para publicar
+- **`docs/STAGING_WINDOWS_IIS.md`** — Bootstrap, IIS, servicio, respaldo y restauración aislada en Windows Server
 - **`etl/README.md`** — Documentación completa del ETL Python
 
 ---

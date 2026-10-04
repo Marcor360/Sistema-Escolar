@@ -6,17 +6,17 @@ Este documento distingue código presente de operación real. “Implementado”
 |---|---|---|
 | Autenticación y roles | Implementado en API y clientes | Pruebas integrales de permisos y decisión de endurecimiento de sesiones para despliegue |
 | Planteles y alcance | Implementado con `ScopeService` en servidor | Probar combinaciones reales de usuarios y asignaciones de la institución |
-| Gestión académica | Implementada: ciclos, materias, grupos, inscripciones, actividades y calificaciones; integración verde en ambos motores | Ejecutar en CI el nuevo caso concurrente de activación y ampliar flujos de entrega/actividad |
+| Gestión académica | Implementada: ciclos, materias, grupos, inscripciones, actividades y calificaciones; integración verde en ambos motores, incluido el caso concurrente de activación | Ampliar flujos de entrega/actividad |
 | Web administrativa/docente | Pantallas principales implementadas; navegación por teclado, foco, regiones de estado/error, pestañas accesibles y manejo de errores de carga | Revisión con personal, auditoría completa de accesibilidad y pruebas en navegadores objetivo |
 | App móvil del alumno | Inicio, materias, tareas, calificaciones, cuenta y perfil implementados; las pantallas de datos muestran error y reintento; sesión vencida vuelve al acceso | Configurar y probar compilación/publicación; push y offline no están implementados |
 | Archivos | Descargas con enlaces firmados y autorización en backend | Persistencia y respaldo externo para hosting; actualmente depende de disco local |
 | Finanzas y Openpay | Flujos de cargo, pago y webhook implementados; pagos, recálculo y bitácora son transaccionales; webhook idempotente | Aplicar migración nueva, probar sandbox con reintentos y completar conciliación antes de producción |
 | SMTP | Envío condicional implementado | Credenciales, dominio remitente, entrega y rebotes dependen del proveedor |
 | Reportes | PDF y Excel implementados | Revisar formatos y datos contra formatos institucionales reales |
-| Base de datos | Entidades, baselines instalables v1, runner manual con bloqueo por base y migraciones incrementales para MySQL/SQL Server; CI prueba adopción y migración desde baseline aislado con `DB_SYNC=false` | Ejecutar en CI el nuevo caso de dos procesos `up`; validar actualización desde bases históricas y aplicar migraciones aprobadas en el servidor elegido; el DDL de MySQL puede requerir reparación manual tras fallos parciales |
+| Base de datos | Entidades, baselines instalables v1, runner manual con bloqueo por base y migraciones incrementales para MySQL/SQL Server; CI prueba adopción, migración y dos procesos `up` sobre bases aisladas con `DB_SYNC=false` | Validar actualización desde bases históricas y aplicar migraciones aprobadas en el servidor elegido; el DDL de MySQL puede requerir reparación manual tras fallos parciales |
 | ETL certweb | Carga parcial de planteles y alumnos; modo de simulación disponible | Confirmar esquema de origen, completar usuarios/docentes/grupos y probar contra ambos destinos reales |
 | Producción | Variables de configuración y compilación disponibles | Hosting, dominio, TLS, respaldos, monitoreo, almacenamiento duradero y cuentas externas aún dependen de decisiones/credenciales |
-| Pruebas | 109 unitarias backend, 5 web, 2 móviles, 3 ETL y suite HTTP verde en MySQL/SQL Server en CI | Ejecutar en CI el nuevo caso HTTP de concurrencia de ciclos; ampliar flujos de actividad/entrega y límites de permisos |
+| Pruebas | 111 unitarias backend, 5 web, 2 móviles, 3 ETL y suite HTTP verde en MySQL/SQL Server en CI, incluido el caso HTTP de concurrencia de ciclos | Ampliar flujos de actividad/entrega y límites de permisos |
 | Privacidad y publicación | No se completa desde el código | Textos legales, aviso institucional, cuentas de tiendas y aprobación del cliente |
 
 ## Dependencias del cliente o del entorno

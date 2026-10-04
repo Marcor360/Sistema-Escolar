@@ -13,6 +13,7 @@ $ErrorActionPreference = 'Stop'
 if ($Version -notmatch '^\d+\.\d+\.\d+([-.][A-Za-z0-9.-]+)?$') { throw 'Version debe ser semver, por ejemplo 1.9.4.' }
 $Source = (Resolve-Path -LiteralPath $Source).Path
 $configFile = Join-Path $Root 'config\backend.env'
+$backupConfigFile = Join-Path $Root 'config\backup.env'
 $release = Join-Path $Root "releases\$Version"
 $current = Join-Path $Root 'current'
 $timestamp = Get-Date -Format 'yyyy-MM-dd_HHmmss'
@@ -22,6 +23,7 @@ foreach ($dir in @('releases', 'backups\database', 'backups\uploads', 'data\uplo
   New-Item -ItemType Directory -Force -Path (Join-Path $Root $dir) | Out-Null
 }
 if (-not (Test-Path -LiteralPath $configFile)) { throw "Falta $configFile. Copia y completa backend/.env.staging.example." }
+if (-not (Test-Path -LiteralPath $backupConfigFile)) { throw "Falta $backupConfigFile con BACKUP_DB_USER y BACKUP_DB_PASS." }
 if (-not (Test-Path -LiteralPath $MysqlDump)) { throw "No se encontró mysqldump: $MysqlDump" }
 if (Test-Path -LiteralPath $release) { throw "La release ya existe: $release. Usa una versión nueva." }
 if (-not (Test-Path -LiteralPath $current)) { throw 'Primero instala y valida una release inicial, crea la junction current e instala el servicio.' }
@@ -40,6 +42,16 @@ if ($env:NODE_ENV -ne 'production' -or $env:APP_ENV -ne 'staging' -or $env:DB_SY
 }
 if (-not $env:DB_PASS -or $env:DB_PASS -like 'REEMPLAZAR*' -or -not $env:JWT_SECRET -or $env:JWT_SECRET -like 'REEMPLAZAR*') {
   throw 'Completa DB_PASS y JWT_SECRET con secretos propios de staging.'
+}
+foreach ($line in Get-Content -LiteralPath $backupConfigFile) {
+  if ($line -match '^\s*(BACKUP_DB_USER|BACKUP_DB_PASS|BACKUP_DB_HOST|BACKUP_DB_PORT|BACKUP_DB_SSL_CA_PATH)=(.*)$') {
+    $value = $Matches[2].Trim()
+    if ($value.Length -ge 2 -and (($value.StartsWith('"') -and $value.EndsWith('"')) -or ($value.StartsWith("'") -and $value.EndsWith("'")))) { $value = $value.Substring(1, $value.Length - 2) }
+    [Environment]::SetEnvironmentVariable($Matches[1], $value, 'Process')
+  }
+}
+if (-not $env:BACKUP_DB_USER -or -not $env:BACKUP_DB_PASS -or $env:BACKUP_DB_PASS -like 'REEMPLAZAR*' -or $env:BACKUP_DB_USER -eq $env:DB_USER) {
+  throw 'Configura un usuario de respaldo distinto al de la aplicación en config\backup.env.'
 }
 
 # Preparar y compilar sin tocar la versión que está atendiendo usuarios. Excluye
@@ -75,22 +87,27 @@ $service = Get-Service -Name $ServiceName -ErrorAction Stop
 if ($service.Status -eq 'Running') { Stop-Service -Name $ServiceName -Force; $service.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(30)) }
 
 # Respaldar antes del runner. MYSQL_PWD evita poner la contraseña en la línea de comandos.
-$env:MYSQL_PWD = $env:DB_PASS
+$env:MYSQL_PWD = $env:BACKUP_DB_PASS
 try {
-  & $MysqlDump --host=$env:DB_HOST --port=$env:DB_PORT --user=$env:DB_USER --single-transaction --routines --events --databases $DatabaseName "--result-file=$(Join-Path $Root "backups\database\${DatabaseName}_$timestamp.sql")"
+  $backupHost = if ($env:BACKUP_DB_HOST) { $env:BACKUP_DB_HOST } else { $env:DB_HOST }
+  $backupPort = if ($env:BACKUP_DB_PORT) { $env:BACKUP_DB_PORT } else { $env:DB_PORT }
+  $backupCa = if ($env:BACKUP_DB_SSL_CA_PATH) { $env:BACKUP_DB_SSL_CA_PATH } else { $env:DB_SSL_CA_PATH }
+  $dumpArgs = @("--host=$backupHost", "--port=$backupPort", "--user=$env:BACKUP_DB_USER", '--single-transaction', '--routines', '--events', '--triggers', '--set-gtid-purged=OFF', '--ssl-mode=VERIFY_IDENTITY')
+  if ($backupCa) { $dumpArgs += "--ssl-ca=$backupCa" }
+  $dumpArgs += @("--result-file=$(Join-Path $Root "backups\database\${DatabaseName}_$timestamp.sql")", $DatabaseName)
+  & $MysqlDump @dumpArgs
   if ($LASTEXITCODE -ne 0) { throw 'Falló mysqldump; no se ejecutaron migraciones.' }
 } catch {
   Start-Service -Name $ServiceName -ErrorAction SilentlyContinue
   throw
-} finally { Remove-Item Env:\MYSQL_PWD -ErrorAction SilentlyContinue }
+} finally {
+  Remove-Item Env:\MYSQL_PWD -ErrorAction SilentlyContinue
+  Remove-Item Env:\BACKUP_DB_PASS -ErrorAction SilentlyContinue
+}
 $uploadsBackup = Join-Path $Root "backups\uploads\uploads_$timestamp.zip"
 try {
-  if (Get-ChildItem -LiteralPath (Join-Path $Root 'data\uploads') -Force) {
-    Compress-Archive -Path (Join-Path $Root 'data\uploads\*') -DestinationPath $uploadsBackup -Force
-  } else {
-    Add-Type -AssemblyName System.IO.Compression
-    [System.IO.Compression.ZipFile]::Open($uploadsBackup, [System.IO.Compression.ZipArchiveMode]::Create).Dispose()
-  }
+  Add-Type -AssemblyName System.IO.Compression.FileSystem
+  [System.IO.Compression.ZipFile]::CreateFromDirectory((Join-Path $Root 'data\uploads'), $uploadsBackup)
 } catch {
   Start-Service -Name $ServiceName -ErrorAction SilentlyContinue
   throw
