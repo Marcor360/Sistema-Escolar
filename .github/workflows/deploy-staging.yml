@@ -1,0 +1,63 @@
+name: Deploy staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Nueva versión semver para la release
+        required: true
+        type: string
+      commit_sha:
+        description: SHA completo en main con CI aprobado
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: staging-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, Windows, staging]
+    environment: staging
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.commit_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Comprobar habilitación, commit y CI
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPLOY_ENABLED: ${{ vars.STAGING_DEPLOY_ENABLED }}
+          API_BASE_URL: ${{ vars.STAGING_API_BASE_URL }}
+          HEALTH_URL: ${{ vars.STAGING_HEALTH_URL }}
+          VERSION: ${{ inputs.version }}
+          COMMIT_SHA: ${{ inputs.commit_sha }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:DEPLOY_ENABLED -ne 'true') { throw 'STAGING_DEPLOY_ENABLED debe ser true en el entorno staging.' }
+          if ($env:VERSION -notmatch '^\d+\.\d+\.\d+([-.][A-Za-z0-9.-]+)?$') { throw 'Versión inválida.' }
+          if ($env:COMMIT_SHA -notmatch '^[a-fA-F0-9]{40}$') { throw 'Usa el SHA completo del commit.' }
+          if ($env:API_BASE_URL -notmatch '^https://[^/]+/api$' -or $env:HEALTH_URL -ne "$($env:API_BASE_URL)/health") { throw 'Configura STAGING_API_BASE_URL y STAGING_HEALTH_URL HTTPS.' }
+          git fetch origin main
+          git merge-base --is-ancestor $env:COMMIT_SHA origin/main
+          if ($LASTEXITCODE -ne 0) { throw 'El commit no pertenece a main.' }
+          $headers = @{ Authorization = "Bearer $env:GH_TOKEN"; Accept = 'application/vnd.github+json'; 'X-GitHub-Api-Version' = '2022-11-28' }
+          $uri = "https://api.github.com/repos/$env:GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$env:COMMIT_SHA&per_page=30"
+          $runs = (Invoke-RestMethod -Uri $uri -Headers $headers).workflow_runs
+          if (-not @($runs | Where-Object { $_.head_branch -eq 'main' -and $_.event -eq 'push' -and $_.conclusion -eq 'success' }).Count) { throw 'No hay CI aprobado para este commit en main.' }
+      - name: Respaldar, migrar y desplegar
+        shell: powershell
+        env:
+          VERSION: ${{ inputs.version }}
+          API_BASE_URL: ${{ vars.STAGING_API_BASE_URL }}
+          HEALTH_URL: ${{ vars.STAGING_HEALTH_URL }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & .\scripts\windows\Deploy-Staging.ps1 -Version $env:VERSION -Source $PWD.Path -ApiBaseUrl $env:API_BASE_URL -HealthUrl $env:HEALTH_URL

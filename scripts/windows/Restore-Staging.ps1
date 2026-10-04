@@ -28,16 +28,16 @@ $backupConfig = Join-Path $Root 'config\backup.env'
 if (-not (Test-Path -LiteralPath $backupConfig)) { throw "Falta $backupConfig." }
 $settings = @{}
 foreach ($line in Get-Content -LiteralPath $backupConfig) {
-  if ($line -match '^\s*(BACKUP_DB_USER|BACKUP_DB_PASS|BACKUP_DB_HOST|BACKUP_DB_PORT|BACKUP_DB_SSL_CA_PATH)=(.*)$') {
+  if ($line -match '^\s*(RESTORE_DB_USER|RESTORE_DB_PASS|BACKUP_DB_HOST|BACKUP_DB_PORT|BACKUP_DB_SSL_CA_PATH)=(.*)$') {
     $settings[$Matches[1]] = $Matches[2].Trim().Trim('"', "'")
   }
 }
-foreach ($key in @('BACKUP_DB_USER', 'BACKUP_DB_PASS')) { if (-not $settings[$key]) { throw "Falta $key en backup.env." } }
+foreach ($key in @('RESTORE_DB_USER', 'RESTORE_DB_PASS')) { if (-not $settings[$key] -or $settings[$key] -like 'REEMPLAZAR*') { throw "Falta $key en backup.env." } }
 $hostName = if ($settings.BACKUP_DB_HOST) { $settings.BACKUP_DB_HOST } else { '127.0.0.1' }
 $port = if ($settings.BACKUP_DB_PORT) { $settings.BACKUP_DB_PORT } else { '3306' }
-$mysqlArgs = @("--host=$hostName", "--port=$port", "--user=$($settings.BACKUP_DB_USER)", '--ssl-mode=VERIFY_IDENTITY', '--batch', '--skip-column-names')
+$mysqlArgs = @("--host=$hostName", "--port=$port", "--user=$($settings.RESTORE_DB_USER)", '--ssl-mode=VERIFY_IDENTITY', '--batch', '--skip-column-names')
 if ($settings.BACKUP_DB_SSL_CA_PATH) { $mysqlArgs += "--ssl-ca=$($settings.BACKUP_DB_SSL_CA_PATH)" }
-$env:MYSQL_PWD = $settings.BACKUP_DB_PASS
+$env:MYSQL_PWD = $settings.RESTORE_DB_PASS
 try {
   $exists = & $Mysql @mysqlArgs "--execute=SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = '$TargetDatabase'"
   if ($LASTEXITCODE -ne 0 -or ($exists | Select-Object -Last 1) -ne '1') { throw 'La base aislada debe existir previamente.' }

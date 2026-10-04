@@ -15,7 +15,16 @@ if ($ApiPort -lt 1 -or $ApiPort -gt 65535 -or $MaxUploadMb -lt 1) { throw 'Puert
 if ($PortalHost -eq $ApiHost -or $PortalHost -notmatch '^[a-zA-Z0-9.-]+$' -or $ApiHost -notmatch '^[a-zA-Z0-9.-]+$') { throw 'Usa dos hostnames DNS distintos.' }
 $thumbprint = $CertificateThumbprint.Replace(' ', '').ToUpperInvariant()
 $cert = Get-Item -LiteralPath "Cert:\LocalMachine\My\$thumbprint" -ErrorAction SilentlyContinue
-if (-not $cert -or -not $cert.HasPrivateKey -or $cert.NotAfter -le (Get-Date)) { throw 'El certificado HTTPS no existe, no tiene clave privada o está vencido.' }
+if (-not $cert -or -not $cert.HasPrivateKey -or $cert.NotBefore -gt (Get-Date) -or $cert.NotAfter -le (Get-Date)) { throw 'El certificado HTTPS no existe, no tiene clave privada o no está vigente.' }
+$certificateNames = @($cert.DnsNameList | ForEach-Object { $_.Unicode.ToLowerInvariant() })
+foreach ($hostname in @($PortalHost, $ApiHost)) {
+  $name = $hostname.ToLowerInvariant()
+  $covered = @($certificateNames | Where-Object {
+    $_ -eq $name -or ($_.StartsWith('*.') -and $name.EndsWith($_.Substring(1)) -and
+      $name.Substring(0, $name.Length - $_.Length + 1) -notmatch '\.')
+  }).Count -gt 0
+  if (-not $covered) { throw "El certificado HTTPS no cubre $hostname en SAN/CN." }
+}
 $webRoot = Join-Path $Root 'current\web\dist'
 if (-not (Test-Path -LiteralPath (Join-Path $webRoot 'web.config'))) { throw "Falta el build web en $webRoot." }
 $rewrite = Get-WebGlobalModule | Where-Object Name -eq 'RewriteModule'
