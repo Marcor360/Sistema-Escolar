@@ -65,7 +65,8 @@ export class OpenpayService {
   private readonly redirectUrl: string;
 
   constructor(private readonly config: ConfigService) {
-    const produccion = this.config.get<string>('NODE_ENV') === 'production';
+    const produccion = this.config.get<string>('NODE_ENV') === 'production' &&
+      this.config.get<string>('APP_ENV') !== 'staging';
     this.merchantId = this.config.get<string>('OPENPAY_MERCHANT_ID') || '';
     const privateKey = this.config.get<string>('OPENPAY_PRIVATE_KEY') || '';
     const webhookUser = this.config.get<string>('OPENPAY_WEBHOOK_USER') || '';

@@ -37,4 +37,11 @@ describe('OpenpayService configuration', () => {
   it('conserva sandbox localhost por defecto fuera de producción', () => {
     expect(() => new OpenpayService(config({ NODE_ENV: 'development' }))).not.toThrow();
   });
+
+  it('permite sandbox sin credenciales en staging con Node en modo producción', () => {
+    expect(() => new OpenpayService(config({
+      NODE_ENV: 'production', APP_ENV: 'staging',
+      OPENPAY_BASE_URL: 'https://sandbox-api.openpay.mx/v1',
+    }))).not.toThrow();
+  });
 });

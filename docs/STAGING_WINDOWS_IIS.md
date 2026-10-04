@@ -8,6 +8,7 @@ Esta preparación cubre una instancia de staging con IIS, NestJS como servicio d
 - Staging usa `backend/.env.staging.example` y `web/.env.staging.example` como plantillas. El archivo real de backend vive fuera de Git en `C:\SistemaEscolar\config\backend.env`; crea secretos nuevos para staging. El archivo del frontend se usa al compilar porque Vite incrusta `VITE_API_URL` en el bundle.
 - La base de pruebas se llama `escolar_staging`; producción tendrá su propia base, credenciales y almacenamiento. No apuntar staging a una base productiva.
 - El ejemplo de staging conserva Openpay sandbox. No cargar credenciales productivas.
+- Usa `NODE_ENV=production` y `APP_ENV=staging`: se mantienen las protecciones de NestJS y se admiten Openpay sandbox y SMTP pendiente. Para MySQL con `DB_SSL=true`, configura una CA confiable mediante `DB_SSL_CA_PATH` cuando el certificado del servidor no provenga de una CA ya confiable.
 - En todo entorno compartido: `DB_SYNC=false`. Nunca usar `schema.sql` como instalador.
 
 Para una base de staging nueva, crea una base vacía `escolar_staging`, configura el usuario limitado de la aplicación, instala una sola vez `database/mysql/baseline_v1.sql`, y después ejecuta `db:migrate:adopt`, `db:migrate:status` y `db:migrate` siguiendo [MIGRACIONES.md](MIGRACIONES.md). No ejecutar el baseline ni `adopt` sobre bases existentes. Respaldar antes de migrar.
@@ -79,7 +80,7 @@ El health check es `GET /api/health`: espera HTTP 200 y `{ "status": "ok", "data
 
 - [ ] Base `escolar_staging` separada, baseline validado/adoptado y migraciones al día.
 - [ ] Cuenta MySQL limitada y respaldo restaurado en una instancia aislada.
-- [ ] `.env` externo con secretos exclusivos, `NODE_ENV=production`, `DB_SYNC=false` y CORS del portal.
+- [ ] `.env` externo con secretos exclusivos, `NODE_ENV=production`, `APP_ENV=staging`, `DB_SYNC=false` y CORS del portal. `APP_ENV=staging` permite Openpay sandbox y SMTP pendiente sin habilitar las opciones de desarrollo de NestJS.
 - [ ] DNS, HTTPS, ARR y URL Rewrite comprobados; puerto 3000 no expuesto públicamente.
 - [ ] Servicio automático probado tras reinicio y logs con ACL/retención.
 - [ ] Carga, descarga firmada y persistencia de archivos probadas.

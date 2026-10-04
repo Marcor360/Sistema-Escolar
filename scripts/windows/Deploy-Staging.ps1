@@ -35,8 +35,8 @@ foreach ($line in Get-Content -LiteralPath $configFile) {
     [Environment]::SetEnvironmentVariable($key, $value, 'Process')
   }
 }
-if ($env:NODE_ENV -ne 'production' -or $env:DB_SYNC -ne 'false' -or $env:DB_NAME -ne $DatabaseName) {
-  throw "El archivo de entorno debe declarar NODE_ENV=production, DB_SYNC=false y DB_NAME=$DatabaseName."
+if ($env:NODE_ENV -ne 'production' -or $env:APP_ENV -ne 'staging' -or $env:DB_SYNC -ne 'false' -or $env:DB_NAME -ne $DatabaseName) {
+  throw "El archivo de entorno debe declarar NODE_ENV=production, APP_ENV=staging, DB_SYNC=false y DB_NAME=$DatabaseName."
 }
 if (-not $env:DB_PASS -or $env:DB_PASS -like 'REEMPLAZAR*' -or -not $env:JWT_SECRET -or $env:JWT_SECRET -like 'REEMPLAZAR*') {
   throw 'Completa DB_PASS y JWT_SECRET con secretos propios de staging.'

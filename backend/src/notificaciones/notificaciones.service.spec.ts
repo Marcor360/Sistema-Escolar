@@ -63,4 +63,12 @@ describe('NotificacionesService configuración de correo', () => {
       { get: (key: string) => values[key] } as any,
     )).not.toThrow();
   });
+
+  it('permite SMTP pendiente en staging con Node en modo producción', () => {
+    const values: Record<string, string> = { NODE_ENV: 'production', APP_ENV: 'staging' };
+    expect(() => new NotificacionesService(
+      ...(dependencias as [any, any, any, any, any]),
+      { get: (key: string) => values[key] } as any,
+    )).not.toThrow();
+  });
 });

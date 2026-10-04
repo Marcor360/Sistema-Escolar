@@ -29,7 +29,9 @@ export class NotificacionesService {
     const user = this.config.get<string>('SMTP_USER');
     const pass = this.config.get<string>('SMTP_PASS');
     const from = this.config.get<string>('SMTP_FROM');
-    if (this.config.get<string>('NODE_ENV') === 'production' && (!host || !user || !pass || !from)) {
+    const produccion = this.config.get<string>('NODE_ENV') === 'production' &&
+      this.config.get<string>('APP_ENV') !== 'staging';
+    if (produccion && (!host || !user || !pass || !from)) {
       throw new Error('SMTP_HOST, SMTP_USER, SMTP_PASS y SMTP_FROM son obligatorios en produccion');
     }
     if ((user && !pass) || (!user && pass)) throw new Error('SMTP_USER y SMTP_PASS deben configurarse juntos');
