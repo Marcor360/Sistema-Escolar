@@ -323,6 +323,7 @@ CREATE TABLE pagos (
   monto DECIMAL(12,2) NOT NULL,
   metodo NVARCHAR(15) NOT NULL,                     -- EFECTIVO | TRANSFERENCIA | TARJETA | PASARELA
   referencia NVARCHAR(60) NULL,
+  clave_idempotencia NVARCHAR(36) NULL,
   estatus NVARCHAR(15) NOT NULL DEFAULT 'CONFIRMADO',
   fecha_pago DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
   registrado_por_id INT NULL,
@@ -335,6 +336,7 @@ CREATE TABLE pagos (
 );
 CREATE INDEX idx_pago_alumno ON pagos(alumno_id);
 CREATE UNIQUE INDEX uq_pagos_orden_pago ON pagos(orden_pago_id) WHERE orden_pago_id IS NOT NULL;
+CREATE UNIQUE INDEX uq_pagos_clave_idempotencia ON pagos(clave_idempotencia) WHERE clave_idempotencia IS NOT NULL;
 CREATE UNIQUE INDEX uq_pagos_legacy ON pagos(legacy_id) WHERE legacy_id IS NOT NULL;
 
 CREATE TABLE plantillas_correo (

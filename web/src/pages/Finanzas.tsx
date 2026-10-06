@@ -1,4 +1,4 @@
-import { FormEvent, KeyboardEvent, useCallback, useEffect, useState } from 'react';
+import { FormEvent, KeyboardEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { pesos, selloDeCargo } from '../utils/formato';
 import { Encabezado } from '../components/Encabezado';
@@ -35,6 +35,7 @@ export default function FinanzasPage() {
   const [formCargo, setFormCargo] = useState({ alumnoId: '', conceptoId: '', descripcion: '', monto: '', fechaVencimiento: '' });
   const [formColegiaturas, setFormColegiaturas] = useState({ cicloId: '', periodo: '' });
   const [formPago, setFormPago] = useState({ alumnoId: '', cargoId: '', monto: '', metodo: 'EFECTIVO', referencia: '' });
+  const intentoPago = useRef<{ firma: string; clave: string } | null>(null);
   const [cargosAlumno, setCargosAlumno] = useState<Cargo[]>([]);
   const navegarTabs = (event: KeyboardEvent<HTMLButtonElement>) => {
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
@@ -132,14 +133,23 @@ export default function FinanzasPage() {
   const registrarPago = async (e: FormEvent) => {
     e.preventDefault();
     limpiarAvisos();
+    const datos = {
+      alumnoId: Number(formPago.alumnoId),
+      cargoId: formPago.cargoId ? Number(formPago.cargoId) : undefined,
+      monto: Number(formPago.monto),
+      metodo: formPago.metodo,
+      referencia: formPago.referencia || undefined,
+    };
+    const firma = JSON.stringify(datos);
+    if (intentoPago.current?.firma !== firma) {
+      intentoPago.current = { firma, clave: crypto.randomUUID() };
+    }
     try {
       await api.post('/finanzas/pagos', {
-        alumnoId: Number(formPago.alumnoId),
-        cargoId: formPago.cargoId ? Number(formPago.cargoId) : undefined,
-        monto: Number(formPago.monto),
-        metodo: formPago.metodo,
-        referencia: formPago.referencia || undefined,
+        ...datos,
+        claveIdempotencia: intentoPago.current.clave,
       });
+      intentoPago.current = null;
       setFormPago({ alumnoId: '', cargoId: '', monto: '', metodo: 'EFECTIVO', referencia: '' });
       setMensaje('Pago registrado y estado de cuenta actualizado');
       cargarDatos();

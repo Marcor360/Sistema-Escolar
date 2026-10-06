@@ -137,6 +137,8 @@ POST `/notificaciones/difundir` (ADMINISTRATIVO; por `usuarioIds` o `rol`, limit
 | POST | /finanzas/avisos-cobranza | FINANZAS | Correo con plantilla + notificación in-app |
 | GET | /finanzas/bitacora | FINANZAS | Bitácora financiera limitada a los planteles asignados |
 
+`POST /finanzas/pagos` exige `claveIdempotencia` (UUID v4). Un reintento con la misma clave y los mismos datos devuelve el pago original; reutilizarla con datos distintos responde 409. El portal conserva la clave al reintentar el mismo formulario después de un error de red. La columna y su índice único se instalan con `migracion_pagos_manual_idempotencia.sql` antes de desplegar esta versión.
+
 ## Reportes
 - GET `/reportes/resumen` (ADMINISTRATIVO, FINANZAS): KPIs académicos y financieros de los planteles asignados.
 - GET `/reportes/boleta/:alumnoId`: boleta PDF (parciales y promedios).

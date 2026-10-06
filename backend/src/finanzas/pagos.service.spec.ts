@@ -14,6 +14,7 @@ function servicioTransaccional(options: {
   pagoExistente?: any;
   saldo?: number;
 } = {}) {
+  const claveIdempotencia = '6a99e643-b51b-4ee4-8f23-603ab0e61253';
   const cargo = options.cargo ?? { id: 3, alumnoId: 8, estatus: 'PENDIENTE' };
   const orden = options.orden ?? {
     id: 12, alumnoId: 8, cargoId: 3, monto: 125, estatus: 'PENDIENTE', alumno,
@@ -44,17 +45,49 @@ function servicioTransaccional(options: {
     recalcularEstatus: jest.fn().mockResolvedValue(undefined),
   };
   const alumnos = { obtener: jest.fn().mockResolvedValue(alumno) };
-  const service = new PagosService({} as any, alumnos as any, cargos as any, {} as any, dataSource as any);
-  return { service, cargo, orden, pagosRepo, cargoRepo, ordenRepo, bitacoraRepo, manager, cargos, alumnos };
+  const pagosGlobal = { findOne: jest.fn().mockResolvedValue(null) };
+  const service = new PagosService(pagosGlobal as any, alumnos as any, cargos as any, {} as any, dataSource as any);
+  return { service, cargo, orden, pagosRepo, pagosGlobal, cargoRepo, ordenRepo, bitacoraRepo, manager, cargos, alumnos, claveIdempotencia };
 }
 
 describe('PagosService.registrarManual', () => {
+  const pagoPrevio = {
+    id: 40, alumnoId: 8, cargoId: 3, monto: 50, metodo: 'EFECTIVO',
+    referencia: null, estatus: 'CONFIRMADO', registradoPorId: 77,
+  };
+
+  it('devuelve el mismo pago ante un reintento y rechaza reutilizar la clave con otro importe', async () => {
+    const ctx = servicioTransaccional();
+    ctx.pagosGlobal.findOne.mockResolvedValue(pagoPrevio);
+    const dto = {
+      alumnoId: 8, cargoId: 3, monto: 50, metodo: 'EFECTIVO', claveIdempotencia: ctx.claveIdempotencia,
+    } as any;
+
+    await expect(ctx.service.registrarManual(dto, user)).resolves.toBe(pagoPrevio);
+    await expect(ctx.service.registrarManual({ ...dto, monto: 60 }, user))
+      .rejects.toBeInstanceOf(ConflictException);
+    expect(ctx.pagosRepo.save).not.toHaveBeenCalled();
+    expect(ctx.bitacoraRepo.insert).not.toHaveBeenCalled();
+  });
+
+  it('reconoce el reintento que terminó mientras esperaba el bloqueo del cargo', async () => {
+    const ctx = servicioTransaccional();
+    ctx.pagosGlobal.findOne.mockResolvedValueOnce(null).mockResolvedValueOnce(pagoPrevio);
+    ctx.ordenRepo.findOne.mockResolvedValue(null);
+    ctx.cargos.saldoDeCargo.mockResolvedValue(0);
+
+    await expect(ctx.service.registrarManual({
+      alumnoId: 8, cargoId: 3, monto: 50, metodo: 'EFECTIVO', claveIdempotencia: ctx.claveIdempotencia,
+    } as any, user)).resolves.toBe(pagoPrevio);
+    expect(ctx.pagosRepo.save).not.toHaveBeenCalled();
+  });
+
   it('rechaza un pago que excede el saldo y no registra ningún movimiento', async () => {
     const ctx = servicioTransaccional({ saldo: 100 });
     ctx.ordenRepo.findOne.mockResolvedValue(null);
 
     await expect(ctx.service.registrarManual({
-      alumnoId: 8, cargoId: 3, monto: 100.01, metodo: 'EFECTIVO',
+      alumnoId: 8, cargoId: 3, monto: 100.01, metodo: 'EFECTIVO', claveIdempotencia: ctx.claveIdempotencia,
     } as any, user)).rejects.toBeInstanceOf(BadRequestException);
 
     expect(ctx.pagosRepo.save).not.toHaveBeenCalled();
@@ -69,7 +102,7 @@ describe('PagosService.registrarManual', () => {
     ctx.ordenRepo.findOne.mockResolvedValue(null);
 
     await expect(ctx.service.registrarManual({
-      alumnoId: 8, cargoId: 3, monto: 100, metodo: 'TRANSFERENCIA',
+      alumnoId: 8, cargoId: 3, monto: 100, metodo: 'TRANSFERENCIA', claveIdempotencia: ctx.claveIdempotencia,
     } as any, user)).resolves.toMatchObject({ monto: 100, cargoId: 3, estatus: 'CONFIRMADO' });
 
     expect(ctx.cargos.recalcularEstatus).toHaveBeenCalledWith(3, ctx.manager);
@@ -81,7 +114,7 @@ describe('PagosService.registrarManual', () => {
     ctx.ordenRepo.findOne.mockResolvedValue({ id: 12, estatus: 'PENDIENTE' });
 
     await expect(ctx.service.registrarManual({
-      alumnoId: 8, cargoId: 3, monto: 50, metodo: 'EFECTIVO',
+      alumnoId: 8, cargoId: 3, monto: 50, metodo: 'EFECTIVO', claveIdempotencia: ctx.claveIdempotencia,
     } as any, user)).rejects.toBeInstanceOf(ConflictException);
 
     expect(ctx.pagosRepo.save).not.toHaveBeenCalled();

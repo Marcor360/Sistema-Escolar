@@ -60,55 +60,73 @@ export class PagosService {
   /** Pago manual de ventanilla (efectivo/transferencia/tarjeta). */
   async registrarManual(dto: RegistrarPagoDto, user: JwtUser) {
     const alumno = await this.alumnos.obtener(dto.alumnoId, user);
-    return this.dataSource.transaction(async (manager) => {
-      if (dto.cargoId) {
-        const cargo = await manager.getRepository(Cargo).findOne({
-          where: { id: dto.cargoId }, lock: { mode: 'pessimistic_write' },
-        });
-        if (!cargo) throw new NotFoundException('Cargo no encontrado');
-        if (cargo.alumnoId !== dto.alumnoId) {
-          throw new BadRequestException('El cargo no pertenece al alumno indicado');
-        }
-        if (cargo.estatus === 'CANCELADO') throw new BadRequestException('No se puede pagar un cargo cancelado');
+    const existente = await this.pagos.findOne({ where: { claveIdempotencia: dto.claveIdempotencia } });
+    if (existente) return this.verificarReintento(existente, dto, user);
+    try {
+      return await this.dataSource.transaction(async (manager) => {
+        if (dto.cargoId) {
+          const cargo = await manager.getRepository(Cargo).findOne({
+            where: { id: dto.cargoId }, lock: { mode: 'pessimistic_write' },
+          });
+          if (!cargo) throw new NotFoundException('Cargo no encontrado');
+          if (cargo.alumnoId !== dto.alumnoId) {
+            throw new BadRequestException('El cargo no pertenece al alumno indicado');
+          }
+          if (cargo.estatus === 'CANCELADO') throw new BadRequestException('No se puede pagar un cargo cancelado');
 
-        const ordenPendiente = await manager.getRepository(OrdenPago).findOne({
-          where: { cargoId: cargo.id, estatus: In(['CREADA', 'PENDIENTE']) },
-        });
-        if (ordenPendiente) {
-          throw new ConflictException('El cargo tiene una orden Openpay pendiente; espera su resultado antes de registrar otro pago');
+          const ordenPendiente = await manager.getRepository(OrdenPago).findOne({
+            where: { cargoId: cargo.id, estatus: In(['CREADA', 'PENDIENTE']) },
+          });
+          if (ordenPendiente) {
+            throw new ConflictException('El cargo tiene una orden Openpay pendiente; espera su resultado antes de registrar otro pago');
+          }
+          const saldo = await this.cargos.saldoDeCargo(cargo, manager);
+          if (Math.round(dto.monto * 100) > Math.round(saldo * 100)) {
+            throw new BadRequestException(`El pago excede el saldo pendiente de $${saldo.toFixed(2)}`);
+          }
         }
-        const saldo = await this.cargos.saldoDeCargo(cargo, manager);
-        if (Math.round(dto.monto * 100) > Math.round(saldo * 100)) {
-          throw new BadRequestException(`El pago excede el saldo pendiente de $${saldo.toFixed(2)}`);
-        }
-      }
 
-      const pagos = manager.getRepository(Pago);
-      const pago = await pagos.save(
-        pagos.create({
-          alumnoId: dto.alumnoId,
-          cargoId: dto.cargoId ?? null,
-          monto: dto.monto,
-          metodo: dto.metodo,
-          referencia: dto.referencia ?? null,
-          estatus: 'CONFIRMADO',
-          fechaPago: new Date(),
-          registradoPorId: user.sub,
-        }),
-      );
-      if (dto.cargoId) await this.cargos.recalcularEstatus(dto.cargoId, manager);
-      await manager.getRepository(BitacoraFinanciera).insert({
-        usuarioId: user.sub,
-        plantelId: alumno.plantelId,
-        accion: 'PAGO_MANUAL',
-        entidad: 'pago',
-        entidadId: pago.id,
-        detalle: dto.cargoId
-          ? `$${dto.monto} ${dto.metodo} cargo=${dto.cargoId}`
-          : `$${dto.monto} ${dto.metodo} sin_cargo; pago_no_aplicado`,
+        const pagos = manager.getRepository(Pago);
+        const pago = await pagos.save(
+          pagos.create({
+            alumnoId: dto.alumnoId,
+            cargoId: dto.cargoId ?? null,
+            monto: dto.monto,
+            metodo: dto.metodo,
+            referencia: dto.referencia ?? null,
+            claveIdempotencia: dto.claveIdempotencia,
+            estatus: 'CONFIRMADO',
+            fechaPago: new Date(),
+            registradoPorId: user.sub,
+          }),
+        );
+        if (dto.cargoId) await this.cargos.recalcularEstatus(dto.cargoId, manager);
+        await manager.getRepository(BitacoraFinanciera).insert({
+          usuarioId: user.sub,
+          plantelId: alumno.plantelId,
+          accion: 'PAGO_MANUAL',
+          entidad: 'pago',
+          entidadId: pago.id,
+          detalle: dto.cargoId
+            ? `$${dto.monto} ${dto.metodo} cargo=${dto.cargoId}`
+            : `$${dto.monto} ${dto.metodo} sin_cargo; pago_no_aplicado`,
+        });
+        return pago;
       });
-      return pago;
-    });
+    } catch (error) {
+      const duplicado = await this.pagos.findOne({ where: { claveIdempotencia: dto.claveIdempotencia } });
+      if (!duplicado) throw error;
+      return this.verificarReintento(duplicado, dto, user);
+    }
+  }
+
+  private verificarReintento(pago: Pago, dto: RegistrarPagoDto, user: JwtUser): Pago {
+    const mismoPago = pago.registradoPorId === user.sub && pago.alumnoId === dto.alumnoId &&
+      pago.cargoId === (dto.cargoId ?? null) && pago.metodo === dto.metodo &&
+      pago.referencia === (dto.referencia ?? null) && pago.estatus === 'CONFIRMADO' &&
+      Math.round(Number(pago.monto) * 100) === Math.round(dto.monto * 100);
+    if (!mismoPago) throw new ConflictException('La clave de idempotencia ya se usó para otro pago');
+    return pago;
   }
 
   /** Pago confirmado por la pasarela (lo invoca el procesamiento del webhook). */

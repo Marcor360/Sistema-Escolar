@@ -323,6 +323,7 @@ CREATE TABLE pagos (
   monto DECIMAL(12,2) NOT NULL,
   metodo VARCHAR(15) NOT NULL,                     -- EFECTIVO | TRANSFERENCIA | TARJETA | PASARELA
   referencia VARCHAR(60) NULL,
+  clave_idempotencia VARCHAR(36) NULL,
   estatus VARCHAR(15) NOT NULL DEFAULT 'CONFIRMADO',-- CONFIRMADO | PENDIENTE | FALLIDO | CANCELADO
   fecha_pago DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   registrado_por_id INT NULL,
@@ -330,6 +331,7 @@ CREATE TABLE pagos (
   legacy_id BIGINT NULL,                           -- ver migracion_legacy_id.sql
   KEY idx_pago_alumno (alumno_id),
   UNIQUE KEY uq_pagos_orden_pago (orden_pago_id),
+  UNIQUE KEY uq_pagos_clave_idempotencia (clave_idempotencia),
   UNIQUE KEY uq_pagos_legacy (legacy_id),
   CONSTRAINT fk_pg_alumno FOREIGN KEY (alumno_id) REFERENCES alumnos(id),
   CONSTRAINT fk_pg_cargo FOREIGN KEY (cargo_id) REFERENCES cargos(id),

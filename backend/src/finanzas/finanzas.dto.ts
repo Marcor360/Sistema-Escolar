@@ -1,11 +1,11 @@
-import { IsIn, IsInt, IsNumber, IsOptional, IsString, Matches, Max, Min } from 'class-validator';
+import { IsDateString, IsIn, IsInt, IsNumber, IsOptional, IsString, IsUUID, Matches, Max, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { PaginacionDto } from '../common/paginacion.dto';
 
 export class ListarCargosDto extends PaginacionDto {
   @IsOptional() @Type(() => Number) @IsInt() alumnoId?: number;
   @IsOptional() @IsString() estatus?: string;
-  @IsOptional() @Matches(/^\d{4}-\d{2}$/) periodo?: string;
+  @IsOptional() @Matches(/^\d{4}-(0[1-9]|1[0-2])$/) periodo?: string;
 }
 
 export class ListarPagosDto extends PaginacionDto {
@@ -32,18 +32,18 @@ export class CrearCargoDto {
   @IsInt() alumnoId: number;
   @IsInt() conceptoId: number;
   @IsOptional() @IsInt() cicloId?: number;
-  @IsOptional() @Matches(/^\d{4}-\d{2}$/) periodo?: string;
+  @IsOptional() @Matches(/^\d{4}-(0[1-9]|1[0-2])$/) periodo?: string;
   @IsString() descripcion: string;
-  @IsNumber() @Min(0) monto: number;
-  @IsOptional() @IsNumber() @Min(0) descuento?: number;
-  @IsOptional() @IsString() fechaVencimiento?: string; // YYYY-MM-DD
+  @IsNumber({ maxDecimalPlaces: 2 }) @Min(0.01) monto: number;
+  @IsOptional() @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) descuento?: number;
+  @IsOptional() @Matches(/^\d{4}-\d{2}-\d{2}$/) @IsDateString({ strict: true }) fechaVencimiento?: string;
 }
 
 export class GenerarColegiaturasDto {
   @IsOptional() @Type(() => Number) @IsInt() plantelId?: number;
   @IsInt() cicloId: number;
-  @Matches(/^\d{4}-\d{2}$/) periodo: string; // YYYY-MM
-  @IsOptional() @IsNumber() @Min(0) monto?: number;   // por defecto, montoBase del concepto COL
+  @Matches(/^\d{4}-(0[1-9]|1[0-2])$/) periodo: string; // YYYY-MM
+  @IsOptional() @IsNumber({ maxDecimalPlaces: 2 }) @Min(0.01) monto?: number; // por defecto, montoBase del concepto COL
   @IsOptional() @IsInt() @Min(1) @Max(28) diaVencimiento?: number; // por defecto día 5
 }
 
@@ -53,6 +53,7 @@ export class AplicarRecargosDto {
 }
 
 export class RegistrarPagoDto {
+  @IsUUID('4') claveIdempotencia: string;
   @IsInt() alumnoId: number;
   @IsOptional() @IsInt() cargoId?: number;
   @IsNumber({ maxDecimalPlaces: 2 }) @Min(0.01) monto: number;

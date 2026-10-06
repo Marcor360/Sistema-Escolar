@@ -160,17 +160,22 @@ export class AcademicoService {
 
   /** Baja lógica: se rechaza si el grupo tiene inscripciones activas. */
   async eliminarGrupo(id: number, user: JwtUser) {
-    const grupo = await this.grupos.findOne({ where: { id } });
-    if (!grupo) throw new NotFoundException('Grupo no encontrado');
-    await this.scope.validarGestion(user, grupo.plantelId);
-    const inscripcionesActivas = await this.inscripciones.count({ where: { grupoId: id, estatus: 'ACTIVA' } });
-    if (inscripcionesActivas > 0) {
-      throw new ConflictException(
-        `El grupo tiene ${inscripcionesActivas} inscripción(es) activa(s); dalas de baja antes de eliminar el grupo`,
-      );
-    }
-    await this.grupos.update(id, { activo: false });
-    return { ok: true };
+    return this.dataSource.transaction(async (manager) => {
+      const grupos = manager.getRepository(Grupo);
+      const grupo = await grupos.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+      if (!grupo) throw new NotFoundException('Grupo no encontrado');
+      await this.scope.validarGestion(user, grupo.plantelId);
+      const inscripcionesActivas = await manager.getRepository(Inscripcion).count({
+        where: { grupoId: id, estatus: 'ACTIVA' },
+      });
+      if (inscripcionesActivas > 0) {
+        throw new ConflictException(
+          `El grupo tiene ${inscripcionesActivas} inscripción(es) activa(s); dalas de baja antes de eliminar el grupo`,
+        );
+      }
+      await grupos.update(id, { activo: false });
+      return { ok: true };
+    });
   }
 
   /** Todas las asignaciones grupo-materia (captura de calificaciones del administrativo). */
@@ -203,6 +208,7 @@ export class AcademicoService {
     const grupo = await this.grupos.findOne({ where: { id: grupoId } });
     if (!grupo) throw new NotFoundException('Grupo no encontrado');
     await this.scope.validarGestion(user, grupo.plantelId);
+    if (!grupo.activo) throw new ConflictException('No se puede asignar una materia a un grupo inactivo');
     const duplicado = await this.grupoMaterias.findOne({
       where: { grupoId, materiaId: dto.materiaId },
     });
@@ -265,16 +271,25 @@ export class AcademicoService {
 
   // ---- Inscripciones ----
   async inscribirAlumno(grupoId: number, alumnoId: number, user: JwtUser) {
-    const grupo = await this.grupos.findOne({ where: { id: grupoId } });
-    if (!grupo) throw new NotFoundException('Grupo no encontrado');
-    await this.scope.validarGestion(user, grupo.plantelId);
-    const alumno = await this.alumnos.findOne({ where: { id: alumnoId } });
-    if (!alumno) throw new NotFoundException('Alumno no encontrado');
-    if (alumno.plantelId !== grupo.plantelId) throw new ForbiddenException('El alumno no pertenece al plantel del grupo');
-    const duplicada = await this.inscripciones.findOne({ where: { grupoId, alumnoId } });
-    if (duplicada) throw new ConflictException('El alumno ya está inscrito en este grupo');
     try {
-      return await this.inscripciones.save(this.inscripciones.create({ grupoId, alumnoId }));
+      return await this.dataSource.transaction(async (manager) => {
+        const grupo = await manager.getRepository(Grupo).findOne({
+          where: { id: grupoId }, lock: { mode: 'pessimistic_write' },
+        });
+        if (!grupo) throw new NotFoundException('Grupo no encontrado');
+        await this.scope.validarGestion(user, grupo.plantelId);
+        if (!grupo.activo) throw new ConflictException('No se puede inscribir en un grupo inactivo');
+        const alumno = await manager.getRepository(Alumno).findOne({ where: { id: alumnoId } });
+        if (!alumno) throw new NotFoundException('Alumno no encontrado');
+        if (alumno.estatus !== 'ACTIVO') throw new ConflictException('El alumno no está activo');
+        if (alumno.plantelId !== grupo.plantelId) {
+          throw new ForbiddenException('El alumno no pertenece al plantel del grupo');
+        }
+        const inscripciones = manager.getRepository(Inscripcion);
+        const duplicada = await inscripciones.findOne({ where: { grupoId, alumnoId } });
+        if (duplicada) throw new ConflictException('El alumno ya está inscrito en este grupo');
+        return inscripciones.save(inscripciones.create({ grupoId, alumnoId }));
+      });
     } catch (error) {
       if (esConflictoUnico(error)) throw new ConflictException('El alumno ya está inscrito en este grupo');
       throw error;

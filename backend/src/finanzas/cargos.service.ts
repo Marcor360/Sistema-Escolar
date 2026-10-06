@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, In, Repository } from 'typeorm';
+import { DataSource, EntityManager, In, Repository } from 'typeorm';
 import { Cargo } from '../entities/cargo.entity';
 import { Pago } from '../entities/pago.entity';
 import { Inscripcion } from '../entities/inscripcion.entity';
@@ -41,6 +41,7 @@ export class CargosService {
     private readonly conceptos: ConceptosService,
     private readonly bitacora: BitacoraFinancieraService,
     private readonly scope: ScopeService,
+    private readonly dataSource: DataSource,
   ) {}
 
   totalDeCargo(cargo: Cargo): number {
@@ -91,29 +92,35 @@ export class CargosService {
   }
 
   async crear(dto: CrearCargoDto, user: JwtUser) {
+    if (dto.monto <= 0 || (dto.descuento ?? 0) > dto.monto) {
+      throw new BadRequestException('El monto debe ser positivo y el descuento no puede excederlo');
+    }
     await this.conceptos.obtener(dto.conceptoId);
     const alumno = await this.alumnos.obtener(dto.alumnoId, user);
-    const cargo = await this.cargos.save(
-      this.cargos.create({
-        alumnoId: dto.alumnoId,
-        conceptoId: dto.conceptoId,
-        cicloId: dto.cicloId ?? null,
-        periodo: dto.periodo ?? null,
-        descripcion: dto.descripcion,
-        monto: dto.monto,
-        descuento: dto.descuento ?? 0,
-        fechaVencimiento: dto.fechaVencimiento ?? null,
-      }),
-    );
-    await this.bitacora.registrar(
-      user.sub, 'CREAR_CARGO', 'cargo', cargo.id, `${dto.descripcion} $${dto.monto}`, alumno.plantelId,
-    );
-    return cargo;
+    return this.dataSource.transaction(async (manager) => {
+      const cargos = manager.getRepository(Cargo);
+      const cargo = await cargos.save(
+        cargos.create({
+          alumnoId: dto.alumnoId,
+          conceptoId: dto.conceptoId,
+          cicloId: dto.cicloId ?? null,
+          periodo: dto.periodo ?? null,
+          descripcion: dto.descripcion,
+          monto: dto.monto,
+          descuento: dto.descuento ?? 0,
+          fechaVencimiento: dto.fechaVencimiento ?? null,
+        }),
+      );
+      await this.bitacora.registrar(
+        user.sub, 'CREAR_CARGO', 'cargo', cargo.id, `${dto.descripcion} $${dto.monto}`, alumno.plantelId, manager,
+      );
+      return cargo;
+    });
   }
 
   /**
    * Colegiatura del periodo para todos los inscritos activos del ciclo.
-   * Idempotente y en lote: 3 consultas de lectura + 1 inserción masiva.
+   * Idempotente; cada cargo y su bitácora se confirman en la misma transacción.
    */
   async generarColegiaturas(dto: GenerarColegiaturasDto, user: JwtUser) {
     const concepto = await this.conceptos.porClave('COL');
@@ -124,14 +131,15 @@ export class CargosService {
     const gruposDelCiclo = await this.grupos.find({
       where: {
         cicloId: dto.cicloId,
+        activo: true,
         ...(planteles === null ? {} : { plantelId: this.scope.condicion(planteles) }),
       },
     });
     if (gruposDelCiclo.length === 0) return { generados: 0, omitidos: 0 };
 
-    const inscripciones = await this.inscripciones.find({
+    const inscripciones = (await this.inscripciones.find({
       where: { grupoId: In(gruposDelCiclo.map((g) => g.id)), estatus: 'ACTIVA' },
-    });
+    })).filter((inscripcion) => inscripcion.alumno.estatus === 'ACTIVO');
     const alumnoIds = [...new Set(inscripciones.map((i) => i.alumnoId))];
     if (alumnoIds.length === 0) return { generados: 0, omitidos: 0 };
 
@@ -141,14 +149,6 @@ export class CargosService {
     });
     const yaGenerados = new Set(existentes.map((c) => c.alumnoId));
     const plantelPorAlumno = new Map(inscripciones.map((i) => [i.alumnoId, i.alumno.plantelId]));
-    const resumenPlantel = new Map<number, { generados: number; omitidos: number }>();
-    for (const alumnoId of alumnoIds) {
-      const plantelId = plantelPorAlumno.get(alumnoId);
-      if (plantelId === undefined) continue;
-      const resumen = resumenPlantel.get(plantelId) ?? { generados: 0, omitidos: 0 };
-      if (yaGenerados.has(alumnoId)) resumen.omitidos++;
-      resumenPlantel.set(plantelId, resumen);
-    }
 
     const dia = String(dto.diaVencimiento ?? 5).padStart(2, '0');
     const vencimiento = `${dto.periodo}-${dia}`;
@@ -170,23 +170,20 @@ export class CargosService {
     let omitidosConcurrentes = 0;
     for (const nuevo of nuevos) {
       try {
-        await this.cargos.save(nuevo);
+        await this.dataSource.transaction(async (manager) => {
+          const cargo = await manager.getRepository(Cargo).save(nuevo);
+          const plantelId = plantelPorAlumno.get(cargo.alumnoId);
+          await this.bitacora.registrar(
+            user.sub, 'GENERAR_COLEGIATURA', 'cargo', cargo.id,
+            `periodo=${dto.periodo} monto=${monto}`, plantelId ?? null, manager,
+          );
+        });
         generados++;
-        const plantelId = plantelPorAlumno.get(nuevo.alumnoId);
-        if (plantelId !== undefined) resumenPlantel.get(plantelId)!.generados++;
       } catch (error) {
         if (!esConflictoUnico(error)) throw error;
         omitidosConcurrentes++;
-        const plantelId = plantelPorAlumno.get(nuevo.alumnoId);
-        if (plantelId !== undefined) resumenPlantel.get(plantelId)!.omitidos++;
       }
     }
-
-    await Promise.all([...resumenPlantel].map(([plantelId, resumen]) => this.bitacora.registrar(
-      user.sub, 'GENERAR_COLEGIATURAS', 'cargo', null,
-      `periodo=${dto.periodo} generados=${resumen.generados} omitidos=${resumen.omitidos}`,
-      plantelId,
-    )));
     return { generados, omitidos: yaGenerados.size + omitidosConcurrentes, vencimiento };
   }
 
@@ -203,25 +200,33 @@ export class CargosService {
       .where('c.estatus IN (:...estatus)', { estatus: ['PENDIENTE', 'PARCIAL'] })
       .andWhere('c.fecha_vencimiento < :hoy', { hoy });
     if (planteles !== null) qb.andWhere('a.plantel_id IN (:...planteles)', { planteles });
-    const vencidos = await qb.getMany();
-
-    const modificados: Cargo[] = [];
-    for (const cargo of vencidos) {
-      if (cargo.recargo > 0) continue;
-      cargo.recargo = redondear((cargo.monto - cargo.descuento) * (porcentaje / 100));
-      cargo.estatus = 'VENCIDO';
-      modificados.push(cargo);
-    }
-    if (modificados.length > 0) await this.cargos.save(modificados);
-    const porPlantel = new Map<number, number>();
-    for (const cargo of modificados) {
-      const plantelId = cargo.alumno.plantelId;
-      porPlantel.set(plantelId, (porPlantel.get(plantelId) ?? 0) + 1);
-    }
-    await Promise.all([...porPlantel].map(([plantelId, cantidad]) => this.bitacora.registrar(
-      user.sub, 'APLICAR_RECARGOS', 'cargo', null, `${porcentaje}% a ${cantidad} cargos`, plantelId,
-    )));
-    return { aplicados: modificados.length, porcentaje };
+    const candidatos = await qb.getMany();
+    if (candidatos.length === 0) return { aplicados: 0, porcentaje };
+    return this.dataSource.transaction(async (manager) => {
+      const cargos = manager.getRepository(Cargo);
+      const porPlantel = new Map<number, number>();
+      let aplicados = 0;
+      for (const candidato of candidatos.sort((a, b) => a.id - b.id)) {
+        const cargo = await cargos.findOne({
+          where: { id: candidato.id }, lock: { mode: 'pessimistic_write' },
+        });
+        if (!cargo || !['PENDIENTE', 'PARCIAL'].includes(cargo.estatus) ||
+            !cargo.fechaVencimiento || cargo.fechaVencimiento >= hoy || cargo.recargo > 0 ||
+            (planteles !== null && !planteles.includes(cargo.alumno.plantelId))) continue;
+        cargo.recargo = redondear((cargo.monto - cargo.descuento) * (porcentaje / 100));
+        cargo.estatus = 'VENCIDO';
+        await cargos.save(cargo);
+        aplicados++;
+        const plantelId = cargo.alumno.plantelId;
+        porPlantel.set(plantelId, (porPlantel.get(plantelId) ?? 0) + 1);
+      }
+      for (const [plantelId, cantidad] of porPlantel) {
+        await this.bitacora.registrar(
+          user.sub, 'APLICAR_RECARGOS', 'cargo', null, `${porcentaje}% a ${cantidad} cargos`, plantelId, manager,
+        );
+      }
+      return { aplicados, porcentaje };
+    });
   }
 
   /** Recalcula el estatus de un cargo con base en sus pagos confirmados. */

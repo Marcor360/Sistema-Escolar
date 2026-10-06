@@ -19,7 +19,8 @@
                                                   "migracion_version_sesion.sql"
                                               ],
                                   "pendientes":  [
-                                                     "migracion_grupos_plantel_unique.sql"
+                                                     "migracion_grupos_plantel_unique.sql",
+                                                     "migracion_pagos_manual_idempotencia.sql"
                                                  ]
                               },
                     "sqlserver":  {
@@ -39,7 +40,8 @@
                                                       "migracion_version_sesion.sql"
                                                   ],
                                       "pendientes":  [
-                                                         "migracion_grupos_plantel_unique.sql"
+                                                         "migracion_grupos_plantel_unique.sql",
+                                                         "migracion_pagos_manual_idempotencia.sql"
                                                      ]
                                   }
                 }

@@ -6,6 +6,7 @@ import { AddressInfo } from 'net';
 import { basename, resolve } from 'path';
 import { readFileSync, unlinkSync } from 'fs';
 import { spawn, spawnSync } from 'child_process';
+import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { DataSource } from 'typeorm';
 import {
@@ -13,6 +14,7 @@ import {
   Docente, Materia, Material, Notificacion, OrdenPago, Pago, Plantel, Rol, Usuario, UsuarioPlantel,
 } from '../src/entities';
 import { AppModule } from '../src/app.module';
+import { BitacoraFinancieraService } from '../src/finanzas/bitacora-financiera.service';
 
 const dbName = process.env.DB_NAME ?? '';
 
@@ -581,6 +583,39 @@ describe('Integración de flujos críticos (base aislada)', () => {
     expect(await dataSource.getRepository(Inscripcion).countBy({ alumnoId, grupoId, estatus: 'ACTIVA' })).toBe(1);
   });
 
+  it('impide inscribir en grupos inactivos y a alumnos dados de baja', async () => {
+    const admin = await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId });
+    const token = await emitirToken(admin.email);
+    const ciclo = await dataSource.getRepository(CicloEscolar).findOneByOrFail({ clave: `C${sufijo}` });
+    const inactivo = await api('/academico/grupos', {
+      method: 'POST', token,
+      body: { cicloId: ciclo.id, plantelId, nombre: `INACTIVO${sufijo}` },
+    });
+    expect(inactivo.response.status).toBe(201);
+    expect((await api(`/academico/grupos/${inactivo.data.id}`, { method: 'DELETE', token })).response.status).toBe(200);
+    const inscripcionInactiva = await api(`/academico/grupos/${inactivo.data.id}/alumnos`, {
+      method: 'POST', token, body: { alumnoId },
+    });
+    expect(inscripcionInactiva.response.status).toBe(409);
+    expect(await dataSource.getRepository(Inscripcion).countBy({ grupoId: inactivo.data.id })).toBe(0);
+
+    const alumnoBaja = await api('/alumnos', {
+      method: 'POST', token,
+      body: {
+        email: `alumno_baja_${sufijo}@example.invalid`, password: 'Integracion_Segura_42!',
+        nombre: 'Alumno', apellidoPaterno: 'Baja', matricula: `AB${sufijo}`, plantelId,
+      },
+    });
+    expect(alumnoBaja.response.status).toBe(201);
+    await dataSource.getRepository(Alumno).update(alumnoBaja.data.id, { estatus: 'BAJA' });
+    const grupoActivo = await dataSource.getRepository(Grupo).findOneByOrFail({ nombre: `G${sufijo}`, plantelId });
+    const inscripcionBaja = await api(`/academico/grupos/${grupoActivo.id}/alumnos`, {
+      method: 'POST', token, body: { alumnoId: alumnoBaja.data.id },
+    });
+    expect(inscripcionBaja.response.status).toBe(409);
+    expect(await dataSource.getRepository(Inscripcion).countBy({ grupoId: grupoActivo.id, alumnoId: alumnoBaja.data.id })).toBe(0);
+  });
+
   it('MAESTRO solo lista y consulta alumnos de sus grupos, aunque compartan plantel', async () => {
     const admin = await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId });
     const tokenAdmin = await emitirToken(admin.email);
@@ -661,7 +696,10 @@ describe('Integración de flujos críticos (base aislada)', () => {
     const token = await emitirToken(admin.email);
     const pagoManual = await api('/finanzas/pagos', {
       method: 'POST', token,
-      body: { alumnoId, cargoId: cargoWebhookId, monto: 125, metodo: 'EFECTIVO', referencia: `MAN${sufijo}` },
+      body: {
+        alumnoId, cargoId: cargoWebhookId, monto: 125, metodo: 'EFECTIVO',
+        referencia: `MAN${sufijo}`, claveIdempotencia: randomUUID(),
+      },
     });
     expect(pagoManual.response.status).toBe(409);
 
@@ -699,18 +737,86 @@ describe('Integración de flujos críticos (base aislada)', () => {
     });
     expect(cargo.response.status).toBe(201);
 
+    const claveParcial = randomUUID();
     const parcial = await api('/finanzas/pagos', {
       method: 'POST', token,
-      body: { alumnoId, cargoId: cargo.data.id, monto: 50, metodo: 'TRANSFERENCIA', referencia: `INT${sufijo}` },
+      body: {
+        alumnoId, cargoId: cargo.data.id, monto: 50, metodo: 'TRANSFERENCIA',
+        referencia: `INT${sufijo}`, claveIdempotencia: claveParcial,
+      },
     });
     expect(parcial.response.status).toBe(201);
+    const reintento = await api('/finanzas/pagos', {
+      method: 'POST', token,
+      body: {
+        alumnoId, cargoId: cargo.data.id, monto: 50, metodo: 'TRANSFERENCIA',
+        referencia: `INT${sufijo}`, claveIdempotencia: claveParcial,
+      },
+    });
+    expect(reintento.response.status).toBe(201);
+    expect(reintento.data.id).toBe(parcial.data.id);
+    const claveReutilizada = await api('/finanzas/pagos', {
+      method: 'POST', token,
+      body: {
+        alumnoId, cargoId: cargo.data.id, monto: 60, metodo: 'TRANSFERENCIA',
+        referencia: `INT${sufijo}`, claveIdempotencia: claveParcial,
+      },
+    });
+    expect(claveReutilizada.response.status).toBe(409);
     const excedente = await api('/finanzas/pagos', {
       method: 'POST', token,
-      body: { alumnoId, cargoId: cargo.data.id, monto: 150.01, metodo: 'EFECTIVO', referencia: `EXC${sufijo}` },
+      body: {
+        alumnoId, cargoId: cargo.data.id, monto: 150.01, metodo: 'EFECTIVO',
+        referencia: `EXC${sufijo}`, claveIdempotencia: randomUUID(),
+      },
     });
     expect(excedente.response.status).toBe(400);
     expect((await dataSource.getRepository(Cargo).findOneByOrFail({ id: cargo.data.id })).estatus).toBe('PARCIAL');
     expect(await dataSource.getRepository(Pago).countBy({ cargoId: cargo.data.id })).toBe(1);
+  });
+
+  it('revierte cargos y recargos cuando falla su bitácora financiera', async () => {
+    const admin = await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId });
+    const token = await emitirToken(admin.email);
+    const concepto = await dataSource.getRepository(ConceptoPago).save(
+      dataSource.getRepository(ConceptoPago).create({
+        clave: `TX${sufijo}`, nombre: 'Concepto transaccional', tipo: 'OTRO', montoBase: 100,
+      }),
+    );
+    const bitacora = app.get(BitacoraFinancieraService);
+    const descripcion = `Cargo reversible ${sufijo}`;
+    const fallo = jest.spyOn(bitacora, 'registrar').mockRejectedValueOnce(new Error('Bitácora no disponible'));
+    try {
+      const respuesta = await api('/finanzas/cargos', {
+        method: 'POST', token,
+        body: { alumnoId, conceptoId: concepto.id, descripcion, monto: 100, descuento: 0 },
+      });
+      expect(respuesta.response.status).toBe(500);
+      expect(await dataSource.getRepository(Cargo).countBy({ descripcion })).toBe(0);
+    } finally {
+      fallo.mockRestore();
+    }
+
+    const creado = await api('/finanzas/cargos', {
+      method: 'POST', token,
+      body: {
+        alumnoId, conceptoId: concepto.id, descripcion, monto: 100,
+        descuento: 0, fechaVencimiento: '2020-01-01',
+      },
+    });
+    expect(creado.response.status).toBe(201);
+    const falloRecargo = jest.spyOn(bitacora, 'registrar').mockRejectedValueOnce(new Error('Bitácora no disponible'));
+    try {
+      const respuesta = await api('/finanzas/cargos/aplicar-recargos', {
+        method: 'POST', token, body: { plantelId, porcentaje: 10 },
+      });
+      expect(respuesta.response.status).toBe(500);
+      const cargo = await dataSource.getRepository(Cargo).findOneByOrFail({ id: creado.data.id });
+      expect(cargo.recargo).toBe(0);
+      expect(cargo.estatus).toBe('PENDIENTE');
+    } finally {
+      falloRecargo.mockRestore();
+    }
   });
 
   it('entrega materiales solo a un alumno inscrito y sirve el enlace firmado', async () => {

@@ -25,3 +25,20 @@ describe('BitacoraFinancieraService.listar alcance', () => {
     expect(repo.find).toHaveBeenCalledWith({ order: { createdAt: 'DESC' }, take: 300 });
   });
 });
+
+describe('BitacoraFinancieraService.registrar', () => {
+  it('usa el repositorio de la transacción recibida', async () => {
+    const repoGlobal = { insert: jest.fn() };
+    const repoTransaccional = { insert: jest.fn().mockResolvedValue(undefined) };
+    const manager = { getRepository: jest.fn().mockReturnValue(repoTransaccional) };
+    const service = new BitacoraFinancieraService(repoGlobal as any, {} as any);
+
+    await service.registrar(7, 'CREAR_CARGO', 'cargo', 11, 'Cargo $100', 3, manager as any);
+
+    expect(manager.getRepository).toHaveBeenCalled();
+    expect(repoTransaccional.insert).toHaveBeenCalledWith(expect.objectContaining({
+      usuarioId: 7, entidadId: 11, plantelId: 3,
+    }));
+    expect(repoGlobal.insert).not.toHaveBeenCalled();
+  });
+});

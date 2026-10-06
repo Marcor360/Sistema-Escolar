@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { EntityManager, In, Repository } from 'typeorm';
 import { BitacoraFinanciera } from '../entities/bitacora-financiera.entity';
 import { ScopeService } from '../planteles/scope.service';
 import { JwtUser } from '../common/current-user.decorator';
@@ -16,9 +16,10 @@ export class BitacoraFinancieraService {
 
   registrar(
     usuarioId: number | null, accion: string, entidad: string, entidadId: number | null,
-    detalle: string, plantelId: number | null = null,
+    detalle: string, plantelId: number | null = null, manager?: EntityManager,
   ) {
-    return this.repo.insert({ usuarioId, plantelId, accion, entidad, entidadId, detalle: detalle.slice(0, 500) });
+    const repo = manager?.getRepository(BitacoraFinanciera) ?? this.repo;
+    return repo.insert({ usuarioId, plantelId, accion, entidad, entidadId, detalle: detalle.slice(0, 500) });
   }
 
   async listar(user: JwtUser) {

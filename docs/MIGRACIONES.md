@@ -23,6 +23,7 @@
 - `migracion_calendario_creador.sql` debe ejecutarse después de `migracion_plantel_detalle.sql`.
 - `migracion_pago_orden_unico.sql` requiere que exista `pagos.orden_pago_id`; se recomienda ejecutarla después de comprobar y resolver duplicados.
 - `migracion_cargos_idempotencia.sql` agrega una clave nullable y un índice único para evitar colegiaturas duplicadas concurrentes; no modifica cargos existentes.
+- `migracion_pagos_manual_idempotencia.sql` agrega `pagos.clave_idempotencia` nullable y única. Los pagos históricos permanecen en `NULL`; aplicar antes de desplegar la API que exige la clave en pagos manuales.
 - `migracion_version_sesion.sql` agrega `usuarios.session_version`, que la API usa para revocar JWT después de cambios de contraseña.
 - `migracion_bitacora_resultado.sql` agrega resultado HTTP y entidad a bitácoras ya existentes; en una base recién creada `schema.sql` ya incluye esas columnas.
 - `migracion_bitacora_plantel.sql` agrega el ámbito institucional a la bitácora financiera; los eventos previos conservan `plantel_id=NULL` y solo quedan visibles para `SUPERADMIN`.
