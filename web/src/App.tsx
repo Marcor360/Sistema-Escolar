@@ -23,8 +23,17 @@ const PlantelesPage = lazy(() => import('./pages/Planteles'));
 const ConfiguracionPage = lazy(() => import('./pages/Configuracion'));
 
 export default function App() {
-  const { sesion, cargando } = useAuth();
+  const { sesion, cargando, errorInicio } = useAuth();
   if (cargando) return null;
+  if (errorInicio) return (
+    <main className="login-fondo">
+      <div className="login-caja">
+        <h1>No se pudo comprobar tu sesión</h1>
+        <p role="alert">Revisa la conexión con el servidor e inténtalo de nuevo.</p>
+        <button className="boton" onClick={() => location.reload()}>Reintentar</button>
+      </div>
+    </main>
+  );
 
   return (
     <Routes>

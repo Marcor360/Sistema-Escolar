@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
-import { api, registrarSesionExpirada, TOKEN_KEY } from './src/api/client';
+import { api, mensajeDeError, registrarSesionExpirada, TOKEN_KEY } from './src/api/client';
 import { Sesion, SesionContext } from './src/sesion';
 import { colores } from './src/theme';
 import LoginScreen from './src/screens/Login';
@@ -27,6 +27,7 @@ export default function App() {
   const [listo, setListo] = useState(false);
   const [marca, setMarca] = useState<Marca>(MARCA_POR_DEFECTO);
   const [marcaLista, setMarcaLista] = useState(false);
+  const [errorInicio, setErrorInicio] = useState('');
 
   const tema = useMemo(() => ({
     ...DefaultTheme,
@@ -40,8 +41,10 @@ export default function App() {
     },
   }), [marca]);
 
-  useEffect(() => {
-    (async () => {
+  const restaurarSesion = useCallback(async () => {
+    setListo(false);
+    setErrorInicio('');
+    try {
       const token = await SecureStore.getItemAsync(TOKEN_KEY);
       if (token) {
         try {
@@ -52,13 +55,20 @@ export default function App() {
             nombre: data.nombreCompleto,
             roles: data.roles.map((r: { clave: string }) => r.clave),
           });
-        } catch {
-          await SecureStore.deleteItemAsync(TOKEN_KEY);
+        } catch (error) {
+          if ((error as { response?: { status?: number } }).response?.status !== 401) {
+            setErrorInicio(mensajeDeError(error));
+          }
         }
       }
+    } catch (error) {
+      setErrorInicio(mensajeDeError(error));
+    } finally {
       setListo(true);
-    })();
+    }
   }, []);
+
+  useEffect(() => { void restaurarSesion(); }, [restaurarSesion]);
 
   useEffect(() => {
     let activa = true;
@@ -108,6 +118,22 @@ export default function App() {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colores.papel }}>
         <ActivityIndicator color={marca.colorPrimario} accessibilityLabel="Cargando aplicación" />
+      </View>
+    );
+  }
+
+  if (errorInicio) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: colores.papel }}>
+        <Text accessibilityRole="alert" style={{ color: colores.peligro, textAlign: 'center', marginBottom: 16 }}>
+          No se pudo comprobar tu sesión. {errorInicio}
+        </Text>
+        <TouchableOpacity
+          onPress={() => { void restaurarSesion(); }} accessibilityRole="button" accessibilityLabel="Reintentar sesión"
+          style={{ backgroundColor: marca.colorPrimario, padding: 14 }}
+        >
+          <Text style={{ color: '#fff' }}>Reintentar</Text>
+        </TouchableOpacity>
       </View>
     );
   }

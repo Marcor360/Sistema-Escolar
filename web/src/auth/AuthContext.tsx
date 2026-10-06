@@ -11,6 +11,7 @@ export interface Sesion {
 interface AuthValue {
   sesion: Sesion | null;
   cargando: boolean;
+  errorInicio: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   tieneRol: (...roles: string[]) => boolean;
@@ -21,11 +22,35 @@ const AuthContext = createContext<AuthValue>(null as unknown as AuthValue);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [sesion, setSesion] = useState<Sesion | null>(null);
   const [cargando, setCargando] = useState(true);
+  const [errorInicio, setErrorInicio] = useState(false);
 
   useEffect(() => {
-    const guardada = localStorage.getItem('sesion');
-    if (guardada && localStorage.getItem('token')) setSesion(JSON.parse(guardada));
-    setCargando(false);
+    let activo = true;
+    if (!localStorage.getItem('token')) {
+      localStorage.removeItem('sesion');
+      setCargando(false);
+      return;
+    }
+    api.get<{
+      id: number; email: string; nombreCompleto: string; roles: { clave: string }[];
+    }>('/auth/me').then(({ data }) => {
+      if (!activo) return;
+      const actual: Sesion = {
+        sub: data.id, email: data.email, nombre: data.nombreCompleto,
+        roles: data.roles.map((rol) => rol.clave),
+      };
+      localStorage.setItem('sesion', JSON.stringify(actual));
+      setSesion(actual);
+    }).catch((error: { response?: { status?: number } }) => {
+      if (!activo) return;
+      localStorage.removeItem('sesion');
+      if (error.response?.status === 401) {
+        localStorage.removeItem('token');
+      } else {
+        setErrorInicio(true);
+      }
+    }).finally(() => { if (activo) setCargando(false); });
+    return () => { activo = false; };
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -47,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     (sesion.roles.includes('SUPERADMIN') || roles.some((r) => sesion.roles.includes(r)));
 
   return (
-    <AuthContext.Provider value={{ sesion, cargando, login, logout, tieneRol }}>
+    <AuthContext.Provider value={{ sesion, cargando, errorInicio, login, logout, tieneRol }}>
       {children}
     </AuthContext.Provider>
   );

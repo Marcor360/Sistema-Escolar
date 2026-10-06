@@ -24,3 +24,9 @@ Este documento actualiza `AUDITORIA_ACTUAL_2026-10-05.md` con los cambios poster
 - Ampliar la aceptación por roles, planteles, navegadores y dispositivos, y mantener el seguimiento de dependencias descrito en la auditoría inicial.
 
 La nueva migración `migracion_pagos_manual_idempotencia.sql` debe quedar aplicada antes de publicar la API y el portal de esta continuación.
+
+## Segunda revisión
+
+El portal web ahora valida el token guardado con `GET /auth/me` al arrancar y toma los roles vigentes del servidor. Una sesión revocada elimina el token local; si la comprobación falla por red, muestra un aviso con opción de reintentar sin usar roles antiguos. Se añadieron pruebas de cambio de rol, revocación y fallo de red. Web pasa lint, 8 pruebas y build.
+
+La app móvil conserva el token si `GET /auth/me` falla por conexión y presenta un botón para reintentar la comprobación. Una respuesta 401 mantiene el comportamiento de eliminar la sesión. TypeScript y las 2 pruebas móviles existentes pasan. Queda pendiente recorrer este comportamiento en un dispositivo con pérdida y recuperación de red.
