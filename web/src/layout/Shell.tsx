@@ -1,4 +1,4 @@
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { Cargando } from '../components/Cargando';
@@ -26,6 +26,7 @@ export function Shell() {
   const { sesion, logout, tieneRol } = useAuth();
   const navigate = useNavigate();
   const { marca } = useMarca();
+  const [errorCierre, setErrorCierre] = useState('');
 
   return (
     <div className="shell">
@@ -48,9 +49,18 @@ export function Shell() {
           <p>{sesion?.nombre}</p>
           <NavLink to="/cuenta" className="pie-enlace">Mi cuenta</NavLink>
           <p className="rol">{sesion?.roles.join(' · ')}</p>
+          {errorCierre && <p className="mensaje-error" role="alert">{errorCierre}</p>}
           <button
             className="boton fantasma"
-            onClick={() => { logout(); navigate('/login'); }}
+            onClick={async () => {
+              setErrorCierre('');
+              try {
+                await logout();
+                navigate('/login');
+              } catch {
+                setErrorCierre('No se pudo cerrar la sesión en el servidor. Inténtalo de nuevo.');
+              }
+            }}
           >
             Cerrar sesión
           </button>

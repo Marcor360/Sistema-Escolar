@@ -27,6 +27,13 @@ export class AuthController {
     return this.auth.me(user);
   }
 
+  @Post('logout')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  logout(@CurrentUser() user: JwtUser) {
+    return this.auth.logout(user);
+  }
+
   @Post('cambiar-password')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)

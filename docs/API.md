@@ -17,6 +17,7 @@ Para el resumen por rol y las decisiones que requieren validación institucional
 |---|---|---|---|
 | POST | /auth/login | público | Devuelve `accessToken` y la sesión |
 | GET | /auth/me | autenticado | Perfil del usuario |
+| POST | /auth/logout | autenticado | Cierra todas las sesiones emitidas con la versión actual del usuario; los JWT anteriores dejan de ser válidos |
 | POST | /auth/forgot-password | público | Genera token de recuperación (1 h; se persiste solo su hash sha256) |
 | POST | /auth/reset-password | público | Cambia contraseña con el token en claro recibido por correo |
 | POST | /auth/cambiar-password | autenticado | Cambio propio (exige la contraseña actual) |

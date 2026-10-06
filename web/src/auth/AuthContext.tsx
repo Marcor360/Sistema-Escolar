@@ -12,7 +12,7 @@ interface AuthValue {
   sesion: Sesion | null;
   cargando: boolean;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   tieneRol: (...roles: string[]) => boolean;
 }
 
@@ -35,7 +35,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSesion(data.usuario);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await api.post('/auth/logout');
     localStorage.removeItem('token');
     localStorage.removeItem('sesion');
     setSesion(null);

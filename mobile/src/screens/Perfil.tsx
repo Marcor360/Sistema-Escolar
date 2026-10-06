@@ -77,7 +77,11 @@ export default function PerfilScreen() {
         </TouchableOpacity>
       </Tarjeta>
 
-      <TouchableOpacity style={estilos.boton} onPress={cerrar} accessibilityRole="button">
+      <TouchableOpacity style={estilos.boton} onPress={() => {
+        void cerrar().catch((error: unknown) => {
+          Alert.alert('No se pudo cerrar sesión', mensajeDeError(error));
+        });
+      }} accessibilityRole="button">
         <Text style={estilos.botonTexto}>Cerrar sesión</Text>
       </TouchableOpacity>
       <Text style={{ height: 24 }} />

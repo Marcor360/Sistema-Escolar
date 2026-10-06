@@ -99,6 +99,7 @@ export default function App() {
   };
 
   const cerrar = async () => {
+    await api.post('/auth/logout');
     await SecureStore.deleteItemAsync(TOKEN_KEY);
     setSesion(null);
   };

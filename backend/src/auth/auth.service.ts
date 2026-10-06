@@ -71,6 +71,17 @@ export class AuthService {
     };
   }
 
+  /** Revoca todas las sesiones emitidas con la versión actual del usuario. */
+  async logout(user: JwtUser) {
+    const resultado = await this.usuarios.increment(
+      { id: user.sub, activo: true, sessionVersion: user.ver ?? 0 },
+      'sessionVersion',
+      1,
+    );
+    if (resultado.affected !== 1) throw new UnauthorizedException('La sesión ya no está activa');
+    return { mensaje: 'Sesión cerrada' };
+  }
+
   /** Cambio de contraseña del propio usuario: exige la contraseña actual. */
   async cambiarPassword(usuarioId: number, actual: string, nueva: string) {
     await this.dataSource.transaction(async (manager) => {

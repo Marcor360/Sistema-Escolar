@@ -164,3 +164,28 @@ describe('AuthService.forgotPassword / resetPassword', () => {
     expect(dataSource.transaction).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('AuthService.logout', () => {
+  it('incrementa la versión solo para el usuario y token actuales', async () => {
+    const usuarios = { increment: jest.fn().mockResolvedValue({ affected: 1 }) };
+    const service = new AuthService(
+      usuarios as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any,
+    );
+
+    await expect(service.logout({ sub: 7, ver: 3, email: 'demo@example.invalid', nombre: 'Demo', roles: ['ALUMNO'] }))
+      .resolves.toEqual({ mensaje: 'Sesión cerrada' });
+    expect(usuarios.increment).toHaveBeenCalledWith(
+      { id: 7, activo: true, sessionVersion: 3 }, 'sessionVersion', 1,
+    );
+  });
+
+  it('rechaza un logout repetido de un token revocado', async () => {
+    const usuarios = { increment: jest.fn().mockResolvedValue({ affected: 0 }) };
+    const service = new AuthService(
+      usuarios as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any,
+    );
+
+    await expect(service.logout({ sub: 7, ver: 3, email: 'demo@example.invalid', nombre: 'Demo', roles: ['ALUMNO'] }))
+      .rejects.toBeInstanceOf(UnauthorizedException);
+  });
+});

@@ -782,4 +782,18 @@ describe('Integración de flujos críticos (base aislada)', () => {
     expect(cambio.response.status).toBe(201);
     expect((await api('/auth/me', { token: tokenAnterior })).response.status).toBe(401);
   });
+
+  it('revoca el JWT al cerrar sesión y permite un nuevo inicio', async () => {
+    const admin = await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId });
+    const token = await emitirToken(admin.email);
+    expect((await api('/auth/me', { token })).response.status).toBe(200);
+
+    const cierre = await api('/auth/logout', { method: 'POST', token });
+    expect(cierre.response.status).toBe(201);
+    expect((await api('/auth/me', { token })).response.status).toBe(401);
+    expect((await api('/auth/logout', { method: 'POST', token })).response.status).toBe(401);
+
+    const nuevo = await emitirToken(admin.email);
+    expect((await api('/auth/me', { token: nuevo })).response.status).toBe(200);
+  });
 });
