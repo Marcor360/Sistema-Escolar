@@ -1,7 +1,9 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Repository } from 'typeorm';
 import { Calificacion } from '../entities/calificacion.entity';
+import { PeriodoCalificacion, EstadoPeriodoCalificacion } from '../entities/periodo-calificacion.entity';
+import { HistorialCalificacion } from '../entities/historial-calificacion.entity';
 import { GrupoMateria } from '../entities/grupo-materia.entity';
 import { DocentesService } from '../docentes/docentes.service';
 import { AlumnosService } from '../alumnos/alumnos.service';
@@ -16,6 +18,8 @@ export class CalificacionesService {
     @InjectRepository(Calificacion) private readonly repo: Repository<Calificacion>,
     @InjectRepository(GrupoMateria) private readonly grupoMaterias: Repository<GrupoMateria>,
     @InjectRepository(Inscripcion) private readonly inscripciones: Repository<Inscripcion>,
+    @InjectRepository(PeriodoCalificacion) private readonly periodos: Repository<PeriodoCalificacion>,
+    @InjectRepository(HistorialCalificacion) private readonly historial: Repository<HistorialCalificacion>,
     private readonly docentes: DocentesService,
     private readonly alumnos: AlumnosService,
     private readonly scope: ScopeService,
@@ -45,6 +49,19 @@ export class CalificacionesService {
 
     const ids = [...new Set(dto.items.map((item) => item.alumnoId))];
     return this.dataSource.transaction(async (manager) => {
+      const grupoMateria = await manager.getRepository(GrupoMateria).findOne({
+        where: { id: gm.id }, lock: { mode: 'pessimistic_write' },
+      });
+      if (!grupoMateria) throw new NotFoundException('Grupo-materia no encontrado');
+      if (!grupoMateria.grupo.activo) throw new ConflictException('El grupo no está activo');
+      if (grupoMateria.docenteId !== gm.docenteId && user.roles.includes('MAESTRO') &&
+          !user.roles.some((rol) => ['SUPERADMIN', 'ADMINISTRATIVO'].includes(rol))) {
+        throw new ForbiddenException('La materia ya no está asignada a este docente');
+      }
+      const periodo = await manager.getRepository(PeriodoCalificacion).findOne({
+        where: { grupoMateriaId: gm.id, parcial: dto.parcial },
+      });
+      if (periodo?.estatus === 'CERRADO') throw new ConflictException('El periodo está cerrado');
       const inscripciones = manager.getRepository(Inscripcion);
       const activos = await inscripciones.find({
         where: { alumnoId: In(ids), grupoId: gm.grupoId, estatus: 'ACTIVA' },
@@ -54,6 +71,7 @@ export class CalificacionesService {
         throw new ForbiddenException('Todos los alumnos deben estar inscritos de forma activa en el grupo');
       }
       const calificaciones = manager.getRepository(Calificacion);
+      const historial = manager.getRepository(HistorialCalificacion);
       for (const item of dto.items) {
         const existente = await calificaciones.findOne({
           where: { alumnoId: item.alumnoId, grupoMateriaId: dto.grupoMateriaId, parcial: dto.parcial },
@@ -62,12 +80,75 @@ export class CalificacionesService {
         const registro = existente ?? calificaciones.create({
           alumnoId: item.alumnoId, grupoMateriaId: dto.grupoMateriaId, parcial: dto.parcial,
         });
+        const valorAnterior = existente?.calificacion ?? null;
+        const observacionAnterior = existente?.observaciones ?? null;
         registro.calificacion = item.calificacion;
         registro.observaciones = item.observaciones ?? registro.observaciones ?? null;
         registro.capturadaPorId = user.sub;
-        await calificaciones.save(registro);
+        const guardada = await calificaciones.save(registro);
+        await historial.insert({
+          calificacionId: guardada.id,
+          alumnoId: item.alumnoId,
+          grupoMateriaId: dto.grupoMateriaId,
+          parcial: dto.parcial,
+          valorAnterior,
+          valorNuevo: registro.calificacion,
+          observacionAnterior,
+          observacionNueva: registro.observaciones,
+          usuarioId: user.sub,
+          motivo: dto.motivo ?? null,
+        });
       }
       return { capturadas: dto.items.length };
+    });
+  }
+
+  private validarParcial(parcial: number): void {
+    if (!Number.isInteger(parcial) || parcial < 0 || parcial > 3) {
+      throw new BadRequestException('El parcial debe estar entre 0 y 3');
+    }
+  }
+
+  async estadoPeriodo(grupoMateriaId: number, parcial: number, user: JwtUser) {
+    this.validarParcial(parcial);
+    await this.validarGrupoMateria(grupoMateriaId, user);
+    const periodo = await this.periodos.findOne({ where: { grupoMateriaId, parcial } });
+    return { grupoMateriaId, parcial, estatus: periodo?.estatus ?? 'ABIERTO' };
+  }
+
+  async cambiarEstadoPeriodo(
+    grupoMateriaId: number, parcial: number, estatus: EstadoPeriodoCalificacion, user: JwtUser,
+  ) {
+    this.validarParcial(parcial);
+    return this.dataSource.transaction(async (manager) => {
+      const gm = await manager.getRepository(GrupoMateria).findOne({
+        where: { id: grupoMateriaId }, lock: { mode: 'pessimistic_write' },
+      });
+      if (!gm) throw new NotFoundException('Grupo-materia no encontrado');
+      await this.scope.validarGestion(user, gm.grupo.plantelId);
+      const periodos = manager.getRepository(PeriodoCalificacion);
+      const periodo = await periodos.findOne({ where: { grupoMateriaId, parcial } }) ??
+        periodos.create({ grupoMateriaId, parcial, estatus: 'ABIERTO' });
+      if (periodo.estatus !== estatus) {
+        periodo.estatus = estatus;
+        if (estatus === 'CERRADO') {
+          periodo.cerradoPorId = user.sub;
+          periodo.cerradoAt = new Date();
+        } else {
+          periodo.reabiertoPorId = user.sub;
+          periodo.reabiertoAt = new Date();
+        }
+      }
+      await periodos.save(periodo);
+      return { grupoMateriaId, parcial, estatus: periodo.estatus };
+    });
+  }
+
+  async historialPeriodo(grupoMateriaId: number, parcial: number, user: JwtUser) {
+    this.validarParcial(parcial);
+    await this.validarGrupoMateria(grupoMateriaId, user);
+    return this.historial.find({
+      where: { grupoMateriaId, parcial }, order: { id: 'DESC' }, take: 100,
     });
   }
 

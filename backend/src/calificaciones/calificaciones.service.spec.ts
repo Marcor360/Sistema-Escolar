@@ -13,7 +13,8 @@ describe('CalificacionesService.porAlumno', () => {
     const alumnos = { obtener: jest.fn().mockResolvedValue({ id: 15, plantelId: 1 }) };
     const scope = { validarGestion: jest.fn() };
     const service = new CalificacionesService(
-      repo as any, grupoMaterias as any, inscripciones as any, docentes as any, alumnos as any, scope as any, {} as any,
+      repo as any, grupoMaterias as any, inscripciones as any, {} as any, {} as any,
+      docentes as any, alumnos as any, scope as any, {} as any,
     );
 
     await service.porAlumno(15, {
@@ -35,7 +36,8 @@ describe('CalificacionesService.porAlumno', () => {
     }) };
     const docentes = { obtenerPorUsuario: jest.fn().mockResolvedValue({ id: 7 }) };
     const service = new CalificacionesService(
-      {} as any, grupoMaterias as any, {} as any, docentes as any, {} as any, {} as any, {} as any,
+      {} as any, grupoMaterias as any, {} as any, {} as any, {} as any,
+      docentes as any, {} as any, {} as any, {} as any,
     );
 
     await expect(service.porGrupoMateria(21, {

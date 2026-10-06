@@ -616,6 +616,41 @@ describe('Integración de flujos críticos (base aislada)', () => {
     expect(await dataSource.getRepository(Inscripcion).countBy({ grupoId: grupoActivo.id, alumnoId: alumnoBaja.data.id })).toBe(0);
   });
 
+  it('reabre una entrega corregida y bloquea envíos a actividades desactivadas', async () => {
+    const admin = await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId });
+    const alumnoUsuario = await dataSource.getRepository(Usuario).findOneByOrFail({ id: alumnoUsuarioId });
+    const tokenAdmin = await emitirToken(admin.email);
+    const tokenAlumno = await emitirToken(alumnoUsuario.email);
+    const actividad = await api('/actividades', {
+      method: 'POST', token: tokenAdmin,
+      body: { grupoMateriaId: grupoMateriaIdMaestro, titulo: `Reentrega ${sufijo}` },
+    });
+    expect(actividad.response.status).toBe(201);
+
+    const primera = await api(`/actividades/${actividad.data.id}/entrega`, {
+      method: 'POST', token: tokenAlumno, body: { comentario: 'Primera versión' },
+    });
+    expect(primera.response.status).toBe(201);
+    const calificada = await api(`/entregas/${primera.data.id}/calificar`, {
+      method: 'PATCH', token: tokenAdmin, body: { calificacion: 80, comentario: 'Corregir' },
+    });
+    expect(calificada.response.status).toBe(200);
+    const corregida = await api(`/actividades/${actividad.data.id}/entrega`, {
+      method: 'POST', token: tokenAlumno, body: { comentario: 'Segunda versión' },
+    });
+    expect(corregida.response.status).toBe(201);
+    expect(corregida.data).toMatchObject({
+      id: primera.data.id, estatus: 'ENTREGADA', calificacion: null,
+      comentarioDocente: null, comentarioAlumno: 'Segunda versión',
+    });
+
+    expect((await api(`/actividades/${actividad.data.id}`, { method: 'DELETE', token: tokenAdmin })).response.status).toBe(200);
+    const inactiva = await api(`/actividades/${actividad.data.id}/entrega`, {
+      method: 'POST', token: tokenAlumno, body: { comentario: 'Tercera versión' },
+    });
+    expect(inactiva.response.status).toBe(409);
+  });
+
   it('MAESTRO solo lista y consulta alumnos de sus grupos, aunque compartan plantel', async () => {
     const admin = await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId });
     const tokenAdmin = await emitirToken(admin.email);

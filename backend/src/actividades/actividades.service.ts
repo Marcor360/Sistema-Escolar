@@ -1,6 +1,8 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
+import { unlink } from 'fs/promises';
+import { resolve } from 'path';
 import { Actividad } from '../entities/actividad.entity';
 import { Entrega } from '../entities/entrega.entity';
 import { Material } from '../entities/material.entity';
@@ -11,6 +13,13 @@ import { DocentesService } from '../docentes/docentes.service';
 import { JwtUser } from '../common/current-user.decorator';
 import { ActualizarActividadDto, CalificarEntregaDto, CrearActividadDto, EntregarDto } from './actividades.dto';
 import { ScopeService } from '../planteles/scope.service';
+import { uploadsPath } from '../common/uploads-path';
+
+async function limpiarArchivoFallido(archivo?: Express.Multer.File): Promise<void> {
+  if (archivo?.path && resolve(archivo.path) === resolve(uploadsPath(), archivo.filename)) {
+    await unlink(archivo.path).catch(() => undefined);
+  }
+}
 
 @Injectable()
 export class ActividadesService {
@@ -23,6 +32,7 @@ export class ActividadesService {
     private readonly alumnos: AlumnosService,
     private readonly docentes: DocentesService,
     private readonly scope: ScopeService,
+    private readonly dataSource: DataSource,
   ) {}
 
   /** El maestro solo opera sobre sus grupos-materia; ADMINISTRATIVO y SUPERADMIN, sobre todos. */
@@ -95,8 +105,13 @@ export class ActividadesService {
   async desactivar(id: number, user: JwtUser) {
     const actividad = await this.obtener(id);
     await this.validarPropiedad(actividad.grupoMateriaId, user);
-    await this.actividades.update(id, { activo: false });
-    return { ok: true };
+    return this.dataSource.transaction(async (manager) => {
+      const actividades = manager.getRepository(Actividad);
+      const actual = await actividades.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+      if (!actual) throw new NotFoundException('Actividad no encontrada');
+      await actividades.update(id, { activo: false });
+      return { ok: true };
+    });
   }
 
   async obtener(id: number) {
@@ -107,21 +122,37 @@ export class ActividadesService {
 
   // ---- Entregas ----
   async entregar(actividadId: number, user: JwtUser, dto: EntregarDto, archivo?: Express.Multer.File) {
-    const actividad = await this.obtener(actividadId);
-    const { alumno } = await this.validarAlumnoEnGrupoMateria(actividad.grupoMateriaId, user);
-
-    const tarde = actividad.fechaEntrega !== null && new Date() > actividad.fechaEntrega;
-    const previa = await this.entregas.findOne({ where: { actividadId, alumnoId: alumno.id } });
-
-    const entrega = previa ?? this.entregas.create({ actividadId, alumnoId: alumno.id });
-    entrega.comentarioAlumno = dto.comentario ?? entrega.comentarioAlumno;
-    if (archivo) {
-      entrega.archivoNombre = archivo.originalname;
-      entrega.archivoRuta = `/uploads/${archivo.filename}`;
+    try {
+      return await this.dataSource.transaction(async (manager) => {
+        const actividad = await manager.getRepository(Actividad).findOne({
+          where: { id: actividadId }, lock: { mode: 'pessimistic_write' },
+        });
+        if (!actividad) throw new NotFoundException('Actividad no encontrada');
+        if (!actividad.activo) throw new ConflictException('La actividad ya no admite entregas');
+        const { alumno } = await this.validarAlumnoEnGrupoMateria(actividad.grupoMateriaId, user);
+        const entregas = manager.getRepository(Entrega);
+        const previa = await entregas.findOne({
+          where: { actividadId, alumnoId: alumno.id }, lock: { mode: 'pessimistic_write' },
+        });
+        const entrega = previa ?? entregas.create({ actividadId, alumnoId: alumno.id });
+        if (previa?.estatus === 'CALIFICADA') {
+          entrega.calificacion = null;
+          entrega.comentarioDocente = null;
+        }
+        entrega.comentarioAlumno = dto.comentario ?? entrega.comentarioAlumno ?? null;
+        if (archivo) {
+          entrega.archivoNombre = archivo.originalname;
+          entrega.archivoRuta = `/uploads/${archivo.filename}`;
+        }
+        const ahora = new Date();
+        entrega.estatus = actividad.fechaEntrega !== null && ahora > actividad.fechaEntrega ? 'TARDE' : 'ENTREGADA';
+        entrega.fechaEntregado = ahora;
+        return entregas.save(entrega);
+      });
+    } catch (error) {
+      await limpiarArchivoFallido(archivo);
+      throw error;
     }
-    entrega.estatus = tarde ? 'TARDE' : 'ENTREGADA';
-    entrega.fechaEntregado = new Date();
-    return this.entregas.save(entrega);
   }
 
   async entregasDeActividad(actividadId: number, user: JwtUser) {
@@ -134,10 +165,15 @@ export class ActividadesService {
     const entrega = await this.entregas.findOne({ where: { id: entregaId }, relations: { actividad: true } });
     if (!entrega) throw new NotFoundException('Entrega no encontrada');
     await this.validarPropiedad(entrega.actividad.grupoMateriaId, user);
-    entrega.calificacion = dto.calificacion;
-    entrega.comentarioDocente = dto.comentario ?? entrega.comentarioDocente;
-    entrega.estatus = 'CALIFICADA';
-    return this.entregas.save(entrega);
+    return this.dataSource.transaction(async (manager) => {
+      const entregas = manager.getRepository(Entrega);
+      const actual = await entregas.findOne({ where: { id: entregaId }, lock: { mode: 'pessimistic_write' } });
+      if (!actual) throw new NotFoundException('Entrega no encontrada');
+      actual.calificacion = dto.calificacion;
+      actual.comentarioDocente = dto.comentario ?? actual.comentarioDocente;
+      actual.estatus = 'CALIFICADA';
+      return entregas.save(actual);
+    });
   }
 
   /** Tareas del alumno autenticado con el estado de su entrega. */
@@ -168,18 +204,24 @@ export class ActividadesService {
   }
 
   // ---- Materiales ----
-  async subirMaterial(grupoMateriaId: number, titulo: string, archivo: Express.Multer.File, user: JwtUser) {
-    await this.validarPropiedad(grupoMateriaId, user);
-    return this.materiales.save(
-      this.materiales.create({
-        grupoMateriaId,
-        titulo: titulo || archivo.originalname,
-        archivoNombre: archivo.originalname,
-        archivoRuta: `/uploads/${archivo.filename}`,
-        mime: archivo.mimetype,
-        tamanoKb: Math.round(archivo.size / 1024),
-      }),
-    );
+  async subirMaterial(grupoMateriaId: number, titulo: string, archivo: Express.Multer.File | undefined, user: JwtUser) {
+    try {
+      if (!archivo) throw new BadRequestException('Selecciona un archivo');
+      await this.validarPropiedad(grupoMateriaId, user);
+      return await this.materiales.save(
+        this.materiales.create({
+          grupoMateriaId,
+          titulo: titulo || archivo.originalname,
+          archivoNombre: archivo.originalname,
+          archivoRuta: `/uploads/${archivo.filename}`,
+          mime: archivo.mimetype,
+          tamanoKb: Math.round(archivo.size / 1024),
+        }),
+      );
+    } catch (error) {
+      await limpiarArchivoFallido(archivo);
+      throw error;
+    }
   }
 
   async materialesDeGrupoMateria(grupoMateriaId: number, user: JwtUser) {

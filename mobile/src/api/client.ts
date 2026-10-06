@@ -1,12 +1,13 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
+import { resolverApiUrl } from './config';
 export { mensajeDeError } from './errores';
 
-const baseURL =
-  process.env.EXPO_PUBLIC_API_URL ||
-  (Constants.expoConfig?.extra?.apiUrl as string) ||
-  'http://localhost:3000/api';
+const baseURL = resolverApiUrl(
+  String(Constants.expoConfig?.extra?.appEnv || 'development'),
+  Constants.expoConfig?.extra?.apiUrl as string | undefined,
+);
 
 export const api = axios.create({ baseURL, timeout: 20000, headers: { 'x-portal': 'MOVIL' } });
 

@@ -1,7 +1,7 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CalificacionesService } from './calificaciones.service';
-import { CapturaCalificacionesDto } from './calificaciones.dto';
+import { CambiarEstadoPeriodoDto, CapturaCalificacionesDto } from './calificaciones.dto';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { RolesGuard } from '../common/roles.guard';
 import { Roles } from '../common/roles.decorator';
@@ -24,6 +24,37 @@ export class CalificacionesController {
   @Roles('MAESTRO', 'ADMINISTRATIVO')
   capturar(@Body() dto: CapturaCalificacionesDto, @CurrentUser() user: JwtUser) {
     return this.service.capturar(dto, user);
+  }
+
+  @Get('periodos/:grupoMateriaId/:parcial')
+  @Roles('MAESTRO', 'ADMINISTRATIVO')
+  estadoPeriodo(
+    @Param('grupoMateriaId', ParseIntPipe) grupoMateriaId: number,
+    @Param('parcial', ParseIntPipe) parcial: number,
+    @CurrentUser() user: JwtUser,
+  ) {
+    return this.service.estadoPeriodo(grupoMateriaId, parcial, user);
+  }
+
+  @Patch('periodos/:grupoMateriaId/:parcial')
+  @Roles('ADMINISTRATIVO')
+  cambiarEstadoPeriodo(
+    @Param('grupoMateriaId', ParseIntPipe) grupoMateriaId: number,
+    @Param('parcial', ParseIntPipe) parcial: number,
+    @Body() dto: CambiarEstadoPeriodoDto,
+    @CurrentUser() user: JwtUser,
+  ) {
+    return this.service.cambiarEstadoPeriodo(grupoMateriaId, parcial, dto.estatus, user);
+  }
+
+  @Get('periodos/:grupoMateriaId/:parcial/historial')
+  @Roles('MAESTRO', 'ADMINISTRATIVO')
+  historialPeriodo(
+    @Param('grupoMateriaId', ParseIntPipe) grupoMateriaId: number,
+    @Param('parcial', ParseIntPipe) parcial: number,
+    @CurrentUser() user: JwtUser,
+  ) {
+    return this.service.historialPeriodo(grupoMateriaId, parcial, user);
   }
 
   @Get('grupo-materia/:id')

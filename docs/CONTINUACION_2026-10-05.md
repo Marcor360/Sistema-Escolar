@@ -30,3 +30,9 @@ La nueva migración `migracion_pagos_manual_idempotencia.sql` debe quedar aplica
 El portal web ahora valida el token guardado con `GET /auth/me` al arrancar y toma los roles vigentes del servidor. Una sesión revocada elimina el token local; si la comprobación falla por red, muestra un aviso con opción de reintentar sin usar roles antiguos. Se añadieron pruebas de cambio de rol, revocación y fallo de red. Web pasa lint, 8 pruebas y build.
 
 La app móvil conserva el token si `GET /auth/me` falla por conexión y presenta un botón para reintentar la comprobación. Una respuesta 401 mantiene el comportamiento de eliminar la sesión. TypeScript y las 2 pruebas móviles existentes pasan. Queda pendiente recorrer este comportamiento en un dispositivo con pérdida y recuperación de red.
+
+## Tercera revisión
+
+Las entregas del alumno rechazan actividades desactivadas. Si se reentrega una actividad ya calificada, se limpia la calificación y el comentario del docente para que la nueva versión quede pendiente de revisión; la fecha y el estado de entrega se actualizan. La entrega, la calificación y la desactivación usan bloqueos de fila para evitar que dos operaciones simultáneas dejen un estado contradictorio. Una carga de material sin archivo responde 400. Cuando un archivo ya fue guardado por Multer y falla el servicio, se intenta retirar ese archivo nuevo del directorio configurado.
+
+Se añadieron pruebas unitarias y un caso HTTP de entregar, calificar, reentregar y desactivar. La suite HTTP sigue pendiente de una ejecución en bases MySQL y SQL Server aisladas. También queda pendiente revisar en un dispositivo la reentrega con archivo y definir con la institución si se permite reentregar después de calificar o si requiere autorización docente.

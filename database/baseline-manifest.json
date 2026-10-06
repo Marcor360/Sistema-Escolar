@@ -20,7 +20,8 @@
                                               ],
                                   "pendientes":  [
                                                      "migracion_grupos_plantel_unique.sql",
-                                                     "migracion_pagos_manual_idempotencia.sql"
+                                                     "migracion_pagos_manual_idempotencia.sql",
+                                                     "migracion_cierre_historial_calificaciones.sql"
                                                  ]
                               },
                     "sqlserver":  {
@@ -41,7 +42,8 @@
                                                   ],
                                       "pendientes":  [
                                                          "migracion_grupos_plantel_unique.sql",
-                                                         "migracion_pagos_manual_idempotencia.sql"
+                                                         "migracion_pagos_manual_idempotencia.sql",
+                                                         "migracion_cierre_historial_calificaciones.sql"
                                                      ]
                                   }
                 }

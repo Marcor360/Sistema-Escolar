@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Calificacion } from '../entities/calificacion.entity';
+import { PeriodoCalificacion } from '../entities/periodo-calificacion.entity';
+import { HistorialCalificacion } from '../entities/historial-calificacion.entity';
 import { GrupoMateria } from '../entities/grupo-materia.entity';
 import { CalificacionesService } from './calificaciones.service';
 import { CalificacionesController } from './calificaciones.controller';
@@ -11,7 +13,7 @@ import { PlantelesModule } from '../planteles/planteles.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Calificacion, GrupoMateria, Inscripcion]),
+    TypeOrmModule.forFeature([Calificacion, PeriodoCalificacion, HistorialCalificacion, GrupoMateria, Inscripcion]),
     DocentesModule,
     AlumnosModule,
     PlantelesModule,

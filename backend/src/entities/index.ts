@@ -14,6 +14,8 @@ export * from './actividad.entity';
 export * from './entrega.entity';
 export * from './material.entity';
 export * from './calificacion.entity';
+export * from './periodo-calificacion.entity';
+export * from './historial-calificacion.entity';
 export * from './evento-calendario.entity';
 export * from './notificacion.entity';
 export * from './concepto-pago.entity';

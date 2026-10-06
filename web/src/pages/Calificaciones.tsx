@@ -12,6 +12,11 @@ interface Inscripcion {
   alumno: { id: number; matricula: string; usuario: { nombre: string; apellidoPaterno: string } };
 }
 interface Registro { alumnoId: number; parcial: number; calificacion: number }
+interface EstadoPeriodo { estatus: 'ABIERTO' | 'CERRADO' }
+interface CambioCalificacion {
+  id: number; alumnoId: number; valorAnterior: number | null; valorNuevo: number;
+  usuarioId: number; fecha: string; motivo: string | null;
+}
 
 export default function CalificacionesPage() {
   const { tieneRol } = useAuth();
@@ -20,6 +25,9 @@ export default function CalificacionesPage() {
   const [parcial, setParcial] = useState('1');
   const [alumnos, setAlumnos] = useState<Inscripcion[]>([]);
   const [valores, setValores] = useState<Record<number, string>>({});
+  const [estadoPeriodo, setEstadoPeriodo] = useState<EstadoPeriodo['estatus'] | null>(null);
+  const [historial, setHistorial] = useState<CambioCalificacion[]>([]);
+  const [motivo, setMotivo] = useState('');
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
 
@@ -37,17 +45,35 @@ export default function CalificacionesPage() {
 
   const cargarAlumnos = async () => {
     setMensaje(''); setError('');
+    setAlumnos([]); setValores({}); setEstadoPeriodo(null); setHistorial([]);
     const clase = clases.find((c) => c.id === Number(claseId));
     if (!clase) return;
     try {
-      const [insc, previas] = await Promise.all([
+      const [insc, previas, estado, cambios] = await Promise.all([
         api.get<Inscripcion[]>(`/academico/grupos/${clase.grupo.id}/alumnos`),
         api.get<Registro[]>(`/calificaciones/grupo-materia/${clase.id}`, { params: { parcial } }),
+        api.get<EstadoPeriodo>(`/calificaciones/periodos/${clase.id}/${parcial}`),
+        api.get<CambioCalificacion[]>(`/calificaciones/periodos/${clase.id}/${parcial}/historial`),
       ]);
       setAlumnos(insc.data);
+      setEstadoPeriodo(estado.data.estatus);
+      setHistorial(cambios.data);
       const mapa: Record<number, string> = {};
       for (const r of previas.data) mapa[r.alumnoId] = String(r.calificacion);
       setValores(mapa);
+    } catch (err) { setError(mensajeDeError(err)); }
+  };
+
+  const cambiarEstado = async () => {
+    if (!claseId || estadoPeriodo === null) return;
+    setError(''); setMensaje('');
+    const siguiente = estadoPeriodo === 'ABIERTO' ? 'CERRADO' : 'ABIERTO';
+    try {
+      const { data } = await api.patch<EstadoPeriodo>(`/calificaciones/periodos/${claseId}/${parcial}`, {
+        estatus: siguiente,
+      });
+      setEstadoPeriodo(data.estatus);
+      setMensaje(`Periodo ${data.estatus.toLowerCase()}`);
     } catch (err) { setError(mensajeDeError(err)); }
   };
 
@@ -78,9 +104,15 @@ export default function CalificacionesPage() {
       const { data } = await api.post('/calificaciones/captura', {
         grupoMateriaId: Number(claseId),
         parcial: Number(parcial),
+        motivo: motivo.trim() || undefined,
         items,
       });
       setMensaje(`${data.capturadas} calificaciones guardadas`);
+      setMotivo('');
+      const { data: cambios } = await api.get<CambioCalificacion[]>(
+        `/calificaciones/periodos/${claseId}/${parcial}/historial`,
+      );
+      setHistorial(cambios);
     } catch (err) { setError(mensajeDeError(err)); }
   };
 
@@ -93,7 +125,9 @@ export default function CalificacionesPage() {
       <section className="panel">
         <div className="fila">
           <div className="campo"><label>Clase</label>
-            <select value={claseId} onChange={(e) => setClaseId(e.target.value)}>
+            <select value={claseId} onChange={(e) => {
+              setClaseId(e.target.value); setAlumnos([]); setValores({}); setEstadoPeriodo(null); setHistorial([]);
+            }}>
               <option value="">Selecciona…</option>
               {clases.map((c) => (
                 <option key={c.id} value={c.id}>{c.grupo.nombre} · {c.materia.clave} {c.materia.nombre}</option>
@@ -101,7 +135,9 @@ export default function CalificacionesPage() {
             </select>
           </div>
           <div className="campo"><label>Parcial</label>
-            <select value={parcial} onChange={(e) => setParcial(e.target.value)}>
+            <select value={parcial} onChange={(e) => {
+              setParcial(e.target.value); setAlumnos([]); setValores({}); setEstadoPeriodo(null); setHistorial([]);
+            }}>
               <option value="1">Parcial 1</option><option value="2">Parcial 2</option>
               <option value="3">Parcial 3</option><option value="0">Final</option>
             </select>
@@ -112,6 +148,17 @@ export default function CalificacionesPage() {
           </button>
         </div>
       </section>
+
+      {estadoPeriodo && (
+        <section className="panel">
+          <p role="status">Periodo {estadoPeriodo.toLowerCase()}</p>
+          {tieneRol('ADMINISTRATIVO') && (
+            <button type="button" className="boton secundario" onClick={cambiarEstado}>
+              {estadoPeriodo === 'ABIERTO' ? 'Cerrar periodo' : 'Reabrir periodo'}
+            </button>
+          )}
+        </section>
+      )}
 
       {alumnos.length > 0 && (
         <form onSubmit={guardar}>
@@ -127,14 +174,39 @@ export default function CalificacionesPage() {
                       type="number" min={0} max={100} step={0.1} style={{ minWidth: 90, width: 90 }}
                       value={valores[i.alumno.id] ?? ''}
                       onChange={(e) => setValores({ ...valores, [i.alumno.id]: e.target.value })}
+                      disabled={estadoPeriodo === 'CERRADO'}
                     />
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <button className="boton">Guardar calificaciones</button>
+          <div className="campo">
+            <label htmlFor="motivo-calificacion">Motivo de la captura o corrección (opcional)</label>
+            <input id="motivo-calificacion" maxLength={300} value={motivo}
+              onChange={(e) => setMotivo(e.target.value)} disabled={estadoPeriodo === 'CERRADO'} />
+          </div>
+          <button className="boton" disabled={estadoPeriodo === 'CERRADO'}>Guardar calificaciones</button>
         </form>
+      )}
+
+      {historial.length > 0 && (
+        <section className="panel">
+          <h2>Historial reciente del periodo</h2>
+          <table className="tabla">
+            <thead><tr><th>Fecha</th><th>Alumno</th><th>Anterior</th><th>Nueva</th><th>Usuario</th><th>Motivo</th></tr></thead>
+            <tbody>{historial.map((cambio) => (
+              <tr key={cambio.id}>
+                <td>{new Date(cambio.fecha).toLocaleString('es-MX')}</td>
+                <td>{alumnos.find((i) => i.alumno.id === cambio.alumnoId)?.alumno.matricula ?? cambio.alumnoId}</td>
+                <td>{cambio.valorAnterior ?? '—'}</td>
+                <td>{cambio.valorNuevo}</td>
+                <td>{cambio.usuarioId}</td>
+                <td>{cambio.motivo ?? '—'}</td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </section>
       )}
     </>
   );
