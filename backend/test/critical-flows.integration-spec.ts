@@ -1,4 +1,5 @@
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { afterAll, beforeAll, describe, expect, it, jest } from '@jest/globals';
 import { NestFactory } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { RequestMethod, ValidationPipe } from '@nestjs/common';

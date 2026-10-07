@@ -1,6 +1,6 @@
 import 'dotenv/config'; // primero: garantiza process.env para módulos evaluados al importar
 import 'reflect-metadata';
-import { RequestMethod, ValidationPipe } from '@nestjs/common';
+import { Logger, RequestMethod, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -8,6 +8,7 @@ import helmet from 'helmet';
 import { mkdirSync } from 'fs';
 import { uploadsPath } from './common/uploads-path';
 import { AppModule } from './app.module';
+import { version } from '../package.json';
 
 async function bootstrap() {
   const uploadsDir = uploadsPath();
@@ -34,7 +35,7 @@ async function bootstrap() {
     const swagger = new DocumentBuilder()
       .setTitle('Sistema Escolar MVP')
       .setDescription('API académica, administrativa y financiera')
-      .setVersion('1.0')
+      .setVersion(version)
       .addBearerAuth()
       .build();
     SwaggerModule.setup('api/docs', app, SwaggerModule.createDocument(app, swagger));
@@ -43,6 +44,6 @@ async function bootstrap() {
   const port = Number(process.env.PORT) || 3000;
   const host = process.env.HOST || '0.0.0.0';
   await app.listen(port, host);
-  console.log(`API en http://${host}:${port}/api`);
+  Logger.log(`API en http://${host}:${port}/api`, 'Bootstrap');
 }
 bootstrap();

@@ -6,7 +6,7 @@ import { join, resolve } from 'path';
 import { typeOrmConfig } from '../config/typeorm.config';
 
 type Motor = 'mysql' | 'mssql';
-type Manifiesto = { baseline: string; motores: Record<Motor, { incluye: string[]; pendientes: string[] }> };
+type Manifiesto = { baseline: string; motores: Record<'mysql' | 'sqlserver', { incluye: string[]; pendientes: string[] }> };
 
 const root = resolve(process.cwd(), '..');
 const motor = (process.env.DB_TYPE || 'mysql') as Motor;

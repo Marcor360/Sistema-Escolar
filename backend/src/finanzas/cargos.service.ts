@@ -287,7 +287,7 @@ export class CargosService {
         ...cargo, total, pagado: redondear(pagado), saldo: redondear(total - pagado),
       });
     });
-    const saldoTotal = redondear(detalle.reduce((sum, c) => sum + c.saldo, 0));
+    const saldoTotal = redondear(detalle.reduce((sum, c) => sum + (c.saldo ?? 0), 0));
     return {
       alumno: this.proyectarAlumnoFinanciero(alumno),
       cargos: detalle,

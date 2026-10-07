@@ -17,7 +17,7 @@ import { uploadsPath } from '../common/uploads-path';
 
 async function limpiarArchivoFallido(archivo?: Express.Multer.File): Promise<void> {
   if (archivo?.path && resolve(archivo.path) === resolve(uploadsPath(), archivo.filename)) {
-    await unlink(archivo.path).catch(() => undefined);
+    await unlink(archivo.path).catch((): undefined => undefined);
   }
 }
 

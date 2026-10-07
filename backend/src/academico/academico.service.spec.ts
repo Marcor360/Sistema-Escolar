@@ -90,7 +90,7 @@ describe('AcademicoService.inscribirAlumno', () => {
     const grupos = { findOne: jest.fn().mockResolvedValue({ id: 4, plantelId: 2, activo: false }) };
     const alumnos = { findOne: jest.fn() };
     const inscripciones = { save: jest.fn() };
-    const manager = { getRepository: jest.fn((entity) => ({ Grupo: grupos, Alumno: alumnos, Inscripcion: inscripciones })[entity.name]) };
+    const manager = { getRepository: jest.fn((entity) => ({ Grupo: grupos, Alumno: alumnos, Inscripcion: inscripciones })[entity.name as 'Grupo' | 'Alumno' | 'Inscripcion']) };
     const dataSource = { transaction: jest.fn((fn) => fn(manager)) };
     const service = crearServicio({ grupos, alumnos, inscripciones, dataSource });
 
@@ -103,7 +103,7 @@ describe('AcademicoService.inscribirAlumno', () => {
     const grupos = { findOne: jest.fn().mockResolvedValue({ id: 4, plantelId: 2, activo: true }) };
     const alumnos = { findOne: jest.fn().mockResolvedValue({ id: 9, plantelId: 2, estatus: 'BAJA' }) };
     const inscripciones = { save: jest.fn() };
-    const manager = { getRepository: jest.fn((entity) => ({ Grupo: grupos, Alumno: alumnos, Inscripcion: inscripciones })[entity.name]) };
+    const manager = { getRepository: jest.fn((entity) => ({ Grupo: grupos, Alumno: alumnos, Inscripcion: inscripciones })[entity.name as 'Grupo' | 'Alumno' | 'Inscripcion']) };
     const dataSource = { transaction: jest.fn((fn) => fn(manager)) };
     const service = crearServicio({ grupos, alumnos, inscripciones, dataSource });
 

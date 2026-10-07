@@ -7,7 +7,7 @@ import { AlumnosService } from '../alumnos/alumnos.service';
 import { NotificacionesService } from '../notificaciones/notificaciones.service';
 import { CargosService } from './cargos.service';
 import { PagosService } from './pagos.service';
-import { OpenpayService } from './openpay.service';
+import { OpenpayCharge, OpenpayService } from './openpay.service';
 import { BitacoraFinancieraService } from './bitacora-financiera.service';
 import { JwtUser } from '../common/current-user.decorator';
 
@@ -29,7 +29,7 @@ export class OrdenesService {
     const cargo = await this.cargos.obtener(cargoId);
 
     // Un alumno solo puede pagar sus propios cargos; FINANZAS puede generar para cualquiera
-    const alumno = await this.alumnos.obtenerPorUsuario(user.sub).catch(() => null);
+    const alumno = await this.alumnos.obtenerPorUsuario(user.sub).catch((): null => null);
     if (alumno) {
       if (cargo.alumnoId !== alumno.id) throw new BadRequestException('El cargo no pertenece al alumno autenticado');
     } else {
@@ -62,7 +62,7 @@ export class OrdenesService {
     const orden = reserva.orden;
     if (orden.estatus === 'PENDIENTE' && orden.urlPago) return this.proyectarOrden(orden);
     if (reserva.previa && orden.id && orden.estatus === 'CREADA') {
-      const existente = await this.openpay.buscarCargoPorOrden(`ORD-${orden.id}`).catch(() => null);
+      const existente = await this.openpay.buscarCargoPorOrden(`ORD-${orden.id}`).catch((): null => null);
       if (existente) {
         if (existente.order_id !== `ORD-${orden.id}` || Math.round(Number(existente.amount) * 100) !== Math.round(Number(orden.monto) * 100) ||
             existente.currency !== 'MXN' || existente.transaction_type !== 'charge') {
@@ -89,7 +89,9 @@ export class OrdenesService {
       });
     } catch (error) {
       // Un timeout/5xx no indica si Openpay alcanzó a crear el cargo. Se conserva CREADA.
-      const status = (error as any)?.response?.status;
+      const respuesta = error && typeof error === 'object' && 'response' in error ? error.response : undefined;
+      const status = respuesta && typeof respuesta === 'object' && 'status' in respuesta &&
+        typeof respuesta.status === 'number' ? respuesta.status : undefined;
       if (status && status >= 400 && status < 500 && ![408, 409, 429].includes(status)) {
         orden.estatus = 'FALLIDA';
         await this.ordenes.save(orden);
@@ -101,7 +103,7 @@ export class OrdenesService {
         orden.id,
         `ORD-${orden.id}: fallo al crear cargo Openpay; requiere conciliación`,
         cargo.alumno.plantelId,
-      ).catch(() => undefined);
+      ).catch((): undefined => undefined);
       throw error;
     }
 
@@ -118,7 +120,7 @@ export class OrdenesService {
     return this.proyectarOrden(actualizada);
   }
 
-  private async aplicarRespuestaCargo(ordenId: number, charge: any): Promise<OrdenPago> {
+  private async aplicarRespuestaCargo(ordenId: number, charge: OpenpayCharge): Promise<OrdenPago> {
     return this.dataSource.transaction(async (manager) => {
       const repo = manager.getRepository(OrdenPago);
       const actual = await repo.findOne({ where: { id: ordenId }, lock: { mode: 'pessimistic_write' } });
@@ -139,7 +141,7 @@ export class OrdenesService {
     const orden = await this.ordenes.findOne({ where: { id } });
     if (!orden) throw new NotFoundException('Orden no encontrada');
     if (user) {
-      const alumno = await this.alumnos.obtenerPorUsuario(user.sub).catch(() => null);
+      const alumno = await this.alumnos.obtenerPorUsuario(user.sub).catch((): null => null);
       if (alumno) {
         if (orden.alumnoId !== alumno.id) throw new BadRequestException('La orden no pertenece al alumno autenticado');
       } else {

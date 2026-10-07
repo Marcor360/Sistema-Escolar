@@ -46,7 +46,7 @@ describe('UsuariosService.actualizar revoca sesiones', () => {
   it('invalida los tokens previos al reactivar una cuenta desactivada', async () => {
     const cuenta = {
       id: 1, email: 'a@escuela.mx', passwordHash: 'hash', nombre: 'A', apellidoPaterno: 'B',
-      apellidoMaterno: null, telefono: null, activo: false, sessionVersion: 2, roles: [],
+      apellidoMaterno: null as string | null, telefono: null as string | null, activo: false, sessionVersion: 2, roles: [] as string[],
     };
     const usuarios = {
       findOne: jest.fn().mockResolvedValue(cuenta),

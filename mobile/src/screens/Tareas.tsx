@@ -21,6 +21,7 @@ export default function TareasScreen() {
   const [cargando, setCargando] = useState(false);
   const [cargaInicialCompleta, setCargaInicialCompleta] = useState(false);
   const [error, setError] = useState('');
+  const [entregandoId, setEntregandoId] = useState<number | null>(null);
 
   const cargar = useCallback(() => {
     setError('');
@@ -34,18 +35,19 @@ export default function TareasScreen() {
   useFocusEffect(useCallback(() => { cargar(); }, [cargar]));
 
   const entregar = async (tarea: Tarea) => {
-    const resultado = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true });
-    if (resultado.canceled || !resultado.assets[0]) return;
-    const archivo = resultado.assets[0];
-
-    const form = new FormData();
-    form.append('archivo', {
-      uri: archivo.uri,
-      name: archivo.name,
-      type: archivo.mimeType ?? 'application/octet-stream',
-    } as unknown as Blob);
-
     try {
+      setEntregandoId(tarea.id);
+      const resultado = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true });
+      if (resultado.canceled || !resultado.assets[0]) return;
+      const archivo = resultado.assets[0];
+
+      const form = new FormData();
+      form.append('archivo', {
+        uri: archivo.uri,
+        name: archivo.name,
+        type: archivo.mimeType ?? 'application/octet-stream',
+      } as unknown as Blob);
+
       await api.post(`/actividades/${tarea.id}/entrega`, form, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
@@ -53,7 +55,25 @@ export default function TareasScreen() {
       cargar();
     } catch (err) {
       Alert.alert('No se pudo entregar', mensajeDeError(err));
+    } finally {
+      setEntregandoId(null);
     }
+  };
+
+  const solicitarEntrega = (tarea: Tarea) => {
+    if (entregandoId !== null) return;
+    if (tarea.entrega?.estatus === 'CALIFICADA') {
+      Alert.alert(
+        'Reemplazar entrega calificada',
+        'La calificación y el comentario del docente se quitarán hasta que revise el nuevo archivo.',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Continuar', onPress: () => { void entregar(tarea); } },
+        ],
+      );
+      return;
+    }
+    void entregar(tarea);
   };
 
   const tono = (tarea: Tarea) => {
@@ -91,11 +111,12 @@ export default function TareasScreen() {
             />
             <TouchableOpacity
               style={estilos.boton}
-              onPress={() => entregar(item)}
+              onPress={() => solicitarEntrega(item)}
+              disabled={entregandoId !== null}
               accessibilityRole="button"
               accessibilityLabel={`${item.entrega ? 'Reemplazar entrega' : 'Entregar archivo'}: ${item.titulo}`}
             >
-              <Text style={estilos.botonTexto}>{item.entrega ? 'Reemplazar entrega' : 'Entregar archivo'}</Text>
+              <Text style={estilos.botonTexto}>{entregandoId === item.id ? 'Enviando…' : item.entrega ? 'Reemplazar entrega' : 'Entregar archivo'}</Text>
             </TouchableOpacity>
           </Tarjeta>
         )}

@@ -2,12 +2,9 @@
   "expo": {
     "name": "Sistema Escolar",
     "slug": "sistema-escolar",
-    "version": "1.10.0",
+    "version": "1.13.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "splash": {
-      "backgroundColor": "#14343B"
-    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "mx.escuela.alumnos"
@@ -18,7 +15,8 @@
     "plugins": [
       "expo-asset",
       "expo-secure-store",
-      "expo-status-bar"
+      "expo-status-bar",
+      ["expo-splash-screen", { "backgroundColor": "#14343B" }]
     ]
   }
 }

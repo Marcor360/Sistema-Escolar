@@ -100,7 +100,7 @@ describe('AlumnosService.obtenerParaApi', () => {
       tutorTelefono: '5550000000', direccion: 'Dirección privada',
       plantel: { id: 1, nombre: 'Plantel A' },
       usuario: {
-        id: 80, nombre: 'Ana', apellidoPaterno: 'López', apellidoMaterno: null,
+        id: 80, nombre: 'Ana', apellidoPaterno: 'López', apellidoMaterno: null as string | null,
         email: 'ana@example.invalid', telefono: '5551111111',
       },
     };

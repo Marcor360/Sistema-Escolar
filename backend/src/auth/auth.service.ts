@@ -169,6 +169,6 @@ export class AuthService {
   ) {
     await this.bitacora
       .insert({ usuarioId, metodo: 'POST', ruta: `auth/login:${motivo}`, ip: ip ?? null })
-      .catch(() => undefined);
+      .catch((): undefined => undefined);
   }
 }

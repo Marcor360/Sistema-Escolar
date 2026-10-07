@@ -11,7 +11,7 @@ const VALORES_INICIALES = {
   id: 1,
   nombreInstitucion: 'Sistema Escolar',
   nombreCorto: 'SE',
-  logoUrl: null,
+  logoUrl: null as string | null,
   colorPrimario: '#14343B',
   colorAcento: '#C79A3C',
 };

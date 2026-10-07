@@ -34,7 +34,7 @@ export class BitacoraInterceptor implements NestInterceptor {
     const registrar = (resultado: 'EXITO' | 'ERROR', statusCode: number, respuesta?: unknown) => {
       const idRespuesta = (respuesta as { id?: unknown } | null)?.id;
       const id = idRespuesta !== undefined && /^\d+$/.test(String(idRespuesta)) ? Number(idRespuesta) : entidadId;
-      void this.repo.insert({ ...base, entidadId: id, resultado, statusCode }).catch(() => undefined);
+      void this.repo.insert({ ...base, entidadId: id, resultado, statusCode }).catch((): undefined => undefined);
     };
 
     return next.handle().pipe(

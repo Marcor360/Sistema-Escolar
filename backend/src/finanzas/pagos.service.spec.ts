@@ -53,7 +53,7 @@ function servicioTransaccional(options: {
 describe('PagosService.registrarManual', () => {
   const pagoPrevio = {
     id: 40, alumnoId: 8, cargoId: 3, monto: 50, metodo: 'EFECTIVO',
-    referencia: null, estatus: 'CONFIRMADO', registradoPorId: 77,
+    referencia: null as string | null, estatus: 'CONFIRMADO', registradoPorId: 77,
   };
 
   it('devuelve el mismo pago ante un reintento y rechaza reutilizar la clave con otro importe', async () => {

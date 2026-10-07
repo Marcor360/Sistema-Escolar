@@ -45,7 +45,7 @@ describe('ActividadesService.entregar', () => {
     const alumnos = { obtenerPorUsuario: jest.fn().mockResolvedValue({ id: 8 }) };
     const manager = { getRepository: jest.fn((entity) => ({
       Actividad: actividades, Entrega: entregas,
-    })[entity.name]) };
+    })[entity.name as 'Actividad' | 'Entrega']) };
     const dataSource = { transaction: jest.fn((fn) => fn(manager)) };
     const service = new ActividadesService(
       actividades as any, entregas as any, {} as any, grupoMaterias as any,

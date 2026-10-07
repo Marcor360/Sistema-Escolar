@@ -1,6 +1,8 @@
-# 🎓 Sistema Escolar Multiplataforma (MVP) — Documentación Completa
+# Sistema Escolar Multiplataforma (MVP)
 
-> **ERP educativo multiplataforma** para gestión académica, administrativa y financiera. El código cubre los flujos principales del MVP; consulta [el estado de implementación](docs/ESTADO_IMPLEMENTACION.md) para distinguirlos de pendientes y dependencias de producción.
+> Portal web administrativo/docente, app móvil del alumno y API para gestión académica y financiera. El código cubre los flujos principales del MVP; todavía no hay certificación de piloto institucional ni despliegue productivo.
+
+**Estado al 6 de octubre de 2026:** los paquetes declaran `1.13.0`. La última CI publicada del commit `b5612c0` [pasó](https://github.com/Marcor360/Sistema-Escolar/actions/runs/37407826286), incluida integración HTTP con bases aisladas MySQL y SQL Server. Los cambios locales posteriores están documentados en [la continuación de la auditoría](docs/CONTINUACION_2026-10-05.md) y aún requieren su propia CI. Para el estado operativo y las dependencias institucionales, consulta [Estado de implementación](docs/ESTADO_IMPLEMENTACION.md).
 
 ---
 
@@ -43,8 +45,8 @@ Digitalizar y automatizar los procesos educativos con:
 ### Frontend Móvil
 | Tecnología | Versión | Función |
 |------------|---------|---------|
-| **React Native** | Expo SDK | App nativa multiplataforma para alumnos |
-| **Expo** | - | Framework simplificado con ejectable API |
+| **React Native** | 0.86.3 | App móvil para alumnos |
+| **Expo** | SDK 57 | Desarrollo y exportación de bundles Android/iOS; build firmado pendiente |
 
 ### Base de Datos
 | Motor | Características |
@@ -67,7 +69,7 @@ Digitalizar y automatizar los procesos educativos con:
 │                    CLIENTES (Frontend)                          │
 │  ┌──────────────┐  ┌──────────────┐  ┌────────────────────┐    │
 │  │   Portal WEB  │  │   App MÓVIL  │  │   Openpay (Webhook)│   │
-│  │  React/Vite   │  │ React Native │  │     BBVA/BBDO      │   │
+│  │  React/Vite   │  │ React Native │  │      Openpay       │   │
 │  └──────────────┘  └──────────────┘  └────────────────────┘    │
 └─────────────────────────────────────────────────────────────────┘
                               ↓ HTTPS/JSON
@@ -83,9 +85,9 @@ Digitalizar y automatizar los procesos educativos con:
 │                              ↓ TypeORM                          │
 ┌─────────────────────────────────────────────────────────────────┐
 │              BASE DE DATOS (MySQL / SQL Server)                  │
-│  • 23 tablas con naming strategies (snake_case)                │
+│  • Entidades TypeORM con nombres snake_case                     │
 │  • Esquema espejo MySQL ↔ SQL Server                           │
-│  • Migraciones incrementales en database/mysql/ y sqlserver/    │
+│  • Migraciones incrementales MySQL y SQL Server                 │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
@@ -123,13 +125,13 @@ representan el progreso ni el esfuerzo pendiente actual. Consulta [Estado de imp
 
 ## 🔗 Integraciones Externas
 
-### 1. **Openpay (BBVA/BBDO)**
+### 1. **Openpay**
 ```typescript
 // backend/src/finanzas/openpay.service.ts
 - Crea cargos con redirección a pasarela segura
 - Webhook confirma pagos: charge.succeeded/failed/cancelled
 - Transaction.expired para pagos caducados
-- Basic Auth opcional en webhook (OPENPAY_WEBHOOK_USER/PASS)
+- Basic Auth exigida para el webhook en producción (OPENPAY_WEBHOOK_USER/PASS)
 ```
 
 ### 2. **SMTP (Correos)**
@@ -145,14 +147,14 @@ representan el progreso ni el esfuerzo pendiente actual. Consulta [Estado de imp
 # etl/etl/run.py
 - Migración inicial desde sistema certweb anterior
 - Estrategia *strangler fig* (Mes 6 del contrato)
-- Idempotente por legacy_id en 12 entidades principales
+- Upserts parciales por legacy_id de planteles y alumnos; faltan otras entidades
 - Modo --dry-run para pruebas sin escribir datos
 ```
 
 ### 4. **Pasarela de Pagos**
 | Proveedor | Estado | Uso |
 |-----------|--------|-----|
-| Openpay | ✅ Integrado | Cobranza online con redirección |
+| Openpay | Código integrado; sandbox pendiente de certificar | Cobranza online con redirección |
 | Stripe | ❌ No incluido | - |
 | MercadoPago | ❌ No incluido | - |
 
@@ -207,7 +209,7 @@ backend/
 │   │
 │   ├── calificaciones/            # Calificaciones
 │   │   ├── calificaciones.controller.ts
-│   │   ├── calificaciones.service.ts # Captura masiva con upsert
+│   │   ├── calificaciones.service.ts # Captura, cierre de periodo e historial
 │   │   └── calificaciones.module.ts
 │   │
 │   ├── calendario/                # Calendario académico
@@ -246,7 +248,7 @@ backend/
 │   │   ├── configuracion.service.ts # Logo, colores dinámicos
 │   │   └── configuracion.module.ts
 │   │
-│   ├── entities/                  # Definiciones TypeORM (23 entidades)
+│   ├── entities/                  # Definiciones TypeORM (28 entidades)
 │   │   ├── usuario.entity.ts      # Usuario con roles ManyToMany
 │   │   ├── alumno.entity.ts       # Alumno con inscripción y plantel
 │   │   ├── docente.entity.ts      # Docente vinculado a usuario
@@ -272,16 +274,16 @@ backend/
 │   │   ├── usuario-plantel.entity.ts # Asignación usuario-planteles
 │   │   └── configuracion-marca.entity.ts # Marca institucional
 │   │
-│   ├── config/                    # Configuraciones TypeORM, uploads
-│   │   ├── typeorm.config.ts      # Configuración DB conmutable MySQL/SQL Server
-│   │   └── upload.config.ts       # Configuración Multer (5MB límite)
+│   ├── config/                    # Configuración TypeORM
+│   │   └── typeorm.config.ts      # Conexión MySQL/SQL Server
 │   │
 │   ├── common/                    # Componentes globales
 │   │   ├── bitacora.interceptor.ts # Interceptor para registrar actividad
 │   │   ├── jwt-auth.guard.ts      # Guard de autenticación JWT
 │   │   ├── roles.guard.ts         # Guard de autorización por roles
 │   │   ├── current-user.decorator.ts # Decorador @CurrentUser()
-│   │   └── paginacion.dto.ts      # DTO estándar de paginación
+│   │   ├── paginacion.dto.ts      # DTO estándar de paginación
+│   │   └── upload.config.ts       # Configuración Multer
 │   │
 │   ├── seed/                      # Datos de demostración
 │   │   └── seed.ts                # Idempotente, exclusivo desarrollo
@@ -289,22 +291,15 @@ backend/
 │   └── archivos/                  # Archivos estáticos (logo público)
 │       └── logo-publico.controller.ts
 │
-├── database/                      # Esquemas y migraciones
-│   ├── mysql/                     # MySQL 8
-│   │   ├── schema.sql             # Estructura completa (paridad documental)
-│   │   ├── seed.sql               # Datos iniciales
-│   │   └── migracion_*.sql        # Migraciones incrementales
-│   └── sqlserver/                 # SQL Server 2019+ (espejo 1:1)
-│       ├── schema.sql             # Esquema equivalente MySQL
-│       ├── seed.sql               # Datos iniciales equivalentes
-│       └── migracion_*.sql        # Migraciones incrementales
-│
 ├── package.json                   # Dependencias y scripts
 ├── tsconfig.json                  # Configuración TypeScript
+├── test/tsconfig.json             # Typecheck de integración HTTP
 ├── nest-cli.json                  # Configuración NestJS
 ├── jest.config.cjs                # Configuración tests
 └── .env.example                   # Plantilla variables de entorno
 ```
+
+Las bases y migraciones están en `database/mysql/` y `database/sqlserver/`, fuera de `backend/`. `schema.sql` sirve solo para documentar la paridad; el runner usa baselines versionados y migraciones incrementales.
 
 ### Frontend Web (React/Vite)
 
@@ -383,11 +378,12 @@ mobile/
 │   │   ├── Materias.tsx           # Listado materias con calificaciones
 │   │   ├── Tareas.tsx             # Actividades pendientes y entregas
 │   │   ├── Calificaciones.tsx     # Tabla de calificaciones por materia
-│   │   ├── EstadoCuenta.tsx       # Estado cuenta propio (FINANZAS)
+│   │   ├── EstadoCuenta.tsx       # Estado de cuenta propio del alumno
 │   │   ├── Perfil.tsx             # Datos personales + cambio contraseña
 │   │   └── comunes.tsx            # Componentes reutilizables
 │   │
-│   └── App.tsx                    # Componente raíz con navegación
+│
+├── App.tsx                        # Componente raíz con navegación
 │
 ├── app.json                       # Configuración Expo
 ├── package.json                   # Dependencias y scripts
@@ -427,10 +423,13 @@ etl/
    ↓
 4. Se emite JWT con expiración diferenciada:
    - WEB: JWT_EXPIRES (default 8h)
-   - MÓVIL: JWT_EXPIRES_MOVIL (si definido, más largo)
+   - MÓVIL: JWT_EXPIRES_MOVIL (opcional; ampliar su duración aumenta el riesgo)
    ↓
-5. Frontend guarda token y actualiza UI según rol
+5. Web guarda el bearer token en localStorage; móvil usa SecureStore.
+6. Al iniciar, ambos consultan GET /auth/me. POST /auth/logout revoca todas las sesiones JWT vigentes de esa cuenta.
 ```
+
+El modelo de sesiones por dispositivo con access token corto y refresh rotativo aún no está implementado. La migración debe coordinar API, web y móvil.
 
 ### Flujo de Gestión Académica
 
@@ -441,7 +440,7 @@ etl/
 4. Maestro ve "Mis Grupos" (solo sus asignaciones)
 5. Maestro crea Actividades y sube Materiales
 6. Alumno entrega trabajos con archivos ≤5MB
-7. Maestro califica entregas y captura parciales
+7. Maestro califica entregas y captura parciales; administración puede cerrar y reabrir periodos
 8. Sistema calcula promedios automáticamente
 9. Generación de boletas PDF y reportes Excel
 ```
@@ -454,7 +453,7 @@ etl/
 3. Aplica recargos a cargos vencidos (una vez por cargo)
 4. Alumno crea Orden de Pago → Redirección Openpay
 5. Webhook confirma pago → Recalcula cargo → Notifica alumno
-6. Administrativo registra pagos manuales (efectivo/transferencia)
+6. FINANZAS registra pagos manuales (efectivo/transferencia) con clave de idempotencia
 7. Genera avisos de cobranza por correo
 8. Alumno ve estado de cuenta propio con historial
 ```
@@ -479,9 +478,10 @@ etl/
 | Característica | Descripción |
 |---------------|-------------|
 | **JWT con expiración** | `JWT_EXPIRES` (web), `JWT_EXPIRES_MOVIL` (móvil) |
+| **Logout global** | Revoca los JWT actuales de la cuenta mediante `session_version` |
 | **Tokens firmados para archivos** | 5 minutos de vida útil, validación en streaming |
 | **Hash SHA256 para tokens de recuperación** | Solo persiste el hash, no el token en claro |
-| **Webhook Openpay con Basic Auth opcional** | Configurado con `OPENPAY_WEBHOOK_USER/PASS` |
+| **Webhook Openpay autenticado en producción** | `OPENPAY_WEBHOOK_USER/PASS` obligatorios al activar producción |
 | **Rate limiting** | 120 req/min global, 5/min en login/recuperación |
 | **Encabezados Helmet** | Seguridad HTTP estándar |
 | **CORS restringible** | `CORS_ORIGINS` en producción |
@@ -489,6 +489,11 @@ etl/
 | **Contraseñas bcrypt** | Hash seguro de contraseñas |
 | **Validación whitelist** | `class-validator` con `whitelist: true` |
 | **Permisos por rol** | Validación en API y rutas del portal |
+| **Portal IIS** | CSP, HSTS, protección contra iframes y Permissions Policy en `web.config` |
+
+---
+
+**Endurecimiento pendiente:** refresh token rotativo por dispositivo, retirar el bearer token web de `localStorage`, resolver la excepción `strictPropertyInitialization: false` de DTO/entidades y certificar la CSP con los dominios finales. El backend ya activa `strict: true` con esa excepción; el lint rechaza `any` en código de producción y advierte sobre los dobles de prueba que aún lo usan.
 
 ---
 
@@ -505,35 +510,40 @@ etl/
 
 ## 🚀 Comandos Útiles
 
-Usa **Node.js 24 LTS** para instalar dependencias, ejecutar pruebas y compilar los tres proyectos del repositorio. El CI usa esa versión para backend, web, móvil e integración con MySQL y SQL Server.
+Usa **Node.js 24** para instalar dependencias, ejecutar pruebas y compilar los tres proyectos. La CI usa esa versión. Los comandos siguientes se ejecutan desde cada carpeta indicada; `npm ci` reproduce el lockfile.
 
 ### Backend
 ```bash
 cd backend
-npm install                    # Instalar dependencias
+npm ci                         # Instalar dependencias del lockfile
 npm run start:dev              # Desarrollo (http://localhost:3000/api)
 ALLOW_DEV_SEED=true npm run seed  # Solo local: requiere 5 contraseñas distintas de 16+ caracteres en backend/.env
 npm run lint                   # Validar código
-npm run typecheck              # Verificar tipos TypeScript
+npm run typecheck              # Verificar src/ y test/ (integración HTTP)
 npm test                       # Ejecutar tests Jest
+npm run build                  # Compilar API
 npm run test:integration       # Flujos HTTP sobre baseline en base escolar_integration_* aislada (DB_SYNC=false)
 ```
 
 ### Frontend Web
 ```bash
 cd web
-npm install                    # Instalar dependencias
+npm ci                         # Instalar dependencias del lockfile
 npm run dev                    # Desarrollo (http://localhost:5173)
 npm run build                  # Build de producción
 npm run lint                   # Validar código
+npm test                       # Pruebas web
 ```
 
 ### Frontend Móvil
 ```bash
 cd mobile
-npm install                    # Instalar dependencias
+npm ci                         # Instalar dependencias del lockfile
 npx expo start                 # Iniciar Expo
 npx tsc --noEmit               # Verificar TypeScript
+npm test                       # Pruebas móviles
+npx expo-doctor                # Compatibilidad de Expo SDK 57
+npx expo export --platform android  # Bundle JS; no es un APK firmado
 ```
 
 ### Base de Datos
@@ -557,7 +567,7 @@ docker compose --profile mssql up -d sqlserver
 
 ## 🖥️ Staging en Windows Server
 
-La próxima versión **1.10.0** incorpora scripts versionados para Windows Server 2019 con IIS, API NestJS como servicio NSSM y MySQL 8.4. **El repositorio está preparado; el VPS y una restauración real todavía requieren validación.** La guía operativa completa está en [Staging en Windows e IIS](docs/STAGING_WINDOWS_IIS.md).
+El repositorio incluye scripts de staging para Windows Server 2019 con IIS, NestJS como servicio NSSM y MySQL 8.4. **El VPS, la actualización de una copia institucional y una restauración real todavía requieren validación.** La guía operativa está en [Staging en Windows e IIS](docs/STAGING_WINDOWS_IIS.md).
 
 Antes del primer despliegue, prepara DNS y el certificado HTTPS, MySQL con TLS, una base `escolar_staging` nueva y separada, y los archivos protegidos `C:\SistemaEscolar\config\backend.env` y `C:\SistemaEscolar\config\backup.env`. Usa [la plantilla del backend](backend/.env.staging.example) y [la del respaldo](scripts/windows/backup.env.example). `BACKUP_DB_USER` debe ser distinto de `DB_USER`. Instala el baseline y adopta su historial solo en una base nueva, siguiendo [Migraciones](docs/MIGRACIONES.md); nunca ejecutes `schema.sql` completo ni habilites `DB_SYNC=true` en staging.
 
@@ -565,7 +575,7 @@ Desde una consola administrativa en el servidor, con Node 24, IIS, URL Rewrite, 
 
 ```powershell
 $credential = Get-Credential '.\svc_escolar_api'
-.\scripts\windows\Initialize-Staging.ps1 -Version '1.10.0' -Source 'C:\Builds\sistema-escolar-mvp' -ServiceCredential $credential -ApiBaseUrl 'https://api-staging.dominio.mx/api'
+.\scripts\windows\Initialize-Staging.ps1 -Version '1.13.0' -Source 'C:\Builds\sistema-escolar-mvp' -ServiceCredential $credential -ApiBaseUrl 'https://api-staging.dominio.mx/api'
 .\scripts\windows\Configure-IIS-Staging.ps1 -PortalHost 'sistema-staging.dominio.mx' -ApiHost 'api-staging.dominio.mx' -CertificateThumbprint '<huella-del-certificado>'
 Start-Service SistemaEscolarApi
 Invoke-WebRequest 'https://api-staging.dominio.mx/api/health'
@@ -603,4 +613,12 @@ Para versiones posteriores, usa [Deploy-Staging.ps1](scripts/windows/Deploy-Stag
 
 ---
 
-**Ideal para instituciones educativas que necesitan digitalizar sus procesos administrativos, académicos y financieros en una sola plataforma integral.**
+## Próximos pasos para el piloto
+
+1. **Cerrar la versión local:** revisar el diff actual, ejecutar la CI con MySQL y SQL Server aislados y confirmar que las migraciones pendientes pasan antes de preparar una release.
+2. **Ensayar datos reales sin tocar producción:** restaurar una copia institucional aislada, auditar su esquema y probar `db:migrate:status` y `db:migrate` sobre esa copia. Registrar conteos, errores y tiempos.
+3. **Preparar staging:** verificar VPS, DNS/TLS, IIS/ARR, servicio API, permisos de `uploads/`, backup externo y restauración completa de MySQL y archivos. Usar [la guía Windows](docs/STAGING_WINDOWS_IIS.md).
+4. **Certificar servicios y uso:** Openpay sandbox, webhook/reintentos/conciliación, SMTP, permisos con cuentas de dos planteles, formatos de reportes y pruebas físicas Android/iOS.
+5. **Acordar reglas institucionales:** reapertura de calificaciones, reentrega de tareas calificadas, privacidad de datos de menores y responsables operativos. No activar pagos productivos ni usar datos de alumnos reales antes de cerrar estas verificaciones.
+
+El [plan de auditoría](docs/AUDITORIA_ACTUAL_2026-10-05.md) y su [continuación](docs/CONTINUACION_2026-10-05.md) separan el trabajo ya implementado de la aceptación pendiente.

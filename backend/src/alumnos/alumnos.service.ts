@@ -31,7 +31,7 @@ export class AlumnosService {
       .leftJoinAndSelect('a.plantel', 'p');
     if (planteles !== null) qb.andWhere('a.plantel_id IN (:...planteles)', { planteles });
 
-    if (maestroPuro) {
+    if (maestroPuro && user) {
       qb.andWhere(
         'EXISTS (SELECT 1 FROM inscripciones i INNER JOIN grupos g ON g.id = i.grupo_id AND g.activo = :grupoActivo INNER JOIN grupo_materias gm ON gm.grupo_id = i.grupo_id INNER JOIN docentes d ON d.id = gm.docente_id WHERE i.alumno_id = a.id AND i.estatus = :estatusInscripcion AND d.usuario_id = :docenteUsuarioId)',
         { grupoActivo: true, estatusInscripcion: 'ACTIVA', docenteUsuarioId: user.sub },

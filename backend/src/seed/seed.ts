@@ -7,7 +7,7 @@ import 'reflect-metadata';
 import { config as loadEnv } from 'dotenv';
 loadEnv();
 
-import { DataSource } from 'typeorm';
+import { DataSource, DataSourceOptions } from 'typeorm';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import * as bcrypt from 'bcryptjs';
 import { join } from 'path';
@@ -30,7 +30,7 @@ const dataSource = new DataSource({
   synchronize: false,
   namingStrategy: new SnakeNamingStrategy(),
   ...(type === 'mssql' ? { options: { encrypt: false, trustServerCertificate: true } } : {}),
-} as any);
+} as DataSourceOptions);
 
 export function validarEjecucionSeed(env: NodeJS.ProcessEnv = process.env): void {
   if (env.NODE_ENV === 'production') {

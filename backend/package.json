@@ -1,6 +1,6 @@
 {
   "name": "escolar-backend",
-  "version": "1.10.0",
+  "version": "1.13.0",
   "description": "API del Sistema Escolar Multiplataforma (MVP) — NestJS + TypeORM (MySQL / SQL Server)",
   "private": true,
   "scripts": {
@@ -12,7 +12,7 @@
     "db:migrate:status": "node dist/database/migrate.js status",
     "db:migrate:adopt": "node dist/database/migrate.js adopt",
     "seed": "ts-node -r tsconfig-paths/register src/seed/seed.ts",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p test/tsconfig.json --noEmit",
     "lint": "eslint \"src/**/*.ts\"",
     "format": "prettier --write \"src/**/*.ts\"",
     "pretest": "node scripts/verificar-sprintf.cjs",

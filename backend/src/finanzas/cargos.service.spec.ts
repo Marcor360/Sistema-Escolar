@@ -28,8 +28,8 @@ describe('CargosService.saldoDeCargo / totalDeCargo', () => {
 describe('CargosService.adeudos minimiza datos del alumno', () => {
   it('no devuelve CURP, tutor, dirección ni correo en el reporte financiero', async () => {
     const cargo = {
-      id: 1, alumnoId: 10, conceptoId: 2, cicloId: null, periodo: '2026-09', claveGeneracion: 'interno',
-      descripcion: 'Colegiatura', monto: 100, descuento: 0, recargo: 0, fechaVencimiento: null,
+      id: 1, alumnoId: 10, conceptoId: 2, cicloId: null as number | null, periodo: '2026-09', claveGeneracion: 'interno',
+      descripcion: 'Colegiatura', monto: 100, descuento: 0, recargo: 0, fechaVencimiento: null as string | null,
       estatus: 'PENDIENTE',
       alumno: {
         id: 10, usuarioId: 80, plantelId: 3, matricula: 'A010', curp: 'CURP-PRIVADA',
