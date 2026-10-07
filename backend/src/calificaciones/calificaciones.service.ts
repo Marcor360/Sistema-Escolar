@@ -1,3 +1,4 @@
+import { CicloEscolar } from '../entities/ciclo-escolar.entity';
 import { PaginacionDto } from '../common/paginacion.dto';
 import { exigirGrupoVigente, inscripcionVigente } from '../common/contexto-academico';
 import { promedioOficial } from '../common/promedio-oficial';
@@ -52,11 +53,14 @@ export class CalificacionesService {
 
     const ids = [...new Set(dto.items.map((item) => item.alumnoId))];
     return this.dataSource.transaction(async (manager) => {
+      const cicloActual = await manager.getRepository(CicloEscolar).findOne({ where: { id: gm.grupo.cicloId }, lock: { mode: 'pessimistic_write' } });
+      if (!cicloActual?.activo) throw new ConflictException('El ciclo ya fue cerrado');
       const grupoMateria = await manager.getRepository(GrupoMateria).findOne({
         where: { id: gm.id }, lock: { mode: 'pessimistic_write' },
       });
       if (!grupoMateria) throw new NotFoundException('Grupo-materia no encontrado');
       if (!grupoMateria.grupo.activo) throw new ConflictException('El grupo no está activo');
+      grupoMateria.grupo.ciclo = cicloActual;
       exigirGrupoVigente(grupoMateria.grupo);
       if (grupoMateria.docenteId !== gm.docenteId && user.roles.includes('MAESTRO') &&
           !user.roles.some((rol) => ['SUPERADMIN', 'ADMINISTRATIVO'].includes(rol))) {
@@ -134,12 +138,18 @@ export class CalificacionesService {
     grupoMateriaId: number, parcial: number, estatus: EstadoPeriodoCalificacion, user: JwtUser,
   ) {
     this.validarParcial(parcial);
+    const previa = await this.grupoMaterias.findOne({ where: { id: grupoMateriaId } });
+    if (!previa) throw new NotFoundException('Grupo-materia no encontrado');
+    await this.scope.validarGestion(user, previa.grupo.plantelId);
     return this.dataSource.transaction(async (manager) => {
+      const cicloActual = await manager.getRepository(CicloEscolar).findOne({ where: { id: previa.grupo.cicloId }, lock: { mode: 'pessimistic_write' } });
+      if (!cicloActual?.activo) throw new ConflictException('El ciclo ya fue cerrado');
       const gm = await manager.getRepository(GrupoMateria).findOne({
         where: { id: grupoMateriaId }, lock: { mode: 'pessimistic_write' },
       });
       if (!gm) throw new NotFoundException('Grupo-materia no encontrado');
       await this.scope.validarGestion(user, gm.grupo.plantelId);
+      gm.grupo.ciclo = cicloActual;
       exigirGrupoVigente(gm.grupo);
       if (estatus === 'CERRADO') {
         const inscritos = await manager.getRepository(Inscripcion).find({ where: { ...inscripcionVigente, grupoId: gm.grupoId } });

@@ -1,0 +1,16 @@
+{
+  "braces": {
+    "upstreamVersion": "3.0.3",
+    "upstreamIntegrity": "sha512-yQbXgO/OSZVD2IsiLlro+7Hf6Q18EJrKSEsdoMzKePKXct3gvD8oLcOQdIzGupr5Fj+EDe8gO/lxc1BzfMpxvA==",
+    "patchedVersion": "3.0.4-escolar.0",
+    "archive": "braces-3.0.4-escolar.0.tgz",
+    "patchedIntegrity": "sha512-k32l02uCVBSYBdBJjAawwL/fh5MjPm737Y/yFzBqzr58HPwRF5lLxPchjmyY/8jLh4C7WKam4aXTn/gGi0I6gg=="
+  },
+  "node-forge": {
+    "upstreamVersion": "1.4.0",
+    "upstreamIntegrity": "sha512-LarFH0+6VfriEhqMMcLX2F7SwSXeWwnEAJEsYm5QKWchiVYVvJyV9v7UDvUv+w5HO23ZpQTXDv/GxdDdMyOuoQ==",
+    "patchedVersion": "1.4.1-escolar.0",
+    "archive": "node-forge-1.4.1-escolar.0.tgz",
+    "patchedIntegrity": "sha512-8Ke7A2jQTaMYvcIW1qQpVkPWhuqf2xE4JTbTB2UitVG0OO0PiK7XDPhC+kIHrnlYI0H9XUz79N6lU64htX9y5g=="
+  }
+}

@@ -1,5 +1,7 @@
+import * as Notifications from 'expo-notifications';
+import { activarPush } from './src/push';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -16,6 +18,7 @@ import EstadoCuentaScreen from './src/screens/EstadoCuenta';
 import PerfilScreen from './src/screens/Perfil';
 import { aplicarColores, MARCA_CACHE_KEY, MARCA_POR_DEFECTO, Marca, MarcaContext } from './src/marca';
 
+const navegacion = createNavigationContainerRef<{ Inicio: undefined; Materias: undefined; Tareas: undefined; Calificaciones: undefined; Pagos: undefined; Perfil: undefined }>();
 const Tab = createBottomTabNavigator();
 
 const iconos: Record<string, string> = {
@@ -104,6 +107,8 @@ export default function App() {
     return () => registrarSesionExpirada(null);
   }, []);
 
+  useEffect(() => { if (sesion && !sesion.passwordChangeRequired) void activarPush(sesion.sub, false).catch(() => undefined); }, [sesion]);
+
   const iniciar = async (email: string, password: string) => {
     const { data } = await api.post('/auth/login', { email, password });
     await SecureStore.setItemAsync(REFRESH_KEY, data.refreshToken);
@@ -111,8 +116,16 @@ export default function App() {
     setSesion(data.usuario);
   };
 
+  useEffect(() => {
+    if (!sesion || sesion.passwordChangeRequired) return;
+    const escuchar = () => { if (navegacion.isReady()) navegacion.navigate('Inicio'); };
+    const sub = Notifications.addNotificationResponseReceivedListener(escuchar);
+    return () => sub.remove();
+  }, [sesion]);
+
   const cerrar = async () => {
     await api.post('/auth/logout');
+    await Notifications.dismissAllNotificationsAsync().catch(() => undefined);
     await SecureStore.deleteItemAsync(TOKEN_KEY);
     await SecureStore.deleteItemAsync(REFRESH_KEY);
     setSesion(null);
@@ -159,7 +172,7 @@ export default function App() {
   return (
     <MarcaContext.Provider value={{ marca }}>
       <SesionContext.Provider value={{ sesion, iniciar, cerrar }}>
-        <NavigationContainer theme={tema}>
+        <NavigationContainer ref={navegacion} theme={tema} onReady={() => { if (sesion && Notifications.getLastNotificationResponse()) navegacion.navigate('Inicio'); }}>
         <StatusBar style="light" />
         {sesion ? (
           <Tab.Navigator

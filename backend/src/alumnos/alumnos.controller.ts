@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AlumnosService } from './alumnos.service';
-import { ActualizarAlumnoDto, CrearAlumnoDto, ListarAlumnosDto, TransferirAlumnoDto } from './alumnos.dto';
+import { ActualizarAlumnoDto, CrearAlumnoDto, ListarAlumnosDto, TransferirAlumnoDto, ReactivarAlumnoDto } from './alumnos.dto';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { RolesGuard } from '../common/roles.guard';
 import { Roles } from '../common/roles.decorator';
@@ -95,6 +95,9 @@ export class AlumnosController {
   bajaExplicita(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) {
     return this.service.baja(id, user);
   }
+
+  @Post(':id/reactivacion') @Roles('ADMINISTRATIVO')
+  reactivar(@Param('id', ParseIntPipe) id: number, @Body() dto: ReactivarAlumnoDto, @CurrentUser() user: JwtUser) { return this.service.reactivar(id, dto.motivo, user); }
 
   @Delete(':id')
   @Roles('ADMINISTRATIVO')

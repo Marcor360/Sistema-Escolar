@@ -15,6 +15,7 @@ export class ListarPagosDto extends PaginacionDto {
 }
 
 export class ConceptoDto {
+  @IsOptional() @IsBoolean() aplicaRecargo?: boolean;
   @IsString() clave: string;
   @IsString() nombre: string;
   @IsIn(['INSCRIPCION', 'COLEGIATURA', 'RECARGO', 'DESCUENTO', 'BECA', 'OTRO'])
@@ -23,6 +24,8 @@ export class ConceptoDto {
 }
 
 export class ActualizarConceptoDto {
+  @IsOptional() @IsBoolean() activo?: boolean;
+  @IsOptional() @IsBoolean() aplicaRecargo?: boolean;
   @IsOptional() @IsString() clave?: string;
   @IsOptional() @IsString() nombre?: string;
   @IsOptional() @IsIn(['INSCRIPCION', 'COLEGIATURA', 'RECARGO', 'DESCUENTO', 'BECA', 'OTRO'])
@@ -59,7 +62,7 @@ export class AplicarRecargosDto {
 export class RegistrarPagoDto {
   @IsUUID('4') claveIdempotencia: string;
   @IsInt() alumnoId: number;
-  @IsOptional() @IsInt() cargoId?: number;
+  @IsInt() @Min(1) cargoId: number;
   @IsNumber({ maxDecimalPlaces: 2 }) @Min(0.01) monto: number;
   @IsIn(['EFECTIVO', 'TRANSFERENCIA', 'TARJETA'])
   metodo: 'EFECTIVO' | 'TRANSFERENCIA' | 'TARJETA';

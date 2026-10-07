@@ -16,7 +16,13 @@
       "expo-asset",
       "expo-secure-store",
       "expo-status-bar",
-      ["expo-splash-screen", { "backgroundColor": "#14343B" }]
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#14343B"
+        }
+      ],
+      "expo-notifications"
     ]
   }
 }

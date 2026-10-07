@@ -1,4 +1,6 @@
-# Correcciones de código — candidato 1.15.0
+# Correcciones de código — primera publicación 1.15.0
+
+Este registro conserva las verificaciones de la primera publicación. La ampliación posterior, sus pruebas y la eliminación de excepciones de audit constan en [AMPLIACION_1.15.0.md](AMPLIACION_1.15.0.md).
 
 Fecha: 7 de octubre de 2026. Base de trabajo: `41f5579b7313f3353a1f64a984d5c44ea2b9521c`. La CI del commit publicado se consulta en [GitHub Actions](https://github.com/Marcor360/Sistema-Escolar/actions/workflows/ci.yml); el SHA exacto se entrega con el commit. Este documento no es un acta de aprobación del piloto.
 

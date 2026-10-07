@@ -227,6 +227,7 @@ export default function AlumnosPage() {
                   {puedeGestionar && <button className="boton secundario chico" onClick={() => verHistorial(a)}>Historial y boleta</button>}
                   {puedeGestionar && <>
                     <button disabled={enviando} className="boton secundario chico" onClick={() => editar(a)}>Editar</button>
+                    {a.estatus === 'BAJA' && <button disabled={enviando} onClick={async () => { const motivo = prompt('Motivo de reactivación. No se restauran inscripciones; deberá inscribirse explícitamente.'); if (!motivo?.trim() || enviando) return; setEnviando(true); setError(''); try { await api.post(`/alumnos/${a.id}/reactivacion`, { motivo }); setMensaje('Alumno reactivado; inscribe desde Grupos'); await cargar(1, buscar, plantelId); } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); } }}>Reactivar expediente</button>}
                     {a.estatus === 'ACTIVO' && <>
                       <button disabled={enviando} className="boton secundario chico" onClick={() => { setTransferencia(a); setDestino(''); }}>Transferir</button>
                       <button disabled={enviando} className="boton secundario chico" onClick={() => egresar(a)}>Egresar</button>

@@ -65,7 +65,7 @@ export class PagosService {
     if (existente) return this.verificarReintento(existente, dto, user);
     try {
       return await this.dataSource.transaction(async (manager) => {
-        if (dto.cargoId) {
+        {
           const cargo = await manager.getRepository(Cargo).findOne({
             where: { id: dto.cargoId }, lock: { mode: 'pessimistic_write' },
           });
@@ -91,7 +91,7 @@ export class PagosService {
         const pago = await pagos.save(
           pagos.create({
             alumnoId: dto.alumnoId,
-            cargoId: dto.cargoId ?? null,
+            cargoId: dto.cargoId,
             monto: dto.monto,
             metodo: dto.metodo,
             referencia: dto.referencia ?? null,
@@ -101,16 +101,14 @@ export class PagosService {
             registradoPorId: user.sub,
           }),
         );
-        if (dto.cargoId) await this.cargos.recalcularEstatus(dto.cargoId, manager);
+        await this.cargos.recalcularEstatus(dto.cargoId, manager);
         await manager.getRepository(BitacoraFinanciera).insert({
           usuarioId: user.sub,
           plantelId: alumno.plantelId,
           accion: 'PAGO_MANUAL',
           entidad: 'pago',
           entidadId: pago.id,
-          detalle: dto.cargoId
-            ? `$${dto.monto} ${dto.metodo} cargo=${dto.cargoId}`
-            : `$${dto.monto} ${dto.metodo} sin_cargo; pago_no_aplicado`,
+          detalle: `$${dto.monto} ${dto.metodo} cargo=${dto.cargoId}`,
         });
         return pago;
       });

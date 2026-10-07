@@ -4,7 +4,7 @@ import { EntityManager, In, Repository, SelectQueryBuilder } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import { Usuario } from '../entities/usuario.entity';
 import { Rol } from '../entities/rol.entity';
-import { ActualizarUsuarioDto, CrearUsuarioDto } from './usuarios.dto';
+import { ActualizarPersonalDto, ActualizarUsuarioDto, CrearUsuarioDto } from './usuarios.dto';
 import { RolClave } from '../common/roles.decorator';
 import { Plantel } from '../entities/plantel.entity';
 import { Alumno } from '../entities/alumno.entity';
@@ -72,7 +72,7 @@ export class UsuariosService {
     const [filas, total] = await qb.orderBy('a.id', 'DESC').skip((pagina - 1) * porPagina).take(porPagina).getManyAndCount();
     return { datos: filas.map((a) => ({
       id: a.id, matricula: a.matricula, nombre: a.usuario.nombreCompleto,
-      correo: a.usuario.email, plantel: a.plantel?.nombre ?? null, estatus: a.estatus,
+      ...(user.roles.some((r) => ['SUPERADMIN', 'ADMINISTRATIVO'].includes(r)) ? { correo: a.usuario.email } : {}), plantel: a.plantel?.nombre ?? null, estatus: a.estatus,
     })), total, pagina, porPagina };
   }
 
@@ -136,6 +136,40 @@ export class UsuariosService {
     return this.proyectar(usuario);
   }
 
+  async detallePersonal(id: number) {
+    const usuario = await this.obtener(id);
+    if (usuario.roles.some((r) => ['ALUMNO', 'MAESTRO'].includes(r.clave))) throw new ConflictException('Gestiona la cuenta desde su expediente');
+    const asignaciones = await this.asignaciones.find({ where: { usuarioId: id, activo: true } });
+    return { ...usuario, plantelIds: asignaciones.map((a) => a.plantelId) };
+  }
+
+  async actualizarPersonal(id: number, dto: ActualizarPersonalDto, user: JwtUser) {
+    const ids = [...new Set(dto.plantelIds)];
+    for (const plantelId of ids) await this.scope.validarGestion(user, plantelId);
+    return this.usuarios.manager.transaction(async (manager) => {
+      const repo = manager.getRepository(Usuario);
+      const usuario = await repo.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+      if (!usuario) throw new NotFoundException('Usuario no encontrado');
+      if (usuario.roles.some((r) => ['ALUMNO', 'MAESTRO'].includes(r.clave))) throw new ConflictException('Gestiona la cuenta desde su expediente');
+      const claves = dto.roles ?? usuario.roles.map((r) => r.clave);
+      if (claves.some((r) => ['ALUMNO', 'MAESTRO'].includes(r)) || !claves.length) throw new ConflictException('Selecciona roles de personal autorizado');
+      if (!claves.includes('SUPERADMIN') && !ids.length) throw new ConflictException('Asigna al menos un plantel al personal');
+      for (const plantelId of ids) if (!await manager.getRepository(Plantel).findOneBy({ id: plantelId, activo: true })) throw new ConflictException('Plantel inactivo o inexistente');
+      const asignaciones = manager.getRepository(UsuarioPlantel);
+      await asignaciones.update({ usuarioId: id }, { activo: false });
+      for (const plantelId of ids) {
+        const previa = await asignaciones.findOneBy({ usuarioId: id, plantelId });
+        if (previa) await asignaciones.update({ usuarioId: id, plantelId }, { activo: true });
+        else await asignaciones.insert({ usuarioId: id, plantelId, activo: true });
+      }
+      usuario.sessionVersion++;
+      await repo.save(usuario);
+      const { plantelIds: _planteles, ...datos } = dto;
+      void _planteles;
+      return this.actualizar(id, datos, manager);
+    });
+  }
+
   async crearPersonal(dto: CrearUsuarioDto, user: JwtUser) {
     if (dto.roles.some((rol) => rol === 'ALUMNO' || rol === 'MAESTRO')) throw new ConflictException('Crea la cuenta desde Alumnos o Docentes');
     if (!dto.roles.includes('SUPERADMIN') && !dto.plantelIds?.length) throw new ConflictException('Asigna al menos un plantel al personal');
@@ -185,6 +219,7 @@ export class UsuariosService {
     const cambiaEstado = dto.activo !== undefined && dto.activo !== usuario.activo;
     if (dto.password || cambiaEstado) usuario.sessionVersion = (usuario.sessionVersion ?? 0) + 1;
     if (dto.roles) {
+      if (!manager) throw new ConflictException('Gestiona los roles y planteles desde la edición de personal');
       for (const rol of ['ALUMNO', 'MAESTRO'] as const) {
         if (dto.roles.includes(rol) !== usuario.roles.some((r) => r.clave === rol)) {
           throw new ConflictException('Los roles de alumno y docente se gestionan desde sus expedientes');

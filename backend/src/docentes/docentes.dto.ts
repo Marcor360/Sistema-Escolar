@@ -49,3 +49,7 @@ export class ActualizarDocenteDto {
 export class PlantelesDocenteDto {
   @IsArray() @ArrayNotEmpty() @Type(() => Number) @IsInt({ each: true }) plantelIds: number[];
 }
+
+export class ReactivarDocenteDto extends PlantelesDocenteDto {
+  @IsString() @MinLength(3) @MaxLength(500) motivo: string;
+}

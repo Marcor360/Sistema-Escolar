@@ -27,3 +27,10 @@ export * from './bitacora-financiera.entity';
 export * from './bitacora-actividad.entity';
 export * from './configuracion-marca.entity';
 export * from './sesion.entity';
+export * from './bitacora-academica.entity';
+export * from './incidencia.entity';
+export * from './incidencia-seguimiento.entity';
+export * from './push-dispositivo.entity';
+export * from './push-envio.entity';
+
+export * from './archivo-limpieza.entity';

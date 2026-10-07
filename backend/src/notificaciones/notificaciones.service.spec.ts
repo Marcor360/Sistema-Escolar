@@ -25,7 +25,7 @@ describe('NotificacionesService.difundir alcance', () => {
       innerJoin: jest.fn().mockReturnThis(), select: jest.fn().mockReturnThis(),
       getRawMany: jest.fn().mockResolvedValue([{ id: 20 }, { id: 21 }]),
     };
-    const repo = { insert: jest.fn().mockResolvedValue(undefined) };
+    const repo = { create: jest.fn((dato) => dato), save: jest.fn().mockResolvedValue({ id: 1, usuarioId: 20 }) };
     const usuarios = { createQueryBuilder: jest.fn().mockReturnValue(query) };
     const alumnos = { find: jest.fn().mockResolvedValue([{ usuarioId: 20 }]) };
     const asignaciones = { find: jest.fn().mockResolvedValue([]) };
@@ -37,7 +37,8 @@ describe('NotificacionesService.difundir alcance', () => {
 
     await expect(service.difundir('Aviso', 'Mensaje', { rol: 'ALUMNO' }, admin as any))
       .resolves.toEqual({ enviadas: 1 });
-    expect(repo.insert).toHaveBeenCalledWith([{ usuarioId: 20, titulo: 'Aviso', mensaje: 'Mensaje' }]);
+    expect(repo.create).toHaveBeenCalledWith({ usuarioId: 20, titulo: 'Aviso', mensaje: 'Mensaje', tipo: 'GENERAL' });
+    expect(repo.save).toHaveBeenCalledTimes(1);
   });
 });
 

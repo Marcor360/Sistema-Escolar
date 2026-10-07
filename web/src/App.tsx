@@ -5,6 +5,9 @@ import { RutaProtegida } from './auth/RutaProtegida';
 import { Shell } from './layout/Shell';
 
 // Cada página se descarga solo cuando se visita (code splitting)
+const OperacionesPage = lazy(() => import('./pages/Operaciones'));
+const ConductaPage = lazy(() => import('./pages/Conducta'));
+const AnaliticaPage = lazy(() => import('./pages/Analitica'));
 const LoginPage = lazy(() => import('./pages/Login'));
 const DashboardPage = lazy(() => import('./pages/Dashboard'));
 const AlumnosPage = lazy(() => import('./pages/Alumnos'));
@@ -54,6 +57,7 @@ export default function App() {
           </Route>
 
           <Route element={<RutaProtegida roles={['ADMINISTRATIVO']} />}>
+            <Route path="/operaciones" element={<OperacionesPage />} />
             <Route path="/docentes" element={<DocentesPage />} />
             <Route path="/materias" element={<MateriasPage />} />
             <Route path="/grupos" element={<GruposPage />} />
@@ -64,6 +68,7 @@ export default function App() {
           </Route>
 
           <Route element={<RutaProtegida roles={['MAESTRO', 'ADMINISTRATIVO']} />}>
+            <Route path="/conducta" element={<ConductaPage />} />
             <Route path="/calificaciones" element={<CalificacionesPage />} />
             <Route path="/calendario" element={<CalendarioPage />} />
           </Route>
@@ -77,6 +82,7 @@ export default function App() {
           </Route>
 
           <Route element={<RutaProtegida roles={['ADMINISTRATIVO', 'FINANZAS', 'MAESTRO']} />}>
+            <Route path="/analitica" element={<AnaliticaPage />} />
             <Route path="/usuarios" element={<UsuariosPage />} />
           </Route>
 

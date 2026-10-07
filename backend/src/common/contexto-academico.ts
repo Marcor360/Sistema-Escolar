@@ -15,3 +15,8 @@ export const inscripcionVigente = {
   alumno: { estatus: 'ACTIVO' as const, usuario: { activo: true } },
   grupo: { activo: true, ciclo: { activo: true }, plantel: { activo: true } },
 };
+
+/** Configuración del siguiente ciclo sin habilitar todavía operación académica. */
+export function exigirGrupoConfigurable(grupo: Grupo): void {
+  if (!grupo.activo || !grupo.plantel?.activo || !['PREPARACION', 'ACTIVO'].includes(grupo.ciclo.estado)) throw new ConflictException('El grupo y plantel deben estar activos y el ciclo en preparación o activo');
+}

@@ -1,3 +1,4 @@
+import { CicloEscolar } from '../entities/ciclo-escolar.entity';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, In, Repository } from 'typeorm';
@@ -7,6 +8,8 @@ import { Cargo } from '../entities/cargo.entity';
 import { Pago } from '../entities/pago.entity';
 import { Inscripcion } from '../entities/inscripcion.entity';
 import { Grupo } from '../entities/grupo.entity';
+import { Alumno } from '../entities/alumno.entity';
+import { ConceptoPago } from '../entities/concepto-pago.entity';
 import { AlumnosService } from '../alumnos/alumnos.service';
 import { ScopeService } from '../planteles/scope.service';
 import { ConceptosService } from './conceptos.service';
@@ -98,7 +101,8 @@ export class CargosService {
     if (dto.monto <= 0 || (dto.descuento ?? 0) > dto.monto) {
       throw new BadRequestException('El monto debe ser positivo y el descuento no puede excederlo');
     }
-    await this.conceptos.obtener(dto.conceptoId);
+    const concepto = await this.conceptos.obtener(dto.conceptoId);
+    if (!concepto.activo || ['BECA', 'DESCUENTO', 'RECARGO'].includes(concepto.tipo)) throw new BadRequestException('Selecciona un concepto de cobro activo; la beca o descuento se aplica como descuento del cargo');
     const alumno = await this.alumnos.obtener(dto.alumnoId, user);
     return this.dataSource.transaction(async (manager) => {
       const cargos = manager.getRepository(Cargo);
@@ -146,14 +150,17 @@ export class CargosService {
   async generarColegiaturas(dto: GenerarColegiaturasDto, user: JwtUser, preview = false) {
     if (!dto.plantelId) throw new BadRequestException('Selecciona un plantel para esta operación');
     if (!preview && !dto.confirmado) throw new BadRequestException('Revisa la previsualización y confirma la operación');
+    const ciclo = await this.dataSource.getRepository(CicloEscolar).findOneBy({ id: dto.cicloId, activo: true });
+    if (!ciclo) throw new ConflictException('Las colegiaturas masivas requieren el ciclo vigente');
     const concepto = await this.conceptos.porClave('COL');
+    if (!concepto.activo || concepto.tipo !== 'COLEGIATURA') throw new BadRequestException('COL debe ser una colegiatura activa');
     const monto = dto.monto ?? concepto.montoBase;
     if (monto <= 0) throw new BadRequestException('Monto de colegiatura inválido');
 
     const planteles = await this.scope.resolverFiltro(user, dto.plantelId);
     const gruposDelCiclo = await this.grupos.find({
       where: {
-        cicloId: dto.cicloId,
+        cicloId: dto.cicloId, ciclo: { activo: true }, plantel: { activo: true },
         activo: true,
         ...(planteles === null ? {} : { plantelId: this.scope.condicion(planteles) }),
       },
@@ -161,8 +168,8 @@ export class CargosService {
     if (gruposDelCiclo.length === 0) return { generados: 0, omitidos: 0 };
 
     const inscripciones = (await this.inscripciones.find({
-      where: { grupoId: In(gruposDelCiclo.map((g) => g.id)), estatus: 'ACTIVA' },
-    })).filter((inscripcion) => inscripcion.alumno.estatus === 'ACTIVO');
+      where: { grupoId: In(gruposDelCiclo.map((g) => g.id)), estatus: 'ACTIVA', alumno: { estatus: 'ACTIVO', usuario: { activo: true } } },
+    })).filter((inscripcion) => inscripcion.alumno.estatus === 'ACTIVO' && inscripcion.alumno.usuario.activo);
     const alumnoIds = [...new Set(inscripciones.map((i) => i.alumnoId))];
     if (alumnoIds.length === 0) return { generados: 0, omitidos: 0 };
 
@@ -171,7 +178,6 @@ export class CargosService {
       where: { conceptoId: concepto.id, cicloId: dto.cicloId, periodo: dto.periodo, alumnoId: In(alumnoIds) },
     });
     const yaGenerados = new Set(existentes.map((c) => c.alumnoId));
-    const plantelPorAlumno = new Map(inscripciones.map((i) => [i.alumnoId, i.alumno.plantelId]));
 
     const dia = String(dto.diaVencimiento ?? 5).padStart(2, '0');
     const vencimiento = `${dto.periodo}-${dia}`;
@@ -195,15 +201,23 @@ export class CargosService {
     let omitidosConcurrentes = 0;
     for (const nuevo of nuevos) {
       try {
-        await this.dataSource.transaction(async (manager) => {
+        const guardado = await this.dataSource.transaction(async (manager) => {
+          // Ciclo y alumno se bloquean también en cierre, baja y transferencia.
+          const vigente = await manager.getRepository(CicloEscolar).findOne({ where: { id: dto.cicloId }, lock: { mode: 'pessimistic_write' } });
+          if (!vigente?.activo) return false;
+          const alumno = await manager.getRepository(Alumno).findOne({ where: { id: nuevo.alumnoId }, lock: { mode: 'pessimistic_write' } });
+          if (!alumno || alumno.estatus !== 'ACTIVO' || !alumno.usuario.activo || (planteles !== null && !planteles.includes(alumno.plantelId))) return false;
+          if (!await manager.getRepository(ConceptoPago).existsBy({ id: concepto.id, activo: true, tipo: 'COLEGIATURA' })) return false;
+          if (!await manager.getRepository(Inscripcion).existsBy({ alumnoId: alumno.id, estatus: 'ACTIVA', grupo: { cicloId: dto.cicloId, plantelId: alumno.plantelId, activo: true, plantel: { activo: true } } })) return false;
           const cargo = await manager.getRepository(Cargo).save(nuevo);
-          const plantelId = plantelPorAlumno.get(cargo.alumnoId);
+          const plantelId = alumno.plantelId;
           await this.bitacora.registrar(
             user.sub, 'GENERAR_COLEGIATURA', 'cargo', cargo.id,
-            `periodo=${dto.periodo} monto=${monto}`, plantelId ?? null, manager,
+            `periodo=${dto.periodo} monto=${monto}`, plantelId, manager,
           );
+          return true;
         });
-        generados++;
+        if (guardado) generados++; else omitidosConcurrentes++;
       } catch (error) {
         if (!esConflictoUnico(error)) throw error;
         omitidosConcurrentes++;
@@ -224,6 +238,7 @@ export class CargosService {
     const qb = this.cargos
       .createQueryBuilder('c')
       .innerJoin('c.alumno', 'a')
+      .innerJoin('c.concepto', 'cp', 'cp.aplica_recargo = :aplicaRecargo AND cp.activo = :aplicaRecargo', { aplicaRecargo: true })
       .where('c.estatus IN (:...estatus)', { estatus: ['PENDIENTE', 'PARCIAL'] })
       .andWhere('c.fecha_vencimiento < :hoy', { hoy });
     if (planteles !== null) qb.andWhere('a.plantel_id IN (:...planteles)', { planteles });
@@ -239,7 +254,7 @@ export class CargosService {
         const cargo = await cargos.findOne({
           where: { id: candidato.id }, lock: { mode: 'pessimistic_write' },
         });
-        if (!cargo || !['PENDIENTE', 'PARCIAL'].includes(cargo.estatus) ||
+        if (!cargo || !cargo.concepto.aplicaRecargo || !cargo.concepto.activo || !['PENDIENTE', 'PARCIAL'].includes(cargo.estatus) ||
             !cargo.fechaVencimiento || cargo.fechaVencimiento >= hoy || cargo.recargo > 0 ||
             (planteles !== null && !planteles.includes(cargo.alumno.plantelId))) continue;
         cargo.recargo = redondear((cargo.monto - cargo.descuento) * (porcentaje / 100));

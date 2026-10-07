@@ -33,3 +33,16 @@ los dos avisos; cualquier causa raíz alta/crítica distinta continúa bloqueand
 CI, aunque aparezca en un paquete de la lista. No se desactiva audit ni se
 aplica `--force`. El registro sigue publicando `braces@3.0.3` y
 `node-forge@1.4.0` como últimas versiones; las excepciones siguen sin remediar.
+
+## Remediación en la ampliación 1.15.0 — 7 de octubre de 2026
+
+Se retiran las excepciones activas. `check-mobile-audit.cjs` exige cero avisos, incluidos moderados y bajos. Se mantienen las secciones anteriores como historial.
+
+El registro npm todavía publica `braces@3.0.3` y `node-forge@1.4.0` sin corrección oficial. `mobile/vendor` contiene archivos npm de versiones **locales**, parches fuente revisables e integridad SHA-512 del origen; no son versiones publicadas por los proveedores:
+
+- `braces@3.0.4-escolar.0`: limita a 100 niveles el parser y los recorridos compile/expand/stringify, incluidos AST recibidos directamente. Basado en el diagnóstico de [braces #70](https://github.com/micromatch/braces/issues/70).
+- `node-forge@1.4.1-escolar.0`: exige el número exacto de elementos de DigestAlgorithm (OID y NULL opcional), como propone [forge PR #1152](https://github.com/digitalbazaar/forge/pull/1152). El PR aún no está integrado oficialmente. Se excluyen del paquete los bundles dist sin parche.
+
+`verificar-parches-mobile.cjs`, ejecutado antes de las pruebas, comprueba rangos y patrones normales, anidación excesiva de patrones/AST, firmas RSA válidas con y sin NULL y rechazo de elementos ASN.1 adicionales. Los paquetes se fijan por archivo e integridad en package-lock, sin desactivar TLS ni verificación de npm.
+
+Mantenimiento: comprobar las publicaciones oficiales antes de cada actualización de Expo; sustituir cada fork por la versión oficial que cierre el aviso y repetir regresiones, audit y build Android. Los parches se usan en las herramientas Expo/Metro; requieren también validación del build nativo firmado al disponer de credenciales EAS.

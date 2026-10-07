@@ -95,3 +95,13 @@ en México.
 - Trabajo: actividades, entregas, materiales, calificaciones, eventos_calendario
 - Finanzas: conceptos_pago, cargos, ordenes_pago, pagos, plantillas_correo
 - Transversal: notificaciones, bitacora_financiera, bitacora_actividad
+
+## Ampliación operativa 1.15.0
+
+Los ciclos separan preparación de vigencia y cierre formal. Las operaciones de calificación bloquean primero el ciclo y después la clase para coordinarse con el cierre. Promoción e importaciones confirman lotes bajo transacción; los previews de importación son temporales en memoria del proceso (15 minutos, máximo cinco por actor), adecuados para un único servidor. Un despliegue de varias instancias requiere almacenar esos previews en un recurso compartido y compartir uploads.
+
+Conducta es un módulo exclusivamente interno; no se importa en móvil y no genera notificaciones. Analítica reutiliza el promedio backend y devuelve indicadores agregados con scope por rol, sin expedientes ni notas internas.
+
+Push usa Expo Push Service desde backend; dispositivos ligados a sesiones y cola persistida en ambos motores. Solo se contacta al proveedor cuando `PUSH_ENABLED=true`. El móvil obtiene permiso y ExpoPushToken con el ID público EAS; el access token del proveedor permanece en backend. Se verifica sesión y dueño justo antes de enviar, y se consultan recibos con límite temporal. Los avisos son genéricos.
+
+La cola `archivos_limpieza` se escribe en la misma transacción que elimina/reemplaza la referencia pública. El worker elimina después de commit y reintenta fallos de almacenamiento; las referencias nunca se descartan silenciosamente. Los DTO rechazados limpian temporales mediante interceptor.

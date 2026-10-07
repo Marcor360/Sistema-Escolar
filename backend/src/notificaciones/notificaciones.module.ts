@@ -1,3 +1,5 @@
+import { PushService } from './push.service';
+import { PushController } from './push.controller';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Notificacion } from '../entities/notificacion.entity';
@@ -10,8 +12,8 @@ import { NotificacionesController } from './notificaciones.controller';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Notificacion, Usuario, Alumno, UsuarioPlantel]), PlantelesModule],
-  providers: [NotificacionesService],
-  controllers: [NotificacionesController],
+  providers: [NotificacionesService, PushService],
+  controllers: [NotificacionesController, PushController],
   exports: [NotificacionesService],
 })
 export class NotificacionesModule {}

@@ -6,6 +6,12 @@
 
 ## Cambios incluidos en la versión 1.15.0
 
+- **Ampliación operativa:** ciclos en preparación con activación/cierre explícitos, promoción seleccionada, importación CSV/XLSX con validación por fila y confirmación atómica, reactivación controlada y gestión de cuentas de personal.
+- **Push móvil:** registro por dispositivo y sesión, permisos voluntarios, reintentos, recibos y aviso genérico sin datos académicos en pantalla bloqueada. Requiere configuración EAS/FCM/APNs y prueba física; queda deshabilitado por defecto en backend.
+- **Conducta e incidencias:** registro, seguimiento, cierre/anulación y bitácora exclusivamente internos; control escolar por plantel y docentes por sus grupos. No se publica al alumno ni se envía por push.
+- **Analítica:** captura y faltantes P1-P3, promedio oficial, aprobación orientativa y entregas vencidas por clase/ciclo/plantel; facturación, pagos aplicados y saldo solo para roles autorizados.
+- **Política financiera:** conceptos editables, recargos desactivados por defecto hasta configuración explícita y beca/descuento como reducción del cargo.
+- **Audit móvil:** cero vulnerabilidades y sin excepciones mediante parches locales revisables de herramientas Expo/Metro, con pruebas de regresión y política de actualización a correcciones oficiales.
 - **Baseline técnico:** metadata TypeORM compatible con MySQL/SQL Server, TypeScript estricto, `DB_SYNC=false`, paridad física y eliminación de `.pyc` trackeados.
 - **Identidad y permisos:** altas por expediente, personal con plantel, cambio inicial obligatorio, baja/egreso/transferencia explícitos y coherentes; baja docente con clases pendientes de reasignación.
 - **Sesiones:** acceso de 15 minutos y refresh rotativo por dispositivo, revocación inmediata, cookie HttpOnly en web y SecureStore en móvil. El bearer web permanece en memoria.
@@ -15,9 +21,11 @@
 - **Finanzas:** cancelación de cargo y anulación de pago manual auditables, conciliación, previews por plantel y confirmación de operaciones masivas, adeudos paginados y pagos con cargo obligatorio.
 - **Móvil y archivos:** sesión renovable, fechas de última actualización en consultas, estado real de pagos, prohibición de reentrega calificada y eliminación del archivo sustituido tras commit; validación de firmas de archivos.
 - **Operación:** proxy local confiable para IIS, request ID sin datos personales en logs, liveness/readiness con verificación de migraciones, APK interno EAS preview y herramienta de carga para consultas.
-- **Migración real:** `migracion_sesiones_rotativas.sql` espejo MySQL/SQL Server añade sesiones y cambio inicial de contraseña. El baseline v1 permanece intacto.
+- **Migraciones reales:** `migracion_operacion_ampliada.sql` espejo añade estados de ciclo, política de recargos, incidencias/seguimientos, bitácora académica, dispositivos/envíos push y cola de limpieza de archivos. `migracion_sesiones_rotativas.sql` espejo MySQL/SQL Server añade sesiones y cambio inicial de contraseña. El baseline v1 permanece intacto.
 
-Consulta [correcciones y verificaciones](docs/CORRECCIONES_1.15.0.md), [reglas del piloto](docs/REGLAS_PILOTO.md) y [estado de implementación](docs/ESTADO_IMPLEMENTACION.md). Ya existe un servidor; la [guía de publicación](docs/PUBLICAR_SERVIDOR_EXISTENTE.md) explica los datos y pasos necesarios para configurarlo y certificarlo. Esta versión no declara el piloto listo.
+Consulta [ampliación y verificaciones](docs/AMPLIACION_1.15.0.md), [correcciones anteriores](docs/CORRECCIONES_1.15.0.md) y [reglas del piloto](docs/REGLAS_PILOTO.md).
+
+Consulta también el [estado de implementación](docs/ESTADO_IMPLEMENTACION.md). Ya existe un servidor; la [guía de publicación](docs/PUBLICAR_SERVIDOR_EXISTENTE.md) explica los datos y pasos necesarios para configurarlo y certificarlo. Esta versión no declara el piloto listo.
 
 ---
 

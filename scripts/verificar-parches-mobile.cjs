@@ -1,0 +1,35 @@
+const assert = require('node:assert/strict');
+const { createRequire } = require('node:module');
+const { resolve } = require('node:path');
+const requireMobile = createRequire(resolve(__dirname, '../mobile/package.json'));
+const braces = requireMobile('braces');
+const forge = requireMobile('node-forge');
+const requireCertificados = createRequire(requireMobile.resolve('@expo/code-signing-certificates'));
+const requireMicromatch = createRequire(requireMobile.resolve('micromatch'));
+assert.equal(requireCertificados('node-forge/package.json').version, '1.4.1-escolar.0');
+assert.equal(requireMicromatch('braces/package.json').version, '3.0.4-escolar.0');
+assert.equal(requireMobile('braces/package.json').version, '3.0.4-escolar.0');
+assert.equal(requireMobile('node-forge/package.json').version, '1.4.1-escolar.0');
+assert.deepEqual(braces('a/{b,c}/d', { expand: true }), ['a/b/d', 'a/c/d']);
+assert.deepEqual(braces('{1..3}', { expand: true }), ['1', '2', '3']);
+const patron = '{'.repeat(4000) + 'a,b' + '}'.repeat(4000);
+for (const f of [braces.parse, braces.compile, braces.expand]) assert.throws(() => f(patron), /maximum depth/);
+const parentesis = '('.repeat(4000) + 'x' + ')'.repeat(4000);
+assert.throws(() => braces(parentesis), /maximum depth/);
+let ast = { type: 'text', value: 'x' };
+for (let i = 0; i < 4000; i++) ast = { type: 'root', nodes: [ast] };
+for (const f of [braces.compile, braces.expand, braces.stringify]) assert.throws(() => f(ast), /maximum depth/);
+const keys = forge.pki.rsa.generateKeyPair({ bits: 1024, e: 65537 });
+const md = forge.md.sha256.create().update('regresión escolar'); const digest = md.digest().getBytes();
+assert.equal(keys.publicKey.verify(digest, keys.privateKey.sign(md)), true);
+const a = forge.asn1; const u = a.Class.UNIVERSAL; const t = a.Type;
+const algoritmo = [a.create(u, t.OID, false, a.oidToDer(forge.pki.oids.sha256).getBytes()), a.create(u, t.NULL, false, '')];
+function firmar(extra, parametros = algoritmo) {
+  const info = a.create(u, t.SEQUENCE, true, [a.create(u, t.SEQUENCE, true, [...parametros, ...extra]), a.create(u, t.OCTETSTRING, false, digest)]);
+  return keys.privateKey.sign(a.toDer(info).getBytes(), 'NONE');
+}
+assert.equal(keys.publicKey.verify(digest, firmar([])), true);
+assert.equal(keys.publicKey.verify(digest, firmar([], algoritmo.slice(0, 1))), true);
+assert.throws(() => keys.publicKey.verify(digest, firmar([a.create(u, t.OCTETSTRING, false, 'garbage')])), /valid RSASSA/);
+assert.throws(() => keys.publicKey.verify(digest, firmar([a.create(u, t.NULL, false, '')])), /valid RSASSA/);
+console.log('Parches móvil: patrones normales y firmas válidas aceptados; anidación excesiva y DigestAlgorithm adulterado rechazados.');

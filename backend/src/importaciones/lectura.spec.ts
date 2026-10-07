@@ -1,0 +1,6 @@
+import * as ExcelJS from 'exceljs';
+import { leerArchivo, leerCsv } from './lectura';
+it('lee CSV con coma, salto de línea y comillas dentro del campo', () => { expect(leerCsv('nombre,nota\r\n"Ana, María","Dijo ""hola""\ny salió"\r\n')).toEqual([['nombre', 'nota'], ['Ana, María', 'Dijo "hola"\ny salió']]); });
+it('rechaza CSV incompleto y cabeceras duplicadas', async () => { expect(() => leerCsv('a\n"incompleto')).toThrow('comillas'); await expect(leerArchivo(Buffer.from('email,email\nx,y'), 'a.csv')).rejects.toThrow('repetidas'); });
+it('lee plantilla XLSX y rechaza fórmulas', async () => { const w = new ExcelJS.Workbook(); const h = w.addWorksheet('Alumnos'); h.addRow(['nombre', 'matricula']); h.addRow(['Ana', 'A001']); await expect(leerArchivo(Buffer.from(await w.xlsx.writeBuffer()), 'a.xlsx')).resolves.toEqual([{ nombre: 'Ana', matricula: 'A001' }]); h.getCell('A2').value = { formula: '1+1', result: 2 }; await expect(leerArchivo(Buffer.from(await w.xlsx.writeBuffer()), 'a.xlsx')).rejects.toThrow('fórmulas'); });
+it('limita filas y bytes antes de cargar contenido', async () => { expect(() => leerCsv('a\n' + 'x\n'.repeat(502))).toThrow('500'); await expect(leerArchivo(Buffer.alloc(5 * 1024 * 1024 + 1), 'a.xlsx')).rejects.toThrow('5 MB'); });

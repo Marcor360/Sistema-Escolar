@@ -11,7 +11,7 @@ interface GrupoMateria {
 }
 interface Actividad {
   id: number; titulo: string; tipo: string; parcial: number;
-  ponderacion: number; fechaEntrega: string | null;
+  descripcion?: string; ponderacion: number; fechaEntrega: string | null;
 }
 interface Material {
   id: number; titulo: string; archivoNombre: string; archivoRuta: string;
@@ -19,11 +19,11 @@ interface Material {
 }
 interface Entrega {
   id: number; estatus: string; calificacion: number | null;
-  archivoRuta: string | null; comentarioAlumno: string | null; fechaEntregado: string;
+  archivoRuta: string | null; comentarioAlumno: string | null; comentarioDocente: string | null; fechaEntregado: string;
   alumno: { matricula: string; usuario: { nombre: string; apellidoPaterno: string } };
 }
 
-const FORM_INICIAL = { titulo: '', tipo: 'TAREA', parcial: '1', ponderacion: '0', fechaEntrega: '' };
+const FORM_INICIAL = { titulo: '', descripcion: '', tipo: 'TAREA', parcial: '1', ponderacion: '0', fechaEntrega: '' };
 
 export default function MaestroPage() {
   const { datos: clases, cargando } = useDatos<GrupoMateria[]>(
@@ -41,6 +41,9 @@ export default function MaestroPage() {
   const [tituloMaterial, setTituloMaterial] = useState('');
   const archivoMaterial = useRef<HTMLInputElement>(null);
   const [error, setError] = useState('');
+  const [editandoActividad, setEditandoActividad] = useState<number | null>(null);
+  const [enviando, setEnviando] = useState(false);
+  const [comentarios, setComentarios] = useState<Record<number, string>>({});
 
   const abrirClase = async (clase: GrupoMateria) => {
     setClaseActiva(clase);
@@ -63,7 +66,8 @@ export default function MaestroPage() {
   const subirMaterial = async (e: FormEvent) => {
     e.preventDefault();
     const archivo = archivoMaterial.current?.files?.[0];
-    if (!claseActiva || !archivo) return;
+    if (!claseActiva || !archivo || enviando) return;
+    setEnviando(true);
     setError('');
     const datos = new FormData();
     datos.append('archivo', archivo);
@@ -76,25 +80,27 @@ export default function MaestroPage() {
       if (archivoMaterial.current) archivoMaterial.current.value = '';
       const { data } = await api.get<Material[]>(`/grupo-materias/${claseActiva.id}/materiales`);
       setMateriales(data);
-    } catch (err) { setError(mensajeDeError(err)); }
+    } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
   const crearActividad = async (e: FormEvent) => {
     e.preventDefault();
-    if (!claseActiva) return;
-    setError('');
+    if (!claseActiva || enviando) return;
+    setEnviando(true); setError('');
     try {
-      await api.post('/actividades', {
+      const datos = {
         grupoMateriaId: claseActiva.id,
-        titulo: form.titulo,
+        titulo: form.titulo, descripcion: form.descripcion,
         tipo: form.tipo,
         parcial: Number(form.parcial),
         ponderacion: Number(form.ponderacion),
-        fechaEntrega: form.fechaEntrega ? new Date(form.fechaEntrega).toISOString() : undefined,
-      });
-      setForm(FORM_INICIAL);
-      abrirClase(claseActiva);
-    } catch (err) { setError(mensajeDeError(err)); }
+        fechaEntrega: form.fechaEntrega ? new Date(form.fechaEntrega).toISOString() : null,
+      };
+      if (editandoActividad) await api.patch(`/actividades/${editandoActividad}`, datos);
+      else await api.post('/actividades', datos);
+      setEditandoActividad(null); setForm(FORM_INICIAL);
+      await abrirClase(claseActiva);
+    } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
   const verEntregas = async (actividad: Actividad) => {
@@ -103,22 +109,24 @@ export default function MaestroPage() {
     setEntregas(data);
     setNotas(Object.fromEntries(data.map((e) => [e.id, e.calificacion?.toString() ?? ''])));
     setGuardadas(new Set());
+    setComentarios(Object.fromEntries(data.map((e) => [e.id, e.comentarioDocente ?? ''])));
   };
 
   /** Guarda la calificación capturada en la propia fila. */
   const guardarNota = async (entrega: Entrega) => {
+    if (enviando) return;
     const valor = notas[entrega.id];
     if (valor === '' || valor === undefined) return;
-    setError('');
+    setEnviando(true); setError('');
     try {
-      await api.patch(`/entregas/${entrega.id}/calificar`, { calificacion: Number(valor) });
+      await api.patch(`/entregas/${entrega.id}/calificar`, { calificacion: Number(valor), comentario: comentarios[entrega.id] ?? '' });
       setGuardadas((previas) => new Set(previas).add(entrega.id));
       setEntregas((previas) =>
         previas?.map((e) =>
-          e.id === entrega.id ? { ...e, calificacion: Number(valor), estatus: 'CALIFICADA' } : e,
+          e.id === entrega.id ? { ...e, calificacion: Number(valor), estatus: 'CALIFICADA', comentarioDocente: comentarios[entrega.id] ?? '' } : e,
         ) ?? null,
       );
-    } catch (err) { setError(mensajeDeError(err)); }
+    } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
   return (
@@ -151,7 +159,7 @@ export default function MaestroPage() {
             <div className="campo"><label>Título</label>
               <input required value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} />
             </div>
-            <div className="campo"><label>Tipo</label>
+            <div className="campo"><label htmlFor="descripcion-actividad">Descripción</label><textarea id="descripcion-actividad" maxLength={4000} value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} /></div><div className="campo"><label>Tipo</label>
               <select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })}>
                 <option>TAREA</option><option>EXAMEN</option><option>PROYECTO</option><option>PARTICIPACION</option>
               </select>
@@ -167,7 +175,7 @@ export default function MaestroPage() {
             <div className="campo"><label>Fecha de entrega</label>
               <input type="datetime-local" value={form.fechaEntrega} onChange={(e) => setForm({ ...form, fechaEntrega: e.target.value })} />
             </div>
-            <button className="boton">Crear actividad</button>
+            <button disabled={enviando} className="boton">{editandoActividad ? 'Guardar corrección' : 'Crear actividad'}</button>
           </form>
 
           <table className="tabla">
@@ -178,7 +186,9 @@ export default function MaestroPage() {
                   <td>{a.titulo}</td><td>{a.tipo}</td><td>{a.parcial}</td>
                   <td>{a.fechaEntrega ? fechaHora(a.fechaEntrega) : 'Sin fecha'}</td>
                   <td className="derecha">
-                    <button className="boton secundario chico" onClick={() => verEntregas(a)}>Entregas</button>
+                    <button disabled={enviando} className="boton secundario chico" onClick={() => verEntregas(a)}>Entregas</button>
+                    <button disabled={enviando} onClick={() => { setEditandoActividad(a.id); setForm({ titulo: a.titulo, descripcion: a.descripcion ?? '', tipo: a.tipo, parcial: String(a.parcial), ponderacion: String(a.ponderacion), fechaEntrega: a.fechaEntrega ? new Date(new Date(a.fechaEntrega).getTime() - new Date(a.fechaEntrega).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '' }); }}>Editar actividad</button>
+                    <button disabled={enviando} onClick={async () => { if (!claseActiva || !confirm('¿Desactivar esta actividad? Se conserva el historial.')) return; setEnviando(true); try { await api.delete(`/actividades/${a.id}`); await abrirClase(claseActiva); } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); } }}>Desactivar</button>
                   </td>
                 </tr>
               ))}
@@ -200,7 +210,7 @@ export default function MaestroPage() {
             <div className="campo"><label>Archivo (PDF, Office, imagen · máx. 5 MB)</label>
               <input type="file" ref={archivoMaterial} required accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.png,.jpg,.jpeg,.zip,.txt" />
             </div>
-            <button className="boton">Subir material</button>
+            <button disabled={enviando} className="boton">Subir material</button>
           </form>
           <table className="tabla">
             <thead><tr><th>Título</th><th>Archivo</th><th>Tamaño</th><th>Fecha</th></tr></thead>
@@ -210,7 +220,10 @@ export default function MaestroPage() {
                   <td>{m.titulo}</td>
                   <td><button className="enlace" onClick={() => abrirArchivo('materiales', m.id)}>{m.archivoNombre}</button></td>
                   <td>{m.tamanoKb} KB</td>
-                  <td>{fecha(m.createdAt)}</td>
+                  <td>{fecha(m.createdAt)}
+                    <button disabled={enviando} onClick={async () => { const titulo = prompt('Título del material', m.titulo); if (!titulo || !claseActiva) return; setEnviando(true); try { await api.patch(`/materiales/${m.id}`, { titulo }); await abrirClase(claseActiva); } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); } }}>Corregir título</button>
+                    <button disabled={enviando} onClick={async () => { if (!claseActiva || !confirm('¿Retirar material y eliminar su archivo?')) return; setEnviando(true); try { await api.delete(`/materiales/${m.id}`); await abrirClase(claseActiva); } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); } }}>Retirar material</button>
+                  </td>
                 </tr>
               ))}
               {materiales.length === 0 && (
@@ -231,7 +244,7 @@ export default function MaestroPage() {
             <tbody>
               {entregas.map((e) => (
                 <tr key={e.id} title={e.comentarioAlumno ?? undefined}>
-                  <td>{e.alumno.matricula} — {e.alumno.usuario.nombre} {e.alumno.usuario.apellidoPaterno}</td>
+                  <td>{e.alumno.matricula} — {e.alumno.usuario.nombre} {e.alumno.usuario.apellidoPaterno}<p>Comentario del alumno: {e.comentarioAlumno ?? 'Sin comentario'}</p></td>
                   <td>{fechaHora(e.fechaEntregado)}</td>
                   <td>
                     <span className={`sello ${e.estatus === 'CALIFICADA' ? 'ok' : e.estatus === 'TARDE' ? 'mal' : 'aviso'}`}>
@@ -240,13 +253,14 @@ export default function MaestroPage() {
                   </td>
                   <td>{e.archivoRuta ? <button className="enlace" onClick={() => abrirArchivo('entregas', e.id)}>Ver archivo</button> : '—'}</td>
                   <td>
+                    <label htmlFor={`feedback-${e.id}`}>Retroalimentación</label><textarea id={`feedback-${e.id}`} maxLength={500} value={comentarios[e.id] ?? ''} onChange={(ev) => setComentarios({ ...comentarios, [e.id]: ev.target.value })} />
                     <span className="captura-nota">
                       <input
                         type="number" min={0} max={100} step={0.1}
                         value={notas[e.id] ?? ''}
                         onChange={(ev) => setNotas({ ...notas, [e.id]: ev.target.value })}
                       />
-                      <button className="boton chico" onClick={() => guardarNota(e)}>
+                      <button disabled={enviando} className="boton chico" onClick={() => guardarNota(e)}>
                         {guardadas.has(e.id) ? '✓' : 'Guardar'}
                       </button>
                     </span>

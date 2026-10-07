@@ -1,3 +1,4 @@
+import { LimpiezaUploadInterceptor } from '../common/limpieza-upload.interceptor';
 import {
   Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post,
   UploadedFile, UseGuards, UseInterceptors,
@@ -5,7 +6,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { ActividadesService } from './actividades.service';
-import { ActualizarActividadDto, CalificarEntregaDto, CrearActividadDto, EntregarDto } from './actividades.dto';
+import { ActualizarActividadDto, CalificarEntregaDto, ActualizarMaterialDto, CrearActividadDto, EntregarDto } from './actividades.dto';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { RolesGuard } from '../common/roles.guard';
 import { Roles } from '../common/roles.decorator';
@@ -29,7 +30,7 @@ export class ActividadesController {
   @Post('actividades/:id/entrega')
   @Roles('ALUMNO')
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FileInterceptor('archivo', uploadConfig))
+  @UseInterceptors(FileInterceptor('archivo', uploadConfig), LimpiezaUploadInterceptor)
   entregar(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser() user: JwtUser,
@@ -91,16 +92,21 @@ export class ActividadesController {
     return this.service.materialesDeGrupoMateria(id, user);
   }
 
+  @Patch('materiales/:id') @Roles('MAESTRO', 'ADMINISTRATIVO')
+  editarMaterial(@Param('id', ParseIntPipe) id: number, @Body() dto: ActualizarMaterialDto, @CurrentUser() user: JwtUser) { return this.service.actualizarMaterial(id, dto.titulo, user); }
+  @Delete('materiales/:id') @Roles('MAESTRO', 'ADMINISTRATIVO')
+  eliminarMaterial(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) { return this.service.eliminarMaterial(id, user); }
+
   @Post('grupo-materias/:id/materiales')
   @Roles('MAESTRO', 'ADMINISTRATIVO')
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FileInterceptor('archivo', uploadConfig))
+  @UseInterceptors(FileInterceptor('archivo', uploadConfig), LimpiezaUploadInterceptor)
   subirMaterial(
     @Param('id', ParseIntPipe) id: number,
-    @Body('titulo') titulo: string,
+    @Body() dto: ActualizarMaterialDto,
     @UploadedFile() archivo: Express.Multer.File,
     @CurrentUser() user: JwtUser,
   ) {
-    return this.service.subirMaterial(id, titulo, archivo, user);
+    return this.service.subirMaterial(id, dto.titulo, archivo, user);
   }
 }

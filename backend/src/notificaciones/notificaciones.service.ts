@@ -1,4 +1,5 @@
-import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
+import { PushService } from './push.service';
+import { ForbiddenException, Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -23,6 +24,7 @@ export class NotificacionesService {
     @InjectRepository(UsuarioPlantel) private readonly usuarioPlanteles: Repository<UsuarioPlantel>,
     private readonly scope: ScopeService,
     private readonly config: ConfigService,
+    @Optional() private readonly push?: PushService,
   ) {
     const host = this.config.get<string>('SMTP_HOST');
     const port = Number(this.config.get('SMTP_PORT')) || 587;
@@ -54,8 +56,10 @@ export class NotificacionesService {
     return { ok: true };
   }
 
-  crear(usuarioId: number, titulo: string, mensaje: string, tipo: Notificacion['tipo'] = 'GENERAL') {
-    return this.repo.save(this.repo.create({ usuarioId, titulo, mensaje, tipo }));
+  async crear(usuarioId: number, titulo: string, mensaje: string, tipo: Notificacion['tipo'] = 'GENERAL') {
+    const notificacion = await this.repo.save(this.repo.create({ usuarioId, titulo, mensaje, tipo }));
+    await this.push?.encolar(notificacion).catch(() => this.logger.warn('Push pendiente; la notificación permanece disponible en la app'));
+    return notificacion;
   }
 
   /** Difusión a usuarios específicos o a todos los que tengan un rol. */
@@ -88,7 +92,7 @@ export class NotificacionesService {
       ids = ids.filter((id) => visibles.has(id));
     }
     if (ids.length === 0) return { enviadas: 0 };
-    await this.repo.insert(ids.map((usuarioId) => ({ usuarioId, titulo, mensaje })));
+    for (const usuarioId of ids) await this.crear(usuarioId, titulo, mensaje);
     return { enviadas: ids.length };
   }
 

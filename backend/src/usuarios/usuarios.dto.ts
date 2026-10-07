@@ -44,3 +44,7 @@ export class ListadoUsuariosDto extends PaginacionDto {
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsOptional() @IsString() buscar?: string;
 }
+
+export class ActualizarPersonalDto extends ActualizarUsuarioDto {
+  @IsArray() @Type(() => Number) @IsInt({ each: true }) @Min(1, { each: true }) plantelIds: number[];
+}

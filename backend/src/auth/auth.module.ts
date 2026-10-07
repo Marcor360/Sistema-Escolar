@@ -1,3 +1,4 @@
+import { SesionesLimpiezaService } from './sesiones-limpieza.service';
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
@@ -29,7 +30,7 @@ import { NotificacionesModule } from '../notificaciones/notificaciones.module';
       },
     }),
   ],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, SesionesLimpiezaService],
   controllers: [AuthController],
 })
 export class AuthModule {}

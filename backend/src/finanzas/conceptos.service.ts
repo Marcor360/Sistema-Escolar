@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConceptoPago } from '../entities/concepto-pago.entity';
@@ -12,17 +12,24 @@ export class ConceptosService {
     private readonly repo: Repository<ConceptoPago>,
   ) {}
 
-  listar() {
-    return this.repo.find({ where: { activo: true }, order: { clave: 'ASC' } });
+  listar(incluirInactivos = false) {
+    return this.repo.find({ where: incluirInactivos ? {} : { activo: true }, order: { clave: 'ASC' } });
   }
 
   crear(dto: ConceptoDto) {
+    this.validarTipo(dto.tipo);
     return this.repo.save(this.repo.create(dto));
   }
 
   async actualizar(id: number, dto: ActualizarConceptoDto) {
+    await this.obtener(id);
+    if (dto.tipo) this.validarTipo(dto.tipo);
     await this.repo.update(id, dto);
     return this.repo.findOne({ where: { id } });
+  }
+
+  private validarTipo(tipo: string) {
+    if (['BECA', 'DESCUENTO', 'RECARGO'].includes(tipo)) throw new BadRequestException('Los descuentos se aplican al cargo y los recargos mediante su política; no son conceptos de cobro');
   }
 
   async porClave(clave: string) {

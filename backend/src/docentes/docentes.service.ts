@@ -1,3 +1,4 @@
+import { BitacoraAcademica } from '../entities/bitacora-academica.entity';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
@@ -177,15 +178,42 @@ export class DocentesService {
       const docente = await docentes.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!docente) throw new NotFoundException('Docente no encontrado');
       await this.validarAlcanceDocente(docente.usuarioId, user, true);
+      if (docente.estatus !== 'ACTIVO') throw new ConflictException('El docente ya está dado de baja');
       docente.estatus = 'BAJA';
       await docentes.save(docente);
       // Las notas y actividades conservan a sus autores; las clases quedan pendientes de reasignación.
       await manager.getRepository(GrupoMateria).update({ docenteId: id }, { docenteId: null });
+      const plantelesPrevios = await manager.getRepository(UsuarioPlantel).find({ where: { usuarioId: docente.usuarioId, activo: true } });
       await manager.getRepository(UsuarioPlantel).update(
         { usuarioId: docente.usuarioId, activo: true }, { activo: false },
       );
       await this.usuarios.actualizar(docente.usuarioId, { activo: false }, manager);
+      for (const plantelId of [...new Set(plantelesPrevios.map((a) => a.plantelId))]) await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId, accion: 'DOCENTE_BAJA', entidadId: id, detalle: 'Cuenta y planteles desactivados; clases pendientes de reasignación', fecha: new Date() });
       return { ok: true };
+    });
+  }
+
+  async reactivar(id: number, plantelIds: number[], motivo: string, user: JwtUser) {
+    const docente = await this.obtener(id, user);
+    const ids = [...new Set(plantelIds)];
+    for (const plantelId of ids) await this.scope.validarGestion(user, plantelId);
+    return this.dataSource.transaction(async (manager) => {
+      const repo = manager.getRepository(Docente);
+      const actual = await repo.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+      if (!actual || actual.estatus !== 'BAJA') throw new ConflictException('Solo se reactiva un docente dado de baja');
+      for (const plantelId of ids) {
+        if (!await manager.getRepository(Plantel).findOneBy({ id: plantelId, activo: true })) throw new ConflictException('El plantel no está activo');
+      }
+      await repo.update(id, { estatus: 'ACTIVO' });
+      await this.usuarios.actualizar(docente.usuarioId, { activo: true }, manager);
+      const asignaciones = manager.getRepository(UsuarioPlantel);
+      for (const plantelId of ids) {
+        const previa = await asignaciones.findOneBy({ usuarioId: actual.usuarioId, plantelId });
+        if (previa) await asignaciones.update({ usuarioId: actual.usuarioId, plantelId }, { activo: true });
+        else await asignaciones.insert({ usuarioId: actual.usuarioId, plantelId, activo: true });
+      }
+      await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId: ids[0], accion: 'DOCENTE_REACTIVADO', entidadId: id, detalle: motivo, fecha: new Date() });
+      return { ok: true, mensaje: 'Docente reactivado con los planteles seleccionados; reasigna sus clases explícitamente.' };
     });
   }
 

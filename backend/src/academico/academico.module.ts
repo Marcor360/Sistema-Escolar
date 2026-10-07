@@ -1,3 +1,5 @@
+import { PromocionService } from './promocion.service';
+import { CiclosService } from './ciclos.service';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CicloEscolar } from '../entities/ciclo-escolar.entity';
@@ -24,7 +26,7 @@ import { PlantelesModule } from '../planteles/planteles.module';
     DocentesModule,
     PlantelesModule,
   ],
-  providers: [AcademicoService],
+  providers: [AcademicoService, CiclosService, PromocionService],
   controllers: [AcademicoController],
   exports: [AcademicoService],
 })

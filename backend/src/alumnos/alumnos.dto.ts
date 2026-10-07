@@ -65,3 +65,7 @@ export class ActualizarAlumnoDto {
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) plantelId?: number;
   @IsOptional() @IsIn(['ACTIVO', 'BAJA', 'EGRESADO']) estatus?: 'ACTIVO' | 'BAJA' | 'EGRESADO';
 }
+
+export class ReactivarAlumnoDto {
+  @IsString() @LongitudMinima(3) @MaxLength(500) motivo: string;
+}

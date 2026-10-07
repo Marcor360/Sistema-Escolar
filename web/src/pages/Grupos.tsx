@@ -4,7 +4,7 @@ import { SelectorBuscable } from '../components/SelectorBuscable';
 import { Encabezado } from '../components/Encabezado';
 import { Paginador } from '../components/Paginador';
 
-interface Ciclo { id: number; clave: string; activo: boolean }
+interface Ciclo { id: number; clave: string; activo: boolean; estado: string }
 interface Plantel { id: number; nombre: string }
 interface Grupo { id: number; nombre: string; grado?: string; turno?: string; ciclo: Ciclo; plantel: Plantel | null }
 interface ResultadoGrupos { datos: Grupo[]; total: number; pagina: number; porPagina: number }
@@ -17,6 +17,7 @@ interface Alumno { id: number; matricula: string; usuario: { nombre: string; ape
 export default function GruposPage() {
   const [ciclos, setCiclos] = useState<Ciclo[]>([]);
   const [planteles, setPlanteles] = useState<Plantel[]>([]);
+  const [filtroCiclo, setFiltroCiclo] = useState('');
   const [filtroPlantel, setFiltroPlantel] = useState('');
   const [resultado, setResultado] = useState<ResultadoGrupos>({ datos: [], total: 0, pagina: 1, porPagina: 20 });
   const [materias, setMaterias] = useState<Materia[]>([]);
@@ -51,7 +52,7 @@ export default function GruposPage() {
     try {
       const [ciclosR, gruposR, plantelesR, materiasR] = await Promise.all([
         api.get<Ciclo[]>('/academico/ciclos'),
-        api.get<ResultadoGrupos>('/academico/grupos', { params: { pagina, ...(plantelId ? { plantelId } : {}) } }),
+        api.get<ResultadoGrupos>('/academico/grupos', { params: { pagina, ...(filtroCiclo ? { cicloId: filtroCiclo, inactivos: true } : {}), ...(plantelId ? { plantelId } : {}) } }),
         api.get<Plantel[]>('/planteles/mios'),
         api.get<Materia[]>('/academico/materias'),
       ]);
@@ -60,7 +61,7 @@ export default function GruposPage() {
       setPlanteles(plantelesR.data);
       setMaterias(materiasR.data);
     } catch (err) { setError(mensajeDeError(err)); }
-  }, []);
+  }, [filtroCiclo]);
   useEffect(() => { cargar(1, ''); }, [cargar]);
 
   const abrirGrupo = async (grupo: Grupo) => {
@@ -136,7 +137,7 @@ export default function GruposPage() {
           <div className="campo"><label>Ciclo</label>
             <select required disabled={editando !== null || enviando} value={formGrupo.cicloId} onChange={(e) => setFormGrupo({ ...formGrupo, cicloId: e.target.value })}>
               <option value="">Selecciona…</option>
-              {ciclos.filter((c) => c.activo || c.id === editando?.ciclo.id).map((c) => <option key={c.id} value={c.id}>{c.clave}</option>)}
+              {ciclos.filter((c) => (c.activo || c.estado === 'PREPARACION') || c.id === editando?.ciclo.id).map((c) => <option key={c.id} value={c.id}>{c.clave}</option>)}
             </select>
           </div>
           <div className="campo"><label>Nombre</label>
@@ -155,7 +156,7 @@ export default function GruposPage() {
         </form>
       </section>
 
-      <div className="fila" style={{ marginBottom: 12 }}>
+      <div className="fila" style={{ marginBottom: 12 }}><div className="campo"><label htmlFor="filtro-ciclo-grupos">Consultar ciclo</label><select id="filtro-ciclo-grupos" value={filtroCiclo} onChange={(e) => setFiltroCiclo(e.target.value)}><option value="">Vigente</option>{ciclos.map((c) => <option key={c.id} value={c.id}>{c.clave} · {c.estado}</option>)}</select></div>
         <div className="campo"><label>Filtrar por plantel</label>
           <select value={filtroPlantel} onChange={(e) => setFiltroPlantel(e.target.value)}>
             <option value="">Todos</option>

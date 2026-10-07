@@ -7,6 +7,7 @@ export class CicloEscolar {
   @Column({ length: 80 }) nombre: string;
   @Column({ type: 'date' }) fechaInicio: string;
   @Column({ type: 'date' }) fechaFin: string;
+  @Column({ length: 15, default: 'PREPARACION' }) estado: 'PREPARACION' | 'ACTIVO' | 'EN_CIERRE' | 'CERRADO';
   @Column({ default: false }) activo: boolean;
   /** Vínculo con la base certweb para la migración inicial (ETL); no se expone en la API pública. */
   @Column({ type: 'bigint', nullable: true }) legacyId: string | null;

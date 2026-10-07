@@ -1,3 +1,6 @@
+import { programarLimpieza } from '../archivos/archivo-limpieza.service';
+import { basename } from 'path';
+import { BitacoraAcademica } from '../entities/bitacora-academica.entity';
 import { exigirGrupoVigente, inscripcionVigente } from '../common/contexto-academico';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -103,7 +106,7 @@ export class ActividadesService {
       tipo: dto.tipo ?? actividad.tipo,
       parcial: dto.parcial ?? actividad.parcial,
       ponderacion: dto.ponderacion ?? actividad.ponderacion,
-      fechaEntrega: dto.fechaEntrega ? new Date(dto.fechaEntrega) : actividad.fechaEntrega,
+      fechaEntrega: dto.fechaEntrega === undefined ? actividad.fechaEntrega : dto.fechaEntrega ? new Date(dto.fechaEntrega) : null,
     });
     return this.actividades.save(actividad);
   }
@@ -147,6 +150,7 @@ export class ActividadesService {
         entrega.comentarioAlumno = dto.comentario ?? entrega.comentarioAlumno ?? null;
         if (archivo) {
           reemplazo.anterior = previa?.archivoRuta ?? null;
+          if (reemplazo.anterior) await programarLimpieza(manager, reemplazo.anterior);
           entrega.archivoNombre = archivo.originalname;
           entrega.archivoRuta = `/uploads/${archivo.filename}`;
         }
@@ -234,6 +238,30 @@ export class ActividadesService {
       await limpiarArchivoFallido(archivo);
       throw error;
     }
+  }
+
+  async actualizarMaterial(id: number, titulo: string, user: JwtUser) {
+    const material = await this.materiales.findOneBy({ id });
+    if (!material) throw new NotFoundException('Material no encontrado');
+    await this.validarPropiedad(material.grupoMateriaId, user);
+    if (!titulo.trim() || titulo.trim().length > 150) throw new BadRequestException('Título entre 1 y 150 caracteres');
+    await this.materiales.update(id, { titulo: titulo.trim() });
+    return { ok: true };
+  }
+
+  async eliminarMaterial(id: number, user: JwtUser) {
+    const material = await this.materiales.findOneBy({ id });
+    if (!material) throw new NotFoundException('Material no encontrado');
+    const gm = await this.validarPropiedad(material.grupoMateriaId, user);
+    await this.dataSource.transaction(async (manager) => {
+      const actual = await manager.getRepository(Material).findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+      if (!actual) throw new NotFoundException('Material ya retirado');
+      await programarLimpieza(manager, actual.archivoRuta);
+      await manager.getRepository(Material).delete(id);
+      await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId: gm.grupo.plantelId, accion: 'MATERIAL_RETIRADO', entidadId: id, detalle: `grupoMateriaId=${gm.id}`, fecha: new Date() });
+    });
+    if (/^\/uploads\/[^/\\]+$/.test(material.archivoRuta)) await unlink(resolve(uploadsPath(), basename(material.archivoRuta))).catch(() => undefined);
+    return { ok: true };
   }
 
   async materialesDeGrupoMateria(grupoMateriaId: number, user: JwtUser) {

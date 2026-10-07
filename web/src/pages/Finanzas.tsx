@@ -1,3 +1,4 @@
+import { CatalogoConceptos } from '../components/CatalogoConceptos';
 import { FormEvent, KeyboardEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { pesos, selloDeCargo } from '../utils/formato';
@@ -55,7 +56,7 @@ export default function FinanzasPage() {
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
-  const [formCargo, setFormCargo] = useState({ alumnoId: '', conceptoId: '', descripcion: '', monto: '', fechaVencimiento: '' });
+  const [formCargo, setFormCargo] = useState({ alumnoId: '', conceptoId: '', descripcion: '', monto: '', descuento: '0', fechaVencimiento: '' });
   const [formColegiaturas, setFormColegiaturas] = useState({ cicloId: '', periodo: '' });
   const [formPago, setFormPago] = useState({ alumnoId: '', cargoId: '', monto: '', metodo: 'EFECTIVO', referencia: '' });
   const intentoPago = useRef<{ firma: string; clave: string } | null>(null);
@@ -112,10 +113,10 @@ export default function FinanzasPage() {
         alumnoId: Number(formCargo.alumnoId),
         conceptoId: Number(formCargo.conceptoId),
         descripcion: formCargo.descripcion,
-        monto: Number(formCargo.monto),
+        monto: Number(formCargo.monto), descuento: Number(formCargo.descuento),
         fechaVencimiento: formCargo.fechaVencimiento || undefined,
       });
-      setFormCargo({ alumnoId: '', conceptoId: '', descripcion: '', monto: '', fechaVencimiento: '' });
+      setFormCargo({ alumnoId: '', conceptoId: '', descripcion: '', monto: '', descuento: '0', fechaVencimiento: '' });
       setMensaje('Cargo registrado');
       cargarDatos();
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
@@ -202,6 +203,7 @@ export default function FinanzasPage() {
   return (
     <>
       <Encabezado titulo="Finanzas" detalle="Cargos, pagos, adeudos y cobranza" />
+      <CatalogoConceptos cambiado={() => { void cargarCatalogos(); }} />
 
       <div className="tabs" role="tablist" aria-label="Secciones de finanzas">
         <button id="tab-cargos" role="tab" aria-selected={tab === 'cargos'} aria-controls="panel-cargos" tabIndex={tab === 'cargos' ? 0 : -1} className={tab === 'cargos' ? 'activa' : ''} onKeyDown={navegarTabs} onClick={() => setTab('cargos')}>Cargos</button>
@@ -237,7 +239,7 @@ export default function FinanzasPage() {
                   }}
                 >
                   <option value="">Selecciona…</option>
-                  {conceptos.map((c) => <option key={c.id} value={c.id}>{c.clave} — {c.nombre}</option>)}
+                  {conceptos.filter((c) => !['BECA', 'DESCUENTO', 'RECARGO'].includes(c.tipo)).map((c) => <option key={c.id} value={c.id}>{c.clave} — {c.nombre}</option>)}
                 </select>
               </div>
               <div className="campo"><label>Descripción</label>
@@ -246,7 +248,7 @@ export default function FinanzasPage() {
               <div className="campo"><label>Monto</label>
                 <input type="number" min={0} step={0.01} required value={formCargo.monto} onChange={(e) => setFormCargo({ ...formCargo, monto: e.target.value })} />
               </div>
-              <div className="campo"><label>Vence</label>
+              <div className="campo"><label htmlFor="descuento-cargo">Beca / descuento</label><input id="descuento-cargo" type="number" min={0} max={formCargo.monto || undefined} step="0.01" value={formCargo.descuento} onChange={(e) => setFormCargo({ ...formCargo, descuento: e.target.value })} /></div><div className="campo"><label>Vence</label>
                 <input type="date" value={formCargo.fechaVencimiento} onChange={(e) => setFormCargo({ ...formCargo, fechaVencimiento: e.target.value })} />
               </div>
               <button disabled={enviando} className="boton">Registrar cargo</button>

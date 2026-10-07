@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, TextInput, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import * as DocumentPicker from 'expo-document-picker';
 import { api, mensajeDeError } from '../api/client';
@@ -13,7 +13,7 @@ interface Tarea {
   parcial: number;
   fechaEntrega: string | null;
   grupoMateria?: { materia?: { clave: string; nombre: string } };
-  entrega: { estatus: string; calificacion: number | null } | null;
+  entrega: { estatus: string; calificacion: number | null; comentarioDocente?: string | null; comentarioAlumno?: string | null } | null;
 }
 
 export default function TareasScreen() {
@@ -22,6 +22,7 @@ export default function TareasScreen() {
   const [cargaInicialCompleta, setCargaInicialCompleta] = useState(false);
   const [error, setError] = useState('');
   const [ultimaActualizacion, setUltimaActualizacion] = useState<string | null>(null);
+  const [comentarios, setComentarios] = useState<Record<number, string>>({});
   const [entregandoId, setEntregandoId] = useState<number | null>(null);
 
   const cargar = useCallback(() => {
@@ -43,6 +44,7 @@ export default function TareasScreen() {
       const archivo = resultado.assets[0];
 
       const form = new FormData();
+      if (comentarios[tarea.id]?.trim()) form.append('comentario', comentarios[tarea.id].trim());
       form.append('archivo', {
         uri: archivo.uri,
         name: archivo.name,
@@ -91,6 +93,8 @@ export default function TareasScreen() {
         renderItem={({ item }) => (
           <Tarjeta>
             <Text style={base.tituloTarjeta}>{item.titulo}</Text>
+            {item.entrega?.comentarioDocente && <Text>Comentarios del profesor: {item.entrega.comentarioDocente}</Text>}
+            <TextInput editable={item.entrega?.estatus !== 'CALIFICADA' && entregandoId === null} accessibilityLabel={`Comentario para el profesor: ${item.titulo}`} placeholder="Comentario para el profesor" maxLength={500} value={comentarios[item.id] ?? ''} onChangeText={(texto) => setComentarios((previos) => ({ ...previos, [item.id]: texto }))} />
             {item.grupoMateria?.materia && (
               <Text style={base.secundario}>
                 {item.grupoMateria.materia.clave} — {item.grupoMateria.materia.nombre}

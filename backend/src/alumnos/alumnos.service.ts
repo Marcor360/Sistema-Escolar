@@ -1,3 +1,4 @@
+import { BitacoraAcademica } from '../entities/bitacora-academica.entity';
 import { inscripcionVigente } from '../common/contexto-academico';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -216,6 +217,7 @@ export class AlumnosService {
       const alumno = await alumnos.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!alumno) throw new NotFoundException('Alumno no encontrado');
       if (user) await this.scope.validarGestion(user, alumno.plantelId);
+      if (alumno.estatus !== 'ACTIVO') throw new ConflictException('Solo puede darse de baja un alumno activo; un egresado conserva su estado histórico');
       alumno.estatus = 'BAJA';
       await alumnos.save(alumno);
 
@@ -223,6 +225,7 @@ export class AlumnosService {
         { alumnoId: id, estatus: 'ACTIVA' }, { estatus: 'BAJA' },
       );
       await this.usuarios.actualizar(alumno.usuarioId, { activo: false }, manager);
+      if (user) await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId: alumno.plantelId, accion: 'ALUMNO_BAJA', entidadId: id, detalle: 'Transición explícita: cuenta e inscripciones desactivadas', fecha: new Date() });
       return { ok: true };
     });
   }
@@ -239,6 +242,7 @@ export class AlumnosService {
       await alumnos.save(alumno);
       await manager.getRepository(Inscripcion).update({ alumnoId: id, estatus: 'ACTIVA' }, { estatus: 'BAJA' });
       await this.usuarios.actualizar(alumno.usuarioId, { activo: false }, manager);
+      if (user) await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId: alumno.plantelId, accion: alumno.estatus === 'EGRESADO' ? 'ALUMNO_EGRESADO' : 'ALUMNO_BAJA', entidadId: id, detalle: 'Transición explícita: cuenta e inscripciones desactivadas', fecha: new Date() });
       return { ok: true };
     });
   }
@@ -256,10 +260,26 @@ export class AlumnosService {
       const destino = await manager.getRepository(Plantel).findOne({ where: { id: plantelId, activo: true } });
       if (!destino) throw new NotFoundException('Plantel de destino activo no encontrado');
       await manager.getRepository(Inscripcion).update({ alumnoId: id, estatus: 'ACTIVA' }, { estatus: 'BAJA' });
+      await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId: alumno.plantelId, accion: 'ALUMNO_TRANSFERIDO', entidadId: id, detalle: `origen=${alumno.plantelId}; destino=${plantelId}; inscripciones anteriores desactivadas`, fecha: new Date() });
       alumno.plantelId = plantelId;
       alumno.plantel = destino;
       await alumnos.save(alumno);
       return { ok: true, mensaje: 'Transferencia completada; inscribe al alumno en el grupo de destino' };
+    });
+  }
+
+  async reactivar(id: number, motivo: string, user: JwtUser) {
+    return this.dataSource.transaction(async (manager) => {
+      const repo = manager.getRepository(Alumno);
+      const alumno = await repo.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+      if (!alumno) throw new NotFoundException('Alumno no encontrado');
+      await this.scope.validarGestion(user, alumno.plantelId);
+      if (alumno.estatus !== 'BAJA') throw new ConflictException('Solo se reactiva una baja; un egresado requiere otro proceso institucional');
+      if (!await manager.getRepository(Plantel).findOneBy({ id: alumno.plantelId, activo: true })) throw new ConflictException('El plantel no está activo');
+      await repo.update(id, { estatus: 'ACTIVO' });
+      await this.usuarios.actualizar(alumno.usuarioId, { activo: true }, manager);
+      await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId: alumno.plantelId, accion: 'ALUMNO_REACTIVADO', entidadId: id, detalle: motivo, fecha: new Date() });
+      return { ok: true, mensaje: 'Expediente reactivado; inscribe explícitamente al alumno. No se restauran inscripciones.' };
     });
   }
 

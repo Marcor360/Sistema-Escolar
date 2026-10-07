@@ -1,5 +1,9 @@
+import { PromocionService } from './promocion.service';
+import { PromocionDto, ConfirmarPromocionDto } from './promocion.dto';
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { CiclosService } from './ciclos.service';
+import { TransicionCicloDto } from './academico.dto';
 import { AcademicoService } from './academico.service';
 import {
   ActualizarCicloDto, ActualizarGrupoDto, ActualizarMateriaDto, AsignarMateriaDto, CicloDto, GrupoDto, InscribirAlumnoDto, ListarGruposDto, MateriaDto,
@@ -14,9 +18,13 @@ import { CurrentUser, JwtUser } from '../common/current-user.decorator';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('academico')
 export class AcademicoController {
-  constructor(private readonly service: AcademicoService) {}
+  constructor(private readonly promocion: PromocionService, private readonly service: AcademicoService, private readonly ciclos: CiclosService) {}
 
   // ---- Panel maestro ----
+  @Get('bitacora') @Roles('ADMINISTRATIVO') bitacora(@CurrentUser() user: JwtUser, @Query() query: ListarGruposDto) { return this.service.bitacoraAcademica(user, query); }
+  @Post('promocion/preview') @Roles('ADMINISTRATIVO') previewPromocion(@Body() dto: PromocionDto, @CurrentUser() user: JwtUser) { return this.promocion.preview(dto, user); }
+  @Post('promocion/confirmar') @Roles('ADMINISTRATIVO') confirmarPromocion(@Body() dto: ConfirmarPromocionDto, @CurrentUser() user: JwtUser) { return this.promocion.confirmar(dto, user); }
+
   @Get('mis-grupos')
   @Roles('MAESTRO')
   misGrupos(@CurrentUser() user: JwtUser) {
@@ -33,6 +41,15 @@ export class AcademicoController {
   actualizarCiclo(@Param('id', ParseIntPipe) id: number, @Body() dto: ActualizarCicloDto) {
     return this.service.actualizarCiclo(id, dto);
   }
+
+  @Get('ciclos/:id/cierre') @Roles('SUPERADMIN')
+  resumenCierre(@Param('id', ParseIntPipe) id: number) { return this.ciclos.resumen(id); }
+  @Post('ciclos/:id/activar') @Roles('SUPERADMIN')
+  activar(@Param('id', ParseIntPipe) id: number, @Body() dto: TransicionCicloDto, @CurrentUser() user: JwtUser) { return this.ciclos.transicion(id, 'activar', dto.confirmado, user); }
+  @Post('ciclos/:id/iniciar-cierre') @Roles('SUPERADMIN')
+  iniciarCierre(@Param('id', ParseIntPipe) id: number, @Body() dto: TransicionCicloDto, @CurrentUser() user: JwtUser) { return this.ciclos.transicion(id, 'iniciar-cierre', dto.confirmado, user); }
+  @Post('ciclos/:id/cerrar') @Roles('SUPERADMIN')
+  cerrar(@Param('id', ParseIntPipe) id: number, @Body() dto: TransicionCicloDto, @CurrentUser() user: JwtUser) { return this.ciclos.transicion(id, 'cerrar', dto.confirmado, user); }
 
   // ---- Materias ----
   @Get('materias') @Roles('ADMINISTRATIVO', 'FINANZAS', 'MAESTRO')

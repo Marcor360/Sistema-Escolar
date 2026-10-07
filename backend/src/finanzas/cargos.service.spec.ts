@@ -2,6 +2,7 @@ import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { CargosService } from './cargos.service';
 import { CrearCargoDto, GenerarColegiaturasDto } from './finanzas.dto';
+import { Cargo, CicloEscolar, Alumno } from '../entities';
 
 describe('CargosService.saldoDeCargo / totalDeCargo', () => {
   const pagosSinMovimientos = () => ({
@@ -68,7 +69,7 @@ describe('CargosService.aplicarRecargos', () => {
   it('calcula (monto - descuento) x porcentaje/100 en cargos vencidos sin recargo previo', async () => {
     const cargo = {
       id: 1, monto: 1000, descuento: 100, recargo: 0, estatus: 'PENDIENTE',
-      fechaVencimiento: '2020-01-01', alumno: { plantelId: 4 },
+      concepto: { activo: true, aplicaRecargo: true }, fechaVencimiento: '2020-01-01', alumno: { plantelId: 4 },
     };
     const qb = {
       innerJoin: jest.fn().mockReturnThis(),
@@ -103,7 +104,7 @@ describe('CargosService.aplicarRecargos', () => {
 
 describe('CargosService.crear', () => {
   it('valida al alumno (y con ello el alcance de su plantel) antes de crear el cargo', async () => {
-    const conceptos = { obtener: jest.fn().mockResolvedValue({ id: 5 }) };
+    const conceptos = { obtener: jest.fn().mockResolvedValue({ id: 5, activo: true, tipo: 'OTRO' }) };
     const alumnosService = { obtener: jest.fn().mockResolvedValue({ id: 10, plantelId: 3 }) };
     const bitacora = { registrar: jest.fn().mockResolvedValue(undefined) };
     const cargosRepo = {
@@ -161,24 +162,25 @@ describe('CargosService.generarColegiaturas', () => {
   const crearServicio = (guardar: jest.Mock) => {
     const grupos = { find: jest.fn().mockResolvedValue([{ id: 4, plantelId: 2 }]) };
     const inscripciones = { find: jest.fn().mockResolvedValue([
-      { alumnoId: 8, alumno: { plantelId: 2, estatus: 'ACTIVO' } },
-      { alumnoId: 9, alumno: { plantelId: 2, estatus: 'ACTIVO' } },
+      { alumnoId: 8, alumno: { plantelId: 2, estatus: 'ACTIVO', usuario: { activo: true } } },
+      { alumnoId: 9, alumno: { plantelId: 2, estatus: 'ACTIVO', usuario: { activo: true } } },
     ]) };
     const cargos = {
       find: jest.fn().mockResolvedValue([]),
       create: jest.fn((dato) => dato),
       save: guardar,
     };
-    const conceptos = { porClave: jest.fn().mockResolvedValue({ id: 5, montoBase: 100 }) };
+    const conceptos = { porClave: jest.fn().mockResolvedValue({ id: 5, montoBase: 100, activo: true, tipo: 'COLEGIATURA' }) };
     const scope = { resolverFiltro: jest.fn().mockResolvedValue([2]), condicion: jest.fn((ids) => ids) };
     const bitacora = { registrar: jest.fn().mockResolvedValue(undefined) };
-    const manager = { getRepository: jest.fn().mockReturnValue(cargos) };
-    const dataSource = { transaction: jest.fn((fn) => fn(manager)) };
+    const alumnoActual = { findOne: jest.fn().mockResolvedValue({ id: 8, plantelId: 2, estatus: 'ACTIVO', usuario: { activo: true } }) };
+    const manager = { getRepository: jest.fn((entidad) => entidad === Cargo ? cargos : entidad === CicloEscolar ? { findOne: jest.fn().mockResolvedValue({ activo: true }) } : entidad === Alumno ? alumnoActual : { existsBy: jest.fn().mockResolvedValue(true) }) };
+    const dataSource = { getRepository: jest.fn().mockReturnValue({ findOneBy: jest.fn().mockResolvedValue({ id: 3, activo: true }) }), transaction: jest.fn((fn) => fn(manager)) };
     const service = new CargosService(
       cargos as any, {} as any, inscripciones as any, grupos as any, {} as any,
       conceptos as any, bitacora as any, scope as any, dataSource as any,
     );
-    return { service, cargos, grupos, inscripciones, bitacora, manager };
+    return { service, cargos, grupos, inscripciones, bitacora, manager, alumnoActual };
   };
 
   it('usa ciclo en la consulta y una clave única estable por alumno, ciclo y periodo', async () => {
@@ -221,6 +223,16 @@ describe('CargosService.generarColegiaturas', () => {
       1, 'GENERAR_COLEGIATURA', 'cargo', 21,
       'periodo=2026-09 monto=100', 2, manager,
     );
+  });
+
+  it('omite al alumno dado de baja entre la selección y la transacción', async () => {
+    const guardar = jest.fn();
+    const { service, alumnoActual, bitacora } = crearServicio(guardar);
+    alumnoActual.findOne.mockResolvedValue({ id: 8, plantelId: 2, estatus: 'BAJA', usuario: { activo: false } });
+    const resultado = await service.generarColegiaturas({ cicloId: 3, periodo: '2026-09', plantelId: 2, confirmado: true }, { sub: 1, roles: ['FINANZAS'] } as any);
+    expect(resultado).toMatchObject({ generados: 0, omitidos: 2 });
+    expect(guardar).not.toHaveBeenCalled();
+    expect(bitacora.registrar).not.toHaveBeenCalled();
   });
 
   it('no genera colegiaturas para alumnos dados de baja', async () => {

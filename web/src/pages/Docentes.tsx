@@ -28,15 +28,17 @@ export default function DocentesPage() {
   const [mensaje, setMensaje] = useState('');
   const [editando, setEditando] = useState<number | null>(null);
   const [enviando, setEnviando] = useState(false);
-  const [detalle, setDetalle] = useState<{ id: number; plantelIds: number[]; clases: { id: number; grupo: string; materia: string; ciclo: string; plantel: string; vigente: boolean }[] } | null>(null);
+  const [detalle, setDetalle] = useState<{ id: number; estatus: string; plantelIds: number[]; clases: { id: number; grupo: string; materia: string; ciclo: string; plantel: string; vigente: boolean }[] } | null>(null);
   const verClases = async (d: Docente) => {
     try { const { data } = await api.get(`/docentes/${d.id}`); setDetalle(data); }
     catch (err) { setError(mensajeDeError(err)); }
   };
   const guardarPlanteles = async () => {
-    if (!detalle || !confirm('¿Confirmar los planteles del docente? Las clases deben reasignarse antes de retirar un plantel.')) return;
+    if (!detalle || enviando || !confirm('¿Confirmar los planteles del docente? Las clases deben reasignarse antes de retirar un plantel.')) return;
+    const motivo = detalle.estatus === 'BAJA' ? prompt('Motivo de reactivación. Las clases no se restauran automáticamente.') : undefined;
+    if (detalle.estatus === 'BAJA' && !motivo?.trim()) return;
     setEnviando(true); setError('');
-    try { await api.post(`/docentes/${detalle.id}/planteles`, { plantelIds: detalle.plantelIds }); setMensaje('Planteles actualizados'); setDetalle(null); cargar(1, filtroPlantel); }
+    try { await api.post(`/docentes/${detalle.id}/${detalle.estatus === 'BAJA' ? 'reactivacion' : 'planteles'}`, { plantelIds: detalle.plantelIds, ...(motivo ? { motivo } : {}) }); setMensaje('Planteles actualizados'); setDetalle(null); cargar(1, filtroPlantel); }
     catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
   const editar = (d: Docente) => {
@@ -114,7 +116,7 @@ export default function DocentesPage() {
       {detalle && <section className="panel"><h2>Planteles y clases</h2><fieldset><legend>Planteles del docente</legend>
         {planteles.map((p) => <label key={p.id} className="casilla"><input type="checkbox" checked={detalle.plantelIds.includes(p.id)} onChange={() => setDetalle({ ...detalle,
           plantelIds: detalle.plantelIds.includes(p.id) ? detalle.plantelIds.filter((id) => id !== p.id) : [...detalle.plantelIds, p.id] })} />{p.nombre}</label>)}
-      </fieldset><button disabled={enviando} onClick={guardarPlanteles}>Guardar planteles</button><button onClick={() => setDetalle(null)}>Cerrar</button>
+      </fieldset><button disabled={enviando} onClick={guardarPlanteles}>{detalle.estatus === 'BAJA' ? 'Reactivar con estos planteles' : 'Guardar planteles'}</button><button onClick={() => setDetalle(null)}>Cerrar</button>
         {detalle.clases.map((c) => <p key={c.id}>{c.ciclo} · {c.plantel} · {c.grupo} · {c.materia} · {c.vigente ? 'Vigente' : 'Histórico'}</p>)}
         <a href="/grupos">Reasignar clases desde Grupos</a>
       </section>}

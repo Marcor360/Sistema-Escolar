@@ -7,6 +7,9 @@ import { archivosBase } from '../api/client';
 import { useMarca } from '../marca/MarcaContext';
 
 const secciones = [
+  { destino: '/operaciones', etiqueta: 'Importar y promover', roles: ['ADMINISTRATIVO'] },
+  { destino: '/conducta', etiqueta: 'Conducta e incidencias', roles: ['ADMINISTRATIVO', 'MAESTRO'] },
+  { destino: '/analitica', etiqueta: 'Analítica', roles: ['ADMINISTRATIVO', 'FINANZAS', 'MAESTRO'] },
   { destino: '/', etiqueta: 'Panel', roles: ['ADMINISTRATIVO', 'FINANZAS', 'MAESTRO'] },
   { destino: '/alumnos', etiqueta: 'Alumnos', roles: ['ADMINISTRATIVO', 'FINANZAS'] },
   { destino: '/planteles', etiqueta: 'Planteles', roles: ['ADMINISTRATIVO', 'FINANZAS'] },

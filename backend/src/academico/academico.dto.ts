@@ -5,6 +5,8 @@ import { IsBoolean, IsIn, IsInt, IsOptional, IsString } from 'class-validator';
 import { PaginacionDto } from '../common/paginacion.dto';
 
 export class ListarGruposDto extends PaginacionDto {
+  @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
+  @IsOptional() @IsString() @MaxLength(80) buscar?: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) cicloId?: number;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) plantelId?: number;
   @IsOptional() @Transform(({ value }) => value === true || value === 'true') @IsBoolean() inactivos?: boolean;
@@ -41,7 +43,7 @@ export class MateriaDto {
   @IsString() @LongitudMinima(1) @MaxLength(120) nombre: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsOptional() @IsString() @MaxLength(300) descripcion?: string;
-  @IsOptional() @IsInt() @Min(1) creditos?: number;
+  @IsOptional() @IsInt() @Min(0) creditos?: number;
 }
 
 export class ActualizarMateriaDto {
@@ -51,7 +53,7 @@ export class ActualizarMateriaDto {
   @IsOptional() @IsString() @LongitudMinima(1) @MaxLength(120) nombre?: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsOptional() @IsString() @MaxLength(300) descripcion?: string;
-  @IsOptional() @IsInt() @Min(1) creditos?: number;
+  @IsOptional() @IsInt() @Min(0) creditos?: number;
 }
 
 export class GrupoDto {
@@ -80,4 +82,8 @@ export class AsignarMateriaDto {
 
 export class InscribirAlumnoDto {
   @IsInt() @Min(1) alumnoId: number;
+}
+
+export class TransicionCicloDto {
+  @IsBoolean() confirmado: boolean;
 }

@@ -10,7 +10,7 @@ function check(report, overrides = {}) {
   let status = 0;
   try {
     runInNewContext(code, {
-      require: () => ({ spawnSync: () => ({ stdout: JSON.stringify(report), status: 1, ...overrides }) }),
+      require: () => ({ spawnSync: () => ({ stdout: JSON.stringify(report), status: 0, ...overrides }) }),
       process: { platform: 'linux', stderr: { write() {} }, exit(value) { status = value; throw stop; } },
       console: { log() {}, warn() {}, error() {} },
     });
@@ -25,9 +25,9 @@ const root = {
 };
 const report = (vulnerabilities) => ({ metadata: { vulnerabilities: { high: Object.keys(vulnerabilities).length } }, vulnerabilities });
 
-test('acepta únicamente las cadenas SDK 57 del aviso previamente documentado', () => {
+test('rechaza también los avisos históricos después de corregir sus causas', () => {
   assert.equal(check(report({ braces: root, expo: { name: 'expo', severity: 'high', via: ['braces'] },
-    'expo-secure-store': { name: 'expo-secure-store', severity: 'high', via: ['expo'] } })), 0);
+    'expo-secure-store': { name: 'expo-secure-store', severity: 'high', via: ['expo'] } })), 1);
 });
 test('rechaza un aviso nuevo aunque el paquete esté en la lista de cadenas permitidas', () => {
   assert.equal(check(report({ braces: root, expo: { name: 'expo', severity: 'high', via: ['braces',
@@ -40,8 +40,10 @@ test('rechaza paquetes inesperados y causas desconocidas', () => {
   assert.equal(check(report({ braces: root, unknown: { name: 'unknown', severity: 'high', via: ['braces'] } })), 1);
   assert.equal(check(report({ expo: { name: 'expo', severity: 'high', via: ['expo'] } })), 1);
 });
-test('rechaza fallos de audit y acepta un reporte sin avisos altos', () => {
+test('rechaza fallos de audit y acepta únicamente cero avisos', () => {
   assert.equal(check(report({}), { error: new Error('network') }), 1);
   assert.equal(check(report({}), { stdout: 'not json' }), 1);
+  assert.equal(check(report({}), { status: 1 }), 1);
   assert.equal(check(report({})), 0);
+  assert.equal(check({ metadata: { vulnerabilities: { total: 1, moderate: 1 } }, vulnerabilities: { lib: { severity: 'moderate' } } }), 1);
 });

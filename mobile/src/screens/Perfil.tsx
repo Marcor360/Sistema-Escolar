@@ -1,3 +1,4 @@
+import { activarPush, desactivarPush } from '../push';
 import { useCallback, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -20,6 +21,14 @@ export default function PerfilScreen() {
   const [actual, setActual] = useState('');
   const [nueva, setNueva] = useState('');
   const [errorPerfil, setErrorPerfil] = useState('');
+  const [configurandoPush, setConfigurandoPush] = useState(false);
+  const configurarPush = async (activar: boolean) => {
+    if (!sesion || configurandoPush) return;
+    setConfigurandoPush(true);
+    try { if (activar) { const habilitado = await activarPush(sesion.sub); Alert.alert('Notificaciones', habilitado ? 'Dispositivo registrado para avisos escolares.' : 'Dispositivo registrado; falta habilitar el proveedor en el servidor.'); }
+      else { await desactivarPush(sesion.sub); Alert.alert('Notificaciones', 'Push desactivado para esta cuenta.'); }
+    } catch (error) { Alert.alert('Notificaciones', mensajeDeError(error)); } finally { setConfigurandoPush(false); }
+  };
 
   const cargarPerfil = useCallback(() => {
     setErrorPerfil('');
@@ -77,6 +86,10 @@ export default function PerfilScreen() {
         </TouchableOpacity>
       </Tarjeta>
 
+      <Tarjeta><Text accessibilityRole="header">Notificaciones push</Text>
+        <TouchableOpacity disabled={configurandoPush} accessibilityRole="button" onPress={() => { void configurarPush(true); }}><Text>Activar avisos en este dispositivo</Text></TouchableOpacity>
+        <TouchableOpacity disabled={configurandoPush} accessibilityRole="button" onPress={() => { void configurarPush(false); }}><Text>Desactivar push</Text></TouchableOpacity>
+      </Tarjeta>
       <TouchableOpacity style={estilos.boton} onPress={() => {
         void cerrar().catch((error: unknown) => {
           Alert.alert('No se pudo cerrar sesión', mensajeDeError(error));

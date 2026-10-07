@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Param, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, ParseBoolPipe, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
@@ -61,7 +61,7 @@ export class FinanzasController {
   // ---------- Catálogo de conceptos ----------
   @Get('conceptos')
   @ApiBearerAuth() @UseGuards(JwtAuthGuard, RolesGuard) @Roles('FINANZAS', 'ADMINISTRATIVO', 'ALUMNO')
-  listarConceptos() { return this.conceptos.listar(); }
+  listarConceptos(@CurrentUser() user: JwtUser, @Query('incluirInactivos', new ParseBoolPipe({ optional: true })) incluirInactivos?: boolean) { return this.conceptos.listar(incluirInactivos === true && user.roles.some((r) => ['FINANZAS', 'SUPERADMIN'].includes(r))); }
 
   @Post('conceptos')
   @ApiBearerAuth() @UseGuards(JwtAuthGuard, RolesGuard) @Roles('FINANZAS')

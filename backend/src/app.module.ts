@@ -1,3 +1,6 @@
+import { ImportacionesModule } from './importaciones/importaciones.module';
+import { ConductaModule } from './conducta/conducta.module';
+import { AnaliticaModule } from './analitica/analitica.module';
 import { Module } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -42,7 +45,7 @@ import { HealthModule } from './health/health.module';
     PlantelesModule,
     ArchivosModule,
     ConfiguracionModule,
-    HealthModule,
+    HealthModule, ConductaModule, AnaliticaModule, ImportacionesModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

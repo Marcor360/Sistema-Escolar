@@ -1,7 +1,8 @@
-import { exigirGrupoVigente, grupoVigente } from '../common/contexto-academico';
+import { BitacoraAcademica } from '../entities/bitacora-academica.entity';
+import { exigirGrupoConfigurable, grupoVigente } from '../common/contexto-academico';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, In, Repository } from 'typeorm';
+import { DataSource, Like, In, Repository } from 'typeorm';
 import { CicloEscolar } from '../entities/ciclo-escolar.entity';
 import { Plantel } from '../entities/plantel.entity';
 import { Materia } from '../entities/materia.entity';
@@ -68,12 +69,12 @@ export class AcademicoService {
   listarCiclos() { return this.ciclos.find({ order: { fechaInicio: 'DESC' } }); }
 
   async crearCiclo(dto: CicloDto) {
+    if (dto.activo === true) throw new BadRequestException('Crea el ciclo en preparación y usa la activación explícita');
     if (dto.fechaFin < dto.fechaInicio) throw new BadRequestException('La fecha de fin debe ser posterior o igual al inicio');
     try {
       return await this.dataSource.transaction('SERIALIZABLE', async (manager) => {
         const ciclos = manager.getRepository(CicloEscolar);
-        if (dto.activo) await ciclos.update({ activo: true }, { activo: false });
-        return ciclos.save(ciclos.create({ ...dto, activo: dto.activo ?? false }));
+        return ciclos.save(ciclos.create({ ...dto, activo: false, estado: 'PREPARACION' }));
       });
     } catch (error) {
       if (esConflictoTransaccional(error)) {
@@ -84,13 +85,14 @@ export class AcademicoService {
   }
 
   async actualizarCiclo(id: number, dto: ActualizarCicloDto) {
+    if (dto.activo !== undefined) throw new BadRequestException('Usa activar, iniciar cierre o cerrar; PATCH solo corrige datos');
     try {
       return await this.dataSource.transaction('SERIALIZABLE', async (manager) => {
         const ciclos = manager.getRepository(CicloEscolar);
         const actual = await ciclos.findOne({ where: { id } });
         if (!actual) throw new NotFoundException('Ciclo escolar no encontrado');
         if ((dto.fechaFin ?? actual.fechaFin) < (dto.fechaInicio ?? actual.fechaInicio)) throw new BadRequestException('La fecha de fin debe ser posterior o igual al inicio');
-        if (dto.activo) await ciclos.update({ activo: true }, { activo: false });
+        if (actual.estado === 'CERRADO') throw new ConflictException('No se edita un ciclo cerrado');
         await ciclos.update(id, dto);
         return ciclos.findOne({ where: { id } });
       });
@@ -134,6 +136,7 @@ export class AcademicoService {
     const [datos, total] = await this.grupos.findAndCount({
       where: {
         ...(maestroPuro ? { id: In(gruposDocente) } : {}),
+        ...(query.buscar ? { nombre: Like(`%${query.buscar}%`) } : {}),
         ...(query.cicloId ? { cicloId: query.cicloId } : { ciclo: { activo: true }, plantel: { activo: true } }),
         ...(planteles === null ? {} : { plantelId: In(planteles) }),
         ...(query.inactivos && puedeVerInactivos ? {} : { activo: true }),
@@ -146,8 +149,8 @@ export class AcademicoService {
   }
   async crearGrupo(dto: GrupoDto, user: JwtUser) {
     await this.scope.validarGestion(user, dto.plantelId);
-    const ciclo = await this.ciclos.findOne({ where: { id: dto.cicloId, activo: true } });
-    if (!ciclo) throw new ConflictException('Selecciona un ciclo existente y activo');
+    const ciclo = await this.ciclos.findOne({ where: { id: dto.cicloId } });
+    if (!ciclo || ciclo.estado === 'CERRADO' || ciclo.estado === 'EN_CIERRE') throw new ConflictException('Selecciona un ciclo activo o en preparación');
     const plantel = await this.dataSource.getRepository(Plantel).findOne({ where: { id: dto.plantelId, activo: true } });
     if (!plantel) throw new ConflictException('El plantel no está activo');
     try {
@@ -230,7 +233,7 @@ export class AcademicoService {
     if (!grupo) throw new NotFoundException('Grupo no encontrado');
     await this.scope.validarGestion(user, grupo.plantelId);
     if (!grupo.activo) throw new ConflictException('No se puede asignar una materia a un grupo inactivo');
-    exigirGrupoVigente(grupo);
+    exigirGrupoConfigurable(grupo);
     const materia = await this.materias.findOne({ where: { id: dto.materiaId, activo: true } });
     if (!materia) throw new ConflictException('La materia no está activa');
     const duplicado = await this.grupoMaterias.findOne({
@@ -267,7 +270,7 @@ export class AcademicoService {
     const gm = await this.grupoMaterias.findOne({ where: { id: grupoMateriaId } });
     if (!gm) throw new NotFoundException('Asignación grupo-materia no encontrada');
     await this.validarAccesoGrupo(gm.grupoId, user);
-    exigirGrupoVigente(gm.grupo);
+    exigirGrupoConfigurable(gm.grupo);
     if (!gm.materia.activo) throw new ConflictException('La materia no está activa');
     const docente = await this.docentes.obtener(docenteId, user);
     if (docente.estatus !== 'ACTIVO' || !docente.usuario.activo) throw new ConflictException('El docente no está activo');
@@ -282,6 +285,7 @@ export class AcademicoService {
       if (!actual || actual.estatus !== 'ACTIVO' || !actual.usuario.activo) throw new ConflictException('El docente no está activo');
       if (!await manager.getRepository(UsuarioPlantel).findOneBy({ usuarioId: actual.usuarioId, plantelId: gm.grupo.plantelId, activo: true })) throw new ConflictException('El docente ya no está asignado al plantel');
       await manager.getRepository(GrupoMateria).update({ id: grupoMateriaId }, { docenteId });
+      await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId: gm.grupo.plantelId, accion: 'DOCENTE_REASIGNADO', entidadId: grupoMateriaId, detalle: `anteriorDocenteId=${gm.docenteId ?? 'sin asignar'}; docenteId=${docenteId}`, fecha: new Date() });
       return { ...gm, docenteId, docente: actual };
     });
   }
@@ -321,7 +325,7 @@ export class AcademicoService {
         const alumno = await manager.getRepository(Alumno).findOne({ where: { id: alumnoId }, lock: { mode: 'pessimistic_write' } });
         if (!alumno) throw new NotFoundException('Alumno no encontrado');
         if (alumno.estatus !== 'ACTIVO') throw new ConflictException('El alumno no está activo');
-        exigirGrupoVigente(grupo);
+        exigirGrupoConfigurable(grupo);
         if (!alumno.usuario.activo) throw new ConflictException('La cuenta del alumno no está activa');
         if (alumno.plantelId !== grupo.plantelId) {
           throw new ForbiddenException('El alumno no pertenece al plantel del grupo');
@@ -332,9 +336,13 @@ export class AcademicoService {
         const duplicada = await inscripciones.findOne({ where: { grupoId, alumnoId } });
         if (duplicada) {
           duplicada.estatus = 'ACTIVA';
-          return inscripciones.save(duplicada);
+          const guardada = await inscripciones.save(duplicada);
+          await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId: grupo.plantelId, accion: 'INSCRIPCION_REACTIVADA', entidadId: guardada.id, detalle: `alumnoId=${alumnoId}; grupoId=${grupoId}`, fecha: new Date() });
+          return guardada;
         }
-        return inscripciones.save(inscripciones.create({ grupoId, alumnoId }));
+        const guardada = await inscripciones.save(inscripciones.create({ grupoId, alumnoId }));
+        await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId: grupo.plantelId, accion: 'INSCRIPCION_CREADA', entidadId: guardada.id, detalle: `alumnoId=${alumnoId}; grupoId=${grupoId}`, fecha: new Date() });
+        return guardada;
       });
     } catch (error) {
       if (esConflictoUnico(error) || esConflictoTransaccional(error)) throw new ConflictException('La inscripción cambió al mismo tiempo; vuelve a consultar');
@@ -367,8 +375,21 @@ export class AcademicoService {
     const inscripcion = await this.inscripciones.findOne({ where: { id } });
     if (!inscripcion) throw new NotFoundException('Inscripción no encontrada');
     await this.validarAccesoGrupo(inscripcion.grupoId, user);
-    await this.inscripciones.update(id, { estatus: 'BAJA' });
-    return { ok: true };
+    return this.dataSource.transaction(async (manager) => {
+      const repo = manager.getRepository(Inscripcion);
+      const actual = await repo.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+      if (!actual) throw new NotFoundException('Inscripción no encontrada');
+      await this.scope.validarGestion(user, actual.grupo.plantelId);
+      await repo.update(id, { estatus: 'BAJA' });
+      await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId: actual.grupo.plantelId, accion: 'INSCRIPCION_BAJA', entidadId: id, detalle: `alumnoId=${actual.alumnoId}; grupoId=${actual.grupoId}`, fecha: new Date() });
+      return { ok: true };
+    });
+  }
+
+  async bitacoraAcademica(user: JwtUser, query: ListarGruposDto) {
+    const planteles = await this.scope.resolverFiltro(user, query.plantelId);
+    const [datos, total] = await this.dataSource.getRepository(BitacoraAcademica).findAndCount({ where: planteles === null ? {} : { plantelId: In(planteles) }, order: { id: 'DESC' }, skip: (query.pagina - 1) * query.porPagina, take: query.porPagina });
+    return { datos, total, pagina: query.pagina, porPagina: query.porPagina };
   }
 
   private esMaestroLimitado(user: JwtUser): boolean {

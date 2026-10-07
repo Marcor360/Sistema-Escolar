@@ -1,3 +1,4 @@
+import { ArchivoLimpiezaService } from './archivo-limpieza.service';
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
@@ -22,7 +23,7 @@ import { LogoPublicoController } from './logo-publico.controller';
       }),
     }),
   ],
-  providers: [ArchivosService],
+  providers: [ArchivosService, ArchivoLimpiezaService],
   controllers: [ArchivosController, LogoPublicoController],
 })
 export class ArchivosModule {}
