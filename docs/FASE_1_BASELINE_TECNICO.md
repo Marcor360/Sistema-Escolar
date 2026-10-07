@@ -59,6 +59,16 @@ La publicación del borrador no se ha realizado y no se asume aplicada.
 PowerShell local se descargó de Microsoft/PowerShell y su SHA256 se verificó
 contra hashes.sha256 de la release oficial antes de validar scripts.
 
+## Primera CI del candidato
+
+El SHA `066ae7544d130bc4fbe437152580e7a6ad0ac071` se publicó en main y
+[su CI](https://github.com/Marcor360/Sistema-Escolar/actions/runs/37648784503)
+confirmó web, ETL y Windows. Backend, móvil y ambas integraciones fallaron en
+`npm ci` antes de ejecutar los tests. El mismo comando pasa localmente.
+Se añade un wrapper que ejecuta exactamente `npm ci`, conserva su código de
+salida y publica sus errores como anotaciones de Actions para poder aislar la
+causa cuando la red impide descargar los logs. No se omite la instalación.
+
 ## Gate de cierre
 
 La Fase 1 **permanece abierta** hasta obtener CI completamente verde del SHA
@@ -109,3 +119,6 @@ sustituyendo los gates pendientes por comprobaciones locales.
 - `scripts/check-mobile-audit.test.cjs`
 - `web/package-lock.json`
 - `web/package.json`
+
+- `.github/workflows/ci.yml`
+- `scripts/ci-install.cjs`

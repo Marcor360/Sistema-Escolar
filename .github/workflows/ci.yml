@@ -19,7 +19,7 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: backend/package-lock.json
-      - run: npm ci
+      - run: node ../scripts/ci-install.cjs
       - run: npm audit
       - run: npm run lint
       - run: npm run typecheck
@@ -38,7 +38,7 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: web/package-lock.json
-      - run: npm ci
+      - run: node ../scripts/ci-install.cjs
       - run: npm audit
       - run: npm run lint
       - run: npm test
@@ -56,7 +56,7 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: mobile/package-lock.json
-      - run: npm ci
+      - run: node ../scripts/ci-install.cjs
       - name: Revisión de vulnerabilidades npm
         run: node ../scripts/check-mobile-audit.cjs
       - run: npm test
@@ -97,7 +97,7 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: backend/package-lock.json
-      - run: npm ci
+      - run: node ../scripts/ci-install.cjs
       - run: npm run test:integration
 
   integration-sqlserver:
@@ -137,7 +137,7 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: backend/package-lock.json
-      - run: npm ci
+      - run: node ../scripts/ci-install.cjs
       - run: npm run test:integration
 
   etl:
