@@ -50,10 +50,10 @@ que las dos vulnerabilidades estén corregidas. Véase EXCEPCIONES_NPM_AUDIT.md.
 | MySQL 8.4, integración completa | 21 pasan, DB_SYNC=false, base aislada |
 | Scripts Windows: parser PowerShell 7.5.4 en Linux | Todos sin errores de sintaxis |
 | Scripts Windows: pruebas de Junction/retención en Windows | Requieren el job Windows de CI |
-| SQL Server 2022, integración completa | Pendiente: descarga local bloqueada por red |
+| SQL Server 2022, integración completa | 21 pasan, DB_SYNC=false, base aislada |
 
-Docker y MySQL funcionan. La imagen oficial de SQL Server redirige a
-`centralus.data.mcr.microsoft.com`, que la política activa rechaza. Se guardó
+Docker, MySQL y SQL Server funcionan. La imagen oficial de SQL Server redirige a
+`centralus.data.mcr.microsoft.com`, que la política inicial rechazaba; tras habilitar acceso de red se descargó y verificó. Se guardó
 el dominio requerido en el borrador del entorno junto con `api.github.com`.
 La publicación del borrador no se ha realizado y no se asume aplicada.
 PowerShell local se descargó de Microsoft/PowerShell y su SHA256 se verificó
@@ -68,6 +68,10 @@ confirmó web, ETL y Windows. Backend, móvil y ambas integraciones fallaron en
 Se añade un wrapper que ejecuta exactamente `npm ci`, conserva su código de
 salida y publica sus errores como anotaciones de Actions para poder aislar la
 causa cuando la red impide descargar los logs. No se omite la instalación.
+El diagnóstico mostró un reemplazo accidental de versión en entradas transitivas
+de los lockfiles. Se restauran íntegramente desde el commit base y solo se cambian
+las versiones raíz; se verifica por comparación estructural que las dependencias,
+URLs e integridades sean idénticas al baseline.
 
 ## Gate de cierre
 
