@@ -2,7 +2,7 @@
 
 > Portal web administrativo/docente, app móvil del alumno y API para gestión académica y financiera. El código cubre los flujos principales del MVP; todavía no hay certificación de piloto institucional ni despliegue productivo.
 
-**Candidato técnico al 7 de octubre de 2026:** los paquetes y Expo declaran `1.14.0`. La Fase 1 repara la metadata TypeORM anulable sin desactivar TypeScript estricto ni alterar el DDL. El punto de partida `7edce9a82e284dda8727eff7f31a980e32ad4d10` fallaba en las integraciones MySQL/SQL Server. La certificación del candidato exige CI verde en su SHA final; consulta [Recuperación del baseline técnico](docs/FASE_1_BASELINE_TECNICO.md) y [Estado de implementación](docs/ESTADO_IMPLEMENTACION.md).
+**Candidato técnico al 7 de octubre de 2026:** los paquetes y Expo declaran `1.14.0`. La Fase 1 repara la metadata TypeORM anulable sin desactivar TypeScript estricto ni alterar el DDL. El punto de partida `7edce9a82e284dda8727eff7f31a980e32ad4d10` fallaba en las integraciones MySQL/SQL Server. La [CI del SHA técnico `5fa8065`](https://github.com/Marcor360/Sistema-Escolar/actions/runs/37649748701) pasó sus siete jobs, incluidas integraciones en ambos motores y Windows; consulta [Recuperación del baseline técnico](docs/FASE_1_BASELINE_TECNICO.md) y [Estado de implementación](docs/ESTADO_IMPLEMENTACION.md).
 
 ---
 

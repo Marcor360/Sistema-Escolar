@@ -30,7 +30,7 @@ Este documento distingue código presente de operación real. “Implementado”
 
 ## Candidato 1.14.0
 
-La Fase 1 parte de `7edce9a82e284dda8727eff7f31a980e32ad4d10`, cuya CI fallaba en ambas integraciones por metadata TypeORM de propiedades anulables. La reparación conserva `strict`, `strictNullChecks` y `DB_SYNC=false`. La evidencia y los requisitos pendientes del candidato se registran en [FASE_1_BASELINE_TECNICO.md](FASE_1_BASELINE_TECNICO.md); la CI histórica de abajo no certifica este candidato.
+La Fase 1 parte de `7edce9a82e284dda8727eff7f31a980e32ad4d10`, cuya CI fallaba en ambas integraciones por metadata TypeORM de propiedades anulables. La reparación conserva `strict`, `strictNullChecks` y `DB_SYNC=false`. La evidencia y los requisitos pendientes del candidato se registran en [FASE_1_BASELINE_TECNICO.md](FASE_1_BASELINE_TECNICO.md); la [CI de `5fa8065`](https://github.com/Marcor360/Sistema-Escolar/actions/runs/37649748701) pasó sus siete jobs, incluidos MySQL, SQL Server y Windows. La Fase 1 queda cerrada para ese código; las Fases 2–5 y la certificación operativa siguen pendientes.
 
 ## Verificación histórica
 

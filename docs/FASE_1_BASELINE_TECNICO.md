@@ -49,7 +49,7 @@ que las dos vulnerabilidades estén corregidas. Véase EXCEPCIONES_NPM_AUDIT.md.
 | ETL unittest | 3 pasan |
 | MySQL 8.4, integración completa | 21 pasan, DB_SYNC=false, base aislada |
 | Scripts Windows: parser PowerShell 7.5.4 en Linux | Todos sin errores de sintaxis |
-| Scripts Windows: pruebas de Junction/retención en Windows | Requieren el job Windows de CI |
+| Scripts Windows: pruebas de Junction/retención en Windows | Job windows-scripts verde en CI |
 | SQL Server 2022, integración completa | 21 pasan, DB_SYNC=false, base aislada |
 
 Docker, MySQL y SQL Server funcionan. La imagen oficial de SQL Server redirige a
@@ -73,12 +73,18 @@ de los lockfiles. Se restauran íntegramente desde el commit base y solo se camb
 las versiones raíz; se verifica por comparación estructural que las dependencias,
 URLs e integridades sean idénticas al baseline.
 
-## Gate de cierre
+## Evidencia de cierre técnico
 
-La Fase 1 **permanece abierta** hasta obtener CI completamente verde del SHA
-final en `main`, incluido Windows y SQL Server. Los resultados históricos no
-certifican el candidato. No iniciar las Fases 2–5 ni declarar PILOTO LISTO
-sustituyendo los gates pendientes por comprobaciones locales.
+El SHA `5fa8065a9992a322f8ef2e53761ee06cecc77f08` está en `main` y
+[su CI completa](https://github.com/Marcor360/Sistema-Escolar/actions/runs/37649748701)
+terminó **success** en los siete jobs: backend, web, móvil, ETL, Windows,
+MySQL y SQL Server. Se verificó el resultado por la API de GitHub para ese SHA.
+La Fase 1 queda cerrada para ese código. Esta actualización documental también
+se somete a CI antes de informar el SHA final de main.
+
+Las Fases 2–5 siguen pendientes. Esta reparación no certifica transiciones de
+dominio, refresh rotativo, reportes oficiales, conciliación financiera ni
+staging/dispositivos físicos. **PILOTO LISTO no está autorizado por estos resultados.**
 
 ## Archivos modificados o retirados
 
