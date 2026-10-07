@@ -234,7 +234,7 @@ async function main() {
     const existe = await cargosRepo.findOne({ where: { alumnoId: alumno.id, conceptoId: conceptoIns!.id } });
     if (!existe) {
       await cargosRepo.save(cargosRepo.create({
-        alumnoId: alumno.id,
+        alumnoId: alumno.id, plantelId: alumno.plantelId,
         conceptoId: conceptoIns!.id,
         cicloId: ciclo.id,
         descripcion: 'Inscripción ciclo 2026-2027',

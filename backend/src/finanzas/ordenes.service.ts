@@ -30,7 +30,7 @@ export class OrdenesService {
     const qb = this.ordenes.createQueryBuilder('o').innerJoinAndSelect('o.alumno', 'a').leftJoinAndSelect('a.usuario', 'u')
       .where('o.estatus IN (:...estatus)', { estatus: ['CREADA', 'PENDIENTE', 'FALLIDA'] });
     if (!user.roles.includes('SUPERADMIN')) qb.andWhere(
-      'EXISTS (SELECT 1 FROM usuario_planteles up WHERE up.usuario_id = :actor AND up.plantel_id = a.plantel_id AND up.activo = :activo)',
+      'EXISTS (SELECT 1 FROM usuario_planteles up WHERE up.usuario_id = :actor AND up.plantel_id = o.plantel_id AND up.activo = :activo)',
       { actor: user.sub, activo: true });
     const [datos, total] = await qb.orderBy('o.created_at', 'ASC').skip((pagina - 1) * 20).take(20).getManyAndCount();
     return { datos: datos.map((o) => ({ id: o.id, alumnoId: o.alumnoId, matricula: o.alumno.matricula, monto: o.monto,
@@ -42,7 +42,7 @@ export class OrdenesService {
     if (!motivo.trim()) throw new BadRequestException('Indica el motivo de conciliación');
     const orden = await this.ordenes.findOne({ where: { id } });
     if (!orden) throw new NotFoundException('Orden no encontrada');
-    await this.alumnos.obtener(orden.alumnoId, user);
+    await this.cargos.validarAcceso(orden, user);
     const charge = await this.openpay.buscarCargoPorOrden(`ORD-${id}`);
     if (!charge) throw new ConflictException('El proveedor todavía no confirma la orden; se conserva para revisión');
     if (charge.order_id !== `ORD-${id}` || Math.round(Number(charge.amount) * 100) !== Math.round(Number(orden.monto) * 100) ||
@@ -50,7 +50,7 @@ export class OrdenesService {
     await this.aplicarRespuestaCargo(id, charge);
     if (charge.status === 'completed') await this.pagos.registrarDePasarela(orden, Number(charge.amount), charge.id);
     await this.bitacora.registrar(user.sub, 'CONCILIAR_ORDEN', 'orden_pago', id,
-      `estado_proveedor=${charge.status}; ${motivo.trim()}`, orden.alumno.plantelId);
+      `estado_proveedor=${charge.status}; ${motivo.trim()}`, orden.plantelId);
     return { id, estadoProveedor: charge.status, mensaje: 'Resultado del proveedor verificado y auditado' };
   }
 
@@ -62,7 +62,7 @@ export class OrdenesService {
     if (alumno) {
       if (cargo.alumnoId !== alumno.id) throw new BadRequestException('El cargo no pertenece al alumno autenticado');
     } else {
-      await this.alumnos.obtener(cargo.alumnoId, user);
+      await this.cargos.validarAcceso(cargo, user);
     }
 
     const reserva = await this.dataSource.transaction(async (manager) => {
@@ -84,7 +84,7 @@ export class OrdenesService {
       if (saldoActual <= 0) throw new BadRequestException('El cargo no tiene saldo pendiente');
       const repo = manager.getRepository(OrdenPago);
       return { orden: await repo.save(repo.create({
-        alumnoId: cargo.alumnoId, cargoId: cargo.id, monto: saldoActual, descripcion: cargo.descripcion,
+        alumnoId: cargo.alumnoId, plantelId: cargo.plantelId, cargoId: cargo.id, monto: saldoActual, descripcion: cargo.descripcion,
         estatus: 'CREADA',
       })), previa: false };
     });
@@ -131,7 +131,7 @@ export class OrdenesService {
         'orden_pago',
         orden.id,
         `ORD-${orden.id}: fallo al crear cargo Openpay; requiere conciliación`,
-        cargo.alumno.plantelId,
+        cargo.plantelId,
       ).catch((): undefined => undefined);
       throw error;
     }
@@ -144,7 +144,7 @@ export class OrdenesService {
     }
     const actualizada = await this.aplicarRespuestaCargo(orden.id, charge);
     await this.bitacora.registrar(
-      user.sub, 'CREAR_ORDEN', 'orden_pago', orden.id, `openpay=${charge.id} $${orden.monto}`, cargo.alumno.plantelId,
+      user.sub, 'CREAR_ORDEN', 'orden_pago', orden.id, `openpay=${charge.id} $${orden.monto}`, cargo.plantelId,
     );
     return this.proyectarOrden(actualizada);
   }
@@ -174,7 +174,7 @@ export class OrdenesService {
       if (alumno) {
         if (orden.alumnoId !== alumno.id) throw new BadRequestException('La orden no pertenece al alumno autenticado');
       } else {
-        await this.alumnos.obtener(orden.alumnoId, user);
+        await this.cargos.validarAcceso(orden, user);
       }
     }
     return this.proyectarOrden(orden);

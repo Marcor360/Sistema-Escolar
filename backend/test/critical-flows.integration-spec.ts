@@ -1,3 +1,4 @@
+import { CobranzaService } from '../src/finanzas/cobranza.service';
 import { PushService } from '../src/notificaciones/push.service';
 import { NotificacionesService } from '../src/notificaciones/notificaciones.service';
 import { NestExpressApplication } from '@nestjs/platform-express';
@@ -16,7 +17,7 @@ import * as bcrypt from 'bcryptjs';
 import { DataSource } from 'typeorm';
 import {
   Alumno, Calificacion, Cargo, CicloEscolar, ConceptoPago, Grupo, GrupoMateria, Inscripcion,
-  BitacoraAcademica, PushDispositivo, PushEnvio, Docente, Entrega, Materia, Material, Notificacion, OrdenPago, Pago, Plantel, Rol, Usuario, UsuarioPlantel,
+  PlantillaCorreo, CobranzaEnvio, BitacoraAcademica, PushDispositivo, PushEnvio, Docente, Entrega, Materia, Material, Notificacion, OrdenPago, Pago, Plantel, Rol, Usuario, UsuarioPlantel,
 } from '../src/entities';
 import { AppModule } from '../src/app.module';
 import { BitacoraFinancieraService } from '../src/finanzas/bitacora-financiera.service';
@@ -93,6 +94,22 @@ async function esperarYCrearBaseSqlServer(): Promise<void> {
   }
 }
 
+const ledgerLegacyFixture = `
+  INSERT INTO planteles (clave,nombre) VALUES ('MIGRACION_B','Plantel actual tras transferencia');
+  INSERT INTO usuarios (email,password_hash,nombre,apellido_paterno,activo) VALUES ('ledger_migracion@example.invalid','fixture-sin-acceso','Histórico','Migración',0);
+  INSERT INTO alumnos (usuario_id,plantel_id,matricula)
+    SELECT u.id,p.id,'MIGRACION_LEDGER' FROM usuarios u CROSS JOIN planteles p WHERE u.email='ledger_migracion@example.invalid' AND p.clave='MIGRACION_B';
+  INSERT INTO conceptos_pago (clave,nombre,tipo,monto_base) VALUES ('MIGRACION_LEDGER','Cargo antiguo','OTRO',100);
+  INSERT INTO cargos (alumno_id,concepto_id,descripcion,monto)
+    SELECT a.id,c.id,'LEDGER_PREVIO',100 FROM alumnos a CROSS JOIN conceptos_pago c WHERE a.matricula='MIGRACION_LEDGER' AND c.clave='MIGRACION_LEDGER';
+  INSERT INTO bitacora_financiera (plantel_id,accion,entidad,entidad_id,detalle)
+    SELECT p.id,'CREAR_CARGO','cargo',c.id,'Origen antes de transferir' FROM planteles p CROSS JOIN cargos c WHERE p.clave='MIGRACION_FIXTURE' AND c.descripcion='LEDGER_PREVIO';
+  INSERT INTO ordenes_pago (alumno_id,cargo_id,monto,descripcion)
+    SELECT alumno_id,id,25,'LEDGER_PREVIO' FROM cargos WHERE descripcion='LEDGER_PREVIO';
+  INSERT INTO pagos (alumno_id,cargo_id,orden_pago_id,monto,metodo)
+    SELECT alumno_id,cargo_id,id,25,'PASARELA' FROM ordenes_pago WHERE descripcion='LEDGER_PREVIO';
+`;
+
 async function instalarBaseline(): Promise<void> {
   const raiz = resolve(process.cwd(), '..');
   if (process.env.DB_TYPE === 'mssql') {
@@ -122,6 +139,7 @@ async function instalarBaseline(): Promise<void> {
           FROM ciclos_escolares c CROSS JOIN planteles p
           WHERE c.clave = 'MIGRACION_FIXTURE' AND p.clave = 'MIGRACION_FIXTURE';
       `);
+      await pool.request().query(ledgerLegacyFixture);
     } finally {
       await pool.close();
     }
@@ -157,6 +175,7 @@ async function instalarBaseline(): Promise<void> {
         FROM ciclos_escolares c CROSS JOIN planteles p
         WHERE c.clave = 'MIGRACION_FIXTURE' AND p.clave = 'MIGRACION_FIXTURE'
     `);
+    await conexion.query(ledgerLegacyFixture);
   } finally {
     await conexion.end();
   }
@@ -217,6 +236,16 @@ describe('Integración de flujos críticos (base aislada)', () => {
       usuario.roles.some((r) => r.clave === 'ALUMNO') ? 'MOVIL' : 'WEB')).accessToken;
   };
 
+  const emitirFinanzasB = async () => {
+    const email = `finanzas_b_${sufijo}@example.invalid`;
+    if (!await dataSource.getRepository(Usuario).findOneBy({ email })) {
+      const root = await emitirToken((await dataSource.getRepository(Usuario).findOneByOrFail({ id: superadminId })).email);
+      const creado = await api('/usuarios', { method: 'POST', token: root, body: { email, password: 'Integracion_Segura_42!', nombre: 'Finanzas', apellidoPaterno: 'Plantel B', roles: ['FINANZAS'], plantelIds: [otroPlantelId] } });
+      expect(creado.response.status).toBe(201);
+    }
+    return emitirToken(email);
+  };
+
   beforeAll(async () => {
     if (process.env.RUN_DB_INTEGRATION !== '1') {
       throw new Error('Define RUN_DB_INTEGRATION=1 para habilitar pruebas contra la base aislada');
@@ -228,12 +257,14 @@ describe('Integración de flujos críticos (base aislada)', () => {
       throw new Error('La integración exige DB_SYNC=false y una base aislada con baseline instalado');
     }
     process.env.NODE_ENV = 'test';
+    process.env.PUSH_ENABLED = 'false'; process.env.SMTP_HOST = '';
     process.env.JWT_SECRET = process.env.JWT_SECRET || 'solo-para-pruebas-integrales';
     process.env.UPLOADS_DIR = process.env.UPLOADS_DIR || 'uploads';
     if (process.env.DB_TYPE === 'mssql') await esperarYCrearBaseSqlServer();
     await instalarBaseline();
 
     app = await NestFactory.create<NestExpressApplication>(AppModule, { logger: false });
+    if (process.env.RUN_WEB_E2E === '1') { process.env.CORS_ORIGINS = 'http://127.0.0.1:5181,http://localhost:5173'; app.enableCors({ origin: process.env.CORS_ORIGINS.split(','), credentials: true }); }
     app.setGlobalPrefix('api', { exclude: [{ path: 'uploads/:filename', method: RequestMethod.GET }] });
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
     await app.listen(0, '127.0.0.1');
@@ -320,7 +351,7 @@ describe('Integración de flujos críticos (base aislada)', () => {
     );
     const cargo = await dataSource.getRepository(Cargo).save(
       dataSource.getRepository(Cargo).create({
-        alumnoId, conceptoId: concepto.id, cicloId: null, periodo: null,
+        alumnoId, plantelId, conceptoId: concepto.id, cicloId: null, periodo: null,
         descripcion: 'Cargo webhook de integración', monto: 125, descuento: 0, recargo: 0,
         fechaVencimiento: null, estatus: 'PENDIENTE',
       }),
@@ -328,7 +359,7 @@ describe('Integración de flujos críticos (base aislada)', () => {
     cargoWebhookId = cargo.id;
     const orden = await dataSource.getRepository(OrdenPago).save(
       dataSource.getRepository(OrdenPago).create({
-        alumnoId, cargoId: cargo.id, monto: 125, descripcion: cargo.descripcion,
+        alumnoId, plantelId, cargoId: cargo.id, monto: 125, descripcion: cargo.descripcion,
         proveedor: 'OPENPAY', idExterno: `ch_${sufijo}`, urlPago: null, estatus: 'PENDIENTE',
         expiraEn: null, payloadWebhook: null,
       }),
@@ -1328,4 +1359,127 @@ describe('Integración de flujos críticos (base aislada)', () => {
     expect((await api(`/usuarios/${alumnoUsuarioId}/personal`, { method: 'PATCH', token: root, body: { plantelIds: [plantelId], roles: ['FINANZAS'] } })).response.status).toBe(409);
   });
 
+  it('migra el origen de cargos, órdenes y pagos existentes desde su primera bitácora', async () => {
+    const origen = await dataSource.getRepository(Plantel).findOneByOrFail({ clave: 'MIGRACION_FIXTURE' });
+    const alumno = await dataSource.getRepository(Alumno).findOneByOrFail({ matricula: 'MIGRACION_LEDGER' });
+    expect(alumno.plantelId).not.toBe(origen.id);
+    const cargo = await dataSource.getRepository(Cargo).findOneByOrFail({ descripcion: 'LEDGER_PREVIO' });
+    const orden = await dataSource.getRepository(OrdenPago).findOneByOrFail({ cargoId: cargo.id });
+    const pago = await dataSource.getRepository(Pago).findOneByOrFail({ cargoId: cargo.id });
+    expect([cargo.plantelId, orden.plantelId, pago.plantelId]).toEqual([origen.id, origen.id, origen.id]);
+  });
+
+  it('mantiene cargos, pagos, permisos y analítica en el plantel de origen después de transferir', async () => {
+    const root = await emitirToken((await dataSource.getRepository(Usuario).findOneByOrFail({ id: superadminId })).email);
+    const a = await emitirToken((await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId })).email);
+    const b = await emitirFinanzasB();
+    const alta = await api('/alumnos', { method: 'POST', token: root, body: { email: `origen_${sufijo}@example.invalid`, password: 'Integracion_Segura_42!', nombre: 'Origen', apellidoPaterno: 'Financiero', matricula: `OF${sufijo}`, plantelId } }); expect(alta.response.status).toBe(201);
+    const clase = await dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: grupoMateriaIdMaestro });
+    const concepto = await dataSource.getRepository(ConceptoPago).findOneByOrFail({ clave: `CW${sufijo}` });
+    const cargo = await api('/finanzas/cargos', { method: 'POST', token: a, body: { alumnoId: alta.data.id, conceptoId: concepto.id, cicloId: clase.grupo.cicloId, descripcion: 'Origen inmutable', monto: 100 } }); expect(cargo.response.status).toBe(201);
+    const transfer = await api(`/alumnos/${alta.data.id}/transferencia`, { method: 'POST', token: root, body: { plantelId: otroPlantelId, motivo: 'Cambio de sede' } }); expect(transfer.response.status).toBe(201);
+    const dto = { alumnoId: alta.data.id, cargoId: cargo.data.id, monto: 20, metodo: 'EFECTIVO', claveIdempotencia: randomUUID() };
+    expect((await api('/finanzas/pagos', { method: 'POST', token: b, body: dto })).response.status).toBe(403);
+    const pago = await api('/finanzas/pagos', { method: 'POST', token: a, body: dto }); expect(pago.response.status).toBe(201); expect(pago.data.plantelId).toBe(plantelId);
+    const buscador = await api(`/finanzas/alumnos?buscar=OF${sufijo}`, { token: a }); expect(buscador.response.status).toBe(200); expect(buscador.data.datos).toHaveLength(1); expect(JSON.stringify(buscador.data)).not.toContain('@example.invalid');
+    const cuentaA = await api(`/finanzas/alumnos/${alta.data.id}/estado-cuenta`, { token: a }); expect(cuentaA.response.status).toBe(200); expect(cuentaA.data.saldoTotal).toBe(80);
+    const cuentaB = await api(`/finanzas/alumnos/${alta.data.id}/estado-cuenta`, { token: b }); expect(cuentaB.response.status).toBe(200); expect(cuentaB.data.cargos).toEqual([]); expect(cuentaB.data.pagos).toEqual([]);
+    expect((await api(`/finanzas/pagos/${pago.data.id}/anulacion`, { method: 'POST', token: b, body: { motivo: 'Fuera del alcance' } })).response.status).toBe(403);
+    expect((await api(`/finanzas/pagos/${pago.data.id}/anulacion`, { method: 'POST', token: a, body: { motivo: 'Corrección autorizada' } })).response.status).toBe(201);
+    expect((await dataSource.getRepository(Cargo).findOneByOrFail({ id: cargo.data.id })).plantelId).toBe(plantelId);
+  });
+
+  it('analítica histórica conserva materia desactivada y participación de alumno de baja', async () => {
+    const root = await emitirToken((await dataSource.getRepository(Usuario).findOneByOrFail({ id: superadminId })).email);
+    const ciclo = await dataSource.getRepository(CicloEscolar).save({ clave: `AH${sufijo}`, nombre: 'Histórico analítico', fechaInicio: '2023-01-01', fechaFin: '2023-12-31', activo: false, estado: 'CERRADO' });
+    const grupo = await dataSource.getRepository(Grupo).save({ cicloId: ciclo.id, plantelId, nombre: 'Histórico', activo: false });
+    const materia = await dataSource.getRepository(Materia).save({ clave: `AH${sufijo}`, nombre: 'Materia retirada', activo: false, creditos: 0 });
+    const clase = await dataSource.getRepository(GrupoMateria).save({ grupoId: grupo.id, materiaId: materia.id, docenteId: null });
+    await dataSource.getRepository(Inscripcion).save({ alumnoId, grupoId: grupo.id, estatus: 'BAJA' });
+    for (const parcial of [1,2,3]) await dataSource.getRepository(Calificacion).save({ alumnoId, grupoMateriaId: clase.id, parcial, calificacion: [80.05, 80.15, 80.25][parcial-1], capturadaPorId: adminId });
+    const resultado = await api(`/analitica?cicloId=${ciclo.id}`, { token: root }); expect(resultado.response.status).toBe(200); expect(resultado.data.modo).toBe('HISTORICO'); expect(resultado.data.academico.clases).toEqual([expect.objectContaining({ materia: 'Materia retirada', inscritos: 1, participantesHistoricos: 1, inscritosVigentes: 0, promedioOficial: 80.2 })]);
+  });
+
+  it('recupera push pendiente después de fallar la cola sin duplicar envíos', async () => {
+    const push = app.get(PushService); const fallo = jest.spyOn(push, 'encolar').mockRejectedValueOnce(new Error('Fallo transitorio de DB'));
+    const n = await app.get(NotificacionesService).crear(alumnoUsuarioId, 'Aviso recuperable', 'Contenido solo en app');
+    expect((await dataSource.getRepository(Notificacion).findOneByOrFail({ id: n.id })).pushPendiente).toBe(true); fallo.mockRestore();
+    await push.recuperar(); await push.recuperar();
+    expect((await dataSource.getRepository(Notificacion).findOneByOrFail({ id: n.id })).pushPendiente).toBe(false);
+    // El caso previo desactivó la instalación; registrar una activa prueba la recuperación con destinatario real.
+    const token = await emitirToken((await dataSource.getRepository(Usuario).findOneByOrFail({ id: alumnoUsuarioId })).email);
+    await api('/notificaciones/push/dispositivos', { method: 'POST', token, body: { instalacionId: randomUUID(), token: `ExponentPushToken[retry${sufijo}]` } });
+    const fallo2 = jest.spyOn(push, 'encolar').mockRejectedValueOnce(new Error('Fallo de cola'));
+    const nueva = await app.get(NotificacionesService).crear(alumnoUsuarioId, 'Aviso durable', 'Información interna'); fallo2.mockRestore(); await push.recuperar(); await push.recuperar();
+    expect(await dataSource.getRepository(PushEnvio).countBy({ notificacionId: nueva.id })).toBe(1);
+  });
+
+  it('cobranza deduplica, conserva éxito parcial y exige revisión de timeout antes de reenviar', async () => {
+    const usuario = await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId }); const token = await emitirToken(usuario.email);
+    await dataSource.getRepository(PlantillaCorreo).save({ clave: 'AVISO_ADEUDO', asunto: 'Aviso {{institucion}}', cuerpoHtml: '<p>{{nombre}} {{saldo}}</p>' });
+    const servicio = app.get(CobranzaService);
+    const primera = await api('/finanzas/avisos-cobranza', { method: 'POST', token, body: { plantelId, confirmado: true } }); expect(primera.response.status).toBe(201); expect(primera.data.programados).toBeGreaterThan(0);
+    const repetida = await api('/finanzas/avisos-cobranza', { method: 'POST', token, body: { plantelId, confirmado: true } }); expect(repetida.data.programados).toBe(0);
+    await dataSource.getRepository(CobranzaEnvio).update({ estado: 'PENDIENTE' }, { proximoIntento: new Date(0) });
+    const smtp = jest.spyOn(app.get(NotificacionesService), 'enviarEmail').mockResolvedValueOnce({ simulado: false }).mockRejectedValueOnce(new Error('Timeout después de DATA')).mockResolvedValue({ simulado: false });
+    await servicio.procesar(); const cantidad = smtp.mock.calls.length; expect(cantidad).toBeGreaterThan(1); await servicio.procesar(); expect(smtp).toHaveBeenCalledTimes(cantidad); smtp.mockRestore();
+    expect(await dataSource.getRepository(CobranzaEnvio).countBy({ estado: 'ENVIADO' })).toBeGreaterThan(0);
+    const incierto = await dataSource.getRepository(CobranzaEnvio).findOneByOrFail({ estado: 'INCIERTO' });
+    const b = await emitirFinanzasB();
+    expect((await api(`/finanzas/cobranza/envios/${incierto.id}/reintento`, { method: 'POST', token: b, body: { motivo: 'Intento no autorizado', confirmado: true } })).response.status).toBe(403);
+    expect((await api(`/finanzas/cobranza/envios/${incierto.id}/reintento`, { method: 'POST', token, body: { motivo: 'Revisado con proveedor', confirmado: false } })).response.status).toBe(400);
+    expect((await api(`/finanzas/cobranza/envios/${incierto.id}/reintento`, { method: 'POST', token, body: { motivo: 'Proveedor confirmó que no recibió', confirmado: true } })).response.status).toBe(201);
+    const repo = dataSource.getRepository(CobranzaEnvio);
+    const rechazo = jest.spyOn(app.get(NotificacionesService), 'enviarEmail').mockRejectedValue(Object.assign(new Error('Rechazo temporal'), { responseCode: 450 }));
+    try {
+      for (let intento = 1; intento <= 3; intento++) {
+        await repo.update(incierto.id, { proximoIntento: new Date(0) }); await servicio.procesar();
+        const actual = await repo.findOneByOrFail({ id: incierto.id });
+        expect(actual.intentos).toBe(intento); expect(actual.estado).toBe(intento < 3 ? 'PENDIENTE' : 'ERROR');
+      }
+      await servicio.procesar(); expect(rechazo).toHaveBeenCalledTimes(3);
+      // Un proceso interrumpido debe conservar el resultado incierto y auditarlo sin reenviar.
+      await repo.update(incierto.id, { estado: 'ENVIANDO', proximoIntento: new Date(0) }); await servicio.procesar();
+      expect((await repo.findOneByOrFail({ id: incierto.id })).estado).toBe('INCIERTO'); expect(rechazo).toHaveBeenCalledTimes(3);
+      expect(await dataSource.getRepository(BitacoraFinanciera).existsBy({ accion: 'COBRANZA_INCIERTO', entidadId: incierto.id, detalle: 'ENVIO_INTERRUMPIDO_VERIFICAR_PROVEEDOR' })).toBe(true);
+    } finally { rechazo.mockRestore(); }
+  });
+
+  it('carga controlada: 100 alumnos, 900 notas y capturas concurrentes sin alterar promedios', async () => {
+    const admin = await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId }); const token = await emitirToken(admin.email);
+    const base = await dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: grupoMateriaIdMaestro });
+    const grupo = await dataSource.getRepository(Grupo).save({ plantelId, cicloId: base.grupo.cicloId, nombre: `Carga-${sufijo}`, activo: true });
+    const alumnosCarga: number[] = [];
+    const passwordHash = await bcrypt.hash('Integracion_Segura_42!', 4);
+    for (let i = 0; i < 100; i++) {
+      const u = await dataSource.getRepository(Usuario).save({ email: `carga${i}_${sufijo}@example.invalid`, nombre: 'Carga', apellidoPaterno: String(i), passwordHash, activo: true });
+      const a = await dataSource.getRepository(Alumno).save({ usuarioId: u.id, plantelId, matricula: `L${i}${sufijo}`, estatus: 'ACTIVO' }); alumnosCarga.push(a.id);
+    }
+    await dataSource.getRepository(Inscripcion).save(alumnosCarga.map((id) => ({ alumnoId: id, grupoId: grupo.id, estatus: 'ACTIVA' as const })));
+    const clases: number[] = [];
+    for (let i = 0; i < 3; i++) {
+      const materia = await dataSource.getRepository(Materia).save({ clave: `L${i}${sufijo}`, nombre: `Carga ${i}`, creditos: 0, activo: true });
+      clases.push((await dataSource.getRepository(GrupoMateria).save({ grupoId: grupo.id, materiaId: materia.id, docenteId: null })).id);
+    }
+    const tiempos: number[] = [];
+    for (const parcial of [1,2,3]) await Promise.all(clases.map(async (id) => {
+      const desde = Date.now(); const r = await api('/calificaciones/captura', { method: 'POST', token, body: { grupoMateriaId: id, parcial, items: alumnosCarga.map((alumnoId) => ({ alumnoId, calificacion: 80 })) } });
+      tiempos.push(Date.now() - desde); expect(r.response.status).toBe(201);
+    }));
+    const desde = Date.now(); const resultado = await api(`/analitica?grupoId=${grupo.id}`, { token }); const analiticaMs = Date.now() - desde;
+    expect(resultado.response.status).toBe(200); expect(resultado.data.academico.clases).toHaveLength(3);
+    for (const c of resultado.data.academico.clases) expect(c).toMatchObject({ inscritos: 100, oficialesCompletos: 100, promedioOficial: 80 });
+    expect(await dataSource.getRepository(Calificacion).countBy({ grupoMateriaId: require('typeorm').In(clases) })).toBe(900);
+    tiempos.sort((a,b) => a-b); console.log(JSON.stringify({ prueba: 'carga_aislada', motor: process.env.DB_TYPE, alumnos: 100, clases: 3, notas: 900, concurrencia: 3, capturasP95Ms: tiempos[Math.ceil(tiempos.length * .95)-1], analiticaMs }));
+  });
+  if (process.env.RUN_WEB_E2E === '1') for (const tipo of ['academico', 'financiero'] as const) {
+    it(`navegador real: recorrido ${tipo} completo con API y DB reales`, async () => {
+      const root = await emitirToken((await dataSource.getRepository(Usuario).findOneByOrFail({ id: superadminId })).email);
+      const usuario = await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId }); await emitirToken(usuario.email);
+      const docente = await api('/docentes', { method: 'POST', token: root, body: { email: `browserdoc_${tipo}_${sufijo}@example.invalid`, password: 'Integracion_Segura_42!', nombre: 'Docente', apellidoPaterno: 'Navegador', numEmpleado: `BW${tipo[0]}${sufijo}`, plantelIds: [plantelId] } }); expect(docente.response.status).toBe(201);
+      const clase = await dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: grupoMateriaIdMaestro });
+      const concepto = await dataSource.getRepository(ConceptoPago).findOneByOrFail({ clave: `CW${sufijo}` });
+      await (await import('./recorridos-web')).recorridoWeb({ baseUrl, email: usuario.email, password: passwords.get(usuario.email) ?? 'Integracion_Segura_42!', sufijo, plantelId, cicloId: clase.grupo.cicloId, materiaId: clase.materiaId, docenteId: docente.data.id, conceptoId: concepto.id }, tipo);
+    });
+  }
 });

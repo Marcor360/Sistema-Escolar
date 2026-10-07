@@ -15,7 +15,7 @@ const dataSourceFor = (_ordenes: any) => {
 
 describe('OrdenesService.crear', () => {
   it('rechaza a un alumno creando una orden de un cargo ajeno', async () => {
-    const cargos = { obtener: jest.fn().mockResolvedValue({ id: 1, alumnoId: 999 }), saldoDeCargo: jest.fn() };
+    const cargos = { validarAcceso: jest.fn().mockResolvedValue(undefined), obtener: jest.fn().mockResolvedValue({ id: 1, alumnoId: 999 }), saldoDeCargo: jest.fn() };
     const alumnos = { obtenerPorUsuario: jest.fn().mockResolvedValue({ id: 5 }), obtener: jest.fn() };
     const repo = {};
     const service = new OrdenesService(repo as any, alumnos as any, cargos as any, {} as any, {} as any, {} as any, {} as any, dataSourceFor(repo) as any);
@@ -24,7 +24,7 @@ describe('OrdenesService.crear', () => {
   });
 
   it('rechaza crear una orden si el cargo ya no tiene saldo pendiente', async () => {
-    const cargos = { obtener: jest.fn().mockResolvedValue({ id: 1, alumnoId: 5 }), saldoDeCargo: jest.fn().mockResolvedValue(0) };
+    const cargos = { validarAcceso: jest.fn().mockResolvedValue(undefined), obtener: jest.fn().mockResolvedValue({ id: 1, alumnoId: 5 }), saldoDeCargo: jest.fn().mockResolvedValue(0) };
     const alumnos = { obtenerPorUsuario: jest.fn().mockResolvedValue({ id: 5 }), obtener: jest.fn() };
     const repo = {};
     const service = new OrdenesService(repo as any, alumnos as any, cargos as any, {} as any, {} as any, {} as any, {} as any, dataSourceFor(repo) as any);
@@ -32,12 +32,12 @@ describe('OrdenesService.crear', () => {
     await expect(service.crear(1, alumnoUser)).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('para personal (FINANZAS), valida el alumno del cargo vía alumnos.obtener (alcance de plantel)', async () => {
+  it('para personal (FINANZAS), valida el plantel de origen del cargo', async () => {
     const cargo = {
-      id: 1, alumnoId: 10, descripcion: 'Colegiatura',
+      id: 1, alumnoId: 10, plantelId: 2, descripcion: 'Colegiatura',
       alumno: { plantelId: 2, usuario: { nombreCompleto: 'X Y', email: 'x@escuela.mx' } },
     };
-    const cargos = { obtener: jest.fn().mockResolvedValue(cargo), saldoDeCargo: jest.fn().mockResolvedValue(500) };
+    const cargos = { validarAcceso: jest.fn().mockResolvedValue(undefined), obtener: jest.fn().mockResolvedValue(cargo), saldoDeCargo: jest.fn().mockResolvedValue(500) };
     const alumnos = {
       obtenerPorUsuario: jest.fn().mockRejectedValue(new Error('el usuario no tiene expediente de alumno')),
       obtener: jest.fn().mockResolvedValue({ id: 10 }),
@@ -49,17 +49,17 @@ describe('OrdenesService.crear', () => {
 
     await service.crear(1, finanzasUser);
 
-    expect(alumnos.obtener).toHaveBeenCalledWith(10, finanzasUser);
+    expect(cargos.validarAcceso).toHaveBeenCalledWith(cargo, finanzasUser);
   });
 
   it('marca la orden local como fallida si Openpay rechaza la creación', async () => {
     const error: any = new Error('Openpay rechazó la solicitud');
     error.response = { status: 400 };
     const cargo = {
-      id: 1, alumnoId: 10, descripcion: 'Colegiatura',
+      id: 1, alumnoId: 10, plantelId: 2, descripcion: 'Colegiatura',
       alumno: { plantelId: 2, usuario: { nombreCompleto: 'X Y', email: 'x@escuela.mx' } },
     };
-    const cargos = { obtener: jest.fn().mockResolvedValue(cargo), saldoDeCargo: jest.fn().mockResolvedValue(500) };
+    const cargos = { validarAcceso: jest.fn().mockResolvedValue(undefined), obtener: jest.fn().mockResolvedValue(cargo), saldoDeCargo: jest.fn().mockResolvedValue(500) };
     const alumnos = {
       obtenerPorUsuario: jest.fn().mockRejectedValue(new Error('sin expediente')),
       obtener: jest.fn().mockResolvedValue({ id: 10 }),
@@ -84,8 +84,8 @@ describe('OrdenesService.crear', () => {
   });
 
   it('conserva CREADA ante timeout ambiguo para no duplicar el cargo', async () => {
-    const cargo = { id: 1, alumnoId: 10, descripcion: 'Colegiatura', alumno: { plantelId: 2, usuario: { nombreCompleto: 'X Y', email: 'x@escuela.mx' } } };
-    const cargos = { obtener: jest.fn().mockResolvedValue(cargo), saldoDeCargo: jest.fn().mockResolvedValue(500) };
+    const cargo = { id: 1, alumnoId: 10, plantelId: 2, descripcion: 'Colegiatura', alumno: { plantelId: 2, usuario: { nombreCompleto: 'X Y', email: 'x@escuela.mx' } } };
+    const cargos = { validarAcceso: jest.fn().mockResolvedValue(undefined), obtener: jest.fn().mockResolvedValue(cargo), saldoDeCargo: jest.fn().mockResolvedValue(500) };
     const alumnos = { obtenerPorUsuario: jest.fn().mockRejectedValue(new Error()), obtener: jest.fn().mockResolvedValue({ id: 10 }) };
     const ordenes = { create: jest.fn((d) => d), save: jest.fn() };
     const timeout = new Error('timeout');

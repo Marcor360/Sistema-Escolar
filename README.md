@@ -2,9 +2,21 @@
 
 > Portal web administrativo/docente, app móvil del alumno y API para gestión académica y financiera. El código cubre los flujos principales del MVP; todavía no hay certificación de piloto institucional ni despliegue productivo.
 
-**Versión candidata: `1.15.0` · Commit: `1.15.0` · 7 de octubre de 2026.** Backend, web, móvil y Expo declaran la misma versión. La CI del SHA publicado debe comprobarse en [GitHub Actions](https://github.com/Marcor360/Sistema-Escolar/actions/workflows/ci.yml). El piloto requiere todavía certificación sobre el servidor y dispositivos reales.
+**Versión candidata: `1.16.0` · Commit: `1.16.0` · 7 de octubre de 2026.** Backend, web, móvil y Expo declaran la misma versión. La CI del SHA publicado debe comprobarse en [GitHub Actions](https://github.com/Marcor360/Sistema-Escolar/actions/workflows/ci.yml). El piloto requiere todavía certificación sobre el servidor y dispositivos reales.
 
-## Cambios incluidos en la versión 1.15.0
+## Cambios incluidos en la versión 1.16.0
+
+- **Origen financiero:** cargos, pagos y órdenes conservan el plantel de origen después de transferir al alumno. Consultas, permisos, reportes, conciliación y selectores financieros usan ese origen.
+- **Histórico académico:** analítica de ciclos cerrados conserva materias/grupos retirados y participantes de baja; distingue participación histórica de inscripción vigente. Agregados en SQL con la regla oficial P1-P3 centralizada.
+- **Push durable:** la notificación conserva un marcador de cola pendiente; se recupera tras fallos sin duplicar envíos por dispositivo.
+- **Cobranza:** seguimiento por destinatario, deduplicación diaria del mismo saldo, reintentos limitados ante rechazo temporal, estado INCIERTO ante timeout y reintento manual con motivo/confirmación.
+- **Formularios:** motivos y títulos editables conservan datos tras errores; diálogos accesibles con foco y controles asociados a labels.
+- **Verificación ampliada:** recorridos académicos/financieros en Chromium con API/DB reales y carga controlada de 100 alumnos, 900 notas y capturas simultáneas. Nuevo job obligatorio `web-e2e`.
+- **Migración:** `migracion_integridad_operativa.sql` incremental espejo en MySQL/SQL Server. Baseline intacto y `DB_SYNC=false`.
+
+Detalle, inventario y límites: [CORRECCIONES_1.16.0.md](docs/CORRECCIONES_1.16.0.md). El ETL certweb completo requiere el esquema real sanitizado; no se inventan mapeos ni se declara el piloto listo.
+
+## Base funcional incluida desde 1.15.0
 
 - **Ampliación operativa:** ciclos en preparación con activación/cierre explícitos, promoción seleccionada, importación CSV/XLSX con validación por fila y confirmación atómica, reactivación controlada y gestión de cuentas de personal.
 - **Push móvil:** registro por dispositivo y sesión, permisos voluntarios, reintentos, recibos y aviso genérico sin datos académicos en pantalla bloqueada. Requiere configuración EAS/FCM/APNs y prueba física; queda deshabilitado por defecto en backend.

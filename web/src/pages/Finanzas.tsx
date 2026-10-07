@@ -1,3 +1,5 @@
+import { SeguimientoCobranza } from '../components/SeguimientoCobranza';
+import { useDialogoMotivo } from '../components/useDialogoMotivo';
 import { CatalogoConceptos } from '../components/CatalogoConceptos';
 import { FormEvent, KeyboardEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
@@ -25,6 +27,7 @@ interface ResultadoPagos { datos: Pago[]; total: number; pagina: number; porPagi
 
 
 export default function FinanzasPage() {
+  const dialogoMotivo = useDialogoMotivo();
   const [tab, setTab] = useState<'cargos' | 'pagos' | 'adeudos'>('cargos');
   const [conceptos, setConceptos] = useState<Concepto[]>([]);
   const [ciclos, setCiclos] = useState<Ciclo[]>([]);
@@ -46,14 +49,11 @@ export default function FinanzasPage() {
     const { data } = await api.post(preview, { ...datos, plantelId: Number(plantelOperacion) });
     return confirm(`Plantel: ${planteles.find((p) => p.id === Number(plantelOperacion))?.nombre}\nCiclo: ${data.cicloId ?? 'Vigente / cargos existentes'}\nPeriodo: ${data.periodo ?? 'Cargos vencidos'}\nRegistros afectados: ${data.registros ?? data.generados ?? 0}\nTotal estimado: ${pesos(data.totalEstimado ?? 0)}\n¿Confirmar operación?`);
   };
-  const corregir = async (tipo: 'cargos' | 'pagos', id: number) => {
-    const motivo = prompt(tipo === 'cargos' ? 'Motivo de cancelación del cargo:' : 'Motivo de anulación del pago:');
-    if (!motivo?.trim()) return;
-    if (!confirm('¿Confirmar? La operación se conservará en la bitácora financiera.')) return;
-    setEnviando(true); setError('');
-    try { await api.post(`/finanzas/${tipo}/${id}/${tipo === 'cargos' ? 'cancelacion' : 'anulacion'}`, { motivo });
+  const corregir = (tipo: 'cargos' | 'pagos', id: number) => {
+    dialogoMotivo.abrir({ titulo: tipo === 'cargos' ? 'Cancelar cargo' : 'Anular pago', advertencia: 'La operación conservará motivo, actor y fecha en la bitácora.', ejecutar: async (motivo) => {
+      await api.post(`/finanzas/${tipo}/${id}/${tipo === 'cargos' ? 'cancelacion' : 'anulacion'}`, { motivo });
       setMensaje('Corrección registrada en la bitácora'); await cargarDatos();
-    } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
+    } });
   };
 
   const [formCargo, setFormCargo] = useState({ alumnoId: '', conceptoId: '', descripcion: '', monto: '', descuento: '0', fechaVencimiento: '' });
@@ -182,7 +182,7 @@ export default function FinanzasPage() {
     try {
       if (!await confirmarMasiva('/finanzas/preview-cobranza', {})) return;
       const { data } = await api.post('/finanzas/avisos-cobranza', { plantelId: Number(plantelOperacion), confirmado: true });
-      setMensaje(`Avisos de cobranza enviados: ${data.enviados}`);
+      setMensaje(`Avisos programados: ${data.programados}; ya registrados: ${data.omitidos}. Consulta el seguimiento de envíos.`);
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
@@ -201,7 +201,7 @@ export default function FinanzasPage() {
   };
 
   return (
-    <>
+    <>{dialogoMotivo.elemento}
       <Encabezado titulo="Finanzas" detalle="Cargos, pagos, adeudos y cobranza" />
       <CatalogoConceptos cambiado={() => { void cargarCatalogos(); }} />
 
@@ -224,9 +224,9 @@ export default function FinanzasPage() {
           <section className="panel">
             <h2>Nuevo cargo individual</h2>
             <form onSubmit={crearCargo} className="fila">
-              <SelectorBuscable<Alumno> ruta="/alumnos" valor={formCargo.alumnoId} cambiar={(id) => setFormCargo({ ...formCargo, alumnoId: id })} etiqueta="Alumno" texto={(a) => `${a.matricula} — ${a.usuario.nombre} ${a.usuario.apellidoPaterno}`} />
-              <div className="campo"><label>Concepto</label>
-                <select
+              <SelectorBuscable<Alumno> ruta="/finanzas/alumnos" valor={formCargo.alumnoId} cambiar={(id) => setFormCargo({ ...formCargo, alumnoId: id })} etiqueta="Alumno" texto={(a) => `${a.matricula} — ${a.usuario.nombre} ${a.usuario.apellidoPaterno}`} />
+              <div className="campo"><label htmlFor="finanzas-campo-1">Concepto</label>
+                <select id="finanzas-campo-1"
                   required value={formCargo.conceptoId}
                   onChange={(e) => {
                     const concepto = conceptos.find((c) => c.id === Number(e.target.value));
@@ -242,14 +242,14 @@ export default function FinanzasPage() {
                   {conceptos.filter((c) => !['BECA', 'DESCUENTO', 'RECARGO'].includes(c.tipo)).map((c) => <option key={c.id} value={c.id}>{c.clave} — {c.nombre}</option>)}
                 </select>
               </div>
-              <div className="campo"><label>Descripción</label>
-                <input required value={formCargo.descripcion} onChange={(e) => setFormCargo({ ...formCargo, descripcion: e.target.value })} />
+              <div className="campo"><label htmlFor="finanzas-campo-2">Descripción</label>
+                <input id="finanzas-campo-2" required value={formCargo.descripcion} onChange={(e) => setFormCargo({ ...formCargo, descripcion: e.target.value })} />
               </div>
-              <div className="campo"><label>Monto</label>
-                <input type="number" min={0} step={0.01} required value={formCargo.monto} onChange={(e) => setFormCargo({ ...formCargo, monto: e.target.value })} />
+              <div className="campo"><label htmlFor="finanzas-campo-3">Monto</label>
+                <input id="finanzas-campo-3" type="number" min={0} step={0.01} required value={formCargo.monto} onChange={(e) => setFormCargo({ ...formCargo, monto: e.target.value })} />
               </div>
-              <div className="campo"><label htmlFor="descuento-cargo">Beca / descuento</label><input id="descuento-cargo" type="number" min={0} max={formCargo.monto || undefined} step="0.01" value={formCargo.descuento} onChange={(e) => setFormCargo({ ...formCargo, descuento: e.target.value })} /></div><div className="campo"><label>Vence</label>
-                <input type="date" value={formCargo.fechaVencimiento} onChange={(e) => setFormCargo({ ...formCargo, fechaVencimiento: e.target.value })} />
+              <div className="campo"><label htmlFor="descuento-cargo">Beca / descuento</label><input id="descuento-cargo" type="number" min={0} max={formCargo.monto || undefined} step="0.01" value={formCargo.descuento} onChange={(e) => setFormCargo({ ...formCargo, descuento: e.target.value })} /></div><div className="campo"><label htmlFor="finanzas-campo-4">Vence</label>
+                <input id="finanzas-campo-4" type="date" value={formCargo.fechaVencimiento} onChange={(e) => setFormCargo({ ...formCargo, fechaVencimiento: e.target.value })} />
               </div>
               <button disabled={enviando} className="boton">Registrar cargo</button>
             </form>
@@ -258,14 +258,14 @@ export default function FinanzasPage() {
           <section className="panel">
             <h2>Generar colegiaturas del periodo</h2>
             <form onSubmit={generarColegiaturas} className="fila">
-              <div className="campo"><label>Ciclo</label>
-                <select required value={formColegiaturas.cicloId} onChange={(e) => setFormColegiaturas({ ...formColegiaturas, cicloId: e.target.value })}>
+              <div className="campo"><label htmlFor="finanzas-campo-5">Ciclo</label>
+                <select id="finanzas-campo-5" required value={formColegiaturas.cicloId} onChange={(e) => setFormColegiaturas({ ...formColegiaturas, cicloId: e.target.value })}>
                   <option value="">Selecciona…</option>
                   {ciclos.map((c) => <option key={c.id} value={c.id}>{c.clave}</option>)}
                 </select>
               </div>
-              <div className="campo"><label>Periodo (AAAA-MM)</label>
-                <input required pattern="\d{4}-\d{2}" placeholder="2026-09" value={formColegiaturas.periodo}
+              <div className="campo"><label htmlFor="finanzas-campo-6">Periodo (AAAA-MM)</label>
+                <input id="finanzas-campo-6" required pattern="\d{4}-\d{2}" placeholder="2026-09" value={formColegiaturas.periodo}
                   onChange={(e) => setFormColegiaturas({ ...formColegiaturas, periodo: e.target.value })} />
               </div>
               <button disabled={enviando} className="boton">Generar para inscritos</button>
@@ -299,19 +299,19 @@ export default function FinanzasPage() {
           <section className="panel">
             <h2>Registrar pago manual</h2>
             <form onSubmit={registrarPago} className="fila">
-              <SelectorBuscable<Alumno> ruta="/alumnos" valor={formPago.alumnoId} cambiar={(id) => setFormPago({ ...formPago, alumnoId: id, cargoId: '' })} etiqueta="Alumno" texto={(a) => `${a.matricula} — ${a.usuario.nombre} ${a.usuario.apellidoPaterno}`} />
+              <SelectorBuscable<Alumno> ruta="/finanzas/alumnos" valor={formPago.alumnoId} cambiar={(id) => setFormPago({ ...formPago, alumnoId: id, cargoId: '' })} etiqueta="Alumno" texto={(a) => `${a.matricula} — ${a.usuario.nombre} ${a.usuario.apellidoPaterno}`} />
               <SelectorBuscable<Cargo> ruta="/finanzas/cargos" valor={formPago.cargoId} cambiar={(id) => setFormPago({ ...formPago, cargoId: id })}
                 etiqueta="Cargo" deshabilitado={!formPago.alumnoId} filtros={{ alumnoId: Number(formPago.alumnoId) || undefined }} texto={(c) => `${c.descripcion} — ${pesos(c.monto - c.descuento + c.recargo)} · ${c.estatus}`} />
-              <div className="campo"><label>Monto</label>
-                <input type="number" min={0.01} step={0.01} required value={formPago.monto} onChange={(e) => setFormPago({ ...formPago, monto: e.target.value })} />
+              <div className="campo"><label htmlFor="finanzas-campo-7">Monto</label>
+                <input id="finanzas-campo-7" type="number" min={0.01} step={0.01} required value={formPago.monto} onChange={(e) => setFormPago({ ...formPago, monto: e.target.value })} />
               </div>
-              <div className="campo"><label>Método</label>
-                <select value={formPago.metodo} onChange={(e) => setFormPago({ ...formPago, metodo: e.target.value })}>
+              <div className="campo"><label htmlFor="finanzas-campo-8">Método</label>
+                <select id="finanzas-campo-8" value={formPago.metodo} onChange={(e) => setFormPago({ ...formPago, metodo: e.target.value })}>
                   <option>EFECTIVO</option><option>TRANSFERENCIA</option><option>TARJETA</option>
                 </select>
               </div>
-              <div className="campo"><label>Referencia</label>
-                <input value={formPago.referencia} onChange={(e) => setFormPago({ ...formPago, referencia: e.target.value })} />
+              <div className="campo"><label htmlFor="finanzas-campo-9">Referencia</label>
+                <input id="finanzas-campo-9" value={formPago.referencia} onChange={(e) => setFormPago({ ...formPago, referencia: e.target.value })} />
               </div>
               <button disabled={enviando} className="boton">Registrar pago</button>
             </form>
@@ -340,7 +340,7 @@ export default function FinanzasPage() {
       {tab === 'adeudos' && (
         <div id="panel-adeudos" role="tabpanel" aria-labelledby="tab-adeudos" tabIndex={0}>
           <div className="acciones" style={{ marginBottom: 14 }}>
-            <button disabled={enviando} className="boton" onClick={enviarAvisos}>Enviar avisos de cobranza</button>
+            <button disabled={enviando} className="boton" onClick={enviarAvisos}>Programar avisos de cobranza</button>
             <button className="boton secundario" onClick={descargarExcel}>Descargar Excel de adeudos</button>
           </div>
           <table className="tabla">
@@ -360,7 +360,7 @@ export default function FinanzasPage() {
               {adeudos.length === 0 && <tr><td className="vacio" colSpan={7}>Sin adeudos: todos los cargos están cubiertos.</td></tr>}
             </tbody>
           </table>
-          <Paginador total={totalAdeudos} pagina={paginaAdeudos} porPagina={20} onCambio={cargarAdeudos} />
+          <SeguimientoCobranza /><Paginador total={totalAdeudos} pagina={paginaAdeudos} porPagina={20} onCambio={cargarAdeudos} />
         </div>
       )}
     </>

@@ -10,7 +10,7 @@ import { CobranzaService } from './cobranza.service';
 import { BitacoraFinancieraService } from './bitacora-financiera.service';
 import { OpenpayWebhookGuard } from './openpay-webhook.guard';
 import {
-  AplicarRecargosDto, ActualizarConceptoDto, ConceptoDto, CrearCargoDto, CrearOrdenDto,
+  ReintentoCobranzaDto, AplicarRecargosDto, ActualizarConceptoDto, ConceptoDto, CrearCargoDto, CrearOrdenDto,
   GenerarColegiaturasDto, ListarCargosDto, ListarPagosDto, RegistrarPagoDto, MotivoFinancieroDto, CobranzaDto, AplicarPagoDto,
 } from './finanzas.dto';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
@@ -74,6 +74,10 @@ export class FinanzasController {
   }
 
   // ---------- Cuentas por cobrar ----------
+  @Get('alumnos')
+  @ApiBearerAuth() @UseGuards(JwtAuthGuard, RolesGuard) @Roles('FINANZAS', 'ADMINISTRATIVO')
+  alumnosFinancieros(@Query() query: ListarCargosDto, @CurrentUser() user: JwtUser) { return this.cargos.listarAlumnosFinancieros(query, user); }
+
   @Get('cargos')
   @ApiBearerAuth() @UseGuards(JwtAuthGuard, RolesGuard) @Roles('FINANZAS', 'ADMINISTRATIVO')
   listarCargos(@CurrentUser() user: JwtUser, @Query() query: ListarCargosDto) {
@@ -164,6 +168,13 @@ export class FinanzasController {
   adeudos(@CurrentUser() user: JwtUser, @Query() query: ListarCargosDto) {
     return this.cargos.adeudosPaginados(user, query);
   }
+
+  @Get('cobranza/envios')
+  @ApiBearerAuth() @UseGuards(JwtAuthGuard, RolesGuard) @Roles('FINANZAS')
+  enviosCobranza(@CurrentUser() user: JwtUser, @Query() query: ListarPagosDto) { return this.cobranza.listar(user, query.pagina); }
+  @Post('cobranza/envios/:id/reintento')
+  @ApiBearerAuth() @UseGuards(JwtAuthGuard, RolesGuard) @Roles('FINANZAS')
+  reintentoCobranza(@Param('id', ParseIntPipe) id: number, @Body() dto: ReintentoCobranzaDto, @CurrentUser() user: JwtUser) { return this.cobranza.reintentar(id, dto.motivo, dto.confirmado, user); }
 
   // ---------- Pagos ----------
   @Get('pagos')

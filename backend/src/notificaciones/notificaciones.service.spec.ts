@@ -37,7 +37,7 @@ describe('NotificacionesService.difundir alcance', () => {
 
     await expect(service.difundir('Aviso', 'Mensaje', { rol: 'ALUMNO' }, admin as any))
       .resolves.toEqual({ enviadas: 1 });
-    expect(repo.create).toHaveBeenCalledWith({ usuarioId: 20, titulo: 'Aviso', mensaje: 'Mensaje', tipo: 'GENERAL' });
+    expect(repo.create).toHaveBeenCalledWith({ usuarioId: 20, titulo: 'Aviso', mensaje: 'Mensaje', tipo: 'GENERAL', pushPendiente: true });
     expect(repo.save).toHaveBeenCalledTimes(1);
   });
 });

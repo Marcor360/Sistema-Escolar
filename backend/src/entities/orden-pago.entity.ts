@@ -3,6 +3,7 @@ import {
   PrimaryGeneratedColumn, UpdateDateColumn,
 } from 'typeorm';
 import { decimalTransformer } from '../common/decimal.transformer';
+import { Plantel } from './plantel.entity';
 import { Alumno } from './alumno.entity';
 import { Cargo } from './cargo.entity';
 
@@ -11,6 +12,8 @@ export type OrdenEstatus = 'CREADA' | 'PENDIENTE' | 'COMPLETADA' | 'FALLIDA' | '
 @Entity('ordenes_pago')
 export class OrdenPago {
   @PrimaryGeneratedColumn() id: number;
+  @Index('idx_orden_pago_plantel') @Column() plantelId: number;
+  @ManyToOne(() => Plantel) @JoinColumn({ name: 'plantel_id' }) plantel: Plantel;
   @Column() alumnoId: number;
   @ManyToOne(() => Alumno, { eager: true })
   @JoinColumn({ name: 'alumno_id' })

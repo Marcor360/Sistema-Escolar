@@ -85,3 +85,5 @@ export class CobranzaDto {
 export class AplicarPagoDto extends MotivoFinancieroDto {
   @IsInt() @Min(1) cargoId: number;
 }
+
+export class ReintentoCobranzaDto extends MotivoFinancieroDto { @IsBoolean() confirmado: boolean; }

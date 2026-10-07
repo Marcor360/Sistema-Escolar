@@ -1,5 +1,6 @@
 import { Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { decimalTransformer } from '../common/decimal.transformer';
+import { Plantel } from './plantel.entity';
 import { Alumno } from './alumno.entity';
 import { Cargo } from './cargo.entity';
 import { OrdenPago } from './orden-pago.entity';
@@ -16,6 +17,8 @@ export type PagoEstatus = 'CONFIRMADO' | 'PENDIENTE' | 'FALLIDO' | 'CANCELADO';
 @Entity('pagos')
 export class Pago {
   @PrimaryGeneratedColumn() id: number;
+  @Index('idx_pago_plantel') @Column() plantelId: number;
+  @ManyToOne(() => Plantel) @JoinColumn({ name: 'plantel_id' }) plantel: Plantel;
   @Index('idx_pago_alumno') @Column() alumnoId: number;
   @ManyToOne(() => Alumno, { eager: true })
   @JoinColumn({ name: 'alumno_id' })

@@ -1,5 +1,5 @@
 import { CicloEscolar } from '../entities/ciclo-escolar.entity';
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, In, Repository } from 'typeorm';
 import { BitacoraFinanciera } from '../entities/bitacora-financiera.entity';
@@ -75,7 +75,7 @@ export class CargosService {
     const qb = this.cargos.createQueryBuilder('c')
       .innerJoinAndSelect('c.alumno', 'a')
       .leftJoinAndSelect('a.usuario', 'u');
-    if (planteles !== null) qb.andWhere('a.plantel_id IN (:...planteles)', { planteles });
+    if (planteles !== null) qb.andWhere('c.plantel_id IN (:...planteles)', { planteles });
     if (query.alumnoId) qb.andWhere('c.alumno_id = :alumnoId', { alumnoId: query.alumnoId });
     if (query.estatus) qb.andWhere('c.estatus = :estatus', { estatus: query.estatus });
     if (query.buscar?.trim()) qb.andWhere('(c.descripcion LIKE :buscar OR a.matricula LIKE :buscar)', { buscar: `%${query.buscar.trim()}%` });
@@ -91,10 +91,27 @@ export class CargosService {
     };
   }
 
+  async listarAlumnosFinancieros(query: ListarCargosDto, user: JwtUser) {
+    const planteles = await this.scope.resolverFiltro(user);
+    const qb = this.dataSource.getRepository(Alumno).createQueryBuilder('a').innerJoin('a.usuario', 'u')
+      .select(['a.id', 'a.matricula', 'u.id', 'u.nombre', 'u.apellidoPaterno']);
+    if (planteles !== null) qb.where('(a.plantel_id IN (:...planteles) OR EXISTS (SELECT 1 FROM cargos c WHERE c.alumno_id = a.id AND c.plantel_id IN (:...planteles)) OR EXISTS (SELECT 1 FROM pagos p WHERE p.alumno_id = a.id AND p.plantel_id IN (:...planteles)))', { planteles });
+    if (query.buscar?.trim()) qb.andWhere('(a.matricula LIKE :buscar OR u.nombre LIKE :buscar OR u.apellido_paterno LIKE :buscar)', { buscar: `%${query.buscar.trim()}%` });
+    const pagina = query.pagina || 1, porPagina = query.porPagina || 20;
+    const [datos, total] = await qb.orderBy('a.matricula', 'ASC').skip((pagina - 1) * porPagina).take(porPagina).getManyAndCount();
+    return { datos: datos.map((a) => ({ id: a.id, matricula: a.matricula, usuario: { nombre: a.usuario.nombre, apellidoPaterno: a.usuario.apellidoPaterno } })), total, pagina, porPagina };
+  }
+
   async obtener(id: number) {
     const cargo = await this.cargos.findOne({ where: { id } });
     if (!cargo) throw new NotFoundException('Cargo no encontrado');
     return cargo;
+  }
+
+  async validarAcceso(cargo: Pick<Cargo, 'plantelId' | 'alumno'>, user: JwtUser) {
+    if (user.roles.includes('ALUMNO')) {
+      if (cargo.alumno.usuarioId !== user.sub) throw new ForbiddenException('Solo puedes consultar tus propios cargos');
+    } else await this.scope.validarGestion(user, cargo.plantelId);
   }
 
   async crear(dto: CrearCargoDto, user: JwtUser) {
@@ -108,7 +125,7 @@ export class CargosService {
       const cargos = manager.getRepository(Cargo);
       const cargo = await cargos.save(
         cargos.create({
-          alumnoId: dto.alumnoId,
+          alumnoId: dto.alumnoId, plantelId: alumno.plantelId,
           conceptoId: dto.conceptoId,
           cicloId: dto.cicloId ?? null,
           periodo: dto.periodo ?? null,
@@ -131,13 +148,13 @@ export class CargosService {
       const cargos = manager.getRepository(Cargo);
       const cargo = await cargos.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!cargo) throw new NotFoundException('Cargo no encontrado');
-      await this.scope.validarGestion(user, cargo.alumno.plantelId);
+      await this.scope.validarGestion(user, cargo.plantelId);
       if (cargo.estatus === 'CANCELADO') throw new ConflictException('El cargo ya está cancelado');
       const pagos = await manager.getRepository(Pago).count({ where: { cargoId: id, estatus: 'CONFIRMADO' } });
       const ordenes = await manager.getRepository(OrdenPago).count({ where: { cargoId: id, estatus: In(['CREADA', 'PENDIENTE']) } });
       if (pagos || ordenes) throw new ConflictException('No puedes cancelar un cargo con pagos aplicados u órdenes pendientes');
       cargo.estatus = 'CANCELADO'; await cargos.save(cargo);
-      await manager.getRepository(BitacoraFinanciera).insert({ usuarioId: user.sub, plantelId: cargo.alumno.plantelId,
+      await manager.getRepository(BitacoraFinanciera).insert({ usuarioId: user.sub, plantelId: cargo.plantelId,
         accion: 'CANCELAR_CARGO', entidad: 'cargo', entidadId: id, detalle: motivo.trim() });
       return { ok: true };
     });
@@ -209,6 +226,7 @@ export class CargosService {
           if (!alumno || alumno.estatus !== 'ACTIVO' || !alumno.usuario.activo || (planteles !== null && !planteles.includes(alumno.plantelId))) return false;
           if (!await manager.getRepository(ConceptoPago).existsBy({ id: concepto.id, activo: true, tipo: 'COLEGIATURA' })) return false;
           if (!await manager.getRepository(Inscripcion).existsBy({ alumnoId: alumno.id, estatus: 'ACTIVA', grupo: { cicloId: dto.cicloId, plantelId: alumno.plantelId, activo: true, plantel: { activo: true } } })) return false;
+          nuevo.plantelId = alumno.plantelId;
           const cargo = await manager.getRepository(Cargo).save(nuevo);
           const plantelId = alumno.plantelId;
           await this.bitacora.registrar(
@@ -241,7 +259,7 @@ export class CargosService {
       .innerJoin('c.concepto', 'cp', 'cp.aplica_recargo = :aplicaRecargo AND cp.activo = :aplicaRecargo', { aplicaRecargo: true })
       .where('c.estatus IN (:...estatus)', { estatus: ['PENDIENTE', 'PARCIAL'] })
       .andWhere('c.fecha_vencimiento < :hoy', { hoy });
-    if (planteles !== null) qb.andWhere('a.plantel_id IN (:...planteles)', { planteles });
+    if (planteles !== null) qb.andWhere('c.plantel_id IN (:...planteles)', { planteles });
     const candidatos = (await qb.getMany()).filter((c) => c.recargo === 0);
     if (preview) return { plantelId: dto.plantelId, porcentaje, registros: candidatos.length,
       totalEstimado: redondear(candidatos.reduce((s, c) => s + redondear((c.monto - c.descuento) * porcentaje / 100), 0)) };
@@ -256,12 +274,12 @@ export class CargosService {
         });
         if (!cargo || !cargo.concepto.aplicaRecargo || !cargo.concepto.activo || !['PENDIENTE', 'PARCIAL'].includes(cargo.estatus) ||
             !cargo.fechaVencimiento || cargo.fechaVencimiento >= hoy || cargo.recargo > 0 ||
-            (planteles !== null && !planteles.includes(cargo.alumno.plantelId))) continue;
+            (planteles !== null && !planteles.includes(cargo.plantelId))) continue;
         cargo.recargo = redondear((cargo.monto - cargo.descuento) * (porcentaje / 100));
         cargo.estatus = 'VENCIDO';
         await cargos.save(cargo);
         aplicados++;
-        const plantelId = cargo.alumno.plantelId;
+        const plantelId = cargo.plantelId;
         porPlantel.set(plantelId, (porPlantel.get(plantelId) ?? 0) + 1);
       }
       for (const [plantelId, cantidad] of porPlantel) {
@@ -295,7 +313,7 @@ export class CargosService {
     const pagina = query.pagina || 1; const porPagina = query.porPagina || 20;
     const qb = this.cargos.createQueryBuilder('c').leftJoinAndSelect('c.alumno', 'a').leftJoinAndSelect('a.usuario', 'u')
       .where('c.estatus IN (:...estatus)', { estatus: ['PENDIENTE', 'PARCIAL', 'VENCIDO'] });
-    if (planteles !== null) qb.andWhere('a.plantel_id IN (:...planteles)', { planteles });
+    if (planteles !== null) qb.andWhere('c.plantel_id IN (:...planteles)', { planteles });
     const [cargos, total] = await qb.orderBy('c.fecha_vencimiento', 'ASC').addOrderBy('c.id', 'ASC')
       .skip((pagina - 1) * porPagina).take(porPagina).getManyAndCount();
     const pagado = await this.pagadoPorCargo(cargos.map((c) => c.id));
@@ -312,7 +330,7 @@ export class CargosService {
       .leftJoinAndSelect('a.usuario', 'u')
       .where('c.estatus IN (:...estatus)', { estatus: ['PENDIENTE', 'PARCIAL', 'VENCIDO'] })
       .orderBy('c.fecha_vencimiento', 'ASC');
-    if (planteles !== null) qb.andWhere('a.plantel_id IN (:...planteles)', { planteles });
+    if (planteles !== null) qb.andWhere('c.plantel_id IN (:...planteles)', { planteles });
     const cargos = await qb.getMany();
     const pagado = await this.pagadoPorCargo(cargos.map((c) => c.id));
     return cargos
@@ -326,15 +344,18 @@ export class CargosService {
 
   /** Estado de cuenta de un alumno: cargos con saldos + historial de pagos. */
   async estadoDeCuenta(alumnoId: number, user?: JwtUser) {
-    const alumno = await this.alumnos.obtener(alumnoId, user);
+    const alumno = await this.alumnos.obtener(alumnoId);
+    const planteles = user ? await this.scope.resolverFiltro(user) : null;
+    const alcance = planteles === null ? {} : { plantelId: In(planteles) };
     const [cargos, pagos] = await Promise.all([
       this.cargos.find({
-        where: { alumnoId, estatus: In(['PENDIENTE', 'PARCIAL', 'PAGADO', 'VENCIDO']) },
+        where: { alumnoId, ...alcance, estatus: In(['PENDIENTE', 'PARCIAL', 'PAGADO', 'VENCIDO']) },
         order: { fechaVencimiento: 'ASC' },
       }),
-      this.pagos.find({ where: { alumnoId }, order: { fechaPago: 'DESC' } }),
+      this.pagos.find({ where: { alumnoId, ...alcance }, order: { fechaPago: 'DESC' } }),
     ]);
 
+    if (user && planteles !== null && !planteles.includes(alumno.plantelId) && !cargos.length && !pagos.length) throw new ForbiddenException('No hay operaciones del alumno dentro de tu alcance');
     const detalle = cargos.map((cargo) => {
       const pagado = pagos
         .filter((p) => p.cargoId === cargo.id && p.estatus === 'CONFIRMADO')
@@ -382,6 +403,7 @@ export class CargosService {
       id: cargo.id,
       alumnoId: cargo.alumnoId,
       conceptoId: cargo.conceptoId,
+      plantelId: cargo.plantelId,
       cicloId: cargo.cicloId,
       periodo: cargo.periodo,
       descripcion: cargo.descripcion,

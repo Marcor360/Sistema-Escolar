@@ -128,26 +128,26 @@ export default function GruposPage() {
       <section className="panel">
         <h2 id="form-grupo">{editando ? 'Editar grupo' : 'Nuevo grupo'}</h2>
         <form onSubmit={crearGrupo} className="fila">
-          <div className="campo"><label>Plantel</label>
-            <select required disabled={editando !== null || enviando} value={formGrupo.plantelId} onChange={(e) => setFormGrupo({ ...formGrupo, plantelId: e.target.value })}>
+          <div className="campo"><label htmlFor="grupos-campo-1">Plantel</label>
+            <select id="grupos-campo-1" required disabled={editando !== null || enviando} value={formGrupo.plantelId} onChange={(e) => setFormGrupo({ ...formGrupo, plantelId: e.target.value })}>
               <option value="">Selecciona…</option>
               {planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
             </select>
           </div>
-          <div className="campo"><label>Ciclo</label>
-            <select required disabled={editando !== null || enviando} value={formGrupo.cicloId} onChange={(e) => setFormGrupo({ ...formGrupo, cicloId: e.target.value })}>
+          <div className="campo"><label htmlFor="grupos-campo-2">Ciclo</label>
+            <select id="grupos-campo-2" required disabled={editando !== null || enviando} value={formGrupo.cicloId} onChange={(e) => setFormGrupo({ ...formGrupo, cicloId: e.target.value })}>
               <option value="">Selecciona…</option>
               {ciclos.filter((c) => (c.activo || c.estado === 'PREPARACION') || c.id === editando?.ciclo.id).map((c) => <option key={c.id} value={c.id}>{c.clave}</option>)}
             </select>
           </div>
-          <div className="campo"><label>Nombre</label>
-            <input required placeholder="1-A" value={formGrupo.nombre} onChange={(e) => setFormGrupo({ ...formGrupo, nombre: e.target.value })} />
+          <div className="campo"><label htmlFor="grupos-campo-3">Nombre</label>
+            <input id="grupos-campo-3" required placeholder="1-A" value={formGrupo.nombre} onChange={(e) => setFormGrupo({ ...formGrupo, nombre: e.target.value })} />
           </div>
-          <div className="campo"><label>Grado</label>
-            <input value={formGrupo.grado} onChange={(e) => setFormGrupo({ ...formGrupo, grado: e.target.value })} />
+          <div className="campo"><label htmlFor="grupos-campo-4">Grado</label>
+            <input id="grupos-campo-4" value={formGrupo.grado} onChange={(e) => setFormGrupo({ ...formGrupo, grado: e.target.value })} />
           </div>
-          <div className="campo"><label>Turno</label>
-            <select value={formGrupo.turno} onChange={(e) => setFormGrupo({ ...formGrupo, turno: e.target.value })}>
+          <div className="campo"><label htmlFor="grupos-campo-5">Turno</label>
+            <select id="grupos-campo-5" value={formGrupo.turno} onChange={(e) => setFormGrupo({ ...formGrupo, turno: e.target.value })}>
               <option value="MATUTINO">Matutino</option>
               <option value="VESPERTINO">Vespertino</option>
             </select>
@@ -157,8 +157,8 @@ export default function GruposPage() {
       </section>
 
       <div className="fila" style={{ marginBottom: 12 }}><div className="campo"><label htmlFor="filtro-ciclo-grupos">Consultar ciclo</label><select id="filtro-ciclo-grupos" value={filtroCiclo} onChange={(e) => setFiltroCiclo(e.target.value)}><option value="">Vigente</option>{ciclos.map((c) => <option key={c.id} value={c.id}>{c.clave} · {c.estado}</option>)}</select></div>
-        <div className="campo"><label>Filtrar por plantel</label>
-          <select value={filtroPlantel} onChange={(e) => setFiltroPlantel(e.target.value)}>
+        <div className="campo"><label htmlFor="grupos-campo-6">Filtrar por plantel</label>
+          <select id="grupos-campo-6" value={filtroPlantel} onChange={(e) => setFiltroPlantel(e.target.value)}>
             <option value="">Todos</option>
             {planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
           </select>
@@ -193,8 +193,8 @@ export default function GruposPage() {
               <button disabled={enviando || !nuevoDocente} onClick={() => operar(`/academico/grupo-materias/${reasignando}/docente/${nuevoDocente}`, 'patch')}>Confirmar reasignación</button>
               <button onClick={() => setReasignando(null)}>Cancelar</button></div>}
             <form onSubmit={asignarMateria} className="fila" style={{ marginBottom: 14 }}>
-              <div className="campo"><label>Materia</label>
-                <select required value={materiaId} onChange={(e) => setMateriaId(e.target.value)}>
+              <div className="campo"><label htmlFor="grupos-campo-7">Materia</label>
+                <select id="grupos-campo-7" required value={materiaId} onChange={(e) => setMateriaId(e.target.value)}>
                   <option value="">Selecciona…</option>
                   {materias.map((m) => <option key={m.id} value={m.id}>{m.clave} — {m.nombre}</option>)}
                 </select>

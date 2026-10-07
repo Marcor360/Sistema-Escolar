@@ -15,7 +15,7 @@ function servicioTransaccional(options: {
   saldo?: number;
 } = {}) {
   const claveIdempotencia = '6a99e643-b51b-4ee4-8f23-603ab0e61253';
-  const cargo = options.cargo ?? { id: 3, alumnoId: 8, estatus: 'PENDIENTE' };
+  const cargo = options.cargo ?? { id: 3, plantelId: 2, alumnoId: 8, estatus: 'PENDIENTE' };
   const orden = options.orden ?? {
     id: 12, alumnoId: 8, cargoId: 3, monto: 125, estatus: 'PENDIENTE', alumno,
   };
@@ -41,12 +41,13 @@ function servicioTransaccional(options: {
   };
   const dataSource = { transaction: jest.fn((callback) => callback(manager as any)) };
   const cargos = {
+    obtener: jest.fn().mockResolvedValue({ ...cargo, plantelId: 2 }),
     saldoDeCargo: jest.fn().mockResolvedValue(options.saldo ?? 125),
     recalcularEstatus: jest.fn().mockResolvedValue(undefined),
   };
   const alumnos = { obtener: jest.fn().mockResolvedValue(alumno) };
   const pagosGlobal = { findOne: jest.fn().mockResolvedValue(null) };
-  const service = new PagosService(pagosGlobal as any, alumnos as any, cargos as any, {} as any, dataSource as any);
+  const service = new PagosService(pagosGlobal as any, alumnos as any, cargos as any, { validarGestion: jest.fn().mockResolvedValue(undefined) } as any, dataSource as any);
   return { service, cargo, orden, pagosRepo, pagosGlobal, cargoRepo, ordenRepo, bitacoraRepo, manager, cargos, alumnos, claveIdempotencia };
 }
 

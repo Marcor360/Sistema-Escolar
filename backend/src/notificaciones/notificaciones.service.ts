@@ -41,7 +41,7 @@ export class NotificacionesService {
       this.transporter = nodemailer.createTransport({
         host,
         port,
-        secure: port === 465,
+        secure: port === 465, connectionTimeout: 15000, greetingTimeout: 15000, socketTimeout: 30000,
         ...(user && pass ? { auth: { user, pass } } : {}),
       });
     }
@@ -57,7 +57,7 @@ export class NotificacionesService {
   }
 
   async crear(usuarioId: number, titulo: string, mensaje: string, tipo: Notificacion['tipo'] = 'GENERAL') {
-    const notificacion = await this.repo.save(this.repo.create({ usuarioId, titulo, mensaje, tipo }));
+    const notificacion = await this.repo.save(this.repo.create({ usuarioId, titulo, mensaje, tipo, pushPendiente: true }));
     await this.push?.encolar(notificacion).catch(() => this.logger.warn('Push pendiente; la notificación permanece disponible en la app'));
     return notificacion;
   }
@@ -97,7 +97,7 @@ export class NotificacionesService {
   }
 
   /** Envía correo real si hay SMTP configurado; si no, lo registra en consola. */
-  async enviarEmail(to: string, subject: string, html: string) {
+  async enviarEmail(to: string, subject: string, html: string, messageId?: string) {
     if (!this.transporter) {
       this.logger.log('SMTP no configurado: correo no enviado');
       return { simulado: true };
@@ -106,7 +106,7 @@ export class NotificacionesService {
       from: this.config.get<string>('SMTP_FROM') || 'no-reply@escolar.mx',
       to,
       subject,
-      html,
+      html, ...(messageId ? { messageId: `<${messageId}>` } : {}),
     });
     return { simulado: false };
   }

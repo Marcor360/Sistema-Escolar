@@ -166,3 +166,47 @@ jobs:
       - name: Validar estructura de despliegue
         shell: pwsh
         run: ./scripts/windows/Test-StagingScripts.ps1
+
+  web-e2e:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: integration-root
+          MYSQL_DATABASE: escolar_integration_browser
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pintegration-root"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    env:
+      RUN_DB_INTEGRATION: '1'
+      RUN_WEB_E2E: '1'
+      NODE_ENV: test
+      DB_TYPE: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: '3306'
+      DB_USER: root
+      DB_PASS: integration-root
+      DB_NAME: escolar_integration_browser
+      DB_SYNC: 'false'
+      JWT_SECRET: integration-only-secret
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            web/package-lock.json
+      - run: node ../scripts/ci-install.cjs
+        working-directory: backend
+      - run: node ../scripts/ci-install.cjs
+        working-directory: web
+      - run: npx playwright install --with-deps chromium
+        working-directory: web
+      - name: Recorridos web con API y base reales
+        run: npm run test:integration
+        working-directory: backend

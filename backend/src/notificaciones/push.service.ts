@@ -17,8 +17,8 @@ export class PushService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PushService.name);
   constructor(private readonly ds: DataSource, private readonly config: ConfigService) {}
   onModuleInit() {
-    if (this.config.get('PUSH_ENABLED') === 'true') {
-      this.timer = setInterval(() => { void this.procesar().catch(() => this.logger.warn('No se pudo procesar push; revisar proveedor/configuración')); }, 30000);
+    {
+      this.timer = setInterval(() => { void this.recuperar().then(() => this.procesar()).catch(() => this.logger.warn('No se pudo procesar push; revisar proveedor/configuración')); }, 30000);
       this.timer.unref();
     }
   }
@@ -43,14 +43,21 @@ export class PushService implements OnModuleInit, OnModuleDestroy {
   }
   async encolar(notificacion: Notificacion) {
     const dispositivos = await this.ds.getRepository(PushDispositivo).find({ where: { usuarioId: notificacion.usuarioId, activo: true } });
-    if (!dispositivos.length) return;
     await this.ds.transaction(async (manager) => {
       // Serializa la cola por notificación para impedir duplicados también entre procesos.
       const actual = await manager.getRepository(Notificacion).findOne({ where: { id: notificacion.id }, lock: { mode: 'pessimistic_write' } });
       if (!actual) return;
+      if (!actual.pushPendiente) return;
       const repo = manager.getRepository(PushEnvio);
       for (const d of dispositivos) if (!await repo.existsBy({ notificacionId: actual.id, dispositivoId: d.id })) await repo.insert({ notificacionId: actual.id, dispositivoId: d.id, estado: 'PENDIENTE', intentos: 0, proximoIntento: new Date(), ticketId: null, error: null });
+      await manager.getRepository(Notificacion).update(actual.id, { pushPendiente: false });
     });
+  }
+  async recuperar() {
+    const pendientes = await this.ds.getRepository(Notificacion).find({ where: { pushPendiente: true }, order: { id: 'ASC' }, take: 50 });
+    for (const n of pendientes) {
+      try { await this.encolar(n); } catch { this.logger.warn('Cola push pendiente; se reintentará sin perder la notificación'); }
+    }
   }
   async procesar() {
     if (this.trabajando || this.config.get('PUSH_ENABLED') !== 'true') return;

@@ -278,6 +278,7 @@ CREATE TABLE eventos_calendario (
 ) ENGINE=InnoDB;
 
 CREATE TABLE notificaciones (
+    push_pendiente BOOLEAN NOT NULL DEFAULT FALSE,
   id INT AUTO_INCREMENT PRIMARY KEY,
   usuario_id INT NOT NULL,
   titulo VARCHAR(150) NOT NULL,
@@ -301,6 +302,7 @@ CREATE TABLE conceptos_pago (
 ) ENGINE=InnoDB;
 
 CREATE TABLE cargos (
+    plantel_id INT NOT NULL,
   id INT AUTO_INCREMENT PRIMARY KEY,
   alumno_id INT NOT NULL,
   concepto_id INT NOT NULL,
@@ -327,6 +329,7 @@ CREATE TABLE cargos (
 ) ENGINE=InnoDB;
 
 CREATE TABLE ordenes_pago (
+    plantel_id INT NOT NULL,
   id INT AUTO_INCREMENT PRIMARY KEY,
   alumno_id INT NOT NULL,
   cargo_id INT NULL,
@@ -346,6 +349,7 @@ CREATE TABLE ordenes_pago (
 ) ENGINE=InnoDB;
 
 CREATE TABLE pagos (
+    plantel_id INT NOT NULL,
   id INT AUTO_INCREMENT PRIMARY KEY,
   alumno_id INT NOT NULL,
   cargo_id INT NULL,
@@ -509,3 +513,26 @@ CREATE TABLE archivos_limpieza (
   error VARCHAR(100) NULL
 ) ENGINE=InnoDB;
 CREATE UNIQUE INDEX uq_archivo_limpieza_nombre ON archivos_limpieza(nombre);
+
+ALTER TABLE cargos ADD CONSTRAINT fk_cargos_plantel_origen FOREIGN KEY (plantel_id) REFERENCES planteles(id);
+CREATE INDEX idx_cargo_plantel ON cargos(plantel_id);
+
+ALTER TABLE pagos ADD CONSTRAINT fk_pagos_plantel_origen FOREIGN KEY (plantel_id) REFERENCES planteles(id);
+CREATE INDEX idx_pago_plantel ON pagos(plantel_id);
+
+ALTER TABLE ordenes_pago ADD CONSTRAINT fk_ordenes_pago_plantel_origen FOREIGN KEY (plantel_id) REFERENCES planteles(id);
+CREATE INDEX idx_orden_pago_plantel ON ordenes_pago(plantel_id);
+
+CREATE TABLE cobranza_envios (
+ id INT AUTO_INCREMENT NOT NULL PRIMARY KEY,
+ clave VARCHAR(64) NOT NULL,
+ plantel_id INT NOT NULL, usuario_id INT NOT NULL, actor_id INT NOT NULL,
+ saldo DECIMAL(12,2) NOT NULL,
+ estado VARCHAR(15) NOT NULL DEFAULT 'PENDIENTE', intentos INT NOT NULL DEFAULT 0,
+ proximo_intento DATETIME NOT NULL, error VARCHAR(80) NULL,
+ created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ CONSTRAINT fk_cobranza_plantel FOREIGN KEY (plantel_id) REFERENCES planteles(id),
+ CONSTRAINT fk_cobranza_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
+ CONSTRAINT fk_cobranza_actor FOREIGN KEY (actor_id) REFERENCES usuarios(id)
+);
+CREATE UNIQUE INDEX uq_cobranza_clave ON cobranza_envios(clave);

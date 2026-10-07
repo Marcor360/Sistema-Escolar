@@ -3,6 +3,7 @@ import {
   PrimaryGeneratedColumn, UpdateDateColumn,
 } from 'typeorm';
 import { decimalTransformer } from '../common/decimal.transformer';
+import { Plantel } from './plantel.entity';
 import { Alumno } from './alumno.entity';
 import { ConceptoPago } from './concepto-pago.entity';
 import { CicloEscolar } from './ciclo-escolar.entity';
@@ -12,6 +13,8 @@ export type CargoEstatus = 'PENDIENTE' | 'PARCIAL' | 'PAGADO' | 'VENCIDO' | 'CAN
 @Entity('cargos')
 export class Cargo {
   @PrimaryGeneratedColumn() id: number;
+  @Index('idx_cargo_plantel') @Column() plantelId: number;
+  @ManyToOne(() => Plantel) @JoinColumn({ name: 'plantel_id' }) plantel: Plantel;
   @Index('idx_cargo_alumno') @Column() alumnoId: number;
   @ManyToOne(() => Alumno, { eager: true })
   @JoinColumn({ name: 'alumno_id' })

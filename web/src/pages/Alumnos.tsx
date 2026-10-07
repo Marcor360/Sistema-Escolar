@@ -1,3 +1,4 @@
+import { useDialogoMotivo } from '../components/useDialogoMotivo';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
@@ -22,6 +23,7 @@ const FORM_INICIAL = {
 };
 
 export default function AlumnosPage() {
+  const dialogoMotivo = useDialogoMotivo();
   const [resultado, setResultado] = useState<Resultado>({ datos: [], total: 0, pagina: 1, porPagina: 20 });
   const [planteles, setPlanteles] = useState<Plantel[]>([]);
   const [plantelId, setPlantelId] = useState('');
@@ -51,7 +53,8 @@ export default function AlumnosPage() {
     catch (err) { setError(mensajeDeError(err)); }
   };
   const editar = async (alumno: Alumno) => {
-    setError('');
+    if (enviando) return;
+    setEnviando(true); setError('');
     try {
       const { data } = await api.get(`/alumnos/${alumno.id}`);
       setForm({ ...FORM_INICIAL, matricula: data.matricula, plantelId: String(data.plantelId),
@@ -59,7 +62,7 @@ export default function AlumnosPage() {
         tutorNombre: data.tutorNombre ?? '', tutorTelefono: data.tutorTelefono ?? '' });
       setEditando(alumno.id);
       document.getElementById('form-alumno')?.scrollIntoView();
-    } catch (err) { setError(mensajeDeError(err)); }
+    } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
   const egresar = async (alumno: Alumno) => {
     if (!confirm('¿Egresar al alumno? Se terminarán sus inscripciones y su acceso; conservará el expediente.')) return;
@@ -142,34 +145,34 @@ export default function AlumnosPage() {
   };
 
   return (
-    <>
+    <>{dialogoMotivo.elemento}
       <Encabezado titulo="Alumnos" detalle="Alta, consulta, boletas y baja de expedientes" />
 
       {puedeGestionar && <section className="panel" id="form-alumno">
         <h2>{editando ? 'Editar alumno' : 'Registrar alumno'}</h2>
-        <form onSubmit={crear}>
+        <form onSubmit={crear} aria-busy={enviando}><fieldset disabled={enviando} style={{ border: 0, margin: 0, padding: 0 }}><legend>Datos del alumno</legend>
           <div className="fila">
-            <div className="campo"><label>Plantel</label>
-              <select required disabled={editando !== null || enviando} value={form.plantelId} onChange={(e) => setForm({ ...form, plantelId: e.target.value })}>
+            <div className="campo"><label htmlFor="alumnos-campo-1">Plantel</label>
+              <select id="alumnos-campo-1" required disabled={editando !== null || enviando} value={form.plantelId} onChange={(e) => setForm({ ...form, plantelId: e.target.value })}>
                 <option value="">Selecciona…</option>
                 {planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
               </select>
             </div>
-            <div className="campo"><label>Matrícula</label><input required disabled={editando !== null} {...dar('matricula')} /></div>
-            <div className="campo"><label>Nombre</label><input required {...dar('nombre')} /></div>
-            <div className="campo"><label>Apellido paterno</label><input required {...dar('apellidoPaterno')} /></div>
-            <div className="campo"><label>Apellido materno</label><input {...dar('apellidoMaterno')} /></div>
-            <div className="campo"><label>CURP</label><input {...dar('curp')} /></div>
+            <div className="campo"><label htmlFor="alumnos-campo-2">Matrícula</label><input id="alumnos-campo-2" required disabled={editando !== null} {...dar('matricula')} /></div>
+            <div className="campo"><label htmlFor="alumnos-campo-3">Nombre</label><input id="alumnos-campo-3" required {...dar('nombre')} /></div>
+            <div className="campo"><label htmlFor="alumnos-campo-4">Apellido paterno</label><input id="alumnos-campo-4" required {...dar('apellidoPaterno')} /></div>
+            <div className="campo"><label htmlFor="alumnos-campo-5">Apellido materno</label><input id="alumnos-campo-5" {...dar('apellidoMaterno')} /></div>
+            <div className="campo"><label htmlFor="alumnos-campo-6">CURP</label><input id="alumnos-campo-6" {...dar('curp')} /></div>
           </div>
           <div className="fila" style={{ marginTop: 10 }}>
-            <div className="campo"><label>Correo</label><input type="email" required disabled={editando !== null} {...dar('email')} /></div>
-            {!editando && <div className="campo"><label>Contraseña inicial</label><input type="password" autoComplete="new-password" required minLength={8} {...dar('password')} /></div>}
-            <div className="campo"><label>Tutor</label><input {...dar('tutorNombre')} /></div>
-            <div className="campo"><label>Tel. tutor</label><input {...dar('tutorTelefono')} /></div>
+            <div className="campo"><label htmlFor="alumnos-campo-7">Correo</label><input id="alumnos-campo-7" type="email" required disabled={editando !== null} {...dar('email')} /></div>
+            {!editando && <div className="campo"><label htmlFor="alumnos-campo-8">Contraseña inicial</label><input id="alumnos-campo-8" type="password" autoComplete="new-password" required minLength={8} {...dar('password')} /></div>}
+            <div className="campo"><label htmlFor="alumnos-campo-9">Tutor</label><input id="alumnos-campo-9" {...dar('tutorNombre')} /></div>
+            <div className="campo"><label htmlFor="alumnos-campo-10">Tel. tutor</label><input id="alumnos-campo-10" {...dar('tutorTelefono')} /></div>
             <button className="boton" disabled={enviando}>{enviando ? 'Guardando…' : 'Guardar alumno'}</button>
             {editando && <button type="button" className="boton secundario" onClick={() => { setEditando(null); setForm(FORM_INICIAL); }}>Cancelar edición</button>}
           </div>
-        </form>
+        </fieldset></form>
         {error && <p className="mensaje-error">{error}</p>}
         {mensaje && <p className="mensaje-ok">{mensaje}</p>}
       </section>}
@@ -193,15 +196,15 @@ export default function AlumnosPage() {
         </form></section>}
 
       <div className="fila" style={{ marginBottom: 12 }}>
-        <div className="campo"><label>Filtrar por plantel</label>
-          <select value={plantelId} onChange={(e) => setPlantelId(e.target.value)}>
+        <div className="campo"><label htmlFor="alumnos-campo-11">Filtrar por plantel</label>
+          <select id="alumnos-campo-11" value={plantelId} onChange={(e) => setPlantelId(e.target.value)}>
             <option value="">Todos</option>
             {planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
           </select>
         </div>
         <div className="campo">
-          <label>Buscar por matrícula</label>
-          <input
+          <label htmlFor="alumnos-campo-12">Buscar por matrícula</label>
+          <input id="alumnos-campo-12"
             value={buscar}
             onChange={(e) => setBuscar(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && cargar(1, buscar, plantelId)}
@@ -227,7 +230,7 @@ export default function AlumnosPage() {
                   {puedeGestionar && <button className="boton secundario chico" onClick={() => verHistorial(a)}>Historial y boleta</button>}
                   {puedeGestionar && <>
                     <button disabled={enviando} className="boton secundario chico" onClick={() => editar(a)}>Editar</button>
-                    {a.estatus === 'BAJA' && <button disabled={enviando} onClick={async () => { const motivo = prompt('Motivo de reactivación. No se restauran inscripciones; deberá inscribirse explícitamente.'); if (!motivo?.trim() || enviando) return; setEnviando(true); setError(''); try { await api.post(`/alumnos/${a.id}/reactivacion`, { motivo }); setMensaje('Alumno reactivado; inscribe desde Grupos'); await cargar(1, buscar, plantelId); } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); } }}>Reactivar expediente</button>}
+                    {a.estatus === 'BAJA' && <button disabled={enviando} onClick={() => dialogoMotivo.abrir({ titulo: 'Reactivar alumno', advertencia: 'No se restauran inscripciones; deberá inscribirse explícitamente.', ejecutar: async (motivo) => { await api.post(`/alumnos/${a.id}/reactivacion`, { motivo }); setMensaje('Alumno reactivado; inscribe desde Grupos'); await cargar(1, buscar, plantelId); } })}>Reactivar expediente</button>}
                     {a.estatus === 'ACTIVO' && <>
                       <button disabled={enviando} className="boton secundario chico" onClick={() => { setTransferencia(a); setDestino(''); }}>Transferir</button>
                       <button disabled={enviando} className="boton secundario chico" onClick={() => egresar(a)}>Egresar</button>

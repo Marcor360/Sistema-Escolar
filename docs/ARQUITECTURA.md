@@ -105,3 +105,13 @@ Conducta es un módulo exclusivamente interno; no se importa en móvil y no gene
 Push usa Expo Push Service desde backend; dispositivos ligados a sesiones y cola persistida en ambos motores. Solo se contacta al proveedor cuando `PUSH_ENABLED=true`. El móvil obtiene permiso y ExpoPushToken con el ID público EAS; el access token del proveedor permanece en backend. Se verifica sesión y dueño justo antes de enviar, y se consultan recibos con límite temporal. Los avisos son genéricos.
 
 La cola `archivos_limpieza` se escribe en la misma transacción que elimina/reemplaza la referencia pública. El worker elimina después de commit y reintenta fallos de almacenamiento; las referencias nunca se descartan silenciosamente. Los DTO rechazados limpian temporales mediante interceptor.
+
+## Integridad operativa 1.16.0
+
+El scope financiero se fija en `cargos.plantel_id`, `pagos.plantel_id` y `ordenes_pago.plantel_id`; una transferencia no modifica esas columnas. Las consultas/acciones financieras y bitácoras usan el origen. El selector financiero solo entrega identificadores y nombres dentro del alcance de expedientes actuales u operaciones propias.
+
+La analítica agrega en DB y devuelve filas por clase; no carga todas las notas/expedientes/entregas para hacer filtros anidados en Node. La regla P1-P3 y la expresión SQL están en `common/promedio-oficial.ts`. El modo histórico depende de ciclo CERRADO y nunca omite materia por desactivación posterior.
+
+`notificaciones.push_pendiente` es un outbox: la cola y la retirada del marcador se confirman en la misma transacción. La recuperación ocurre aun con push externo deshabilitado; no contacta al proveedor hasta habilitarlo.
+
+`cobranza_envios` registra cada destinatario, clave diaria del saldo, actor, lease, intentos y resultado. Estado ENVIANDO con lease vencido pasa a INCIERTO; no se repite automáticamente una transmisión potencialmente aceptada. SMTP no garantiza exactly-once: Message-ID estable ayuda al diagnóstico, pero una incertidumbre se resuelve con verificación del proveedor y confirmación explícita. No se guardan destinatarios/asuntos/cuerpos en logs ni se devuelve email en el seguimiento.

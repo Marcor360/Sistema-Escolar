@@ -67,7 +67,7 @@ export class ReportesService {
       .innerJoin('p.alumno', 'a')
       .where('p.estatus = :e', { e: 'CONFIRMADO' })
       .andWhere('p.fecha_pago >= :d', { d: inicioMes });
-    if (planteles !== null) pagosQb.andWhere('a.plantel_id IN (:...planteles)', { planteles });
+    if (planteles !== null) pagosQb.andWhere('p.plantel_id IN (:...planteles)', { planteles });
     const pagosMes = await pagosQb.getRawOne<{ total: string }>();
 
     return {
@@ -168,8 +168,6 @@ export class ReportesService {
       if (propio.id !== alumno.id) throw new ForbiddenException('No puedes consultar la boleta de otro alumno');
     } else if (!user.roles.some((rol) => ['SUPERADMIN', 'ADMINISTRATIVO'].includes(rol))) {
       throw new ForbiddenException('La boleta completa es exclusiva del alumno y control escolar; usa el concentrado de tus clases');
-    } else if (!user.roles.includes('SUPERADMIN')) {
-      await this.scope.validarGestion(user, alumno.plantelId);
     }
     const inscripciones = await this.grupos.manager.getRepository(Inscripcion).find({
       where: { alumnoId, ...(inscripcionId ? { id: inscripcionId } : {}), grupo: cicloId ? { cicloId } : { ciclo: { activo: true } } },

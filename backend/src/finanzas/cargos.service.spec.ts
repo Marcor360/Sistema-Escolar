@@ -68,7 +68,7 @@ describe('CargosService.adeudos minimiza datos del alumno', () => {
 describe('CargosService.aplicarRecargos', () => {
   it('calcula (monto - descuento) x porcentaje/100 en cargos vencidos sin recargo previo', async () => {
     const cargo = {
-      id: 1, monto: 1000, descuento: 100, recargo: 0, estatus: 'PENDIENTE',
+      id: 1, plantelId: 4, monto: 1000, descuento: 100, recargo: 0, estatus: 'PENDIENTE',
       concepto: { activo: true, aplicaRecargo: true }, fechaVencimiento: '2020-01-01', alumno: { plantelId: 4 },
     };
     const qb = {

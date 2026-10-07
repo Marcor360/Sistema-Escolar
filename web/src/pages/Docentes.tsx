@@ -1,3 +1,4 @@
+import { useDialogoMotivo } from '../components/useDialogoMotivo';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { Encabezado } from '../components/Encabezado';
@@ -19,6 +20,7 @@ const FORM_INICIAL = {
 };
 
 export default function DocentesPage() {
+  const dialogoMotivo = useDialogoMotivo();
   const [resultado, setResultado] = useState<Resultado>({ datos: [], total: 0, pagina: 1, porPagina: 20 });
   const [planteles, setPlanteles] = useState<Plantel[]>([]);
   const [plantelIds, setPlantelIds] = useState<number[]>([]);
@@ -35,12 +37,14 @@ export default function DocentesPage() {
   };
   const guardarPlanteles = async () => {
     if (!detalle || enviando || !confirm('¿Confirmar los planteles del docente? Las clases deben reasignarse antes de retirar un plantel.')) return;
-    const motivo = detalle.estatus === 'BAJA' ? prompt('Motivo de reactivación. Las clases no se restauran automáticamente.') : undefined;
-    if (detalle.estatus === 'BAJA' && !motivo?.trim()) return;
+    const guardar = async (motivo?: string) => {
+      await api.post(`/docentes/${detalle.id}/${detalle.estatus === 'BAJA' ? 'reactivacion' : 'planteles'}`, { plantelIds: detalle.plantelIds, ...(motivo ? { motivo } : {}) }); setMensaje('Planteles actualizados'); setDetalle(null); cargar(1, filtroPlantel);
+    };
+    if (detalle.estatus === 'BAJA') { dialogoMotivo.abrir({ titulo: 'Reactivar docente', advertencia: 'Las clases no se restauran automáticamente.', ejecutar: guardar }); return; }
     setEnviando(true); setError('');
-    try { await api.post(`/docentes/${detalle.id}/${detalle.estatus === 'BAJA' ? 'reactivacion' : 'planteles'}`, { plantelIds: detalle.plantelIds, ...(motivo ? { motivo } : {}) }); setMensaje('Planteles actualizados'); setDetalle(null); cargar(1, filtroPlantel); }
-    catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
+    try { await guardar(); } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
+
   const editar = (d: Docente) => {
     setEditando(d.id); setForm({ ...FORM_INICIAL, numEmpleado: d.numEmpleado,
       nombre: d.usuario.nombre, apellidoPaterno: d.usuario.apellidoPaterno,
@@ -86,19 +90,19 @@ export default function DocentesPage() {
   };
 
   return (
-    <>
+    <>{dialogoMotivo.elemento}
       <Encabezado titulo="Docentes" detalle="Plantilla docente y cuentas de acceso" />
 
       <section className="panel" id="form-docente">
         <h2>{editando ? 'Editar docente' : 'Registrar docente'}</h2>
         <form onSubmit={crear}>
           <div className="fila">
-            <div className="campo"><label>Núm. empleado</label><input disabled={editando !== null} required {...dar('numEmpleado')} /></div>
-            <div className="campo"><label>Nombre</label><input required {...dar('nombre')} /></div>
-            <div className="campo"><label>Apellido paterno</label><input required {...dar('apellidoPaterno')} /></div>
-            <div className="campo"><label>Especialidad</label><input {...dar('especialidad')} /></div>
-            <div className="campo"><label>Correo</label><input disabled={editando !== null} type="email" required {...dar('email')} /></div>
-            {!editando && <div className="campo"><label>Contraseña inicial</label><input type="password" autoComplete="new-password" required minLength={8} {...dar('password')} /></div>}
+            <div className="campo"><label htmlFor="docentes-campo-1">Núm. empleado</label><input id="docentes-campo-1" disabled={editando !== null} required {...dar('numEmpleado')} /></div>
+            <div className="campo"><label htmlFor="docentes-campo-2">Nombre</label><input id="docentes-campo-2" required {...dar('nombre')} /></div>
+            <div className="campo"><label htmlFor="docentes-campo-3">Apellido paterno</label><input id="docentes-campo-3" required {...dar('apellidoPaterno')} /></div>
+            <div className="campo"><label htmlFor="docentes-campo-4">Especialidad</label><input id="docentes-campo-4" {...dar('especialidad')} /></div>
+            <div className="campo"><label htmlFor="docentes-campo-5">Correo</label><input id="docentes-campo-5" disabled={editando !== null} type="email" required {...dar('email')} /></div>
+            {!editando && <div className="campo"><label htmlFor="docentes-campo-6">Contraseña inicial</label><input id="docentes-campo-6" type="password" autoComplete="new-password" required minLength={8} {...dar('password')} /></div>}
             <button disabled={enviando} className="boton">{enviando ? 'Guardando…' : 'Guardar docente'}</button>
             {editando && <button type="button" onClick={() => { setEditando(null); setForm(FORM_INICIAL); }}>Cancelar edición</button>}
           </div>
@@ -111,7 +115,7 @@ export default function DocentesPage() {
         {mensaje && <p role="status" className="mensaje-ok">{mensaje}</p>}
       </section>
 
-      <div className="fila" style={{ marginBottom: 12 }}><div className="campo"><label>Filtrar por plantel</label><select value={filtroPlantel} onChange={(e) => setFiltroPlantel(e.target.value)}><option value="">Todos</option>{planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div><button className="boton secundario" onClick={() => cargar(1, filtroPlantel)}>Aplicar</button></div>
+      <div className="fila" style={{ marginBottom: 12 }}><div className="campo"><label htmlFor="docentes-campo-7">Filtrar por plantel</label><select id="docentes-campo-7" value={filtroPlantel} onChange={(e) => setFiltroPlantel(e.target.value)}><option value="">Todos</option>{planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div><button className="boton secundario" onClick={() => cargar(1, filtroPlantel)}>Aplicar</button></div>
 
       {detalle && <section className="panel"><h2>Planteles y clases</h2><fieldset><legend>Planteles del docente</legend>
         {planteles.map((p) => <label key={p.id} className="casilla"><input type="checkbox" checked={detalle.plantelIds.includes(p.id)} onChange={() => setDetalle({ ...detalle,
