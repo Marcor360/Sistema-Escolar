@@ -15,7 +15,9 @@ export class Grupo {
   @JoinColumn({ name: 'plantel_id' })
   plantel: Plantel;
   @Column({ length: 40 }) nombre: string;
-  @Column({ length: 20, nullable: true }) grado: string | null;
-  @Column({ length: 10, nullable: true }) turno: 'MATUTINO' | 'VESPERTINO' | null;
+  @Column({ type: String, length: 20, nullable: true }) grado: string | null;
+  @Column({ type: String, length: 10, nullable: true }) turno: 'MATUTINO' | 'VESPERTINO' | null;
   @Column({ default: true }) activo: boolean;
+  /** Columna ya presente en baseline v1 y en ambos esquemas físicos. */
+  @Column({ type: 'bigint', nullable: true }) legacyId: string | null;
 }

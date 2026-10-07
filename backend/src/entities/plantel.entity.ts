@@ -6,10 +6,10 @@ export class Plantel {
   @PrimaryGeneratedColumn() id: number;
   @Column({ length: 80, unique: true }) clave: string;
   @Column({ length: 150 }) nombre: string;
-  @Column({ length: 200, nullable: true }) direccion: string | null;
-  @Column({ length: 80, nullable: true }) municipio: string | null;
-  @Column({ length: 20, nullable: true }) telefono: string | null;
-  @Column({ nullable: true }) directorUsuarioId: number | null;
+  @Column({ type: String, length: 200, nullable: true }) direccion: string | null;
+  @Column({ type: String, length: 80, nullable: true }) municipio: string | null;
+  @Column({ type: String, length: 20, nullable: true }) telefono: string | null;
+  @Column({ type: 'int', nullable: true }) directorUsuarioId: number | null;
   @ManyToOne(() => Usuario, { eager: true, nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'director_usuario_id' })
   director: Usuario | null;

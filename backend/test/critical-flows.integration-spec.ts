@@ -332,6 +332,30 @@ describe('Integración de flujos críticos (base aislada)', () => {
     ordenId = orden.id;
   });
 
+  it('mantiene paridad de columnas nullable entre las entidades y el baseline migrado', async () => {
+    const runner = dataSource.createQueryRunner();
+    try {
+      for (const metadata of dataSource.entityMetadatas) {
+        const table = await runner.getTable(metadata.tablePath);
+        expect(table).toBeDefined();
+        expect(table!.columns.map((column) => column.name).sort())
+          .toEqual(metadata.columns.map((column) => column.databaseName).sort());
+        for (const column of metadata.columns) {
+          const physical = table!.findColumnByName(column.databaseName)!;
+          expect(`${metadata.tableName}.${column.databaseName}: ${physical.isNullable}`)
+            .toBe(`${metadata.tableName}.${column.databaseName}: ${column.isNullable}`);
+          if (column.length) expect(physical.length).toBe(column.length);
+          if (column.type === 'decimal') {
+            expect(physical.precision).toBe(column.precision);
+            expect(physical.scale).toBe(column.scale);
+          }
+        }
+      }
+    } finally {
+      await runner.release();
+    }
+  });
+
   it('conserva los grupos preexistentes al actualizar el índice histórico', async () => {
     const grupoExistente = await dataSource.getRepository(Grupo).findOneBy({ nombre: 'GRUPO_MIGRACION_EXISTENTE' });
     expect(grupoExistente).toEqual(expect.objectContaining({ nombre: 'GRUPO_MIGRACION_EXISTENTE' }));

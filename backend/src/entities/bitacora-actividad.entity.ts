@@ -5,13 +5,13 @@ export type BitacoraResultado = 'EXITO' | 'ERROR';
 @Entity('bitacora_actividad')
 export class BitacoraActividad {
   @PrimaryGeneratedColumn() id: number;
-  @Column({ nullable: true }) usuarioId: number | null;
+  @Column({ type: 'int', nullable: true }) usuarioId: number | null;
   @Column({ length: 8 }) metodo: string;
   @Column({ length: 200 }) ruta: string;
-  @Column({ length: 100, nullable: true }) entidad: string | null;
-  @Column({ nullable: true }) entidadId: number | null;
+  @Column({ type: String, length: 100, nullable: true }) entidad: string | null;
+  @Column({ type: 'int', nullable: true }) entidadId: number | null;
   @Column({ length: 10, default: 'EXITO' }) resultado: BitacoraResultado;
   @Column({ type: 'smallint', nullable: true }) statusCode: number | null;
-  @Column({ length: 45, nullable: true }) ip: string | null;
+  @Column({ type: String, length: 45, nullable: true }) ip: string | null;
   @CreateDateColumn() createdAt: Date;
 }

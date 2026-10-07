@@ -2,7 +2,7 @@
 
 > Portal web administrativo/docente, app móvil del alumno y API para gestión académica y financiera. El código cubre los flujos principales del MVP; todavía no hay certificación de piloto institucional ni despliegue productivo.
 
-**Estado al 6 de octubre de 2026:** los paquetes declaran `1.13.0`. La última CI publicada del commit `b5612c0` [pasó](https://github.com/Marcor360/Sistema-Escolar/actions/runs/37407826286), incluida integración HTTP con bases aisladas MySQL y SQL Server. Los cambios locales posteriores están documentados en [la continuación de la auditoría](docs/CONTINUACION_2026-10-05.md) y aún requieren su propia CI. Para el estado operativo y las dependencias institucionales, consulta [Estado de implementación](docs/ESTADO_IMPLEMENTACION.md).
+**Candidato técnico al 7 de octubre de 2026:** los paquetes y Expo declaran `1.14.0`. La Fase 1 repara la metadata TypeORM anulable sin desactivar TypeScript estricto ni alterar el DDL. El punto de partida `7edce9a82e284dda8727eff7f31a980e32ad4d10` fallaba en las integraciones MySQL/SQL Server. La certificación del candidato exige CI verde en su SHA final; consulta [Recuperación del baseline técnico](docs/FASE_1_BASELINE_TECNICO.md) y [Estado de implementación](docs/ESTADO_IMPLEMENTACION.md).
 
 ---
 
@@ -575,7 +575,7 @@ Desde una consola administrativa en el servidor, con Node 24, IIS, URL Rewrite, 
 
 ```powershell
 $credential = Get-Credential '.\svc_escolar_api'
-.\scripts\windows\Initialize-Staging.ps1 -Version '1.13.0' -Source 'C:\Builds\sistema-escolar-mvp' -ServiceCredential $credential -ApiBaseUrl 'https://api-staging.dominio.mx/api'
+.\scripts\windows\Initialize-Staging.ps1 -Version '1.14.0' -Source 'C:\Builds\sistema-escolar-mvp' -ServiceCredential $credential -ApiBaseUrl 'https://api-staging.dominio.mx/api'
 .\scripts\windows\Configure-IIS-Staging.ps1 -PortalHost 'sistema-staging.dominio.mx' -ApiHost 'api-staging.dominio.mx' -CertificateThumbprint '<huella-del-certificado>'
 Start-Service SistemaEscolarApi
 Invoke-WebRequest 'https://api-staging.dominio.mx/api/health'

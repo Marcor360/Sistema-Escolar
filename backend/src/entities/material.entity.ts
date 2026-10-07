@@ -11,7 +11,7 @@ export class Material {
   @Column({ length: 150 }) titulo: string;
   @Column({ length: 200 }) archivoNombre: string;
   @Column({ length: 300 }) archivoRuta: string;
-  @Column({ length: 100, nullable: true }) mime: string | null;
+  @Column({ type: String, length: 100, nullable: true }) mime: string | null;
   @Column({ default: 0 }) tamanoKb: number;
   @CreateDateColumn() createdAt: Date;
 }

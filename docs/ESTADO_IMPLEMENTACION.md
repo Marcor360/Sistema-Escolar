@@ -28,7 +28,11 @@ Este documento distingue código presente de operación real. “Implementado”
 - Identidad institucional, aviso de privacidad y textos legales aprobados.
 - Cuentas Apple Developer y Google Play Console si se distribuirá la app.
 
-## Verificación conocida
+## Candidato 1.14.0
+
+La Fase 1 parte de `7edce9a82e284dda8727eff7f31a980e32ad4d10`, cuya CI fallaba en ambas integraciones por metadata TypeORM de propiedades anulables. La reparación conserva `strict`, `strictNullChecks` y `DB_SYNC=false`. La evidencia y los requisitos pendientes del candidato se registran en [FASE_1_BASELINE_TECNICO.md](FASE_1_BASELINE_TECNICO.md); la CI histórica de abajo no certifica este candidato.
+
+## Verificación histórica
 
 La última CI publicada del commit `b5612c0` ([run `37407826286`](https://github.com/Marcor360/Sistema-Escolar/actions/runs/37407826286)) terminó verde en backend, web, móvil, ETL, scripts Windows e integración HTTP MySQL/SQL Server con bases aisladas y `DB_SYNC=false`. Es evidencia de ese commit; los cambios locales posteriores aún no tienen una ejecución remota propia.
 

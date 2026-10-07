@@ -16,7 +16,7 @@ export class GrupoMateria {
   @ManyToOne(() => Materia, { eager: true })
   @JoinColumn({ name: 'materia_id' })
   materia: Materia;
-  @Column({ nullable: true }) docenteId: number | null;
+  @Column({ type: 'int', nullable: true }) docenteId: number | null;
   @ManyToOne(() => Docente, { eager: true, nullable: true })
   @JoinColumn({ name: 'docente_id' })
   docente: Docente | null;

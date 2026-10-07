@@ -16,7 +16,30 @@ if (audit.error || !report.metadata?.vulnerabilities) {
 }
 
 const vulnerabilities = report.vulnerabilities || {};
+// Cadenas de Expo SDK 57: solo herencia de los mismos dos avisos raíz.
 const allowedTransitivelyAffected = new Set([
+  '@expo/devtools',
+  '@expo/dom-webview',
+  '@expo/log-box',
+  '@expo/router-server',
+  '@react-navigation/bottom-tabs',
+  '@react-navigation/elements',
+  '@react-navigation/native',
+  '@react-navigation/native-stack',
+  'babel-preset-expo',
+  'expo-asset',
+  'expo-constants',
+  'expo-document-picker',
+  'expo-file-system',
+  'expo-font',
+  'expo-keep-awake',
+  'expo-modules-core',
+  'expo-modules-jsi',
+  'expo-secure-store',
+  'expo-splash-screen',
+  'expo-status-bar',
+  'react-native-safe-area-context',
+
   '@expo/cli',
   '@expo/code-signing-certificates',
   '@expo/metro',

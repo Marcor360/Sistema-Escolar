@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { ConfigService } from '@nestjs/config';
 import { createHash } from 'crypto';
 import { DataSource, DataSourceOptions, QueryRunner } from 'typeorm';

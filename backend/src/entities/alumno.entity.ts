@@ -19,15 +19,15 @@ export class Alumno {
   @JoinColumn({ name: 'plantel_id' })
   plantel: Plantel;
   @Column({ length: 20, unique: true }) matricula: string;
-  @Column({ length: 18, nullable: true }) curp: string | null;
+  @Column({ type: String, length: 18, nullable: true }) curp: string | null;
   @Column({ type: 'date', nullable: true }) fechaNacimiento: string | null;
-  @Column({ length: 120, nullable: true }) tutorNombre: string | null;
-  @Column({ length: 20, nullable: true }) tutorTelefono: string | null;
-  @Column({ length: 200, nullable: true }) direccion: string | null;
+  @Column({ type: String, length: 120, nullable: true }) tutorNombre: string | null;
+  @Column({ type: String, length: 20, nullable: true }) tutorTelefono: string | null;
+  @Column({ type: String, length: 200, nullable: true }) direccion: string | null;
   @Column({ length: 20, default: 'ACTIVO' }) estatus: AlumnoEstatus;
   @CreateDateColumn() createdAt: Date;
   @UpdateDateColumn() updatedAt: Date;
-  @DeleteDateColumn() deletedAt: Date | null;
+  @DeleteDateColumn({ type: Date }) deletedAt: Date | null;
   /** Vínculo con la base certweb para la migración inicial (ETL); no se expone en la API pública. */
   @Column({ type: 'bigint', nullable: true }) legacyId: string | null;
 }

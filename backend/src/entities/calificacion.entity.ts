@@ -22,8 +22,8 @@ export class Calificacion {
   @Column() parcial: number;
   @Column('decimal', { precision: 5, scale: 2, transformer: decimalTransformer })
   calificacion: number;
-  @Column({ length: 300, nullable: true }) observaciones: string | null;
-  @Column({ nullable: true }) capturadaPorId: number | null;
+  @Column({ type: String, length: 300, nullable: true }) observaciones: string | null;
+  @Column({ type: 'int', nullable: true }) capturadaPorId: number | null;
   @CreateDateColumn() createdAt: Date;
   @UpdateDateColumn() updatedAt: Date;
 }

@@ -22,3 +22,14 @@ La app sigue en Expo SDK 56 / React Native 0.85. La matriz oficial documenta SDK
 ## Reevaluación al 6 de octubre de 2026
 
 La app se actualizó a Expo SDK 57 / React Native 0.86.3. `expo-doctor` pasó sus 21 comprobaciones; TypeScript, pruebas y export Android pasaron localmente. `check-mobile-audit.cjs` todavía informa las excepciones activas `GHSA-86w9-cpqp-85rv` y `GHSA-vfj7-8cjw-p6xm`; **no están resueltas**. La base de avisos de GitHub las clasifica como altas y no indica versiones corregidas al momento de la revisión: [node-forge](https://github.com/advisories/GHSA-86w9-cpqp-85rv) y [braces](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm). Quedan pendientes el build nativo firmado y la prueba física en Android/iOS.
+
+## Reevaluación de la Fase 1 al 7 de octubre de 2026
+
+El audit del lockfile de Expo SDK 57 propaga los mismos dos avisos raíz a 37
+paquetes: aparecen también las cadenas de plugins Expo y React Navigation que
+dependen de Expo/React Native. Se actualiza únicamente la lista cerrada de
+paquetes transitivamente afectados. Se conservan los IDs y URLs exactos de
+los dos avisos; cualquier causa raíz alta/crítica distinta continúa bloqueando
+CI, aunque aparezca en un paquete de la lista. No se desactiva audit ni se
+aplica `--force`. El registro sigue publicando `braces@3.0.3` y
+`node-forge@1.4.0` como últimas versiones; las excepciones siguen sin remediar.

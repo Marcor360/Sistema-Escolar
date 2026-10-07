@@ -20,22 +20,22 @@ export class Pago {
   @ManyToOne(() => Alumno, { eager: true })
   @JoinColumn({ name: 'alumno_id' })
   alumno: Alumno;
-  @Column({ nullable: true }) cargoId: number | null;
+  @Column({ type: 'int', nullable: true }) cargoId: number | null;
   @ManyToOne(() => Cargo, { nullable: true })
   @JoinColumn({ name: 'cargo_id' })
   cargo: Cargo | null;
-  @Column({ nullable: true }) ordenPagoId: number | null;
+  @Column({ type: 'int', nullable: true }) ordenPagoId: number | null;
   @ManyToOne(() => OrdenPago, { nullable: true })
   @JoinColumn({ name: 'orden_pago_id' })
   ordenPago: OrdenPago | null;
   @Column('decimal', { precision: 12, scale: 2, transformer: decimalTransformer }) monto: number;
   @Column({ length: 15 }) metodo: PagoMetodo;
-  @Column({ length: 60, nullable: true }) referencia: string | null;
+  @Column({ type: String, length: 60, nullable: true }) referencia: string | null;
   @Index('uq_pagos_clave_idempotencia', { unique: true, where: 'clave_idempotencia IS NOT NULL' })
-  @Column({ length: 36, nullable: true }) claveIdempotencia: string | null;
+  @Column({ type: String, length: 36, nullable: true }) claveIdempotencia: string | null;
   @Column({ length: 15, default: 'CONFIRMADO' }) estatus: PagoEstatus;
   @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' }) fechaPago: Date;
-  @Column({ nullable: true }) registradoPorId: number | null;
+  @Column({ type: 'int', nullable: true }) registradoPorId: number | null;
   @CreateDateColumn() createdAt: Date;
   /** Vínculo con la base certweb para la migración inicial (ETL); no se expone en la API pública. */
   @Column({ type: 'bigint', nullable: true }) legacyId: string | null;

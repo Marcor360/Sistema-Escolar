@@ -11,8 +11,8 @@ export class Usuario {
   @Column({ length: 100, select: false }) passwordHash: string;
   @Column({ length: 80 }) nombre: string;
   @Column({ length: 80 }) apellidoPaterno: string;
-  @Column({ length: 80, nullable: true }) apellidoMaterno: string | null;
-  @Column({ length: 20, nullable: true }) telefono: string | null;
+  @Column({ type: String, length: 80, nullable: true }) apellidoMaterno: string | null;
+  @Column({ type: String, length: 20, nullable: true }) telefono: string | null;
   @Column({ default: true }) activo: boolean;
   @Column({ name: 'session_version', type: 'int', default: 0 }) sessionVersion: number;
 
@@ -26,7 +26,7 @@ export class Usuario {
 
   @CreateDateColumn() createdAt: Date;
   @UpdateDateColumn() updatedAt: Date;
-  @DeleteDateColumn() deletedAt: Date | null;
+  @DeleteDateColumn({ type: Date }) deletedAt: Date | null;
 
   /** Vínculo con la base certweb para la migración inicial (ETL); no se expone en la API pública. */
   @Column({ type: 'bigint', nullable: true }) legacyId: string | null;

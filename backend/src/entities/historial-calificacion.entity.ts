@@ -13,9 +13,9 @@ export class HistorialCalificacion {
   @Column('decimal', { precision: 5, scale: 2, nullable: true, transformer: decimalTransformer })
   valorAnterior: number | null;
   @Column('decimal', { precision: 5, scale: 2, transformer: decimalTransformer }) valorNuevo: number;
-  @Column({ length: 300, nullable: true }) observacionAnterior: string | null;
-  @Column({ length: 300, nullable: true }) observacionNueva: string | null;
+  @Column({ type: String, length: 300, nullable: true }) observacionAnterior: string | null;
+  @Column({ type: String, length: 300, nullable: true }) observacionNueva: string | null;
   @Column() usuarioId: number;
   @CreateDateColumn() fecha: Date;
-  @Column({ length: 300, nullable: true }) motivo: string | null;
+  @Column({ type: String, length: 300, nullable: true }) motivo: string | null;
 }

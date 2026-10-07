@@ -13,8 +13,8 @@ export class PeriodoCalificacion {
   grupoMateria: GrupoMateria;
   @Column() parcial: number;
   @Column({ length: 10, default: 'ABIERTO' }) estatus: EstadoPeriodoCalificacion;
-  @Column({ nullable: true }) cerradoPorId: number | null;
+  @Column({ type: 'int', nullable: true }) cerradoPorId: number | null;
   @Column({ type: 'datetime', nullable: true }) cerradoAt: Date | null;
-  @Column({ nullable: true }) reabiertoPorId: number | null;
+  @Column({ type: 'int', nullable: true }) reabiertoPorId: number | null;
   @Column({ type: 'datetime', nullable: true }) reabiertoAt: Date | null;
 }
