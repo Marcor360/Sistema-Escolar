@@ -2,7 +2,28 @@
 
 > Portal web administrativo/docente, app móvil del alumno y API para gestión académica y financiera. El código cubre los flujos principales del MVP; todavía no hay certificación de piloto institucional ni despliegue productivo.
 
-**Candidato técnico al 7 de octubre de 2026:** los paquetes y Expo declaran `1.14.0`. La Fase 1 repara la metadata TypeORM anulable sin desactivar TypeScript estricto ni alterar el DDL. El punto de partida `7edce9a82e284dda8727eff7f31a980e32ad4d10` fallaba en las integraciones MySQL/SQL Server. La [CI del SHA técnico `5fa8065`](https://github.com/Marcor360/Sistema-Escolar/actions/runs/37649748701) pasó sus siete jobs, incluidas integraciones en ambos motores y Windows; consulta [Recuperación del baseline técnico](docs/FASE_1_BASELINE_TECNICO.md) y [Estado de implementación](docs/ESTADO_IMPLEMENTACION.md).
+**Versión candidata: `1.15.0` · Commit: `1.15.0` · 7 de octubre de 2026.** Backend, web, móvil y Expo declaran la misma versión. El baseline técnico anterior, SHA `e0e3cfefa1f709f5d7ec5cf0930f6f4f7ca88834`, tiene [CI completamente verde](https://github.com/Marcor360/Sistema-Escolar/actions/runs/37650137255). La CI de `1.15.0` debe comprobarse en su propio SHA; las Fases 2–5 siguen pendientes y el piloto aún no está certificado.
+
+
+## Cambios incluidos en la versión 1.15.0
+
+Esta publicación alinea la versión y la documentación sobre el baseline reparado
+de la Fase 1. No incorpora todavía las correcciones funcionales de las Fases 2–5.
+
+- **Metadata TypeORM reparada:** 51 columnas anulables tienen tipos explícitos compatibles con MySQL y SQL Server, conservando TypeScript estricto y `DB_SYNC=false`.
+- **Paridad y pruebas:** validación de metadata en ambos drivers y comprobación de columnas físicas contra entidades; `Grupo.legacyId` refleja la columna ya existente.
+- **Migraciones operables:** el runner carga `.env`; esta reparación no añadió migraciones ni cambió el DDL.
+- **Repositorio limpio:** se retiraron seis `.pyc` trackeados y se conservaron las reglas de exclusión.
+- **Verificaciones:** el baseline pasó 126 pruebas unitarias de backend, 8 de web, 4 móviles, 5 del gate de audit, 3 de ETL y 21 de integración en cada motor; los siete jobs de CI, incluido Windows, terminaron verdes.
+- **Audit móvil controlado:** se actualizaron las cadenas transitivas de Expo 57 y se añadieron pruebas del gate. Las dos vulnerabilidades previamente documentadas siguen sin remediar; no se aceptan avisos nuevos.
+- **Versionado y documentación:** manifiestos, versiones raíz de lockfiles y Expo se alinean a `1.15.0`, sin cambiar dependencias. Se incorpora la [auditoría del 7 de octubre](docs/AUDITORIA_2026-10-07.md) y se documenta qué está hecho y qué sigue pendiente.
+
+Consulta el [informe de la Fase 1](docs/FASE_1_BASELINE_TECNICO.md) y el
+[estado de implementación](docs/ESTADO_IMPLEMENTACION.md). La siguiente prioridad
+es la Fase 2: dashboard por rol, transiciones, contexto académico, inscripción
+única por ciclo, grupos inmutables, cierre de planteles/materias y calendario
+por grupo. Todavía no hay staging Windows ni dispositivos disponibles para
+certificar la Fase 5.
 
 ---
 
@@ -575,7 +596,7 @@ Desde una consola administrativa en el servidor, con Node 24, IIS, URL Rewrite, 
 
 ```powershell
 $credential = Get-Credential '.\svc_escolar_api'
-.\scripts\windows\Initialize-Staging.ps1 -Version '1.14.0' -Source 'C:\Builds\sistema-escolar-mvp' -ServiceCredential $credential -ApiBaseUrl 'https://api-staging.dominio.mx/api'
+.\scripts\windows\Initialize-Staging.ps1 -Version '1.15.0' -Source 'C:\Builds\sistema-escolar-mvp' -ServiceCredential $credential -ApiBaseUrl 'https://api-staging.dominio.mx/api'
 .\scripts\windows\Configure-IIS-Staging.ps1 -PortalHost 'sistema-staging.dominio.mx' -ApiHost 'api-staging.dominio.mx' -CertificateThumbprint '<huella-del-certificado>'
 Start-Service SistemaEscolarApi
 Invoke-WebRequest 'https://api-staging.dominio.mx/api/health'

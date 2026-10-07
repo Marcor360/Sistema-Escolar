@@ -28,7 +28,9 @@ Este documento distingue código presente de operación real. “Implementado”
 - Identidad institucional, aviso de privacidad y textos legales aprobados.
 - Cuentas Apple Developer y Google Play Console si se distribuirá la app.
 
-## Candidato 1.14.0
+## Candidato 1.15.0
+
+La publicación `1.15.0` alinea backend, web, móvil, Expo y documentación con el baseline técnico reparado. No incorpora las correcciones funcionales pendientes de las Fases 2–5. La [auditoría del 7 de octubre](AUDITORIA_2026-10-07.md) identifica las prioridades posteriores. El último baseline completo `e0e3cfe` tiene [CI verde](https://github.com/Marcor360/Sistema-Escolar/actions/runs/37650137255); la CI de cada nueva publicación debe verificarse para su SHA exacto. El usuario confirmó que staging Windows y dispositivos para certificar la Fase 5 aún no están disponibles.
 
 La Fase 1 parte de `7edce9a82e284dda8727eff7f31a980e32ad4d10`, cuya CI fallaba en ambas integraciones por metadata TypeORM de propiedades anulables. La reparación conserva `strict`, `strictNullChecks` y `DB_SYNC=false`. La evidencia y los requisitos pendientes del candidato se registran en [FASE_1_BASELINE_TECNICO.md](FASE_1_BASELINE_TECNICO.md); la [CI de `5fa8065`](https://github.com/Marcor360/Sistema-Escolar/actions/runs/37649748701) pasó sus siete jobs, incluidos MySQL, SQL Server y Windows. La Fase 1 queda cerrada para ese código; las Fases 2–5 y la certificación operativa siguen pendientes.
 
