@@ -6,7 +6,7 @@ param(
   [string]$DatabaseName = 'escolar_staging',
   [string]$MysqlDump = 'C:\Program Files\MySQL\MySQL Server 8.4\bin\mysqldump.exe',
   [string]$ApiBaseUrl = 'https://api-staging.dominio.mx/api',
-  [string]$HealthUrl = 'https://api-staging.dominio.mx/api/health'
+  [string]$HealthUrl = 'https://api-staging.dominio.mx/api/health/ready'
 )
 
 $ErrorActionPreference = 'Stop'

@@ -23,7 +23,7 @@ export class UsuariosController {
     return this.service.listado(query, user);
   }
   @Get(':id') obtener(@Param('id', ParseIntPipe) id: number) { return this.service.obtener(id); }
-  @Post() crear(@Body() dto: CrearUsuarioDto) { return this.service.crear(dto); }
+  @Post() crear(@Body() dto: CrearUsuarioDto, @CurrentUser() user: JwtUser) { return this.service.crearPersonal(dto, user); }
   @Patch(':id') actualizar(@Param('id', ParseIntPipe) id: number, @Body() dto: ActualizarUsuarioDto) {
     return this.service.actualizar(id, dto);
   }

@@ -8,7 +8,9 @@ interface Calificacion {
   id: number;
   parcial: number;
   calificacion: number;
-  grupoMateria: { materia: { clave: string; nombre: string } };
+  promedioOficial: number | null;
+  grupoMateriaId: number;
+  grupoMateria: { grupo: { nombre: string; ciclo: { id: number; nombre: string } }; materia: { clave: string; nombre: string } };
 }
 
 export default function CalificacionesScreen() {
@@ -16,12 +18,13 @@ export default function CalificacionesScreen() {
   const [cargando, setCargando] = useState(false);
   const [cargaInicialCompleta, setCargaInicialCompleta] = useState(false);
   const [error, setError] = useState('');
+  const [ultimaActualizacion, setUltimaActualizacion] = useState<string | null>(null);
 
   const cargar = useCallback(() => {
     setError('');
     setCargando(true);
     api.get<Calificacion[]>('/calificaciones/mias')
-      .then((r) => { setRegistros(r.data); setCargaInicialCompleta(true); })
+      .then((r) => { setRegistros(r.data); setUltimaActualizacion(new Date().toLocaleString()); setCargaInicialCompleta(true); })
       .catch((fallo) => setError(mensajeDeError(fallo)))
       .finally(() => setCargando(false));
   }, []);
@@ -31,8 +34,8 @@ export default function CalificacionesScreen() {
   // Agrupar por materia para lectura tipo boleta
   const materias = new Map<string, { nombre: string; parciales: Calificacion[] }>();
   for (const r of registros) {
-    const clave = r.grupoMateria.materia.clave;
-    const grupo = materias.get(clave) ?? { nombre: r.grupoMateria.materia.nombre, parciales: [] };
+    const clave = String(r.grupoMateriaId);
+    const grupo = materias.get(clave) ?? { nombre: `${r.grupoMateria.materia.clave} — ${r.grupoMateria.materia.nombre} · ${r.grupoMateria.grupo.nombre} · ${r.grupoMateria.grupo.ciclo.nombre}`, parciales: [] };
     grupo.parciales.push(r);
     materias.set(clave, grupo);
   }
@@ -41,6 +44,7 @@ export default function CalificacionesScreen() {
   return (
     <View style={base.pantalla}>
       {error !== '' && <ErrorCarga mensaje={error} reintentar={cargar} />}
+      {ultimaActualizacion && <Text accessibilityRole="text">Última actualización: {ultimaActualizacion}</Text>}
       <FlatList
         data={filas}
         keyExtractor={([clave]) => clave}
@@ -48,12 +52,11 @@ export default function CalificacionesScreen() {
         ListEmptyComponent={cargaInicialCompleta && !error
           ? <Vacio mensaje="Aún no hay calificaciones capturadas." />
           : !cargaInicialCompleta && !error ? <ActivityIndicator accessibilityLabel="Cargando calificaciones" /> : null}
-        renderItem={({ item: [clave, materia] }) => {
-          const promedio =
-            materia.parciales.reduce((s, p) => s + p.calificacion, 0) / materia.parciales.length;
+        renderItem={({ item: [, materia] }) => {
+          const promedio = materia.parciales[0]?.promedioOficial;
           return (
             <Tarjeta>
-              <Text style={base.tituloTarjeta}>{clave} — {materia.nombre}</Text>
+              <Text style={base.tituloTarjeta}>{materia.nombre}</Text>
               {materia.parciales
                 .sort((a, b) => a.parcial - b.parcial)
                 .map((p) => (
@@ -62,7 +65,7 @@ export default function CalificacionesScreen() {
                   </Text>
                 ))}
               <Text style={[base.secundario, { marginTop: 4 }]}>
-                Promedio: <Text style={base.monto}>{promedio.toFixed(1)}</Text>
+                Promedio: <Text style={base.monto}>{promedio == null ? 'Pendiente de P1-P3' : promedio.toFixed(1)}</Text>
               </Text>
             </Tarjeta>
           );

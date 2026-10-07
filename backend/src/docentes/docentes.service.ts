@@ -1,6 +1,8 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
+import { Plantel } from '../entities/plantel.entity';
+import { GrupoMateria } from '../entities/grupo-materia.entity';
 import { Docente } from '../entities/docente.entity';
 import { UsuariosService } from '../usuarios/usuarios.service';
 import { ActualizarDocenteDto, CrearDocenteDto, ListarDocentesDto } from './docentes.dto';
@@ -25,22 +27,23 @@ export class DocentesService {
     const planteles = await this.scope.resolverFiltro(user, query.plantelId);
     const qb = this.docentes.createQueryBuilder('d').innerJoinAndSelect('d.usuario', 'u');
     if (planteles !== null) qb.andWhere(
-      'EXISTS (SELECT 1 FROM usuario_planteles up WHERE up.usuario_id = u.id AND up.activo = :activa AND up.plantel_id IN (:...planteles))',
-      { activa: true, planteles },
+      'EXISTS (SELECT 1 FROM usuario_planteles up WHERE up.usuario_id = u.id AND (up.activo = :activa OR d.estatus = :baja) AND up.plantel_id IN (:...planteles))',
+      { activa: true, baja: 'BAJA', planteles },
     );
+    if (query.buscar?.trim()) qb.andWhere('(d.num_empleado LIKE :buscar OR u.nombre LIKE :buscar OR u.apellido_paterno LIKE :buscar)', { buscar: `%${query.buscar.trim()}%` });
     const [docentes, total] = await qb
       .orderBy('d.id', 'DESC')
       .skip((pagina - 1) * porPagina)
       .take(porPagina)
       .getManyAndCount();
     const todasLasAsignaciones = docentes.length ? await this.asignaciones.find({
-      where: { usuarioId: In(docentes.map((d) => d.usuarioId)), activo: true },
+      where: { usuarioId: In(docentes.map((d) => d.usuarioId)) },
     }) : [];
     const asignaciones = planteles === null
       ? todasLasAsignaciones
       : todasLasAsignaciones.filter((a) => planteles.includes(a.plantelId));
     const datos = docentes.map((d) => this.proyectarDocente(d, {
-      planteles: asignaciones.filter((a) => a.usuarioId === d.usuarioId).map((a) => a.plantel.nombre),
+      planteles: asignaciones.filter((a) => a.usuarioId === d.usuarioId && (a.activo || d.estatus === 'BAJA')).map((a) => a.plantel.nombre),
     }));
     return { datos, total, pagina, porPagina };
   }
@@ -53,7 +56,41 @@ export class DocentesService {
   }
 
   async obtenerParaApi(id: number, user: JwtUser) {
-    return this.proyectarDocente(await this.obtener(id, user));
+    const docente = await this.obtener(id, user);
+    const permitidos = await this.scope.plantelesDe(user);
+    const asignaciones = await this.asignaciones.find({ where: { usuarioId: docente.usuarioId, activo: true } });
+    const clases = await this.dataSource.getRepository(GrupoMateria).find({ where: { docenteId: id,
+      ...(permitidos === null ? {} : { grupo: { plantelId: In(permitidos) } }) } });
+    return { ...this.proyectarDocente(docente),
+      plantelIds: asignaciones.filter((a) => permitidos === null || permitidos.includes(a.plantelId)).map((a) => a.plantelId),
+      clases: clases.map((c) => ({ id: c.id, grupo: c.grupo.nombre, ciclo: c.grupo.ciclo.nombre, plantel: c.grupo.plantel.nombre,
+        materia: c.materia.nombre, vigente: c.grupo.activo && c.grupo.ciclo.activo })) };
+  }
+
+  async asignarPlanteles(id: number, plantelIds: number[], user: JwtUser) {
+    const docente = await this.obtener(id, user, true);
+    if (docente.estatus !== 'ACTIVO') throw new ConflictException('El docente no está activo');
+    const ids = [...new Set(plantelIds)];
+    if (!ids.length) throw new ConflictException('Asigna al menos un plantel');
+    for (const plantelId of ids) await this.scope.validarGestion(user, plantelId);
+    return this.dataSource.transaction(async (manager) => {
+      const asignaciones = manager.getRepository(UsuarioPlantel);
+      const anteriores = await asignaciones.find({ where: { usuarioId: docente.usuarioId, activo: true } });
+      for (const anterior of anteriores) {
+        if (ids.includes(anterior.plantelId)) continue;
+        const clases = await manager.getRepository(GrupoMateria).count({ where: { docenteId: id,
+          grupo: { plantelId: anterior.plantelId, activo: true, ciclo: { activo: true } } } });
+        if (clases) throw new ConflictException('Reasigna las clases antes de quitar el plantel del docente');
+        await asignaciones.update({ usuarioId: docente.usuarioId, plantelId: anterior.plantelId }, { activo: false });
+      }
+      for (const plantelId of ids) {
+        if (!await manager.getRepository(Plantel).findOne({ where: { id: plantelId, activo: true } })) throw new ConflictException('El plantel no está activo');
+        const actual = await asignaciones.findOne({ where: { usuarioId: docente.usuarioId, plantelId } });
+        if (actual) await asignaciones.update({ usuarioId: docente.usuarioId, plantelId }, { activo: true });
+        else await asignaciones.save(asignaciones.create({ usuarioId: docente.usuarioId, plantelId, activo: true }));
+      }
+      return { ok: true };
+    });
   }
 
   private async validarAlcanceDocente(
@@ -61,7 +98,7 @@ export class DocentesService {
   ): Promise<void> {
     if (user.roles.includes('SUPERADMIN')) return;
     const permitidos = await this.scope.plantelesDe(user);
-    const asignaciones = await this.asignaciones.find({ where: { usuarioId, activo: true } });
+    const asignaciones = await this.asignaciones.find({ where: { usuarioId, ...(exigirTodosLosPlanteles ? { activo: true } : {}) } });
     if (permitidos === null) return;
     if (exigirTodosLosPlanteles && asignaciones.some((a) => !permitidos.includes(a.plantelId))) {
       throw new ForbiddenException('No puedes modificar un docente asignado a planteles fuera de tu alcance');
@@ -83,6 +120,9 @@ export class DocentesService {
     if (existe) throw new ConflictException('El número de empleado ya está registrado');
 
     return this.dataSource.transaction(async (manager) => {
+      for (const plantelId of plantelIds) {
+        if (!await manager.getRepository(Plantel).findOne({ where: { id: plantelId, activo: true } })) throw new ConflictException('El plantel no está activo');
+      }
       const usuario = await this.usuarios.crear({
         email: dto.email,
         password: dto.password,
@@ -108,9 +148,10 @@ export class DocentesService {
   }
 
   async actualizar(id: number, dto: ActualizarDocenteDto, user: JwtUser) {
+    if (dto.estatus !== undefined) throw new BadRequestException('Usa la acción de baja para cambiar el estado');
     return this.dataSource.transaction(async (manager) => {
       const docentes = manager.getRepository(Docente);
-      const docente = await docentes.findOne({ where: { id } });
+      const docente = await docentes.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!docente) throw new NotFoundException('Docente no encontrado');
       await this.validarAlcanceDocente(docente.usuarioId, user, true);
       if (dto.nombre || dto.apellidoPaterno || dto.apellidoMaterno || dto.telefono) {
@@ -124,7 +165,7 @@ export class DocentesService {
       Object.assign(docente, {
         cedulaProfesional: dto.cedulaProfesional ?? docente.cedulaProfesional,
         especialidad: dto.especialidad ?? docente.especialidad,
-        estatus: dto.estatus ?? docente.estatus,
+
       });
       return this.proyectarDocente(await docentes.save(docente));
     });
@@ -133,12 +174,13 @@ export class DocentesService {
   async baja(id: number, user: JwtUser) {
     return this.dataSource.transaction(async (manager) => {
       const docentes = manager.getRepository(Docente);
-      const docente = await docentes.findOne({ where: { id } });
+      const docente = await docentes.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!docente) throw new NotFoundException('Docente no encontrado');
       await this.validarAlcanceDocente(docente.usuarioId, user, true);
       docente.estatus = 'BAJA';
       await docentes.save(docente);
-      await docentes.softDelete(id);
+      // Las notas y actividades conservan a sus autores; las clases quedan pendientes de reasignación.
+      await manager.getRepository(GrupoMateria).update({ docenteId: id }, { docenteId: null });
       await manager.getRepository(UsuarioPlantel).update(
         { usuarioId: docente.usuarioId, activo: true }, { activo: false },
       );

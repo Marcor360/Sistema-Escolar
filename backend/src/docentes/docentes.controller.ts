@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { DocentesService } from './docentes.service';
-import { ActualizarDocenteDto, CrearDocenteDto, ListarDocentesDto } from './docentes.dto';
+import { ActualizarDocenteDto, CrearDocenteDto, ListarDocentesDto, PlantelesDocenteDto } from './docentes.dto';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { RolesGuard } from '../common/roles.guard';
 import { Roles } from '../common/roles.decorator';
@@ -26,6 +26,12 @@ export class DocentesController {
     @Param('id', ParseIntPipe) id: number, @Body() dto: ActualizarDocenteDto, @CurrentUser() user: JwtUser,
   ) {
     return this.service.actualizar(id, dto, user);
+  }
+  @Post(':id/planteles') planteles(@Param('id', ParseIntPipe) id: number, @Body() dto: PlantelesDocenteDto, @CurrentUser() user: JwtUser) {
+    return this.service.asignarPlanteles(id, dto.plantelIds, user);
+  }
+  @Post(':id/baja') bajaExplicita(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) {
+    return this.service.baja(id, user);
   }
   @Delete(':id') baja(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) {
     return this.service.baja(id, user);

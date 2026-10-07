@@ -17,7 +17,9 @@ describe('AuthService.login', () => {
     const bitacora = { insert: jest.fn().mockResolvedValue(undefined) };
     const jwt = { sign: jest.fn().mockReturnValue('token') };
     const config = { get: jest.fn((key: string) => (key === 'JWT_EXPIRES_MOVIL' ? '30d' : '8h')) };
-    const service = new AuthService(repo as any, {} as any, bitacora as any, jwt as any, {} as any, config as any, {} as any);
+    const sessions = { create: jest.fn((s) => s), save: jest.fn(async (s) => s), findOne: jest.fn().mockResolvedValue({ id: 1 }) };
+    const source = { getRepository: jest.fn(() => sessions) };
+    const service = new AuthService(repo as any, {} as any, bitacora as any, jwt as any, {} as any, config as any, source as any);
     return { service, jwt, bitacora, repo };
   };
 
@@ -40,7 +42,7 @@ describe('AuthService.login', () => {
     const respuesta = await service.login('demo@escuela.mx', 'Correcta123', 'WEB');
     expect(respuesta).toMatchObject({ accessToken: 'token' });
     expect(JSON.stringify(respuesta)).not.toContain('passwordHash');
-    expect(jwt.sign).toHaveBeenCalledWith(expect.objectContaining({ roles: ['ADMINISTRATIVO'] }), { expiresIn: '8h' });
+    expect(jwt.sign).toHaveBeenCalledWith(expect.objectContaining({ roles: ['ADMINISTRATIVO'] }), { expiresIn: '15m' });
     expect(repo.findOne).toHaveBeenCalledWith(expect.objectContaining({
       select: expect.arrayContaining(['passwordHash']),
     }));

@@ -13,19 +13,21 @@ interface CargoDetalle {
 interface Estado {
   saldoTotal: number;
   cargos: CargoDetalle[];
-  pagos: { id: number; monto: number; metodo: string; fechaPago: string }[];
+  pagos: { id: number; monto: number; metodo: string; fechaPago: string; estatus: string; aplicado: boolean }[];
 }
 
 export default function EstadoCuentaScreen() {
   const [estado, setEstado] = useState<Estado | null>(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
+  const [ultimaActualizacion, setUltimaActualizacion] = useState<string | null>(null);
+  const [pagando, setPagando] = useState(false);
 
   const cargar = useCallback(() => {
     setError('');
     setCargando(true);
     api.get<Estado>('/finanzas/me/estado-cuenta')
-      .then((r) => setEstado(r.data))
+      .then((r) => { setEstado(r.data); setUltimaActualizacion(new Date().toLocaleString()); })
       .catch((fallo) => setError(mensajeDeError(fallo)))
       .finally(() => setCargando(false));
   }, []);
@@ -33,6 +35,8 @@ export default function EstadoCuentaScreen() {
   useFocusEffect(useCallback(() => { cargar(); }, [cargar]));
 
   const pagarEnLinea = async (cargo: CargoDetalle) => {
+    if (pagando) return;
+    setPagando(true);
     try {
       const { data } = await api.post('/finanzas/ordenes', { cargoId: cargo.id });
       if (data.urlPago) {
@@ -42,7 +46,7 @@ export default function EstadoCuentaScreen() {
       }
     } catch (err) {
       Alert.alert('No se pudo generar la orden', mensajeDeError(err));
-    }
+    } finally { setPagando(false); }
   };
 
   const tono = (estatus: string) =>
@@ -54,6 +58,7 @@ export default function EstadoCuentaScreen() {
       refreshControl={<RefreshControl refreshing={cargando} onRefresh={cargar} />}
     >
       {error !== '' && <ErrorCarga mensaje={error} reintentar={cargar} />}
+      {ultimaActualizacion && <Text accessibilityRole="text">Última actualización: {ultimaActualizacion}</Text>}
       {estado && (
         <>
           <View style={estilos.resumen}>
@@ -73,6 +78,7 @@ export default function EstadoCuentaScreen() {
               <Sello texto={c.estatus} tono={tono(c.estatus)} />
               {c.saldo > 0 && (
                 <TouchableOpacity
+                  disabled={pagando}
                   style={estilos.boton}
                   onPress={() => pagarEnLinea(c)}
                   accessibilityRole="button"
@@ -91,7 +97,7 @@ export default function EstadoCuentaScreen() {
                 <Tarjeta key={p.id}>
                   <Text style={base.tituloTarjeta}>{pesos(p.monto)}</Text>
                   <Text style={base.secundario}>
-                    {p.metodo} · {new Date(p.fechaPago).toLocaleDateString('es-MX')}
+                    {p.estatus}{p.estatus === 'CONFIRMADO' && !p.aplicado ? ' · Pendiente de aplicación por Finanzas' : ''} · {p.metodo} · {new Date(p.fechaPago).toLocaleDateString('es-MX')}
                   </Text>
                 </Tarjeta>
               ))}

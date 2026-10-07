@@ -23,6 +23,8 @@ export default function UsuariosPage() {
   const [resultado, setResultado] = useState<Resultado>({ datos: [], total: 0, pagina: 1, porPagina: 20 });
   const [planteles, setPlanteles] = useState<Plantel[]>([]);
   const [plantelId, setPlantelId] = useState('');
+  const [plantelIds, setPlantelIds] = useState<number[]>([]);
+  const [enviando, setEnviando] = useState(false);
   const [buscar, setBuscar] = useState('');
   const [form, setForm] = useState(FORM_INICIAL);
   const [rolesElegidos, setRolesElegidos] = useState<string[]>(['ADMINISTRATIVO']);
@@ -49,11 +51,11 @@ export default function UsuariosPage() {
   };
   const alternarRol = (rol: string) => setRolesElegidos((r) => r.includes(rol) ? r.filter((x) => x !== rol) : [...r, rol]);
   const crear = async (e: FormEvent) => {
-    e.preventDefault(); setError(''); setMensaje('');
+    e.preventDefault(); if (enviando) return; setEnviando(true); setError(''); setMensaje('');
     try {
-      await api.post('/usuarios', { ...form, roles: rolesElegidos });
+      await api.post('/usuarios', { ...form, roles: rolesElegidos, plantelIds: plantelIds.length ? plantelIds : undefined });
       setMensaje(`Cuenta ${form.email} creada`); setForm(FORM_INICIAL); await cargar(1, tipo, plantelId, buscar);
-    } catch (err) { setError(mensajeDeError(err)); }
+    } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
   return <>
@@ -63,8 +65,10 @@ export default function UsuariosPage() {
         <div className="campo"><label>Nombre</label><input required value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} /></div>
         <div className="campo"><label>Apellido paterno</label><input required value={form.apellidoPaterno} onChange={(e) => setForm({ ...form, apellidoPaterno: e.target.value })} /></div>
         <div className="campo"><label>Correo</label><input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-        <div className="campo"><label>Contraseña inicial</label><input required minLength={8} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></div>
-      </div><div className="fila" style={{ marginTop: 12 }}>{ROLES_PERSONAL.map((rol) => <label className="casilla" key={rol}><input type="checkbox" checked={rolesElegidos.includes(rol)} onChange={() => alternarRol(rol)} />{rol}</label>)}<button className="boton">Crear</button></div></form>
+        <div className="campo"><label>Contraseña inicial</label><input type="password" autoComplete="new-password" required minLength={8} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></div>
+      </div><div className="fila" style={{ marginTop: 12 }}>{ROLES_PERSONAL.map((rol) => <label className="casilla" key={rol}><input type="checkbox" checked={rolesElegidos.includes(rol)} onChange={() => alternarRol(rol)} />{rol}</label>)}<button disabled={enviando} className="boton">{enviando ? 'Guardando…' : 'Crear'}</button></div><fieldset><legend>Planteles de alcance</legend>{planteles.map((p) => <label key={p.id} className="casilla">
+        <input type="checkbox" checked={plantelIds.includes(p.id)} onChange={() => setPlantelIds((ids) => ids.includes(p.id) ? ids.filter((id) => id !== p.id) : [...ids, p.id])} />{p.nombre}
+      </label>)}</fieldset></form>
     </section>}
     {error && <p className="mensaje-error">{error}</p>}{mensaje && <p className="mensaje-ok">{mensaje}</p>}
 

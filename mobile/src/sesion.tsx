@@ -5,6 +5,7 @@ export interface Sesion {
   email: string;
   nombre: string;
   roles: string[];
+  passwordChangeRequired?: boolean;
 }
 
 export interface SesionContexto {

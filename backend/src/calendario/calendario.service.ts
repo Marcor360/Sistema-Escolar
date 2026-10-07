@@ -1,4 +1,5 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { grupoVigente, inscripcionVigente } from '../common/contexto-academico';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtUser } from '../common/current-user.decorator';
@@ -24,18 +25,23 @@ export class CalendarioService {
   ) {}
 
   async listar(user: JwtUser, desde?: string, hasta?: string, plantelId?: number) {
+    if ((desde && !Number.isFinite(Date.parse(desde))) || (hasta && !Number.isFinite(Date.parse(hasta))) ||
+        (desde && hasta && Date.parse(hasta) < Date.parse(desde))) throw new BadRequestException('Intervalo de fechas inválido');
     const qb = this.eventos.createQueryBuilder('e').leftJoinAndSelect('e.plantel', 'p');
-    if (desde) qb.andWhere('e.fecha_inicio >= :desde', { desde: new Date(desde) });
-    if (hasta) qb.andWhere('e.fecha_inicio <= :hasta', { hasta: new Date(hasta) });
+    const inicioVentana = desde ? new Date(desde) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const finVentana = hasta ? new Date(hasta) : new Date(inicioVentana.getTime() + 90 * 24 * 60 * 60 * 1000);
+    if (finVentana.getTime() - inicioVentana.getTime() > 366 * 24 * 60 * 60 * 1000) throw new BadRequestException('Consulta una ventana de hasta un año');
+    qb.andWhere('(e.fecha_inicio >= :desde OR e.fecha_fin >= :desde)', { desde: inicioVentana });
+    qb.andWhere('e.fecha_inicio <= :hasta', { hasta: finVentana });
     if (user.roles.includes('ALUMNO')) {
       const alumno = await this.alumnos.findOne({ where: { usuarioId: user.sub } });
       if (!alumno) throw new NotFoundException('El usuario no tiene expediente de alumno');
-      const inscripciones = await this.inscripciones.find({ where: { alumnoId: alumno.id, estatus: 'ACTIVA' } });
+      const inscripciones = await this.inscripciones.find({ where: { ...inscripcionVigente, alumnoId: alumno.id } });
       const grupos = inscripciones.map((i) => i.grupoId);
       qb.andWhere(
         grupos.length
-          ? '(e.plantel_id IS NULL OR e.plantel_id = :plantelAlumno OR e.grupo_id IN (:...gruposAlumno))'
-          : '(e.plantel_id IS NULL OR e.plantel_id = :plantelAlumno)',
+          ? '((e.plantel_id IS NULL AND e.grupo_id IS NULL) OR (e.plantel_id = :plantelAlumno AND e.grupo_id IS NULL) OR e.grupo_id IN (:...gruposAlumno))'
+          : '((e.plantel_id IS NULL AND e.grupo_id IS NULL) OR (e.plantel_id = :plantelAlumno AND e.grupo_id IS NULL))',
         { plantelAlumno: alumno.plantelId, gruposAlumno: grupos },
       );
     } else {
@@ -46,7 +52,7 @@ export class CalendarioService {
         const asignaciones = docente
           ? await this.grupoMaterias.find({ where: { docenteId: docente.id } })
           : [];
-        const gruposActivos = asignaciones.filter((asignacion) => asignacion.grupo.activo);
+        const gruposActivos = asignaciones.filter((asignacion) => grupoVigente(asignacion.grupo));
         const grupoIds = [...new Set(gruposActivos.map((grupo) => grupo.grupoId))];
         const plantelesDocente = [...new Set(gruposActivos.map((grupo) => grupo.grupo.plantelId))];
         if (plantelId !== undefined && !plantelesDocente.includes(plantelId)) {
@@ -55,11 +61,11 @@ export class CalendarioService {
         if (plantelId !== undefined) {
           const gruposDelPlantel = gruposActivos.filter((grupo) => grupo.grupo.plantelId === plantelId);
           const gruposFiltrados = [...new Set(gruposDelPlantel.map((grupo) => grupo.grupoId))];
-          qb.andWhere('(e.plantel_id IS NULL OR e.plantel_id = :plantelId OR e.grupo_id IN (:...grupoIds))', {
+          qb.andWhere('((e.plantel_id IS NULL AND e.grupo_id IS NULL) OR (e.plantel_id = :plantelId AND e.grupo_id IS NULL) OR e.grupo_id IN (:...grupoIds))', {
             plantelId, grupoIds: gruposFiltrados,
           });
         } else if (grupoIds.length > 0) {
-          qb.andWhere('(e.plantel_id IS NULL OR e.plantel_id IN (:...planteles) OR e.grupo_id IN (:...grupoIds))', {
+          qb.andWhere('((e.plantel_id IS NULL AND e.grupo_id IS NULL) OR (e.plantel_id IN (:...planteles) AND e.grupo_id IS NULL) OR e.grupo_id IN (:...grupoIds))', {
             planteles: plantelesDocente, grupoIds,
           });
         } else {
@@ -67,14 +73,19 @@ export class CalendarioService {
         }
       } else {
         const planteles = await this.scope.resolverFiltro(user, plantelId);
-        if (planteles !== null) qb.andWhere('(e.plantel_id IS NULL OR e.plantel_id IN (:...planteles))', { planteles });
-        else if (plantelId) qb.andWhere('(e.plantel_id IS NULL OR e.plantel_id = :plantelId)', { plantelId });
+        if (planteles !== null) qb.andWhere('((e.plantel_id IS NULL AND e.grupo_id IS NULL) OR (e.grupo_id IS NULL AND e.plantel_id IN (:...planteles)) OR EXISTS (SELECT 1 FROM grupos g WHERE g.id = e.grupo_id AND g.plantel_id IN (:...planteles)))', { planteles });
+        else if (plantelId) qb.andWhere('((e.plantel_id IS NULL AND e.grupo_id IS NULL) OR (e.grupo_id IS NULL AND e.plantel_id = :plantelId) OR EXISTS (SELECT 1 FROM grupos g WHERE g.id = e.grupo_id AND g.plantel_id = :plantelId))', { plantelId });
       }
     }
-    return qb.orderBy('e.fecha_inicio', 'ASC').take(500).getMany();
+    return qb.orderBy('e.fecha_inicio', 'ASC').getMany();
   }
 
   async crear(dto: EventoDto, user: JwtUser) {
+    const inicio = new Date(dto.fechaInicio).getTime();
+    const fin = dto.fechaFin ? new Date(dto.fechaFin).getTime() : inicio;
+    if (!Number.isFinite(inicio) || !Number.isFinite(fin) || fin < inicio) {
+      throw new BadRequestException('Las fechas deben ser válidas y fechaFin no puede preceder a fechaInicio');
+    }
     const superadmin = user.roles.includes('SUPERADMIN');
     const maestroPuro = user.roles.includes('MAESTRO') && !user.roles.includes('ADMINISTRATIVO') && !superadmin;
     let plantelId = dto.plantelId ?? null;

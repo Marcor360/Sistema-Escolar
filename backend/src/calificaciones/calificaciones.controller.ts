@@ -1,5 +1,6 @@
+import { PaginacionDto } from '../common/paginacion.dto';
 import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CalificacionesService } from './calificaciones.service';
 import { CambiarEstadoPeriodoDto, CapturaCalificacionesDto } from './calificaciones.dto';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
@@ -14,12 +15,22 @@ import { CurrentUser, JwtUser } from '../common/current-user.decorator';
 export class CalificacionesController {
   constructor(private readonly service: CalificacionesService) {}
 
+  @ApiOperation({ summary: 'Calificaciones propias del ciclo vigente; cicloId explícito para historial' })
+  @ApiResponse({ status: 400, description: 'Datos o transición inválidos' })
+  @ApiResponse({ status: 401, description: 'Sesión expirada o revocada' })
+  @ApiResponse({ status: 403, description: 'Rol, portal, alcance u origen no autorizado' })
+  @ApiResponse({ status: 409, description: 'Conflicto con el estado actual' })
   @Get('mias')
   @Roles('ALUMNO')
-  mias(@CurrentUser() user: JwtUser) {
-    return this.service.mias(user);
+  mias(@CurrentUser() user: JwtUser, @Query('cicloId', new ParseIntPipe({ optional: true })) cicloId?: number) {
+    return this.service.mias(user, cicloId);
   }
 
+  @ApiOperation({ summary: 'Captura oficial transaccional; corregir una nota exige motivo' })
+  @ApiResponse({ status: 400, description: 'Datos o transición inválidos' })
+  @ApiResponse({ status: 401, description: 'Sesión expirada o revocada' })
+  @ApiResponse({ status: 403, description: 'Rol, portal, alcance u origen no autorizado' })
+  @ApiResponse({ status: 409, description: 'Conflicto con el estado actual' })
   @Post('captura')
   @Roles('MAESTRO', 'ADMINISTRATIVO')
   capturar(@Body() dto: CapturaCalificacionesDto, @CurrentUser() user: JwtUser) {
@@ -36,6 +47,11 @@ export class CalificacionesController {
     return this.service.estadoPeriodo(grupoMateriaId, parcial, user);
   }
 
+  @ApiOperation({ summary: 'Cerrar sin faltantes o reabrir mediante control escolar' })
+  @ApiResponse({ status: 400, description: 'Datos o transición inválidos' })
+  @ApiResponse({ status: 401, description: 'Sesión expirada o revocada' })
+  @ApiResponse({ status: 403, description: 'Rol, portal, alcance u origen no autorizado' })
+  @ApiResponse({ status: 409, description: 'Conflicto con el estado actual' })
   @Patch('periodos/:grupoMateriaId/:parcial')
   @Roles('ADMINISTRATIVO')
   cambiarEstadoPeriodo(
@@ -50,11 +66,12 @@ export class CalificacionesController {
   @Get('periodos/:grupoMateriaId/:parcial/historial')
   @Roles('MAESTRO', 'ADMINISTRATIVO')
   historialPeriodo(
+    @Query() query: PaginacionDto,
     @Param('grupoMateriaId', ParseIntPipe) grupoMateriaId: number,
     @Param('parcial', ParseIntPipe) parcial: number,
     @CurrentUser() user: JwtUser,
   ) {
-    return this.service.historialPeriodo(grupoMateriaId, parcial, user);
+    return this.service.historialPeriodo(grupoMateriaId, parcial, user, query);
   }
 
   @Get('grupo-materia/:id')
@@ -69,7 +86,7 @@ export class CalificacionesController {
 
   @Get('alumno/:id')
   @Roles('ADMINISTRATIVO', 'MAESTRO')
-  porAlumno(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) {
-    return this.service.porAlumno(id, user);
+  porAlumno(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser, @Query('cicloId', new ParseIntPipe({ optional: true })) cicloId?: number) {
+    return this.service.porAlumno(id, user, cicloId);
   }
 }

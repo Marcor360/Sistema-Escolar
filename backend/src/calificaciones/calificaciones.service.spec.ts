@@ -5,7 +5,7 @@ describe('CalificacionesService.porAlumno', () => {
   it('un MAESTRO recibe solo las calificaciones de sus materias con inscripción activa', async () => {
     const repo = { find: jest.fn().mockResolvedValue([]) };
     const grupoMaterias = { find: jest.fn().mockResolvedValue([
-      { id: 21, grupoId: 3, docenteId: 7, grupo: { activo: true } },
+      { id: 21, grupoId: 3, docenteId: 7, grupo: { activo: true, ciclo: { activo: true }, plantel: { activo: true } } },
       { id: 22, grupoId: 4, docenteId: 7, grupo: { activo: false } },
     ]) };
     const inscripciones = { find: jest.fn().mockResolvedValue([{ grupoId: 3, alumnoId: 15, estatus: 'ACTIVA' }]) };

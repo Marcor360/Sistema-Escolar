@@ -1,6 +1,7 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { Paginador } from '../components/Paginador';
 import { Encabezado } from '../components/Encabezado';
 
 interface GrupoMateria {
@@ -12,7 +13,8 @@ interface Inscripcion {
   alumno: { id: number; matricula: string; usuario: { nombre: string; apellidoPaterno: string } };
 }
 interface Registro { alumnoId: number; parcial: number; calificacion: number }
-interface EstadoPeriodo { estatus: 'ABIERTO' | 'CERRADO' }
+interface EstadoPeriodo { estatus: 'ABIERTO' | 'CERRADO'; inscritos: number; capturados: number; faltantes: number }
+interface HistorialPagina { datos: CambioCalificacion[]; total: number; pagina: number; porPagina: number }
 interface CambioCalificacion {
   id: number; alumnoId: number; valorAnterior: number | null; valorNuevo: number;
   usuarioId: number; fecha: string; motivo: string | null;
@@ -27,9 +29,16 @@ export default function CalificacionesPage() {
   const [valores, setValores] = useState<Record<number, string>>({});
   const [estadoPeriodo, setEstadoPeriodo] = useState<EstadoPeriodo['estatus'] | null>(null);
   const [historial, setHistorial] = useState<CambioCalificacion[]>([]);
+  const [paginaHistorial, setPaginaHistorial] = useState<HistorialPagina>({ datos: [], total: 0, pagina: 1, porPagina: 20 });
+  const cargarHistorial = async (pagina: number) => {
+    try { const { data } = await api.get<HistorialPagina>(`/calificaciones/periodos/${claseId}/${parcial}/historial`, { params: { pagina } });
+      setHistorial(data.datos); setPaginaHistorial(data);
+    } catch (err) { setError(mensajeDeError(err)); }
+  };
   const [motivo, setMotivo] = useState('');
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
+  const [enviando, setEnviando] = useState(false);
 
   const cargarClases = useCallback(() => {
     // El maestro ve sus clases; control escolar captura en cualquiera (una sola petición)
@@ -53,11 +62,11 @@ export default function CalificacionesPage() {
         api.get<Inscripcion[]>(`/academico/grupos/${clase.grupo.id}/alumnos`),
         api.get<Registro[]>(`/calificaciones/grupo-materia/${clase.id}`, { params: { parcial } }),
         api.get<EstadoPeriodo>(`/calificaciones/periodos/${clase.id}/${parcial}`),
-        api.get<CambioCalificacion[]>(`/calificaciones/periodos/${clase.id}/${parcial}/historial`),
+        api.get<HistorialPagina>(`/calificaciones/periodos/${clase.id}/${parcial}/historial`),
       ]);
       setAlumnos(insc.data);
       setEstadoPeriodo(estado.data.estatus);
-      setHistorial(cambios.data);
+      setHistorial(cambios.data.datos); setPaginaHistorial(cambios.data);
       const mapa: Record<number, string> = {};
       for (const r of previas.data) mapa[r.alumnoId] = String(r.calificacion);
       setValores(mapa);
@@ -68,13 +77,17 @@ export default function CalificacionesPage() {
     if (!claseId || estadoPeriodo === null) return;
     setError(''); setMensaje('');
     const siguiente = estadoPeriodo === 'ABIERTO' ? 'CERRADO' : 'ABIERTO';
+    if (enviando) return; setEnviando(true);
     try {
+      const { data: resumen } = await api.get<EstadoPeriodo>(`/calificaciones/periodos/${claseId}/${parcial}`);
+      if (siguiente === 'CERRADO' && resumen.faltantes) { setError(`No se puede cerrar: faltan ${resumen.faltantes} calificaciones`); return; }
+      if (!confirm(`Inscritos: ${resumen.inscritos} · Capturados: ${resumen.capturados} · Faltantes: ${resumen.faltantes}. ¿${siguiente === 'CERRADO' ? 'Cerrar' : 'Reabrir'} periodo?`)) return;
       const { data } = await api.patch<EstadoPeriodo>(`/calificaciones/periodos/${claseId}/${parcial}`, {
         estatus: siguiente,
       });
       setEstadoPeriodo(data.estatus);
       setMensaje(`Periodo ${data.estatus.toLowerCase()}`);
-    } catch (err) { setError(mensajeDeError(err)); }
+    } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
   /** Concentrado de la clase (parciales, final y promedio) en Excel. */
@@ -95,11 +108,13 @@ export default function CalificacionesPage() {
 
   const guardar = async (e: FormEvent) => {
     e.preventDefault();
+    if (enviando) return;
     setError(''); setMensaje('');
     const items = alumnos
       .filter((a) => valores[a.alumno.id] !== undefined && valores[a.alumno.id] !== '')
       .map((a) => ({ alumnoId: a.alumno.id, calificacion: Number(valores[a.alumno.id]) }));
     if (items.length === 0) { setError('Captura al menos una calificación'); return; }
+    setEnviando(true);
     try {
       const { data } = await api.post('/calificaciones/captura', {
         grupoMateriaId: Number(claseId),
@@ -109,16 +124,16 @@ export default function CalificacionesPage() {
       });
       setMensaje(`${data.capturadas} calificaciones guardadas`);
       setMotivo('');
-      const { data: cambios } = await api.get<CambioCalificacion[]>(
+      const { data: cambios } = await api.get<HistorialPagina>(
         `/calificaciones/periodos/${claseId}/${parcial}/historial`,
       );
-      setHistorial(cambios);
-    } catch (err) { setError(mensajeDeError(err)); }
+      setHistorial(cambios.datos); setPaginaHistorial(cambios);
+    } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
   return (
     <>
-      <Encabezado titulo="Captura de calificaciones" detalle="Registro por grupo-materia y parcial" />
+      <Encabezado titulo="Captura de calificaciones" detalle="Evaluación oficial por parcial; las actividades de clase se registran por separado" />
       {error && <p className="mensaje-error" role="alert">{error}</p>}
       {mensaje && <p className="mensaje-ok" role="status">{mensaje}</p>}
 
@@ -153,7 +168,7 @@ export default function CalificacionesPage() {
         <section className="panel">
           <p role="status">Periodo {estadoPeriodo.toLowerCase()}</p>
           {tieneRol('ADMINISTRATIVO') && (
-            <button type="button" className="boton secundario" onClick={cambiarEstado}>
+            <button type="button" className="boton secundario" onClick={cambiarEstado} disabled={enviando}>
               {estadoPeriodo === 'ABIERTO' ? 'Cerrar periodo' : 'Reabrir periodo'}
             </button>
           )}
@@ -182,17 +197,18 @@ export default function CalificacionesPage() {
             </tbody>
           </table>
           <div className="campo">
-            <label htmlFor="motivo-calificacion">Motivo de la captura o corrección (opcional)</label>
+            <label htmlFor="motivo-calificacion">Motivo obligatorio al corregir una nota existente</label>
             <input id="motivo-calificacion" maxLength={300} value={motivo}
               onChange={(e) => setMotivo(e.target.value)} disabled={estadoPeriodo === 'CERRADO'} />
           </div>
-          <button className="boton" disabled={estadoPeriodo === 'CERRADO'}>Guardar calificaciones</button>
+          <button className="boton" disabled={enviando || estadoPeriodo === 'CERRADO'}>Guardar calificaciones</button>
         </form>
       )}
 
       {historial.length > 0 && (
         <section className="panel">
-          <h2>Historial reciente del periodo</h2>
+          <h2>Historial del periodo</h2>
+          <Paginador total={paginaHistorial.total} pagina={paginaHistorial.pagina} porPagina={paginaHistorial.porPagina} onCambio={cargarHistorial} />
           <table className="tabla">
             <thead><tr><th>Fecha</th><th>Alumno</th><th>Anterior</th><th>Nueva</th><th>Usuario</th><th>Motivo</th></tr></thead>
             <tbody>{historial.map((cambio) => (

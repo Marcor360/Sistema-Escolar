@@ -26,12 +26,13 @@ export default function MateriasScreen() {
   const [abierta, setAbierta] = useState<number | null>(null);
   const [materialesPor, setMaterialesPor] = useState<Record<number, Material[]>>({});
   const [error, setError] = useState('');
+  const [ultimaActualizacion, setUltimaActualizacion] = useState<string | null>(null);
 
   const cargar = useCallback(() => {
     setError('');
     setCargando(true);
     api.get<Materia[]>('/alumnos/me/materias')
-      .then((r) => { setMaterias(r.data); setCargaInicialCompleta(true); })
+      .then((r) => { setMaterias(r.data); setUltimaActualizacion(new Date().toLocaleString()); setCargaInicialCompleta(true); })
       .catch((fallo) => setError(mensajeDeError(fallo)))
       .finally(() => setCargando(false));
   }, []);
@@ -61,6 +62,7 @@ export default function MateriasScreen() {
   return (
     <View style={base.pantalla}>
       {error !== '' && <ErrorCarga mensaje={error} reintentar={cargar} />}
+      {ultimaActualizacion && <Text accessibilityRole="text">Última actualización: {ultimaActualizacion}</Text>}
       <FlatList
         data={materias}
         keyExtractor={(m) => String(m.id)}

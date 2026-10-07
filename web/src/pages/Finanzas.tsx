@@ -1,6 +1,8 @@
 import { FormEvent, KeyboardEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { pesos, selloDeCargo } from '../utils/formato';
+import { Conciliacion } from '../components/Conciliacion';
+import { SelectorBuscable } from '../components/SelectorBuscable';
 import { Encabezado } from '../components/Encabezado';
 import { Paginador } from '../components/Paginador';
 
@@ -23,20 +25,40 @@ interface ResultadoPagos { datos: Pago[]; total: number; pagina: number; porPagi
 
 export default function FinanzasPage() {
   const [tab, setTab] = useState<'cargos' | 'pagos' | 'adeudos'>('cargos');
-  const [alumnos, setAlumnos] = useState<Alumno[]>([]);
   const [conceptos, setConceptos] = useState<Concepto[]>([]);
   const [ciclos, setCiclos] = useState<Ciclo[]>([]);
   const [resultadoCargos, setResultadoCargos] = useState<ResultadoCargos>({ datos: [], total: 0, pagina: 1, porPagina: 20 });
   const [resultadoPagos, setResultadoPagos] = useState<ResultadoPagos>({ datos: [], total: 0, pagina: 1, porPagina: 20 });
   const [adeudos, setAdeudos] = useState<Adeudo[]>([]);
+  const [paginaAdeudos, setPaginaAdeudos] = useState(1); const [totalAdeudos, setTotalAdeudos] = useState(0);
+  const cargarAdeudos = async (pagina = 1) => {
+    try { const { data } = await api.get('/finanzas/adeudos', { params: { pagina } }); setAdeudos(data.datos); setPaginaAdeudos(pagina); setTotalAdeudos(data.total); }
+    catch (err) { setError(mensajeDeError(err)); }
+  };
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const [planteles, setPlanteles] = useState<{ id: number; nombre: string }[]>([]);
+  const [plantelOperacion, setPlantelOperacion] = useState('');
+  const confirmarMasiva = async (preview: string, datos: object) => {
+    if (!plantelOperacion) throw new Error('Selecciona el plantel de la operación masiva');
+    const { data } = await api.post(preview, { ...datos, plantelId: Number(plantelOperacion) });
+    return confirm(`Plantel: ${planteles.find((p) => p.id === Number(plantelOperacion))?.nombre}\nCiclo: ${data.cicloId ?? 'Vigente / cargos existentes'}\nPeriodo: ${data.periodo ?? 'Cargos vencidos'}\nRegistros afectados: ${data.registros ?? data.generados ?? 0}\nTotal estimado: ${pesos(data.totalEstimado ?? 0)}\n¿Confirmar operación?`);
+  };
+  const corregir = async (tipo: 'cargos' | 'pagos', id: number) => {
+    const motivo = prompt(tipo === 'cargos' ? 'Motivo de cancelación del cargo:' : 'Motivo de anulación del pago:');
+    if (!motivo?.trim()) return;
+    if (!confirm('¿Confirmar? La operación se conservará en la bitácora financiera.')) return;
+    setEnviando(true); setError('');
+    try { await api.post(`/finanzas/${tipo}/${id}/${tipo === 'cargos' ? 'cancelacion' : 'anulacion'}`, { motivo });
+      setMensaje('Corrección registrada en la bitácora'); await cargarDatos();
+    } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
+  };
 
   const [formCargo, setFormCargo] = useState({ alumnoId: '', conceptoId: '', descripcion: '', monto: '', fechaVencimiento: '' });
   const [formColegiaturas, setFormColegiaturas] = useState({ cicloId: '', periodo: '' });
   const [formPago, setFormPago] = useState({ alumnoId: '', cargoId: '', monto: '', metodo: 'EFECTIVO', referencia: '' });
   const intentoPago = useRef<{ firma: string; clave: string } | null>(null);
-  const [cargosAlumno, setCargosAlumno] = useState<Cargo[]>([]);
   const navegarTabs = (event: KeyboardEvent<HTMLButtonElement>) => {
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
     const botones = Array.from(document.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
@@ -50,12 +72,10 @@ export default function FinanzasPage() {
 
   const cargarCatalogos = useCallback(async () => {
     try {
-      const [alumnosR, conceptosR, ciclosR] = await Promise.all([
-        api.get<{ datos: Alumno[] }>('/alumnos', { params: { porPagina: 100 } }),
+      const [conceptosR, ciclosR] = await Promise.all([
         api.get<Concepto[]>('/finanzas/conceptos'),
         api.get<Ciclo[]>('/academico/ciclos'),
       ]);
-      setAlumnos(alumnosR.data.datos);
       setConceptos(conceptosR.data);
       setCiclos(ciclosR.data);
     } catch (err) { setError(mensajeDeError(err)); }
@@ -76,23 +96,16 @@ export default function FinanzasPage() {
   );
   const cargarDatos = useCallback(async () => {
     await Promise.all([cargarCargos(), cargarPagos()]);
-    try { const { data } = await api.get<Adeudo[]>('/finanzas/adeudos'); setAdeudos(data); }
+    try { const { data } = await api.get('/finanzas/adeudos'); setAdeudos(data.datos); setPaginaAdeudos(1); setTotalAdeudos(data.total); }
     catch (err) { setError(mensajeDeError(err)); }
   }, [cargarCargos, cargarPagos]);
-  useEffect(() => { cargarCatalogos(); cargarDatos(); }, [cargarCatalogos, cargarDatos]);
-
-  /** Cargos con saldo del alumno elegido, para el selector de "pago a cargo" (independiente de la página visible). */
-  useEffect(() => {
-    if (!formPago.alumnoId) { setCargosAlumno([]); return; }
-    api.get<ResultadoCargos>('/finanzas/cargos', { params: { alumnoId: formPago.alumnoId, porPagina: 100 } })
-      .then((r) => setCargosAlumno(r.data.datos))
-      .catch((err) => setError(mensajeDeError(err)));
-  }, [formPago.alumnoId]);
+  useEffect(() => { cargarCatalogos(); cargarDatos(); api.get('/planteles/mios').then((r) => setPlanteles(r.data)).catch((e) => setError(mensajeDeError(e))); }, [cargarCatalogos, cargarDatos]);
 
   const limpiarAvisos = () => { setError(''); setMensaje(''); };
 
   const crearCargo = async (e: FormEvent) => {
     e.preventDefault();
+    if (enviando) return; setEnviando(true);
     limpiarAvisos();
     try {
       await api.post('/finanzas/cargos', {
@@ -105,33 +118,39 @@ export default function FinanzasPage() {
       setFormCargo({ alumnoId: '', conceptoId: '', descripcion: '', monto: '', fechaVencimiento: '' });
       setMensaje('Cargo registrado');
       cargarDatos();
-    } catch (err) { setError(mensajeDeError(err)); }
+    } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
   const generarColegiaturas = async (e: FormEvent) => {
     e.preventDefault();
+    if (enviando) return; setEnviando(true);
     limpiarAvisos();
     try {
+      if (!await confirmarMasiva('/finanzas/cargos/preview-colegiaturas', { cicloId: Number(formColegiaturas.cicloId), periodo: formColegiaturas.periodo })) return;
       const { data } = await api.post('/finanzas/cargos/generar-colegiaturas', {
+        plantelId: Number(plantelOperacion), confirmado: true,
         cicloId: Number(formColegiaturas.cicloId),
         periodo: formColegiaturas.periodo,
       });
       setMensaje(`Colegiaturas: ${data.generados} generadas, ${data.omitidos} ya existían (vencen ${data.vencimiento})`);
       cargarDatos();
-    } catch (err) { setError(mensajeDeError(err)); }
+    } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
   const aplicarRecargos = async () => {
+    if (enviando) return; setEnviando(true);
     limpiarAvisos();
     try {
-      const { data } = await api.post('/finanzas/cargos/aplicar-recargos', {});
+      if (!await confirmarMasiva('/finanzas/cargos/preview-recargos', {})) return;
+      const { data } = await api.post('/finanzas/cargos/aplicar-recargos', { plantelId: Number(plantelOperacion), confirmado: true });
       setMensaje(`Recargos del ${data.porcentaje}% aplicados a ${data.aplicados} cargos vencidos`);
       cargarDatos();
-    } catch (err) { setError(mensajeDeError(err)); }
+    } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
   const registrarPago = async (e: FormEvent) => {
     e.preventDefault();
+    if (enviando) return; setEnviando(true);
     limpiarAvisos();
     const datos = {
       alumnoId: Number(formPago.alumnoId),
@@ -153,18 +172,21 @@ export default function FinanzasPage() {
       setFormPago({ alumnoId: '', cargoId: '', monto: '', metodo: 'EFECTIVO', referencia: '' });
       setMensaje('Pago registrado y estado de cuenta actualizado');
       cargarDatos();
-    } catch (err) { setError(mensajeDeError(err)); }
+    } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
   const enviarAvisos = async () => {
+    if (enviando) return; setEnviando(true);
     limpiarAvisos();
     try {
-      const { data } = await api.post('/finanzas/avisos-cobranza');
+      if (!await confirmarMasiva('/finanzas/preview-cobranza', {})) return;
+      const { data } = await api.post('/finanzas/avisos-cobranza', { plantelId: Number(plantelOperacion), confirmado: true });
       setMensaje(`Avisos de cobranza enviados: ${data.enviados}`);
-    } catch (err) { setError(mensajeDeError(err)); }
+    } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
   const descargarExcel = async () => {
+    if (enviando) return; setEnviando(true);
     limpiarAvisos();
     try {
       const { data } = await api.get('/reportes/adeudos.xlsx', { responseType: 'blob' });
@@ -174,7 +196,7 @@ export default function FinanzasPage() {
       a.download = 'adeudos.xlsx';
       a.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-    } catch (err) { setError(mensajeDeError(err)); }
+    } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
   return (
@@ -190,17 +212,17 @@ export default function FinanzasPage() {
       {error && <p className="mensaje-error" role="alert">{error}</p>}
       {mensaje && <p className="mensaje-ok" role="status">{mensaje}</p>}
 
+      <Conciliacion />
+      <section className="panel"><label htmlFor="plantel-operacion">Plantel para operaciones masivas</label>
+        <select id="plantel-operacion" value={plantelOperacion} onChange={(e) => setPlantelOperacion(e.target.value)}><option value="">Selecciona un plantel…</option>{planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select>
+        <p>Las colegiaturas, recargos y avisos requieren previsualización y confirmación para este plantel.</p>
+      </section>
       {tab === 'cargos' && (
         <div id="panel-cargos" role="tabpanel" aria-labelledby="tab-cargos" tabIndex={0}>
           <section className="panel">
             <h2>Nuevo cargo individual</h2>
             <form onSubmit={crearCargo} className="fila">
-              <div className="campo"><label>Alumno</label>
-                <select required value={formCargo.alumnoId} onChange={(e) => setFormCargo({ ...formCargo, alumnoId: e.target.value })}>
-                  <option value="">Selecciona…</option>
-                  {alumnos.map((a) => <option key={a.id} value={a.id}>{a.matricula} — {a.usuario.nombre} {a.usuario.apellidoPaterno}</option>)}
-                </select>
-              </div>
+              <SelectorBuscable<Alumno> ruta="/alumnos" valor={formCargo.alumnoId} cambiar={(id) => setFormCargo({ ...formCargo, alumnoId: id })} etiqueta="Alumno" texto={(a) => `${a.matricula} — ${a.usuario.nombre} ${a.usuario.apellidoPaterno}`} />
               <div className="campo"><label>Concepto</label>
                 <select
                   required value={formCargo.conceptoId}
@@ -227,7 +249,7 @@ export default function FinanzasPage() {
               <div className="campo"><label>Vence</label>
                 <input type="date" value={formCargo.fechaVencimiento} onChange={(e) => setFormCargo({ ...formCargo, fechaVencimiento: e.target.value })} />
               </div>
-              <button className="boton">Registrar cargo</button>
+              <button disabled={enviando} className="boton">Registrar cargo</button>
             </form>
           </section>
 
@@ -244,13 +266,13 @@ export default function FinanzasPage() {
                 <input required pattern="\d{4}-\d{2}" placeholder="2026-09" value={formColegiaturas.periodo}
                   onChange={(e) => setFormColegiaturas({ ...formColegiaturas, periodo: e.target.value })} />
               </div>
-              <button className="boton">Generar para inscritos</button>
+              <button disabled={enviando} className="boton">Generar para inscritos</button>
               <button type="button" className="boton secundario" onClick={aplicarRecargos}>Aplicar recargos a vencidos</button>
             </form>
           </section>
 
           <table className="tabla">
-            <thead><tr><th>Alumno</th><th>Descripción</th><th>Periodo</th><th>Vence</th><th className="derecha">Monto</th><th className="derecha">Recargo</th><th>Estatus</th></tr></thead>
+            <thead><tr><th>Alumno</th><th>Descripción</th><th>Periodo</th><th>Vence</th><th className="derecha">Monto</th><th className="derecha">Recargo</th><th>Estatus</th><th>Correcciones</th></tr></thead>
             <tbody>
               {resultadoCargos.datos.map((c) => (
                 <tr key={c.id}>
@@ -260,7 +282,7 @@ export default function FinanzasPage() {
                   <td>{c.fechaVencimiento ?? '—'}</td>
                   <td className="derecha monto">{pesos(c.monto - c.descuento)}</td>
                   <td className="derecha monto">{c.recargo > 0 ? pesos(c.recargo) : '—'}</td>
-                  <td><span className={`sello ${selloDeCargo(c.estatus)}`}>{c.estatus}</span></td>
+                  <td><span className={`sello ${selloDeCargo(c.estatus)}`}>{c.estatus}</span></td><td>{c.estatus !== 'CANCELADO' && <button disabled={enviando} onClick={() => corregir('cargos', c.id)}>Cancelar cargo</button>}</td>
                 </tr>
               ))}
               {resultadoCargos.datos.length === 0 && <tr><td className="vacio" colSpan={7}>Sin cargos registrados.</td></tr>}
@@ -275,20 +297,9 @@ export default function FinanzasPage() {
           <section className="panel">
             <h2>Registrar pago manual</h2>
             <form onSubmit={registrarPago} className="fila">
-              <div className="campo"><label>Alumno</label>
-                <select required value={formPago.alumnoId} onChange={(e) => setFormPago({ ...formPago, alumnoId: e.target.value, cargoId: '' })}>
-                  <option value="">Selecciona…</option>
-                  {alumnos.map((a) => <option key={a.id} value={a.id}>{a.matricula} — {a.usuario.nombre} {a.usuario.apellidoPaterno}</option>)}
-                </select>
-              </div>
-              <div className="campo"><label>Cargo (opcional)</label>
-                <select value={formPago.cargoId} onChange={(e) => setFormPago({ ...formPago, cargoId: e.target.value })}>
-                  <option value="">Pago a cuenta</option>
-                  {cargosAlumno
-                    .filter((c) => c.estatus !== 'PAGADO' && c.estatus !== 'CANCELADO')
-                    .map((c) => <option key={c.id} value={c.id}>{c.descripcion} ({c.estatus})</option>)}
-                </select>
-              </div>
+              <SelectorBuscable<Alumno> ruta="/alumnos" valor={formPago.alumnoId} cambiar={(id) => setFormPago({ ...formPago, alumnoId: id, cargoId: '' })} etiqueta="Alumno" texto={(a) => `${a.matricula} — ${a.usuario.nombre} ${a.usuario.apellidoPaterno}`} />
+              <SelectorBuscable<Cargo> ruta="/finanzas/cargos" valor={formPago.cargoId} cambiar={(id) => setFormPago({ ...formPago, cargoId: id })}
+                etiqueta="Cargo" deshabilitado={!formPago.alumnoId} filtros={{ alumnoId: Number(formPago.alumnoId) || undefined }} texto={(c) => `${c.descripcion} — ${pesos(c.monto - c.descuento + c.recargo)} · ${c.estatus}`} />
               <div className="campo"><label>Monto</label>
                 <input type="number" min={0.01} step={0.01} required value={formPago.monto} onChange={(e) => setFormPago({ ...formPago, monto: e.target.value })} />
               </div>
@@ -300,12 +311,12 @@ export default function FinanzasPage() {
               <div className="campo"><label>Referencia</label>
                 <input value={formPago.referencia} onChange={(e) => setFormPago({ ...formPago, referencia: e.target.value })} />
               </div>
-              <button className="boton">Registrar pago</button>
+              <button disabled={enviando} className="boton">Registrar pago</button>
             </form>
           </section>
 
           <table className="tabla">
-            <thead><tr><th>Fecha</th><th>Alumno</th><th className="derecha">Monto</th><th>Método</th><th>Referencia</th><th>Estatus</th></tr></thead>
+            <thead><tr><th>Fecha</th><th>Alumno</th><th className="derecha">Monto</th><th>Método</th><th>Referencia</th><th>Estatus</th><th>Correcciones</th></tr></thead>
             <tbody>
               {resultadoPagos.datos.map((p) => (
                 <tr key={p.id}>
@@ -314,7 +325,7 @@ export default function FinanzasPage() {
                   <td className="derecha monto">{pesos(p.monto)}</td>
                   <td>{p.metodo}</td>
                   <td>{p.referencia ?? '—'}</td>
-                  <td><span className={`sello ${p.estatus === 'CONFIRMADO' ? 'ok' : 'aviso'}`}>{p.estatus}</span></td>
+                  <td><span className={`sello ${p.estatus === 'CONFIRMADO' ? 'ok' : 'aviso'}`}>{p.estatus}</span></td><td>{p.estatus === 'CONFIRMADO' && p.metodo !== 'PASARELA' && <button disabled={enviando} onClick={() => corregir('pagos', p.id)}>Anular pago</button>}</td>
                 </tr>
               ))}
               {resultadoPagos.datos.length === 0 && <tr><td className="vacio" colSpan={6}>Sin pagos registrados.</td></tr>}
@@ -327,11 +338,11 @@ export default function FinanzasPage() {
       {tab === 'adeudos' && (
         <div id="panel-adeudos" role="tabpanel" aria-labelledby="tab-adeudos" tabIndex={0}>
           <div className="acciones" style={{ marginBottom: 14 }}>
-            <button className="boton" onClick={enviarAvisos}>Enviar avisos de cobranza</button>
+            <button disabled={enviando} className="boton" onClick={enviarAvisos}>Enviar avisos de cobranza</button>
             <button className="boton secundario" onClick={descargarExcel}>Descargar Excel de adeudos</button>
           </div>
           <table className="tabla">
-            <thead><tr><th>Alumno</th><th>Concepto</th><th>Vence</th><th className="derecha">Total</th><th className="derecha">Pagado</th><th className="derecha">Saldo</th><th>Estatus</th></tr></thead>
+            <thead><tr><th>Alumno</th><th>Concepto</th><th>Vence</th><th className="derecha">Total</th><th className="derecha">Pagado</th><th className="derecha">Saldo</th><th>Estatus</th><th>Correcciones</th></tr></thead>
             <tbody>
               {adeudos.map((c) => (
                 <tr key={c.id}>
@@ -341,12 +352,13 @@ export default function FinanzasPage() {
                   <td className="derecha monto">{pesos(c.total)}</td>
                   <td className="derecha monto">{pesos(c.pagado)}</td>
                   <td className="derecha monto"><b>{pesos(c.saldo)}</b></td>
-                  <td><span className={`sello ${selloDeCargo(c.estatus)}`}>{c.estatus}</span></td>
+                  <td><span className={`sello ${selloDeCargo(c.estatus)}`}>{c.estatus}</span></td><td>{c.estatus !== 'CANCELADO' && <button disabled={enviando} onClick={() => corregir('cargos', c.id)}>Cancelar cargo</button>}</td>
                 </tr>
               ))}
               {adeudos.length === 0 && <tr><td className="vacio" colSpan={7}>Sin adeudos: todos los cargos están cubiertos.</td></tr>}
             </tbody>
           </table>
+          <Paginador total={totalAdeudos} pagina={paginaAdeudos} porPagina={20} onCambio={cargarAdeudos} />
         </div>
       )}
     </>

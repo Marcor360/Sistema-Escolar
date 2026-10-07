@@ -1,7 +1,9 @@
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { afterAll, beforeAll, describe, expect, it, jest } from '@jest/globals';
 import { NestFactory } from '@nestjs/core';
-import { JwtService } from '@nestjs/jwt';
+import * as ExcelJS from 'exceljs';
+import { BitacoraFinanciera } from '../src/entities/bitacora-financiera.entity';
+import { AuthService } from '../src/auth/auth.service';
 import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { AddressInfo } from 'net';
 import { basename, resolve } from 'path';
@@ -11,8 +13,8 @@ import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { DataSource } from 'typeorm';
 import {
-  Alumno, Cargo, CicloEscolar, ConceptoPago, Grupo, GrupoMateria, Inscripcion,
-  Docente, Materia, Material, Notificacion, OrdenPago, Pago, Plantel, Rol, Usuario, UsuarioPlantel,
+  Alumno, Calificacion, Cargo, CicloEscolar, ConceptoPago, Grupo, GrupoMateria, Inscripcion,
+  Docente, Entrega, Materia, Material, Notificacion, OrdenPago, Pago, Plantel, Rol, Usuario, UsuarioPlantel,
 } from '../src/entities';
 import { AppModule } from '../src/app.module';
 import { BitacoraFinancieraService } from '../src/finanzas/bitacora-financiera.service';
@@ -199,18 +201,18 @@ describe('Integración de flujos críticos (base aislada)', () => {
     return { response, data };
   };
 
+  const passwords = new Map<string, string>();
   const emitirToken = async (email: string) => {
     const usuario = await dataSource.getRepository(Usuario).findOneOrFail({
       where: { email },
       relations: ['roles'],
     });
-    return app.get(JwtService).sign({
-      sub: usuario.id,
-      email: usuario.email,
-      nombre: usuario.nombreCompleto,
-      roles: usuario.roles.map((rol) => rol.clave),
-      ver: usuario.sessionVersion ?? 0,
-    });
+    if (usuario.passwordChangeRequired) {
+      await app.get(AuthService).cambiarPassword(usuario.id, passwords.get(email) ?? 'Integracion_Segura_42!', 'Integracion_Renovada_42!');
+      passwords.set(email, 'Integracion_Renovada_42!');
+    }
+    return (await app.get(AuthService).login(email, passwords.get(email) ?? 'Integracion_Segura_42!',
+      usuario.roles.some((r) => r.clave === 'ALUMNO') ? 'MOVIL' : 'WEB')).accessToken;
   };
 
   beforeAll(async () => {
@@ -507,6 +509,10 @@ describe('Integración de flujos críticos (base aislada)', () => {
     const health = await api('/health');
     expect(health.response.status).toBe(200);
     expect(health.data).toEqual({ status: 'ok', database: 'ok' });
+    expect((await api('/health/live')).response.status).toBe(200);
+    const ready = await api('/health/ready');
+    expect(ready.response.status).toBe(200);
+    expect(ready.data.schema).toBe('ok');
   });
 
   it('mantiene un solo ciclo activo al crear y actualizar ciclos', async () => {
@@ -542,7 +548,7 @@ describe('Integración de flujos críticos (base aislada)', () => {
     expect(ciclosConcurrentes.some(({ response }) => response.status === 201)).toBe(true);
     expect(ciclosConcurrentes.every(({ response }) => [201, 409].includes(response.status))).toBe(true);
     const ciclosActivosConcurrentes = await dataSource.getRepository(CicloEscolar).findBy({ activo: true });
-    expect(ciclosActivosConcurrentes.filter(({ clave }) => [`D${sufijo}`, `E${sufijo}`].includes(clave))).toHaveLength(1);
+    expect(ciclosActivosConcurrentes.filter(({ clave }) => [`D${sufijo}`, `E${sufijo}`].map((c) => c.toUpperCase()).includes(clave))).toHaveLength(1);
   });
 
   it('inscribe a un alumno, captura una calificaci??n y la muestra en su portal', async () => {
@@ -555,7 +561,7 @@ describe('Integración de flujos críticos (base aislada)', () => {
 
     const ciclo = await api('/academico/ciclos', {
       method: 'POST', token: tokenAdmin,
-      body: { clave: `C${sufijo}`, nombre: 'Ciclo de integración', fechaInicio: '2026-08-01', fechaFin: '2027-07-31' },
+      body: { clave: `C${sufijo}`, nombre: 'Ciclo de integración', fechaInicio: '2026-08-01', fechaFin: '2027-07-31', activo: true },
     });
     expect(ciclo.response.status).toBe(201);
     const materia = await api('/academico/materias', {
@@ -641,7 +647,7 @@ describe('Integración de flujos críticos (base aislada)', () => {
     expect(await dataSource.getRepository(Inscripcion).countBy({ grupoId: grupoActivo.id, alumnoId: alumnoBaja.data.id })).toBe(0);
   });
 
-  it('reabre una entrega corregida y bloquea envíos a actividades desactivadas', async () => {
+  it('conserva notas de entregas calificadas y bloquea envíos a actividades desactivadas', async () => {
     const admin = await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId });
     const alumnoUsuario = await dataSource.getRepository(Usuario).findOneByOrFail({ id: alumnoUsuarioId });
     const tokenAdmin = await emitirToken(admin.email);
@@ -663,11 +669,10 @@ describe('Integración de flujos críticos (base aislada)', () => {
     const corregida = await api(`/actividades/${actividad.data.id}/entrega`, {
       method: 'POST', token: tokenAlumno, body: { comentario: 'Segunda versión' },
     });
-    expect(corregida.response.status).toBe(201);
-    expect(corregida.data).toMatchObject({
-      id: primera.data.id, estatus: 'ENTREGADA', calificacion: null,
-      comentarioDocente: null, comentarioAlumno: 'Segunda versión',
-    });
+    expect(corregida.response.status).toBe(409);
+    const entregaConservada = await dataSource.getRepository(Entrega).findOneByOrFail({ id: primera.data.id });
+    expect(entregaConservada.calificacion).toBe(80);
+    expect(entregaConservada.estatus).toBe('CALIFICADA');
 
     expect((await api(`/actividades/${actividad.data.id}`, { method: 'DELETE', token: tokenAdmin })).response.status).toBe(200);
     const inactiva = await api(`/actividades/${actividad.data.id}/entrega`, {
@@ -731,7 +736,7 @@ describe('Integración de flujos críticos (base aislada)', () => {
     const concepto = await conceptos.save(conceptos.create({
       clave: 'COL', nombre: 'Colegiatura integracion', tipo: 'COLEGIATURA', montoBase: 100,
     }));
-    const body = { cicloId: ciclo.id, periodo: '2026-09', monto: 100 };
+    const body = { cicloId: ciclo.id, periodo: '2026-09', monto: 100, plantelId, confirmado: true };
     const [primera, segunda] = await Promise.all([
       api('/finanzas/cargos/generar-colegiaturas', { method: 'POST', token, body }),
       api('/finanzas/cargos/generar-colegiaturas', { method: 'POST', token, body }),
@@ -868,7 +873,7 @@ describe('Integración de flujos críticos (base aislada)', () => {
     const falloRecargo = jest.spyOn(bitacora, 'registrar').mockRejectedValueOnce(new Error('Bitácora no disponible'));
     try {
       const respuesta = await api('/finanzas/cargos/aplicar-recargos', {
-        method: 'POST', token, body: { plantelId, porcentaje: 10 },
+        method: 'POST', token, body: { plantelId, porcentaje: 10, confirmado: true },
       });
       expect(respuesta.response.status).toBe(500);
       const cargo = await dataSource.getRepository(Cargo).findOneByOrFail({ id: creado.data.id });
@@ -962,4 +967,219 @@ describe('Integración de flujos críticos (base aislada)', () => {
     const nuevo = await emitirToken(admin.email);
     expect((await api('/auth/me', { token: nuevo })).response.status).toBe(200);
   });
+  it('aísla eventos de dos grupos y planteles para alumnos, maestros y administrativo', async () => {
+    const ciclo = await dataSource.getRepository(CicloEscolar).findOneByOrFail({ clave: `C${sufijo}` });
+    const grupoA = await dataSource.getRepository(Grupo).findOneByOrFail({ nombre: `G${sufijo}`, plantelId });
+    const grupoB = await dataSource.getRepository(Grupo).findOneByOrFail({ nombre: `Y${sufijo}`, plantelId });
+    const tokenAdmin = await emitirToken((await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId })).email);
+    const tokenSuper = await emitirToken((await dataSource.getRepository(Usuario).findOneByOrFail({ id: superadminId })).email);
+    const tokenAlumnoA = await emitirToken((await dataSource.getRepository(Usuario).findOneByOrFail({ id: alumnoUsuarioId })).email);
+    const tokenAlumnoB = await emitirToken(`alumno_otro_grupo_${sufijo}@example.invalid`);
+    const tokenMaestroA = await emitirToken(`maestro_scope_${sufijo}@example.invalid`);
+    const altaB = await api('/docentes', { method: 'POST', token: tokenAdmin, body: {
+      email: `maestro_b_${sufijo}@example.invalid`, password: 'Integracion_Segura_42!',
+      nombre: 'Maestro', apellidoPaterno: 'B', numEmpleado: `B${sufijo}`, plantelIds: [plantelId],
+    } });
+    expect(altaB.response.status).toBe(201);
+    const materia = await dataSource.getRepository(Materia).findOneByOrFail({ clave: `MAT${sufijo}` });
+    expect((await api(`/academico/grupos/${grupoB.id}/materias`, { method: 'POST', token: tokenAdmin,
+      body: { materiaId: materia.id, docenteId: altaB.data.id } })).response.status).toBe(201);
+    const tokenMaestroB = await emitirToken(`maestro_b_${sufijo}@example.invalid`);
+    const grupoC = await dataSource.getRepository(Grupo).findOneByOrFail({ cicloId: ciclo.id, plantelId: otroPlantelId });
+    const eventos = [
+      { titulo: `GLOBAL-${sufijo}` }, { titulo: `PLANTEL-${sufijo}`, plantelId },
+      { titulo: `A-${sufijo}`, grupoId: grupoA.id, plantelId },
+      { titulo: `B-${sufijo}`, grupoId: grupoB.id, plantelId },
+      { titulo: `C-${sufijo}`, grupoId: grupoC.id, plantelId: otroPlantelId },
+    ];
+    for (const evento of eventos) expect((await api('/calendario', { method: 'POST', token: tokenSuper,
+      body: { ...evento, fechaInicio: '2026-10-07T12:00:00Z' } })).response.status).toBe(201);
+    for (const [token, propios, ajenos] of [
+      [tokenAlumnoA, ['GLOBAL', 'PLANTEL', 'A'], ['B', 'C']],
+      [tokenAlumnoB, ['GLOBAL', 'PLANTEL', 'B'], ['A', 'C']],
+      [tokenMaestroA, ['GLOBAL', 'PLANTEL', 'A'], ['B', 'C']],
+      [tokenMaestroB, ['GLOBAL', 'PLANTEL', 'B'], ['A', 'C']],
+      [tokenAdmin, ['GLOBAL', 'PLANTEL', 'A', 'B'], ['C']],
+    ] as const) {
+      const respuesta = await api('/calendario?desde=2026-10-01&hasta=2026-10-31', { token }); expect(respuesta.response.status).toBe(200);
+      const titulos = respuesta.data.map((e: { titulo: string }) => e.titulo);
+      for (const titulo of propios) expect(titulos).toContain(`${titulo}-${sufijo}`);
+      for (const titulo of ajenos) expect(titulos).not.toContain(`${titulo}-${sufijo}`);
+    }
+    expect((await api('/calendario', { method: 'POST', token: tokenSuper,
+      body: { titulo: 'Fechas invertidas', fechaInicio: '2026-10-08T12:00:00Z', fechaFin: '2026-10-07T12:00:00Z' } })).response.status).toBe(400);
+    expect((await api(`/reportes/boleta/${alumnoId}`, { token: tokenMaestroA })).response.status).toBe(403);
+  });
+
+  it('bloquea PATCH de estado/plantel, conserva bajas/egresos y completa transferencias', async () => {
+    const token = await emitirToken((await dataSource.getRepository(Usuario).findOneByOrFail({ id: superadminId })).email);
+    const grupo = await dataSource.getRepository(Grupo).findOneByOrFail({ nombre: `G${sufijo}`, plantelId });
+    for (const accion of ['baja', 'egreso', 'transferencia']) {
+      const alta = await api('/alumnos', { method: 'POST', token, body: {
+        nombre: 'Transición', apellidoPaterno: accion, matricula: `T${accion.slice(0, 2)}${sufijo}`,
+        email: `${accion}_${sufijo}@example.invalid`, password: 'Integracion_Segura_42!', plantelId,
+      } }); expect(alta.response.status).toBe(201);
+      const id = alta.data.id; const usuarioId = alta.data.usuarioId;
+      const movil = await emitirToken(`${accion}_${sufijo}@example.invalid`);
+      expect((await api(`/academico/grupos/${grupo.id}/alumnos`, { method: 'POST', token, body: { alumnoId: id } })).response.status).toBe(201);
+      expect((await api(`/alumnos/${id}`, { method: 'PATCH', token, body: { estatus: 'BAJA' } })).response.status).toBe(400);
+      expect((await api(`/alumnos/${id}`, { method: 'PATCH', token, body: { plantelId: otroPlantelId } })).response.status).toBe(400);
+      const resultado = await api(`/alumnos/${id}/${accion}`, { method: 'POST', token,
+        ...(accion === 'transferencia' ? { body: { plantelId: otroPlantelId } } : {}) });
+      expect(resultado.response.status).toBe(201);
+      expect(await dataSource.getRepository(Inscripcion).countBy({ alumnoId: id, estatus: 'ACTIVA' })).toBe(0);
+      const expediente = await dataSource.getRepository(Alumno).findOneByOrFail({ id });
+      const cuenta = await dataSource.getRepository(Usuario).findOneByOrFail({ id: usuarioId });
+      if (accion === 'transferencia') { expect(expediente.plantelId).toBe(otroPlantelId); expect(cuenta.activo).toBe(true); }
+      else {
+        expect(expediente.estatus).toBe(accion === 'baja' ? 'BAJA' : 'EGRESADO'); expect(cuenta.activo).toBe(false);
+        expect((await api('/auth/me', { token: movil })).response.status).toBe(401);
+      }
+    }
+  });
+
+  it('impide doble inscripción concurrente y cambios de ciclo; rechaza grupos en ciclos cerrados', async () => {
+    const token = await emitirToken((await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId })).email);
+    const grupoA = await dataSource.getRepository(Grupo).findOneByOrFail({ nombre: `G${sufijo}`, plantelId });
+    const grupoB = await dataSource.getRepository(Grupo).findOneByOrFail({ nombre: `Y${sufijo}`, plantelId });
+    const alta = await api('/alumnos', { method: 'POST', token, body: { nombre: 'Concurrente', apellidoPaterno: 'Prueba',
+      matricula: `CON${sufijo}`, email: `con_${sufijo}@example.invalid`, password: 'Integracion_Segura_42!', plantelId } });
+    expect(alta.response.status).toBe(201);
+    const respuestas = await Promise.all([grupoA, grupoB].map((g) => api(`/academico/grupos/${g.id}/alumnos`, {
+      method: 'POST', token, body: { alumnoId: alta.data.id },
+    })));
+    expect(respuestas.map((r) => r.response.status).sort()).toEqual([201, 409]);
+    expect(await dataSource.getRepository(Inscripcion).countBy({ alumnoId: alta.data.id, estatus: 'ACTIVA' })).toBe(1);
+    const cerrado = await dataSource.getRepository(CicloEscolar).findOneOrFail({ where: { activo: false } });
+    expect((await api('/academico/grupos', { method: 'POST', token, body: { cicloId: cerrado.id, plantelId, nombre: 'Cerrado' } })).response.status).toBe(409);
+    expect((await api(`/academico/grupos/${grupoA.id}`, { method: 'PATCH', token, body: { cicloId: cerrado.id } })).response.status).toBe(409);
+  });
+
+  it('exige motivo, muestra faltantes y bloquea cierre/modificación del periodo', async () => {
+    const token = await emitirToken((await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId })).email);
+    const contexto = await dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: grupoMateriaIdMaestro });
+    const faltante = await api('/alumnos', { method: 'POST', token, body: { nombre: 'Sin nota', apellidoPaterno: 'Periodo',
+      matricula: `FAL${sufijo}`, email: `faltante_${sufijo}@example.invalid`, password: 'Integracion_Segura_42!', plantelId } });
+    expect(faltante.response.status).toBe(201);
+    expect((await api(`/academico/grupos/${contexto.grupoId}/alumnos`, { method: 'POST', token, body: { alumnoId: faltante.data.id } })).response.status).toBe(201);
+    const ruta = `/calificaciones/periodos/${grupoMateriaIdMaestro}/1`;
+    expect((await api('/calificaciones/captura', { method: 'POST', token,
+      body: { grupoMateriaId: grupoMateriaIdMaestro, parcial: 1, items: [{ alumnoId, calificacion: 91 }] } })).response.status).toBe(400);
+    const estado = await api(ruta, { token }); expect(estado.response.status).toBe(200); expect(estado.data.faltantes).toBeGreaterThan(0);
+    expect((await api(ruta, { method: 'PATCH', token, body: { estatus: 'CERRADO' } })).response.status).toBe(409);
+    const gm = await dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: grupoMateriaIdMaestro });
+    const inscritos = await dataSource.getRepository(Inscripcion).findBy({ grupoId: gm.grupoId, estatus: 'ACTIVA' });
+    expect((await api('/calificaciones/captura', { method: 'POST', token, body: {
+      grupoMateriaId: gm.id, parcial: 1, motivo: 'Corrección verificada', items: inscritos.map((i) => ({ alumnoId: i.alumnoId, calificacion: 91 })),
+    } })).response.status).toBe(201);
+    expect((await api(ruta, { method: 'PATCH', token, body: { estatus: 'CERRADO' } })).response.status).toBe(200);
+    expect((await api('/calificaciones/captura', { method: 'POST', token,
+      body: { grupoMateriaId: gm.id, parcial: 1, motivo: 'Intento cerrado', items: [{ alumnoId, calificacion: 90 }] } })).response.status).toBe(409);
+    expect((await api(ruta, { method: 'PATCH', token, body: { estatus: 'ABIERTO' } })).response.status).toBe(200);
+  });
+
+  it('rota refresh, detecta reutilización y revoca solamente la sesión afectada', async () => {
+    const email = (await dataSource.getRepository(Usuario).findOneByOrFail({ id: alumnoUsuarioId })).email;
+    const auth = app.get(AuthService);
+    const primera = await auth.login(email, 'Integracion_Segura_42!', 'MOVIL');
+    const segunda = await auth.login(email, 'Integracion_Segura_42!', 'MOVIL');
+    const rotada = await auth.refresh(primera.refreshToken, 'MOVIL');
+    expect(rotada.refreshToken).not.toBe(primera.refreshToken);
+    await expect(auth.refresh(primera.refreshToken, 'MOVIL')).rejects.toThrow('ya no está activa');
+    expect((await api('/auth/me', { token: rotada.accessToken })).response.status).toBe(401);
+    expect((await api('/auth/me', { token: segunda.accessToken })).response.status).toBe(200);
+    await expect(auth.refresh(segunda.refreshToken, 'WEB')).rejects.toThrow('Refresh inválido');
+    expect((await api('/auth/logout', { method: 'POST', token: segunda.accessToken })).response.status).toBe(201);
+    await expect(auth.refresh(segunda.refreshToken, 'MOVIL')).rejects.toThrow('ya no está activa');
+  });
+
+  it('desactiva al docente y deja sus clases disponibles para reasignación', async () => {
+    const token = await emitirToken((await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId })).email);
+    const docente = await dataSource.getRepository(Docente).findOneOrFail({ where: { usuario: { email: `maestro_b_${sufijo}@example.invalid` } } });
+    const tokenMaestro = await emitirToken(docente.usuario.email);
+    const clase = await dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: grupoMateriaIdMaestro });
+    const anterior = clase.docenteId!;
+    expect((await api(`/academico/grupo-materias/${clase.id}/docente/${docente.id}`, { method: 'PATCH', token })).response.status).toBe(200);
+    expect((await dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: clase.id })).docenteId).toBe(docente.id);
+    expect((await api(`/academico/grupo-materias/${clase.id}/docente/${anterior}`, { method: 'PATCH', token })).response.status).toBe(200);
+    expect((await api(`/docentes/${docente.id}`, { method: 'PATCH', token, body: { estatus: 'BAJA' } })).response.status).toBe(400);
+    expect((await api(`/docentes/${docente.id}/baja`, { method: 'POST', token })).response.status).toBe(201);
+    expect((await dataSource.getRepository(Docente).findOneByOrFail({ id: docente.id })).estatus).toBe('BAJA');
+    expect((await dataSource.getRepository(Usuario).findOneByOrFail({ id: docente.usuarioId })).activo).toBe(false);
+    expect(await dataSource.getRepository(UsuarioPlantel).countBy({ usuarioId: docente.usuarioId, activo: true })).toBe(0);
+    expect(await dataSource.getRepository(GrupoMateria).countBy({ docenteId: docente.id })).toBe(0);
+    expect((await api('/auth/me', { token: tokenMaestro })).response.status).toBe(401);
+    expect((await api(`/academico/grupo-materias/${grupoMateriaIdMaestro}/docente/${docente.id}`, { method: 'PATCH', token })).response.status).toBe(409);
+    const inactiva = await dataSource.getRepository(Materia).save(dataSource.getRepository(Materia).create({ clave: `INA${sufijo}`, nombre: 'Materia inactiva', activo: false }));
+    const gm = await dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: grupoMateriaIdMaestro });
+    expect((await api(`/academico/grupos/${gm.grupoId}/materias`, { method: 'POST', token, body: { materiaId: inactiva.id } })).response.status).toBe(409);
+  });
+
+  it('obliga cambio inicial y evita personal sin plantel o roles de expediente sin expediente', async () => {
+    const token = await emitirToken((await dataSource.getRepository(Usuario).findOneByOrFail({ id: superadminId })).email);
+    const datos = { email: `nuevo_staff_${sufijo}@example.invalid`, nombre: 'Personal', apellidoPaterno: 'Nuevo', password: 'Integracion_Segura_42!' };
+    for (const rol of ['ALUMNO', 'MAESTRO', 'FINANZAS']) expect((await api('/usuarios', { method: 'POST', token, body: { ...datos, roles: [rol] } })).response.status).toBe(409);
+    const alta = await api('/usuarios', { method: 'POST', token, body: { ...datos, roles: ['ADMINISTRATIVO'], plantelIds: [plantelId] } });
+    expect(alta.response.status).toBe(201);
+    const auth = app.get(AuthService);
+    const temporal = await auth.login(datos.email, datos.password, 'WEB');
+    expect(temporal.usuario.passwordChangeRequired).toBe(true);
+    expect((await api('/alumnos', { token: temporal.accessToken })).response.status).toBe(403);
+    expect((await api('/auth/cambiar-password', { method: 'POST', token: temporal.accessToken,
+      body: { actual: datos.password, nueva: 'Nueva_Institucional_42!' } })).response.status).toBe(201);
+    expect((await api('/auth/me', { token: temporal.accessToken })).response.status).toBe(401);
+    const definitiva = await auth.login(datos.email, 'Nueva_Institucional_42!', 'WEB');
+    expect((await api('/alumnos', { token: definitiva.accessToken })).response.status).toBe(200);
+  });
+
+  it('cancela cargos y anula pagos manuales con auditoría y recálculo del saldo', async () => {
+    const token = await emitirToken((await dataSource.getRepository(Usuario).findOneByOrFail({ id: finanzasId })).email);
+    const concepto = await dataSource.getRepository(ConceptoPago).findOneOrFail({ where: { activo: true } });
+    const nuevo = await api('/finanzas/cargos', { method: 'POST', token, body: { alumnoId, conceptoId: concepto.id, descripcion: 'Cargo reversible', monto: 50 } });
+    expect(nuevo.response.status).toBe(201);
+    const cargoId = nuevo.data.id;
+    expect((await api('/finanzas/pagos', { method: 'POST', token, body: { alumnoId, monto: 50, metodo: 'EFECTIVO', claveIdempotencia: randomUUID() } })).response.status).toBe(400);
+    const pago = await api('/finanzas/pagos', { method: 'POST', token, body: { alumnoId, cargoId, monto: 50, metodo: 'EFECTIVO', claveIdempotencia: randomUUID() } });
+    expect(pago.response.status).toBe(201);
+    expect((await dataSource.getRepository(Cargo).findOneByOrFail({ id: cargoId })).estatus).toBe('PAGADO');
+    expect((await api(`/finanzas/cargos/${cargoId}/cancelacion`, { method: 'POST', token, body: { motivo: 'Error de captura' } })).response.status).toBe(409);
+    expect((await api(`/finanzas/pagos/${pago.data.id}/anulacion`, { method: 'POST', token, body: { motivo: 'Error comprobado' } })).response.status).toBe(201);
+    expect((await dataSource.getRepository(Cargo).findOneByOrFail({ id: cargoId })).estatus).toBe('PENDIENTE');
+    expect((await api(`/finanzas/cargos/${cargoId}/cancelacion`, { method: 'POST', token, body: { motivo: 'Error de captura' } })).response.status).toBe(201);
+    expect(await dataSource.getRepository(BitacoraFinanciera).countBy({ accion: 'ANULAR_PAGO', entidadId: pago.data.id, usuarioId: finanzasId })).toBe(1);
+    expect(await dataSource.getRepository(BitacoraFinanciera).countBy({ accion: 'CANCELAR_CARGO', entidadId: cargoId, usuarioId: finanzasId })).toBe(1);
+  });
+
+  it('separa notas de ciclos, calcula P1-P3 sin Final y exporta inscritos sin nota', async () => {
+    const token = await emitirToken((await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId })).email);
+    const movil = await emitirToken((await dataSource.getRepository(Usuario).findOneByOrFail({ id: alumnoUsuarioId })).email);
+    const actual = await dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: grupoMateriaIdMaestro });
+    const pasado = await dataSource.getRepository(CicloEscolar).findOneOrFail({ where: { activo: false } });
+    const grupoPasado = await dataSource.getRepository(Grupo).save(dataSource.getRepository(Grupo).create({ cicloId: pasado.id, plantelId, nombre: `H${sufijo}`, activo: false }));
+    const gmPasado = await dataSource.getRepository(GrupoMateria).save(dataSource.getRepository(GrupoMateria).create({ grupoId: grupoPasado.id, materiaId: actual.materiaId }));
+    await dataSource.getRepository(Inscripcion).save(dataSource.getRepository(Inscripcion).create({ alumnoId, grupoId: grupoPasado.id, estatus: 'BAJA' }));
+    await dataSource.getRepository(Calificacion).save(dataSource.getRepository(Calificacion).create({ alumnoId, grupoMateriaId: gmPasado.id, parcial: 1, calificacion: 17, capturadaPorId: adminId }));
+    for (const [parcial, calificacion] of [[1, 60], [2, 90], [3, 90], [0, 100]]) expect((await api('/calificaciones/captura', { method: 'POST', token,
+      body: { grupoMateriaId: actual.id, parcial, motivo: 'Prueba de regla oficial', items: [{ alumnoId, calificacion }] } })).response.status).toBe(201);
+    const notas = await api('/calificaciones/mias', { token: movil });
+    expect(notas.data.some((c: { grupoMateriaId: number }) => c.grupoMateriaId === gmPasado.id)).toBe(false);
+    expect(notas.data.filter((c: { grupoMateriaId: number }) => c.grupoMateriaId === actual.id).map((c: { promedioOficial: number }) => c.promedioOficial)).toEqual([80, 80, 80, 80]);
+    const historicas = await api(`/calificaciones/mias?cicloId=${pasado.id}`, { token: movil });
+    expect(historicas.data.map((c: { grupoMateriaId: number }) => c.grupoMateriaId)).toEqual([gmPasado.id]);
+    const sinNota = await api('/alumnos', { method: 'POST', token, body: { nombre: 'Sin', apellidoPaterno: 'Nota', matricula: `SN${sufijo}`,
+      email: `sinnota_${sufijo}@example.invalid`, password: 'Integracion_Segura_42!', plantelId } });
+    expect((await api(`/academico/grupos/${actual.grupoId}/alumnos`, { method: 'POST', token, body: { alumnoId: sinNota.data.id } })).response.status).toBe(201);
+    const response = await fetch(`${baseUrl}/reportes/grupo-materias/${actual.id}/calificaciones.xlsx`, { headers: { authorization: `Bearer ${token}` } });
+    expect(response.status).toBe(200);
+    const workbook = new ExcelJS.Workbook(); await workbook.xlsx.load(Buffer.from(await response.arrayBuffer()) as unknown as Parameters<typeof workbook.xlsx.load>[0]);
+    const rows: unknown[][] = []; workbook.worksheets[0].eachRow((row) => rows.push(row.values as unknown[]));
+    expect(rows.some((row) => row.includes(`SN${sufijo}`.toUpperCase()))).toBe(true);
+    const matricula = (await dataSource.getRepository(Alumno).findOneByOrFail({ id: alumnoId })).matricula;
+    const fila = rows.find((row) => row.includes(matricula));
+    expect(fila?.slice(3)).toEqual([60, 90, 90, 100, 80]);
+    const propia = await dataSource.getRepository(Inscripcion).findOneByOrFail({ alumnoId, grupoId: actual.grupoId });
+    const pdf = await fetch(`${baseUrl}/reportes/boleta/${alumnoId}?cicloId=${actual.grupo.cicloId}&inscripcionId=${propia.id}`, { headers: { authorization: `Bearer ${token}` } });
+    expect(pdf.status).toBe(200); expect(pdf.headers.get('content-type')).toContain('application/pdf');
+  });
+
 });

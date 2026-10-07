@@ -45,8 +45,8 @@ describe('DocentesService alcance por plantel', () => {
     qb.getManyAndCount = jest.fn().mockResolvedValue([[docente], 1]);
     const docentes = { createQueryBuilder: jest.fn().mockReturnValue(qb) };
     const asignaciones = { find: jest.fn().mockResolvedValue([
-      { usuarioId: 30, plantelId: 1, plantel: { nombre: 'Plantel A' } },
-      { usuarioId: 30, plantelId: 2, plantel: { nombre: 'Plantel B' } },
+      { usuarioId: 30, activo: true, plantelId: 1, plantel: { nombre: 'Plantel A' } },
+      { usuarioId: 30, activo: true, plantelId: 2, plantel: { nombre: 'Plantel B' } },
     ]) };
     const scope = { resolverFiltro: jest.fn().mockResolvedValue([1]) };
     const service = new DocentesService(docentes as any, asignaciones as any, {} as any, scope as any, {} as any);

@@ -21,12 +21,14 @@ export class CobranzaService {
     private readonly config: ConfigService,
   ) {}
 
-  async enviarAvisos(user: JwtUser) {
+  async enviarAvisos(user: JwtUser, plantelId?: number, preview = false, confirmado = false) {
+    if (!plantelId) throw new BadRequestException('Selecciona un plantel para esta operación');
+    if (!preview && !confirmado) throw new BadRequestException('Revisa la previsualización y confirma la operación');
     const plantilla = await this.plantillas.findOne({ where: { clave: 'AVISO_ADEUDO' } });
     if (!plantilla) throw new BadRequestException('Falta la plantilla AVISO_ADEUDO');
     const institucion = this.config.get<string>('NOMBRE_INSTITUCION') || 'Institución';
 
-    const adeudos = await this.cargos.adeudos(user, undefined, true);
+    const adeudos = await this.cargos.adeudos(user, plantelId, true);
     const porAlumno = new Map<number, {
       nombre: string; email: string; usuarioId: number; saldo: number; plantelId: number;
     }>();
@@ -42,6 +44,7 @@ export class CobranzaService {
       porAlumno.set(cargo.alumnoId, actual);
     }
 
+    if (preview) return { plantelId, registros: porAlumno.size, totalEstimado: redondear([...porAlumno.values()].reduce((s, a) => s + a.saldo, 0)) };
     let enviados = 0;
     const enviadosPorPlantel = new Map<number, number>();
     for (const datos of porAlumno.values()) {

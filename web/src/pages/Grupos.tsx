@@ -1,5 +1,6 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
+import { SelectorBuscable } from '../components/SelectorBuscable';
 import { Encabezado } from '../components/Encabezado';
 import { Paginador } from '../components/Paginador';
 
@@ -19,8 +20,6 @@ export default function GruposPage() {
   const [filtroPlantel, setFiltroPlantel] = useState('');
   const [resultado, setResultado] = useState<ResultadoGrupos>({ datos: [], total: 0, pagina: 1, porPagina: 20 });
   const [materias, setMaterias] = useState<Materia[]>([]);
-  const [docentes, setDocentes] = useState<Docente[]>([]);
-  const [alumnos, setAlumnos] = useState<Alumno[]>([]);
   const [seleccionado, setSeleccionado] = useState<Grupo | null>(null);
   const [asignaciones, setAsignaciones] = useState<GrupoMateria[]>([]);
   const [inscritos, setInscritos] = useState<Inscripcion[]>([]);
@@ -29,24 +28,37 @@ export default function GruposPage() {
   const [docenteId, setDocenteId] = useState('');
   const [alumnoId, setAlumnoId] = useState('');
   const [error, setError] = useState('');
+  const [mensaje, setMensaje] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const [editando, setEditando] = useState<Grupo | null>(null);
+  const [reasignando, setReasignando] = useState<number | null>(null);
+  const [nuevoDocente, setNuevoDocente] = useState('');
+  const operar = async (ruta: string, metodo: 'delete' | 'patch', datos?: object) => {
+    if (enviando || !confirm('¿Confirmar esta corrección? El historial académico se conserva.')) return;
+    setEnviando(true); setError('');
+    try { await api.request({ url: ruta, method: metodo, data: datos }); setMensaje('Corrección completada');
+      await cargar(1, filtroPlantel); if (seleccionado) await abrirGrupo(seleccionado);
+    } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
+  };
+  const editar = (g: Grupo) => {
+    setEditando(g); setFormGrupo({ cicloId: String(g.ciclo.id), plantelId: String(g.plantel?.id ?? ''),
+      nombre: g.nombre, grado: g.grado ?? '', turno: g.turno ?? 'MATUTINO' });
+    document.getElementById('form-grupo')?.scrollIntoView();
+  };
 
   const cargar = useCallback(async (pagina = 1, plantelId = '') => {
     setError('');
     try {
-      const [ciclosR, gruposR, plantelesR, materiasR, docentesR, alumnosR] = await Promise.all([
+      const [ciclosR, gruposR, plantelesR, materiasR] = await Promise.all([
         api.get<Ciclo[]>('/academico/ciclos'),
         api.get<ResultadoGrupos>('/academico/grupos', { params: { pagina, ...(plantelId ? { plantelId } : {}) } }),
         api.get<Plantel[]>('/planteles/mios'),
         api.get<Materia[]>('/academico/materias'),
-        api.get<{ datos: Docente[] }>('/docentes', { params: { porPagina: 100 } }),
-        api.get<{ datos: Alumno[] }>('/alumnos', { params: { porPagina: 100 } }),
       ]);
       setCiclos(ciclosR.data);
       setResultado(gruposR.data);
       setPlanteles(plantelesR.data);
       setMaterias(materiasR.data);
-      setDocentes(docentesR.data.datos);
-      setAlumnos(alumnosR.data.datos);
     } catch (err) { setError(mensajeDeError(err)); }
   }, []);
   useEffect(() => { cargar(1, ''); }, [cargar]);
@@ -66,24 +78,26 @@ export default function GruposPage() {
 
   const crearGrupo = async (e: FormEvent) => {
     e.preventDefault();
-    setError('');
+    if (enviando) return; setEnviando(true); setError('');
     try {
-      await api.post('/academico/grupos', {
+      if (editando) await api.patch(`/academico/grupos/${editando.id}`, { nombre: formGrupo.nombre, grado: formGrupo.grado || undefined, turno: formGrupo.turno });
+      else await api.post('/academico/grupos', {
         cicloId: Number(formGrupo.cicloId),
         plantelId: Number(formGrupo.plantelId),
         nombre: formGrupo.nombre,
         grado: formGrupo.grado || undefined,
         turno: formGrupo.turno,
       });
+      setEditando(null); setMensaje('Grupo guardado');
       setFormGrupo({ cicloId: '', plantelId: '', nombre: '', grado: '', turno: 'MATUTINO' });
       cargar(1, filtroPlantel);
-    } catch (err) { setError(mensajeDeError(err)); }
+    } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
   const asignarMateria = async (e: FormEvent) => {
     e.preventDefault();
     if (!seleccionado) return;
-    setError('');
+    if (enviando) return; setEnviando(true); setError('');
     try {
       await api.post(`/academico/grupos/${seleccionado.id}/materias`, {
         materiaId: Number(materiaId),
@@ -91,38 +105,38 @@ export default function GruposPage() {
       });
       setMateriaId(''); setDocenteId('');
       abrirGrupo(seleccionado);
-    } catch (err) { setError(mensajeDeError(err)); }
+    } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
   const inscribir = async (e: FormEvent) => {
     e.preventDefault();
     if (!seleccionado) return;
-    setError('');
+    if (enviando) return; setEnviando(true); setError('');
     try {
       await api.post(`/academico/grupos/${seleccionado.id}/alumnos`, { alumnoId: Number(alumnoId) });
       setAlumnoId('');
       abrirGrupo(seleccionado);
-    } catch (err) { setError(mensajeDeError(err)); }
+    } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
   return (
     <>
       <Encabezado titulo="Grupos" detalle="Grupos por ciclo, materias asignadas e inscripciones" />
-      {error && <p className="mensaje-error">{error}</p>}
+      {error && <p role="alert" className="mensaje-error">{error}</p>}{mensaje && <p role="status" className="mensaje-ok">{mensaje}</p>}
 
       <section className="panel">
-        <h2>Nuevo grupo</h2>
+        <h2 id="form-grupo">{editando ? 'Editar grupo' : 'Nuevo grupo'}</h2>
         <form onSubmit={crearGrupo} className="fila">
           <div className="campo"><label>Plantel</label>
-            <select required value={formGrupo.plantelId} onChange={(e) => setFormGrupo({ ...formGrupo, plantelId: e.target.value })}>
+            <select required disabled={editando !== null || enviando} value={formGrupo.plantelId} onChange={(e) => setFormGrupo({ ...formGrupo, plantelId: e.target.value })}>
               <option value="">Selecciona…</option>
               {planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
             </select>
           </div>
           <div className="campo"><label>Ciclo</label>
-            <select required value={formGrupo.cicloId} onChange={(e) => setFormGrupo({ ...formGrupo, cicloId: e.target.value })}>
+            <select required disabled={editando !== null || enviando} value={formGrupo.cicloId} onChange={(e) => setFormGrupo({ ...formGrupo, cicloId: e.target.value })}>
               <option value="">Selecciona…</option>
-              {ciclos.map((c) => <option key={c.id} value={c.id}>{c.clave}</option>)}
+              {ciclos.filter((c) => c.activo || c.id === editando?.ciclo.id).map((c) => <option key={c.id} value={c.id}>{c.clave}</option>)}
             </select>
           </div>
           <div className="campo"><label>Nombre</label>
@@ -137,7 +151,7 @@ export default function GruposPage() {
               <option value="VESPERTINO">Vespertino</option>
             </select>
           </div>
-          <button className="boton">Crear grupo</button>
+          <button disabled={enviando} className="boton">{editando ? 'Guardar corrección' : 'Crear grupo'}</button>{editando && <button type="button" onClick={() => { setEditando(null); setFormGrupo({ cicloId: '', plantelId: '', nombre: '', grado: '', turno: 'MATUTINO' }); }}>Cancelar edición</button>}
         </form>
       </section>
 
@@ -159,6 +173,8 @@ export default function GruposPage() {
               <td>{g.nombre}</td><td>{g.plantel?.nombre ?? <span className="sello neutro">Sin plantel</span>}</td><td>{g.ciclo?.clave}</td><td>{g.grado ?? '—'}</td><td>{g.turno ?? '—'}</td>
               <td className="derecha">
                 <button className="boton secundario chico" onClick={() => abrirGrupo(g)}>Administrar</button>
+                <button disabled={enviando} onClick={() => editar(g)}>Editar</button>
+                <button disabled={enviando} onClick={() => operar(`/academico/grupos/${g.id}`, 'delete')}>Desactivar grupo</button>
               </td>
             </tr>
           ))}
@@ -170,7 +186,11 @@ export default function GruposPage() {
       {seleccionado && (
         <>
           <section className="panel">
-            <h2>Materias del grupo {seleccionado.nombre}</h2>
+            <h2>Materias del grupo {seleccionado.nombre} · {seleccionado.ciclo.clave} · {seleccionado.plantel?.nombre}</h2>
+            {reasignando && <div className="fila"><SelectorBuscable<Docente> ruta="/docentes" valor={nuevoDocente} cambiar={setNuevoDocente}
+              etiqueta="Nuevo docente" filtros={{ plantelId: seleccionado.plantel?.id }} texto={(d) => `${d.numEmpleado} — ${d.usuario.nombre} ${d.usuario.apellidoPaterno}`} />
+              <button disabled={enviando || !nuevoDocente} onClick={() => operar(`/academico/grupo-materias/${reasignando}/docente/${nuevoDocente}`, 'patch')}>Confirmar reasignación</button>
+              <button onClick={() => setReasignando(null)}>Cancelar</button></div>}
             <form onSubmit={asignarMateria} className="fila" style={{ marginBottom: 14 }}>
               <div className="campo"><label>Materia</label>
                 <select required value={materiaId} onChange={(e) => setMateriaId(e.target.value)}>
@@ -178,23 +198,19 @@ export default function GruposPage() {
                   {materias.map((m) => <option key={m.id} value={m.id}>{m.clave} — {m.nombre}</option>)}
                 </select>
               </div>
-              <div className="campo"><label>Docente</label>
-                <select value={docenteId} onChange={(e) => setDocenteId(e.target.value)}>
-                  <option value="">Sin asignar</option>
-                  {docentes.map((d) => (
-                    <option key={d.id} value={d.id}>{d.numEmpleado} — {d.usuario.nombre} {d.usuario.apellidoPaterno}</option>
-                  ))}
-                </select>
-              </div>
-              <button className="boton">Asignar materia</button>
+              <SelectorBuscable<Docente> ruta="/docentes" valor={docenteId} cambiar={setDocenteId} etiqueta="Docente" requerido={false}
+                filtros={{ plantelId: seleccionado.plantel?.id }} texto={(d) => `${d.numEmpleado} — ${d.usuario.nombre} ${d.usuario.apellidoPaterno}`} />
+              <button disabled={enviando} className="boton">Asignar materia</button>
             </form>
             <table className="tabla">
-              <thead><tr><th>Materia</th><th>Docente</th></tr></thead>
+              <thead><tr><th>Materia</th><th>Docente</th><th>Correcciones</th></tr></thead>
               <tbody>
                 {asignaciones.map((gm) => (
                   <tr key={gm.id}>
                     <td>{gm.materia.clave} — {gm.materia.nombre}</td>
                     <td>{gm.docente ? `${gm.docente.usuario.nombre} ${gm.docente.usuario.apellidoPaterno}` : <span className="sello aviso">Sin docente</span>}</td>
+                    <td><button disabled={enviando} onClick={() => { setReasignando(gm.id); setNuevoDocente(''); }}>Reasignar docente</button>
+                      <button disabled={enviando} onClick={() => operar(`/academico/grupo-materias/${gm.id}`, 'delete')}>Quitar materia</button></td>
                   </tr>
                 ))}
                 {asignaciones.length === 0 && <tr><td className="vacio" colSpan={2}>Sin materias asignadas.</td></tr>}
@@ -205,23 +221,17 @@ export default function GruposPage() {
           <section className="panel">
             <h2>Alumnos inscritos en {seleccionado.nombre}</h2>
             <form onSubmit={inscribir} className="fila" style={{ marginBottom: 14 }}>
-              <div className="campo"><label>Alumno</label>
-                <select required value={alumnoId} onChange={(e) => setAlumnoId(e.target.value)}>
-                  <option value="">Selecciona…</option>
-                  {alumnos.map((a) => (
-                    <option key={a.id} value={a.id}>{a.matricula} — {a.usuario.nombre} {a.usuario.apellidoPaterno}</option>
-                  ))}
-                </select>
-              </div>
-              <button className="boton">Inscribir</button>
+              <SelectorBuscable<Alumno> ruta="/alumnos" valor={alumnoId} cambiar={setAlumnoId} etiqueta="Alumno"
+                filtros={{ plantelId: seleccionado.plantel?.id }} texto={(a) => `${a.matricula} — ${a.usuario.nombre} ${a.usuario.apellidoPaterno}`} />
+              <button disabled={enviando} className="boton">Inscribir</button>
             </form>
             <table className="tabla">
-              <thead><tr><th>Matrícula</th><th>Alumno</th></tr></thead>
+              <thead><tr><th>Matrícula</th><th>Alumno</th><th>Correcciones</th></tr></thead>
               <tbody>
                 {inscritos.map((i) => (
                   <tr key={i.id}>
                     <td>{i.alumno.matricula}</td>
-                    <td>{i.alumno.usuario.nombre} {i.alumno.usuario.apellidoPaterno}</td>
+                    <td>{i.alumno.usuario.nombre} {i.alumno.usuario.apellidoPaterno}</td><td><button disabled={enviando} onClick={() => operar(`/academico/inscripciones/${i.id}`, 'delete')}>Dar de baja inscripción</button></td>
                   </tr>
                 ))}
                 {inscritos.length === 0 && <tr><td className="vacio" colSpan={2}>Sin alumnos inscritos.</td></tr>}

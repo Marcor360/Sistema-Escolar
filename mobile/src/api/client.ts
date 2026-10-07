@@ -12,6 +12,8 @@ const baseURL = resolverApiUrl(
 export const api = axios.create({ baseURL, timeout: 20000, headers: { 'x-portal': 'MOVIL' } });
 
 export const TOKEN_KEY = 'escolar_token';
+export const REFRESH_KEY = 'escolar_refresh';
+let renovando: Promise<void> | null = null;
 let alExpirarSesion: (() => void) | null = null;
 
 export function registrarSesionExpirada(handler: (() => void) | null) {
@@ -27,7 +29,22 @@ api.interceptors.request.use(async (config) => {
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && (!error.config?.url?.startsWith('/auth/') || error.config?.url === '/auth/me') && !error.config?.headers['x-reintento-sesion']) {
+      try {
+        if (!renovando) renovando = (async () => {
+          const refreshToken = await SecureStore.getItemAsync(REFRESH_KEY);
+          if (!refreshToken) throw new Error('Sin refresh');
+          const { data } = await axios.post(`${baseURL}/auth/refresh`, { refreshToken }, { timeout: 20000, headers: { 'x-portal': 'MOVIL' } });
+          await SecureStore.setItemAsync(REFRESH_KEY, data.refreshToken);
+          await SecureStore.setItemAsync(TOKEN_KEY, data.accessToken);
+        })().finally(() => { renovando = null; });
+        await renovando;
+        error.config.headers['x-reintento-sesion'] = '1';
+        return api.request(error.config);
+      } catch (refreshError) {
+        if (!(refreshError as { response?: unknown }).response && (refreshError as Error).message !== 'Sin refresh') return Promise.reject(refreshError);
+      }
+      await SecureStore.deleteItemAsync(REFRESH_KEY).catch(() => undefined);
       await SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => undefined);
       alExpirarSesion?.();
     }

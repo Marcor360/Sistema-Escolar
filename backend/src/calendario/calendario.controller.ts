@@ -19,8 +19,8 @@ export class CalendarioController {
     @CurrentUser() user: JwtUser,
     @Query('desde') desde?: string,
     @Query('hasta') hasta?: string,
-    @Query('plantelId') plantelId?: string,
-  ) { return this.service.listar(user, desde, hasta, plantelId ? Number(plantelId) : undefined); }
+    @Query('plantelId', new ParseIntPipe({ optional: true })) plantelId?: number,
+  ) { return this.service.listar(user, desde, hasta, plantelId); }
 
   @Post()
   @Roles('ADMINISTRATIVO', 'MAESTRO')

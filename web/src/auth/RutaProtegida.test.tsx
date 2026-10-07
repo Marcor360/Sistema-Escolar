@@ -24,6 +24,7 @@ function mostrarRuta(roles: string[], rolesServidor = roles, error?: unknown) {
   localStorage.setItem('sesion', JSON.stringify({
     sub: 1, email: 'persona@example.invalid', nombre: 'Persona', roles,
   }));
+  vi.spyOn(api, 'post').mockResolvedValue({ data: { accessToken: 'token-renovado' } });
   const respuesta = vi.spyOn(api, 'get');
   if (error) respuesta.mockRejectedValue(error);
   else respuesta.mockResolvedValue({ data: {
@@ -63,7 +64,7 @@ describe('RutaProtegida', () => {
     mostrarRuta(['FINANZAS'], ['MAESTRO']);
     expect(await screen.findByText('Inicio autorizado')).toBeTruthy();
     expect(screen.queryByText('Panel financiero')).toBeNull();
-    expect(JSON.parse(localStorage.getItem('sesion')!).roles).toEqual(['MAESTRO']);
+    expect(localStorage.getItem('sesion')).toBeNull();
   });
 
   it('descarta una sesión revocada al recibir 401', async () => {
@@ -77,7 +78,7 @@ describe('RutaProtegida', () => {
     mostrarRuta(['FINANZAS'], ['FINANZAS'], new Error('Red no disponible'));
     expect(await screen.findByText('No se pudo comprobar tu sesión')).toBeTruthy();
     expect(localStorage.getItem('sesion')).toBeNull();
-    expect(localStorage.getItem('token')).toBe('token-de-prueba');
+    expect(localStorage.getItem('token')).toBeNull();
     expect(screen.queryByText('Panel financiero')).toBeNull();
   });
 });

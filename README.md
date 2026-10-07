@@ -2,28 +2,22 @@
 
 > Portal web administrativo/docente, app móvil del alumno y API para gestión académica y financiera. El código cubre los flujos principales del MVP; todavía no hay certificación de piloto institucional ni despliegue productivo.
 
-**Versión candidata: `1.15.0` · Commit: `1.15.0` · 7 de octubre de 2026.** Backend, web, móvil y Expo declaran la misma versión. El baseline técnico anterior, SHA `e0e3cfefa1f709f5d7ec5cf0930f6f4f7ca88834`, tiene [CI completamente verde](https://github.com/Marcor360/Sistema-Escolar/actions/runs/37650137255). La CI de `1.15.0` debe comprobarse en su propio SHA; las Fases 2–5 siguen pendientes y el piloto aún no está certificado.
-
+**Versión candidata: `1.15.0` · Commit: `1.15.0` · 7 de octubre de 2026.** Backend, web, móvil y Expo declaran la misma versión. La CI del SHA publicado debe comprobarse en [GitHub Actions](https://github.com/Marcor360/Sistema-Escolar/actions/workflows/ci.yml). El piloto requiere todavía certificación sobre el servidor y dispositivos reales.
 
 ## Cambios incluidos en la versión 1.15.0
 
-Esta publicación alinea la versión y la documentación sobre el baseline reparado
-de la Fase 1. No incorpora todavía las correcciones funcionales de las Fases 2–5.
+- **Baseline técnico:** metadata TypeORM compatible con MySQL/SQL Server, TypeScript estricto, `DB_SYNC=false`, paridad física y eliminación de `.pyc` trackeados.
+- **Identidad y permisos:** altas por expediente, personal con plantel, cambio inicial obligatorio, baja/egreso/transferencia explícitos y coherentes; baja docente con clases pendientes de reasignación.
+- **Sesiones:** acceso de 15 minutos y refresh rotativo por dispositivo, revocación inmediata, cookie HttpOnly en web y SecureStore en móvil. El bearer web permanece en memoria.
+- **Academia y calendario:** contexto vigente, inscripción única por ciclo bajo transacción, ciclo de grupo inmutable, validación de entidades activas y eventos aislados por grupo con intervalos de consulta.
+- **Evaluación y reportes:** actividades separadas de evaluación oficial; motivo al corregir, cierre sin faltantes, promedio backend P1-P3; boleta por ciclo/inscripción restringida a alumno/control escolar; Excel incluye inscritos sin nota.
+- **Operación web:** edición de alumnos/docentes, transferencia, egreso, historial, boleta, planteles docentes y corrección de grupos, materias e inscripciones. Selectores con búsqueda API paginada.
+- **Finanzas:** cancelación de cargo y anulación de pago manual auditables, conciliación, previews por plantel y confirmación de operaciones masivas, adeudos paginados y pagos con cargo obligatorio.
+- **Móvil y archivos:** sesión renovable, fechas de última actualización en consultas, estado real de pagos, prohibición de reentrega calificada y eliminación del archivo sustituido tras commit; validación de firmas de archivos.
+- **Operación:** proxy local confiable para IIS, request ID sin datos personales en logs, liveness/readiness con verificación de migraciones, APK interno EAS preview y herramienta de carga para consultas.
+- **Migración real:** `migracion_sesiones_rotativas.sql` espejo MySQL/SQL Server añade sesiones y cambio inicial de contraseña. El baseline v1 permanece intacto.
 
-- **Metadata TypeORM reparada:** 51 columnas anulables tienen tipos explícitos compatibles con MySQL y SQL Server, conservando TypeScript estricto y `DB_SYNC=false`.
-- **Paridad y pruebas:** validación de metadata en ambos drivers y comprobación de columnas físicas contra entidades; `Grupo.legacyId` refleja la columna ya existente.
-- **Migraciones operables:** el runner carga `.env`; esta reparación no añadió migraciones ni cambió el DDL.
-- **Repositorio limpio:** se retiraron seis `.pyc` trackeados y se conservaron las reglas de exclusión.
-- **Verificaciones:** el baseline pasó 126 pruebas unitarias de backend, 8 de web, 4 móviles, 5 del gate de audit, 3 de ETL y 21 de integración en cada motor; los siete jobs de CI, incluido Windows, terminaron verdes.
-- **Audit móvil controlado:** se actualizaron las cadenas transitivas de Expo 57 y se añadieron pruebas del gate. Las dos vulnerabilidades previamente documentadas siguen sin remediar; no se aceptan avisos nuevos.
-- **Versionado y documentación:** manifiestos, versiones raíz de lockfiles y Expo se alinean a `1.15.0`, sin cambiar dependencias. Se incorpora la [auditoría del 7 de octubre](docs/AUDITORIA_2026-10-07.md) y se documenta qué está hecho y qué sigue pendiente.
-
-Consulta el [informe de la Fase 1](docs/FASE_1_BASELINE_TECNICO.md) y el
-[estado de implementación](docs/ESTADO_IMPLEMENTACION.md). La siguiente prioridad
-es la Fase 2: dashboard por rol, transiciones, contexto académico, inscripción
-única por ciclo, grupos inmutables, cierre de planteles/materias y calendario
-por grupo. Todavía no hay staging Windows ni dispositivos disponibles para
-certificar la Fase 5.
+Consulta [correcciones y verificaciones](docs/CORRECCIONES_1.15.0.md), [reglas del piloto](docs/REGLAS_PILOTO.md) y [estado de implementación](docs/ESTADO_IMPLEMENTACION.md). Ya existe un servidor; la [guía de publicación](docs/PUBLICAR_SERVIDOR_EXISTENTE.md) explica los datos y pasos necesarios para configurarlo y certificarlo. Esta versión no declara el piloto listo.
 
 ---
 
@@ -442,15 +436,14 @@ etl/
    - WEB: SUPERADMIN, ADMINISTRATIVO, FINANZAS, MAESTRO
    - MÓVIL: ALUMNO (excluyente)
    ↓
-4. Se emite JWT con expiración diferenciada:
-   - WEB: JWT_EXPIRES (default 8h)
-   - MÓVIL: JWT_EXPIRES_MOVIL (opcional; ampliar su duración aumenta el riesgo)
+4. Se emite access token de 15 minutos y refresh rotativo por sesión (máximo 30 días).
    ↓
-5. Web guarda el bearer token en localStorage; móvil usa SecureStore.
-6. Al iniciar, ambos consultan GET /auth/me. POST /auth/logout revoca todas las sesiones JWT vigentes de esa cuenta.
+5. Web guarda access en memoria y refresh en cookie HttpOnly; móvil usa SecureStore.
+6. Ambos consultan GET /auth/me y renuevan al expirar. POST /auth/logout revoca ese dispositivo.
+7. La baja y el cambio de contraseña/roles invalidan todas las sesiones por versión.
 ```
 
-El modelo de sesiones por dispositivo con access token corto y refresh rotativo aún no está implementado. La migración debe coordinar API, web y móvil.
+La migración de sesiones requiere desplegar API, web y móvil coordinados y volver a iniciar sesión. Las reglas están en [REGLAS_PILOTO.md](docs/REGLAS_PILOTO.md).
 
 ### Flujo de Gestión Académica
 
@@ -498,8 +491,8 @@ El modelo de sesiones por dispositivo con access token corto y refresh rotativo 
 
 | Característica | Descripción |
 |---------------|-------------|
-| **JWT con expiración** | `JWT_EXPIRES` (web), `JWT_EXPIRES_MOVIL` (móvil) |
-| **Logout global** | Revoca los JWT actuales de la cuenta mediante `session_version` |
+| **Sesiones rotativas** | Access de 15 minutos, refresh por dispositivo y detección de reutilización |
+| **Revocación** | Logout de dispositivo; baja/cambio de contraseña o roles incrementa `session_version` |
 | **Tokens firmados para archivos** | 5 minutos de vida útil, validación en streaming |
 | **Hash SHA256 para tokens de recuperación** | Solo persiste el hash, no el token en claro |
 | **Webhook Openpay autenticado en producción** | `OPENPAY_WEBHOOK_USER/PASS` obligatorios al activar producción |
@@ -514,7 +507,7 @@ El modelo de sesiones por dispositivo con access token corto y refresh rotativo 
 
 ---
 
-**Endurecimiento pendiente:** refresh token rotativo por dispositivo, retirar el bearer token web de `localStorage`, resolver la excepción `strictPropertyInitialization: false` de DTO/entidades y certificar la CSP con los dominios finales. El backend ya activa `strict: true` con esa excepción; el lint rechaza `any` en código de producción y advierte sobre los dobles de prueba que aún lo usan.
+**Endurecimiento pendiente:** resolver la excepción `strictPropertyInitialization: false` de DTO/entidades y certificar la CSP con los dominios finales. El backend ya activa `strict: true` con esa excepción; el lint rechaza `any` en código de producción y advierte sobre los dobles de prueba que aún lo usan.
 
 ---
 
@@ -636,10 +629,10 @@ Para versiones posteriores, usa [Deploy-Staging.ps1](scripts/windows/Deploy-Stag
 
 ## Próximos pasos para el piloto
 
-1. **Cerrar la versión local:** revisar el diff actual, ejecutar la CI con MySQL y SQL Server aislados y confirmar que las migraciones pendientes pasan antes de preparar una release.
+1. **Verificar el SHA publicado:** consultar la CI completa y aplicar migraciones en una base aislada antes de desplegar.
 2. **Ensayar datos reales sin tocar producción:** restaurar una copia institucional aislada, auditar su esquema y probar `db:migrate:status` y `db:migrate` sobre esa copia. Registrar conteos, errores y tiempos.
 3. **Preparar staging:** verificar VPS, DNS/TLS, IIS/ARR, servicio API, permisos de `uploads/`, backup externo y restauración completa de MySQL y archivos. Usar [la guía Windows](docs/STAGING_WINDOWS_IIS.md).
 4. **Certificar servicios y uso:** Openpay sandbox, webhook/reintentos/conciliación, SMTP, permisos con cuentas de dos planteles, formatos de reportes y pruebas físicas Android/iOS.
-5. **Acordar reglas institucionales:** reapertura de calificaciones, reentrega de tareas calificadas, privacidad de datos de menores y responsables operativos. No activar pagos productivos ni usar datos de alumnos reales antes de cerrar estas verificaciones.
+5. **Aceptar reglas institucionales:** revisar [las reglas implementadas](docs/REGLAS_PILOTO.md), privacidad y responsables operativos. No activar pagos productivos ni usar datos de alumnos reales antes de cerrar estas verificaciones.
 
 El [plan de auditoría](docs/AUDITORIA_ACTUAL_2026-10-05.md) y su [continuación](docs/CONTINUACION_2026-10-05.md) separan el trabajo ya implementado de la aceptación pendiente.

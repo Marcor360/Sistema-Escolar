@@ -95,7 +95,7 @@ export class NotificacionesService {
   /** Envía correo real si hay SMTP configurado; si no, lo registra en consola. */
   async enviarEmail(to: string, subject: string, html: string) {
     if (!this.transporter) {
-      this.logger.log(`[EMAIL simulado] para=${to} asunto="${subject}"`);
+      this.logger.log('SMTP no configurado: correo no enviado');
       return { simulado: true };
     }
     await this.transporter.sendMail({

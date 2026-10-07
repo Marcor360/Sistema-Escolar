@@ -21,13 +21,14 @@ export default function TareasScreen() {
   const [cargando, setCargando] = useState(false);
   const [cargaInicialCompleta, setCargaInicialCompleta] = useState(false);
   const [error, setError] = useState('');
+  const [ultimaActualizacion, setUltimaActualizacion] = useState<string | null>(null);
   const [entregandoId, setEntregandoId] = useState<number | null>(null);
 
   const cargar = useCallback(() => {
     setError('');
     setCargando(true);
     api.get<Tarea[]>('/alumnos/me/tareas')
-      .then((r) => { setTareas(r.data); setCargaInicialCompleta(true); })
+      .then((r) => { setTareas(r.data); setUltimaActualizacion(new Date().toLocaleString()); setCargaInicialCompleta(true); })
       .catch((fallo) => setError(mensajeDeError(fallo)))
       .finally(() => setCargando(false));
   }, []);
@@ -63,14 +64,7 @@ export default function TareasScreen() {
   const solicitarEntrega = (tarea: Tarea) => {
     if (entregandoId !== null) return;
     if (tarea.entrega?.estatus === 'CALIFICADA') {
-      Alert.alert(
-        'Reemplazar entrega calificada',
-        'La calificación y el comentario del docente se quitarán hasta que revise el nuevo archivo.',
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          { text: 'Continuar', onPress: () => { void entregar(tarea); } },
-        ],
-      );
+      Alert.alert('Entrega calificada', 'La entrega ya fue evaluada y no puede reemplazarse. Consulta al docente si necesitas una corrección.');
       return;
     }
     void entregar(tarea);
@@ -86,6 +80,7 @@ export default function TareasScreen() {
   return (
     <View style={base.pantalla}>
       {error !== '' && <ErrorCarga mensaje={error} reintentar={cargar} />}
+      {ultimaActualizacion && <Text accessibilityRole="text">Última actualización: {ultimaActualizacion}</Text>}
       <FlatList
         data={tareas}
         keyExtractor={(t) => String(t.id)}
@@ -112,7 +107,7 @@ export default function TareasScreen() {
             <TouchableOpacity
               style={estilos.boton}
               onPress={() => solicitarEntrega(item)}
-              disabled={entregandoId !== null}
+              disabled={entregandoId !== null || item.entrega?.estatus === 'CALIFICADA'}
               accessibilityRole="button"
               accessibilityLabel={`${item.entrega ? 'Reemplazar entrega' : 'Entregar archivo'}: ${item.titulo}`}
             >

@@ -6,6 +6,7 @@ import { Usuario } from '../entities/usuario.entity';
 import { Rol } from '../entities/rol.entity';
 import { ActualizarUsuarioDto, CrearUsuarioDto } from './usuarios.dto';
 import { RolClave } from '../common/roles.decorator';
+import { Plantel } from '../entities/plantel.entity';
 import { Alumno } from '../entities/alumno.entity';
 import { Docente } from '../entities/docente.entity';
 import { UsuarioPlantel } from '../entities/usuario-plantel.entity';
@@ -59,7 +60,7 @@ export class UsuariosService {
       .leftJoinAndSelect('a.plantel', 'p');
     if (maestroPuro) {
       qb.andWhere(
-        'EXISTS (SELECT 1 FROM inscripciones i INNER JOIN grupos g ON g.id = i.grupo_id AND g.activo = :grupoActivo INNER JOIN grupo_materias gm ON gm.grupo_id = i.grupo_id INNER JOIN docentes d ON d.id = gm.docente_id WHERE i.alumno_id = a.id AND i.estatus = :activa AND d.usuario_id = :actorId)',
+        'EXISTS (SELECT 1 FROM inscripciones i INNER JOIN grupos g ON g.id = i.grupo_id AND g.activo = :grupoActivo INNER JOIN ciclos_escolares ce ON ce.id = g.ciclo_id AND ce.activo = :grupoActivo INNER JOIN planteles pl ON pl.id = g.plantel_id AND pl.activo = :grupoActivo INNER JOIN grupo_materias gm ON gm.grupo_id = i.grupo_id INNER JOIN docentes d ON d.id = gm.docente_id WHERE i.alumno_id = a.id AND i.estatus = :activa AND d.usuario_id = :actorId)',
         { grupoActivo: true, activa: 'ACTIVA', actorId: user.sub },
       );
       if (query.plantelId) qb.andWhere('a.plantel_id = :plantelId', { plantelId: query.plantelId });
@@ -135,8 +136,27 @@ export class UsuariosService {
     return this.proyectar(usuario);
   }
 
+  async crearPersonal(dto: CrearUsuarioDto, user: JwtUser) {
+    if (dto.roles.some((rol) => rol === 'ALUMNO' || rol === 'MAESTRO')) throw new ConflictException('Crea la cuenta desde Alumnos o Docentes');
+    if (!dto.roles.includes('SUPERADMIN') && !dto.plantelIds?.length) throw new ConflictException('Asigna al menos un plantel al personal');
+    const ids = [...new Set(dto.plantelIds ?? [])];
+    for (const id of ids) await this.scope.validarGestion(user, id);
+    return this.usuarios.manager.transaction(async (manager) => {
+      for (const id of ids) {
+        if (!await manager.getRepository(Plantel).findOne({ where: { id, activo: true } })) throw new ConflictException('Selecciona planteles activos');
+      }
+      const usuario = await this.crear(dto, manager);
+      const asignaciones = manager.getRepository(UsuarioPlantel);
+      await asignaciones.save(ids.map((plantelId) => asignaciones.create({ usuarioId: usuario.id, plantelId, activo: true })));
+      return usuario;
+    });
+  }
+
   /** Reutilizable por Alumnos/Docentes para crear la cuenta asociada. */
   async crear(dto: CrearUsuarioDto, manager?: EntityManager): Promise<UsuarioPublico> {
+    if (!manager && dto.roles.some((rol) => rol === 'ALUMNO' || rol === 'MAESTRO')) {
+      throw new ConflictException('Crea ALUMNO desde Alumnos y MAESTRO desde Docentes para generar su expediente');
+    }
     const usuarios = manager?.getRepository(Usuario) ?? this.usuarios;
     const existe = await usuarios.findOne({ where: { email: dto.email }, withDeleted: true });
     if (existe) throw new ConflictException('El correo ya está registrado');
@@ -149,7 +169,7 @@ export class UsuariosService {
       apellidoPaterno: dto.apellidoPaterno,
       apellidoMaterno: dto.apellidoMaterno ?? null,
       telefono: dto.telefono ?? null,
-      roles,
+      roles, passwordChangeRequired: true,
     });
     return this.proyectar(await usuarios.save(usuario));
   }
@@ -158,10 +178,21 @@ export class UsuariosService {
     const usuarios = manager?.getRepository(Usuario) ?? this.usuarios;
     const usuario = await usuarios.findOne({ where: { id } });
     if (!usuario) throw new NotFoundException('Usuario no encontrado');
-    if (dto.password) usuario.passwordHash = await bcrypt.hash(dto.password, 10);
+    if (!manager && dto.activo !== undefined && usuario.roles.some((r) => ['ALUMNO', 'MAESTRO'].includes(r.clave))) {
+      throw new ConflictException('Gestiona el estado de la cuenta desde su expediente');
+    }
+    if (dto.password) { usuario.passwordHash = await bcrypt.hash(dto.password, 10); usuario.passwordChangeRequired = true; }
     const cambiaEstado = dto.activo !== undefined && dto.activo !== usuario.activo;
     if (dto.password || cambiaEstado) usuario.sessionVersion = (usuario.sessionVersion ?? 0) + 1;
-    if (dto.roles) usuario.roles = await this.resolverRoles(dto.roles, manager);
+    if (dto.roles) {
+      for (const rol of ['ALUMNO', 'MAESTRO'] as const) {
+        if (dto.roles.includes(rol) !== usuario.roles.some((r) => r.clave === rol)) {
+          throw new ConflictException('Los roles de alumno y docente se gestionan desde sus expedientes');
+        }
+      }
+      usuario.roles = await this.resolverRoles(dto.roles, manager);
+      usuario.sessionVersion = (usuario.sessionVersion ?? 0) + 1;
+    }
     Object.assign(usuario, {
       nombre: dto.nombre ?? usuario.nombre,
       apellidoPaterno: dto.apellidoPaterno ?? usuario.apellidoPaterno,
@@ -173,8 +204,7 @@ export class UsuariosService {
   }
 
   async desactivar(id: number) {
-    await this.obtener(id);
-    await this.usuarios.update(id, { activo: false });
+    await this.actualizar(id, { activo: false });
     return { ok: true };
   }
 

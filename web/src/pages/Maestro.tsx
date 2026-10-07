@@ -161,7 +161,7 @@ export default function MaestroPage() {
                 <option value="1">1</option><option value="2">2</option><option value="3">3</option>
               </select>
             </div>
-            <div className="campo"><label>Ponderación %</label>
+            <div className="campo"><label>Peso de seguimiento (sin efecto en la nota oficial)</label>
               <input type="number" min={0} max={100} value={form.ponderacion} onChange={(e) => setForm({ ...form, ponderacion: e.target.value })} />
             </div>
             <div className="campo"><label>Fecha de entrega</label>

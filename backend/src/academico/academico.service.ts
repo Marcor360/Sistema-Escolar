@@ -1,12 +1,15 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { exigirGrupoVigente, grupoVigente } from '../common/contexto-academico';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Repository } from 'typeorm';
 import { CicloEscolar } from '../entities/ciclo-escolar.entity';
+import { Plantel } from '../entities/plantel.entity';
 import { Materia } from '../entities/materia.entity';
 import { Grupo } from '../entities/grupo.entity';
 import { GrupoMateria } from '../entities/grupo-materia.entity';
 import { Inscripcion } from '../entities/inscripcion.entity';
 import { Alumno } from '../entities/alumno.entity';
+import { Docente } from '../entities/docente.entity';
 import { Calificacion } from '../entities/calificacion.entity';
 import { Actividad } from '../entities/actividad.entity';
 import { Material } from '../entities/material.entity';
@@ -65,6 +68,7 @@ export class AcademicoService {
   listarCiclos() { return this.ciclos.find({ order: { fechaInicio: 'DESC' } }); }
 
   async crearCiclo(dto: CicloDto) {
+    if (dto.fechaFin < dto.fechaInicio) throw new BadRequestException('La fecha de fin debe ser posterior o igual al inicio');
     try {
       return await this.dataSource.transaction('SERIALIZABLE', async (manager) => {
         const ciclos = manager.getRepository(CicloEscolar);
@@ -85,6 +89,7 @@ export class AcademicoService {
         const ciclos = manager.getRepository(CicloEscolar);
         const actual = await ciclos.findOne({ where: { id } });
         if (!actual) throw new NotFoundException('Ciclo escolar no encontrado');
+        if ((dto.fechaFin ?? actual.fechaFin) < (dto.fechaInicio ?? actual.fechaInicio)) throw new BadRequestException('La fecha de fin debe ser posterior o igual al inicio');
         if (dto.activo) await ciclos.update({ activo: true }, { activo: false });
         await ciclos.update(id, dto);
         return ciclos.findOne({ where: { id } });
@@ -105,6 +110,10 @@ export class AcademicoService {
     return this.materias.findOne({ where: { id } });
   }
   async desactivarMateria(id: number) {
+    const materia = await this.materias.findOne({ where: { id } });
+    if (!materia) throw new NotFoundException('Materia no encontrada');
+    const clases = await this.grupoMaterias.count({ where: { materiaId: id, grupo: { activo: true, ciclo: { activo: true } } } });
+    if (clases) throw new ConflictException('Primero retira la materia de los grupos vigentes; no se elimina el historial');
     await this.materias.update(id, { activo: false });
     return { ok: true };
   }
@@ -125,7 +134,7 @@ export class AcademicoService {
     const [datos, total] = await this.grupos.findAndCount({
       where: {
         ...(maestroPuro ? { id: In(gruposDocente) } : {}),
-        ...(query.cicloId ? { cicloId: query.cicloId } : {}),
+        ...(query.cicloId ? { cicloId: query.cicloId } : { ciclo: { activo: true }, plantel: { activo: true } }),
         ...(planteles === null ? {} : { plantelId: In(planteles) }),
         ...(query.inactivos && puedeVerInactivos ? {} : { activo: true }),
       },
@@ -137,6 +146,10 @@ export class AcademicoService {
   }
   async crearGrupo(dto: GrupoDto, user: JwtUser) {
     await this.scope.validarGestion(user, dto.plantelId);
+    const ciclo = await this.ciclos.findOne({ where: { id: dto.cicloId, activo: true } });
+    if (!ciclo) throw new ConflictException('Selecciona un ciclo existente y activo');
+    const plantel = await this.dataSource.getRepository(Plantel).findOne({ where: { id: dto.plantelId, activo: true } });
+    if (!plantel) throw new ConflictException('El plantel no está activo');
     try {
       return await this.grupos.save(this.grupos.create(dto));
     } catch (error) {
@@ -149,6 +162,13 @@ export class AcademicoService {
     const grupo = await this.grupos.findOne({ where: { id } });
     if (!grupo) throw new NotFoundException('Grupo no encontrado');
     await this.scope.validarGestion(user, grupo.plantelId);
+    if (dto.cicloId !== undefined && dto.cicloId !== grupo.cicloId) {
+      throw new ConflictException('El ciclo del grupo es inmutable; crea un grupo en el ciclo de destino');
+    }
+    if ((dto.grado !== undefined && dto.grado !== grupo.grado) || (dto.turno !== undefined && dto.turno !== grupo.turno)) {
+      const inscritos = await this.inscripciones.count({ where: { grupoId: id } });
+      if (inscritos) throw new ConflictException('No puedes cambiar grado o turno de un grupo con inscripciones');
+    }
     try {
       await this.grupos.update(id, dto);
     } catch (error) {
@@ -187,7 +207,8 @@ export class AcademicoService {
     if (planteles?.length === 0) return [];
     return this.grupoMaterias.find({
       where: {
-        ...(planteles === null ? {} : { grupo: { plantelId: In(planteles) } }),
+        grupo: { activo: true, ciclo: { activo: true }, plantel: { activo: true }, ...(planteles === null ? {} : { plantelId: In(planteles) }) },
+        materia: { activo: true },
         ...(docenteId === null ? {} : { docenteId }),
       },
       order: { grupoId: 'ASC' },
@@ -209,13 +230,17 @@ export class AcademicoService {
     if (!grupo) throw new NotFoundException('Grupo no encontrado');
     await this.scope.validarGestion(user, grupo.plantelId);
     if (!grupo.activo) throw new ConflictException('No se puede asignar una materia a un grupo inactivo');
+    exigirGrupoVigente(grupo);
+    const materia = await this.materias.findOne({ where: { id: dto.materiaId, activo: true } });
+    if (!materia) throw new ConflictException('La materia no está activa');
     const duplicado = await this.grupoMaterias.findOne({
       where: { grupoId, materiaId: dto.materiaId },
     });
     if (duplicado) throw new ConflictException('La materia ya está asignada a este grupo');
     if (dto.docenteId !== undefined) {
       const docente = await this.docentes.obtener(dto.docenteId, user);
-      if (!user.roles.includes('SUPERADMIN')) {
+      if (docente.estatus !== 'ACTIVO' || !docente.usuario.activo) throw new ConflictException('El docente no está activo');
+      {
         const asignacion = await this.usuarioPlanteles.findOne({
           where: { usuarioId: docente.usuarioId, plantelId: grupo.plantelId, activo: true },
         });
@@ -223,9 +248,15 @@ export class AcademicoService {
       }
     }
     try {
-      return await this.grupoMaterias.save(
-        this.grupoMaterias.create({ grupoId, materiaId: dto.materiaId, docenteId: dto.docenteId ?? null }),
-      );
+      return await this.dataSource.transaction(async (manager) => {
+        if (dto.docenteId !== undefined) {
+          const actual = await manager.getRepository(Docente).findOne({ where: { id: dto.docenteId }, lock: { mode: 'pessimistic_write' } });
+          if (!actual || actual.estatus !== 'ACTIVO' || !actual.usuario.activo) throw new ConflictException('El docente no está activo');
+          if (!await manager.getRepository(UsuarioPlantel).findOneBy({ usuarioId: actual.usuarioId, plantelId: grupo.plantelId, activo: true })) throw new ConflictException('El docente ya no está asignado al plantel');
+        }
+        const repositorio = manager.getRepository(GrupoMateria);
+        return repositorio.save(repositorio.create({ grupoId, materiaId: dto.materiaId, docenteId: dto.docenteId ?? null }));
+      });
     } catch (error) {
       if (esConflictoUnico(error)) throw new ConflictException('La materia ya está asignada a este grupo');
       throw error;
@@ -236,15 +267,23 @@ export class AcademicoService {
     const gm = await this.grupoMaterias.findOne({ where: { id: grupoMateriaId } });
     if (!gm) throw new NotFoundException('Asignación grupo-materia no encontrada');
     await this.validarAccesoGrupo(gm.grupoId, user);
+    exigirGrupoVigente(gm.grupo);
+    if (!gm.materia.activo) throw new ConflictException('La materia no está activa');
     const docente = await this.docentes.obtener(docenteId, user);
-    if (!user.roles.includes('SUPERADMIN')) {
+    if (docente.estatus !== 'ACTIVO' || !docente.usuario.activo) throw new ConflictException('El docente no está activo');
+    {
       const asignacion = await this.usuarioPlanteles.findOne({
         where: { usuarioId: docente.usuarioId, plantelId: gm.grupo.plantelId, activo: true },
       });
       if (!asignacion) throw new ForbiddenException('El docente no está asignado al plantel del grupo');
     }
-    gm.docenteId = docenteId;
-    return this.grupoMaterias.save(gm);
+    return this.dataSource.transaction(async (manager) => {
+      const actual = await manager.getRepository(Docente).findOne({ where: { id: docenteId }, lock: { mode: 'pessimistic_write' } });
+      if (!actual || actual.estatus !== 'ACTIVO' || !actual.usuario.activo) throw new ConflictException('El docente no está activo');
+      if (!await manager.getRepository(UsuarioPlantel).findOneBy({ usuarioId: actual.usuarioId, plantelId: gm.grupo.plantelId, activo: true })) throw new ConflictException('El docente ya no está asignado al plantel');
+      await manager.getRepository(GrupoMateria).update({ id: grupoMateriaId }, { docenteId });
+      return { ...gm, docenteId, docente: actual };
+    });
   }
 
   /** Quita una materia asignada por error; rechaza si ya tiene trabajo académico registrado. */
@@ -279,19 +318,26 @@ export class AcademicoService {
         if (!grupo) throw new NotFoundException('Grupo no encontrado');
         await this.scope.validarGestion(user, grupo.plantelId);
         if (!grupo.activo) throw new ConflictException('No se puede inscribir en un grupo inactivo');
-        const alumno = await manager.getRepository(Alumno).findOne({ where: { id: alumnoId } });
+        const alumno = await manager.getRepository(Alumno).findOne({ where: { id: alumnoId }, lock: { mode: 'pessimistic_write' } });
         if (!alumno) throw new NotFoundException('Alumno no encontrado');
         if (alumno.estatus !== 'ACTIVO') throw new ConflictException('El alumno no está activo');
+        exigirGrupoVigente(grupo);
+        if (!alumno.usuario.activo) throw new ConflictException('La cuenta del alumno no está activa');
         if (alumno.plantelId !== grupo.plantelId) {
           throw new ForbiddenException('El alumno no pertenece al plantel del grupo');
         }
         const inscripciones = manager.getRepository(Inscripcion);
+        const otra = await inscripciones.findOne({ where: { alumnoId, estatus: 'ACTIVA', grupo: { cicloId: grupo.cicloId } } });
+        if (otra) throw new ConflictException('El alumno ya tiene una inscripción activa en este ciclo; corrige la inscripción anterior');
         const duplicada = await inscripciones.findOne({ where: { grupoId, alumnoId } });
-        if (duplicada) throw new ConflictException('El alumno ya está inscrito en este grupo');
+        if (duplicada) {
+          duplicada.estatus = 'ACTIVA';
+          return inscripciones.save(duplicada);
+        }
         return inscripciones.save(inscripciones.create({ grupoId, alumnoId }));
       });
     } catch (error) {
-      if (esConflictoUnico(error)) throw new ConflictException('El alumno ya está inscrito en este grupo');
+      if (esConflictoUnico(error) || esConflictoTransaccional(error)) throw new ConflictException('La inscripción cambió al mismo tiempo; vuelve a consultar');
       throw error;
     }
   }
@@ -347,6 +393,6 @@ export class AcademicoService {
   async misGrupos(usuarioId: number) {
     const docente = await this.docentes.obtenerPorUsuario(usuarioId);
     const asignaciones = await this.grupoMaterias.find({ where: { docenteId: docente.id } });
-    return asignaciones.filter((gm) => gm.grupo.activo);
+    return asignaciones.filter((gm) => grupoVigente(gm.grupo) && gm.materia.activo);
   }
 }

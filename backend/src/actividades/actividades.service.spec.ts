@@ -40,7 +40,7 @@ describe('ActividadesService.entregar', () => {
       create: jest.fn((dato) => dato),
       save: jest.fn(async (dato) => dato),
     };
-    const grupoMaterias = { findOne: jest.fn().mockResolvedValue({ id: 12, grupoId: 3, grupo: { activo: true } }) };
+    const grupoMaterias = { findOne: jest.fn().mockResolvedValue({ id: 12, grupoId: 3, grupo: { activo: true, ciclo: { activo: true }, plantel: { activo: true } } }) };
     const inscripciones = { findOne: jest.fn().mockResolvedValue({ id: 1 }) };
     const alumnos = { obtenerPorUsuario: jest.fn().mockResolvedValue({ id: 8 }) };
     const manager = { getRepository: jest.fn((entity) => ({
@@ -62,22 +62,12 @@ describe('ActividadesService.entregar', () => {
     expect(entregas.save).not.toHaveBeenCalled();
   });
 
-  it('reabre la calificación de una reentrega y conserva el bloqueo de la fila', async () => {
-    const previa = {
-      id: 9, actividadId: 5, alumnoId: 8, estatus: 'CALIFICADA',
-      calificacion: 92, comentarioDocente: 'Primera revisión', comentarioAlumno: 'Original',
-    };
+  it('rechaza la reentrega de una actividad calificada y conserva la nota', async () => {
+    const previa = { id: 9, actividadId: 5, alumnoId: 8, estatus: 'CALIFICADA', calificacion: 92 };
     const { service, entregas } = crearServicio({ id: 5, activo: true, grupoMateriaId: 12, fechaEntrega: null }, previa);
-
-    const resultado = await service.entregar(5, actor, { comentario: 'Corrección' });
-
-    expect(resultado).toMatchObject({
-      id: 9, estatus: 'ENTREGADA', calificacion: null, comentarioDocente: null,
-      comentarioAlumno: 'Corrección',
-    });
-    expect(entregas.findOne).toHaveBeenCalledWith({
-      where: { actividadId: 5, alumnoId: 8 }, lock: { mode: 'pessimistic_write' },
-    });
+    await expect(service.entregar(5, actor, { comentario: 'Corrección' })).rejects.toThrow('no admite reentrega');
+    expect(previa.calificacion).toBe(92);
+    expect(entregas.save).not.toHaveBeenCalled();
   });
 
   it('responde con error de validación cuando falta el archivo de material', async () => {

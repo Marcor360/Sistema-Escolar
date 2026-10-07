@@ -1,4 +1,6 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { promedioOficial } from '../common/promedio-oficial';
+import { Inscripcion } from '../entities/inscripcion.entity';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -103,9 +105,17 @@ export class ReportesService {
       order: { alumnoId: 'ASC', parcial: 'ASC' },
     });
 
-    // Pivote: una fila por alumno, columnas por parcial
+    const inscritos = await this.grupos.manager.getRepository(Inscripcion).find({
+      where: { grupoId: gm.grupoId, estatus: 'ACTIVA', alumno: { estatus: 'ACTIVO' } },
+      order: { alumnoId: 'ASC' },
+    });
+    // Pivote: todas las inscripciones, incluso sin calificación.
     const filas = new Map<number, { matricula: string; nombre: string; parciales: Map<number, number> }>();
+    for (const i of inscritos) filas.set(i.alumnoId, {
+      matricula: i.alumno.matricula, nombre: i.alumno.usuario.nombreCompleto, parciales: new Map(),
+    });
     for (const r of registros) {
+      if (!filas.has(r.alumnoId)) continue;
       const fila = filas.get(r.alumnoId) ?? {
         matricula: r.alumno.matricula,
         nombre: r.alumno.usuario.nombreCompleto,
@@ -130,10 +140,7 @@ export class ReportesService {
 
     for (const fila of filas.values()) {
       const valores = [1, 2, 3].map((p) => fila.parciales.get(p));
-      const definidos = valores.filter((v): v is number => v !== undefined);
-      const promedio = definidos.length
-        ? Math.round((definidos.reduce((a, b) => a + b, 0) / definidos.length) * 10) / 10
-        : null;
+      const promedio = promedioOficial(fila.parciales);
       ws.addRow({
         matricula: fila.matricula,
         nombre: fila.nombre,
@@ -153,34 +160,35 @@ export class ReportesService {
   }
 
   /** Boleta PDF básica: calificaciones por materia y parcial + promedios. */
-  async boletaPdf(alumnoId: number, user: JwtUser, res: Response) {
+  async boletaPdf(alumnoId: number, user: JwtUser, res: Response, cicloId?: number, inscripcionId?: number) {
     const alumno = await this.alumnos.findOne({ where: { id: alumnoId } });
     if (!alumno) throw new NotFoundException('Alumno no encontrado');
     if (user.roles.includes('ALUMNO')) {
       const propio = await this.alumnosService.obtenerPorUsuario(user.sub);
       if (propio.id !== alumno.id) throw new ForbiddenException('No puedes consultar la boleta de otro alumno');
-    } else if (
-      user.roles.includes('MAESTRO') &&
-      !user.roles.some((rol) => ['SUPERADMIN', 'ADMINISTRATIVO', 'FINANZAS'].includes(rol))
-    ) {
-      const permitido = await this.alumnos
-        .createQueryBuilder('a')
-        .where('a.id = :alumnoId', { alumnoId })
-        .andWhere(
-          'EXISTS (SELECT 1 FROM inscripciones i INNER JOIN grupos g ON g.id = i.grupo_id AND g.activo = :grupoActivo INNER JOIN grupo_materias gm ON gm.grupo_id = i.grupo_id INNER JOIN docentes d ON d.id = gm.docente_id WHERE i.alumno_id = a.id AND i.estatus = :inscripcionActiva AND d.usuario_id = :actorId)',
-          { grupoActivo: true, inscripcionActiva: 'ACTIVA', actorId: user.sub },
-        )
-        .getCount();
-      if (!permitido) throw new ForbiddenException('El alumno no pertenece a uno de tus grupos');
+    } else if (!user.roles.some((rol) => ['SUPERADMIN', 'ADMINISTRATIVO'].includes(rol))) {
+      throw new ForbiddenException('La boleta completa es exclusiva del alumno y control escolar; usa el concentrado de tus clases');
     } else if (!user.roles.includes('SUPERADMIN')) {
       await this.scope.validarGestion(user, alumno.plantelId);
     }
+    const inscripciones = await this.grupos.manager.getRepository(Inscripcion).find({
+      where: { alumnoId, ...(inscripcionId ? { id: inscripcionId } : {}), grupo: cicloId ? { cicloId } : { ciclo: { activo: true } } },
+      order: { id: 'DESC' },
+    });
+    if (!inscripciones.length) throw new NotFoundException('El alumno no tiene inscripción en el ciclo solicitado');
+    if (inscripciones.length > 1 && !inscripcionId) throw new BadRequestException('Selecciona una inscripción para emitir la boleta de este ciclo');
+    const inscripcion = inscripciones[0];
+    // El alcance histórico corresponde al plantel de la inscripción, no al plantel actual tras una transferencia.
+    if (!user.roles.includes('ALUMNO')) await this.scope.validarGestion(user, inscripcion.grupo.plantelId);
     const calificaciones = await this.calificaciones.find({
-      where: { alumnoId },
+      where: { alumnoId, grupoMateria: { grupoId: inscripcion.grupoId } },
       order: { grupoMateriaId: 'ASC', parcial: 'ASC' },
     });
 
     const materias = new Map<number, { nombre: string; parciales: Map<number, number> }>();
+    for (const clase of await this.grupoMaterias.find({ where: { grupoId: inscripcion.grupoId } })) {
+      materias.set(clase.id, { nombre: clase.materia.nombre, parciales: new Map() });
+    }
     for (const c of calificaciones) {
       const fila = materias.get(c.grupoMateriaId) ?? {
         nombre: c.grupoMateria?.materia?.nombre ?? `Materia ${c.grupoMateriaId}`,
@@ -203,13 +211,15 @@ export class ReportesService {
     doc.fontSize(10);
     doc.text(`Alumno: ${alumno.usuario.nombreCompleto}`);
     doc.text(`Matrícula: ${alumno.matricula}`);
+    doc.text(`Ciclo: ${inscripcion.grupo.ciclo.nombre} · Grupo: ${inscripcion.grupo.nombre}`);
+    doc.text(`Plantel: ${inscripcion.grupo.plantel.nombre} · Inscripción: ${inscripcion.id}`);
     doc.text(`Fecha de emisión: ${new Date().toLocaleDateString('es-MX')}`);
     doc.moveDown();
 
     const x = 50;
     let y = doc.y;
-    const anchos = [220, 70, 70, 70, 80];
-    const encabezados = ['Materia', 'Parcial 1', 'Parcial 2', 'Parcial 3', 'Promedio'];
+    const anchos = [190, 60, 60, 60, 60, 70];
+    const encabezados = ['Materia', 'P1', 'P2', 'P3', 'Final', 'Promedio'];
     doc.font('Helvetica-Bold');
     encabezados.forEach((h, i) => {
       doc.text(h, x + anchos.slice(0, i).reduce((a, b) => a + b, 0), y, { width: anchos[i] });
@@ -221,15 +231,13 @@ export class ReportesService {
     const promediosGenerales: number[] = [];
     for (const fila of materias.values()) {
       const valores = [1, 2, 3].map((p) => fila.parciales.get(p));
-      const definidos = valores.filter((v): v is number => v !== undefined);
-      const promedio = definidos.length
-        ? Math.round((definidos.reduce((a, b) => a + b, 0) / definidos.length) * 10) / 10
-        : null;
+      const promedio = promedioOficial(fila.parciales);
       if (promedio !== null) promediosGenerales.push(promedio);
 
       const celdas = [
         fila.nombre,
         ...valores.map((v) => (v === undefined ? '—' : v.toFixed(1))),
+        fila.parciales.has(0) ? Number(fila.parciales.get(0)).toFixed(1) : '—',
         promedio === null ? '—' : promedio.toFixed(1),
       ];
       celdas.forEach((c, i) => {

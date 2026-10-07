@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
-import { api, mensajeDeError, registrarSesionExpirada, TOKEN_KEY } from './src/api/client';
+import { api, mensajeDeError, registrarSesionExpirada, TOKEN_KEY, REFRESH_KEY } from './src/api/client';
 import { Sesion, SesionContext } from './src/sesion';
 import { colores } from './src/theme';
 import LoginScreen from './src/screens/Login';
@@ -28,6 +28,8 @@ export default function App() {
   const [marca, setMarca] = useState<Marca>(MARCA_POR_DEFECTO);
   const [marcaLista, setMarcaLista] = useState(false);
   const [errorInicio, setErrorInicio] = useState('');
+  const [actual, setActual] = useState(''); const [nueva, setNueva] = useState('');
+  const [errorPassword, setErrorPassword] = useState(''); const [cambiando, setCambiando] = useState(false);
 
   const tema = useMemo(() => ({
     ...DefaultTheme,
@@ -53,7 +55,7 @@ export default function App() {
             sub: data.id,
             email: data.email,
             nombre: data.nombreCompleto,
-            roles: data.roles.map((r: { clave: string }) => r.clave),
+            roles: data.roles.map((r: { clave: string }) => r.clave), passwordChangeRequired: data.passwordChangeRequired,
           });
         } catch (error) {
           if ((error as { response?: { status?: number } }).response?.status !== 401) {
@@ -104,6 +106,7 @@ export default function App() {
 
   const iniciar = async (email: string, password: string) => {
     const { data } = await api.post('/auth/login', { email, password });
+    await SecureStore.setItemAsync(REFRESH_KEY, data.refreshToken);
     await SecureStore.setItemAsync(TOKEN_KEY, data.accessToken);
     setSesion(data.usuario);
   };
@@ -111,6 +114,7 @@ export default function App() {
   const cerrar = async () => {
     await api.post('/auth/logout');
     await SecureStore.deleteItemAsync(TOKEN_KEY);
+    await SecureStore.deleteItemAsync(REFRESH_KEY);
     setSesion(null);
   };
 
@@ -121,6 +125,20 @@ export default function App() {
       </View>
     );
   }
+
+  if (sesion?.passwordChangeRequired) return <View style={{ padding: 24, paddingTop: 60 }}>
+    <Text accessibilityRole="header">Cambia tu contraseña temporal</Text>
+    <TextInput accessibilityLabel="Contraseña temporal" placeholder="Contraseña temporal" secureTextEntry value={actual} onChangeText={setActual} />
+    <TextInput accessibilityLabel="Nueva contraseña" placeholder="Nueva contraseña (mínimo 8 caracteres)" secureTextEntry value={nueva} onChangeText={setNueva} />
+    {errorPassword !== '' && <Text accessibilityRole="alert">{errorPassword}</Text>}
+    <TouchableOpacity accessibilityRole="button" disabled={cambiando || nueva.length < 8} onPress={async () => {
+      setCambiando(true); setErrorPassword('');
+      try { await api.post('/auth/cambiar-password', { actual, nueva });
+        await SecureStore.deleteItemAsync(TOKEN_KEY); await SecureStore.deleteItemAsync(REFRESH_KEY);
+        setSesion(null); setActual(''); setNueva('');
+      } catch (err) { setErrorPassword(mensajeDeError(err)); } finally { setCambiando(false); }
+    }}><Text>{cambiando ? 'Guardando…' : 'Cambiar contraseña y volver a ingresar'}</Text></TouchableOpacity>
+  </View>;
 
   if (errorInicio) {
     return (

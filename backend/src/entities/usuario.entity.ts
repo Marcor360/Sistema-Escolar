@@ -14,6 +14,7 @@ export class Usuario {
   @Column({ type: String, length: 80, nullable: true }) apellidoMaterno: string | null;
   @Column({ type: String, length: 20, nullable: true }) telefono: string | null;
   @Column({ default: true }) activo: boolean;
+  @Column({ default: false }) passwordChangeRequired: boolean;
   @Column({ name: 'session_version', type: 'int', default: 0 }) sessionVersion: number;
 
   @ManyToMany(() => Rol, { eager: true })

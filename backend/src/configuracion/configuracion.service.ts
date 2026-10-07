@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { promises as fs } from 'fs';
 import { basename, join } from 'path';
 import { uploadsPath } from '../common/uploads-path';
+import { validarContenidoArchivo } from '../common/validar-archivo';
 import { Repository } from 'typeorm';
 import { ConfiguracionMarca } from '../entities';
 import { ActualizarMarcaDto, MarcaPublicaDto } from './configuracion.dto';
@@ -38,6 +39,10 @@ export class ConfiguracionService {
   }
 
   async guardarLogo(file: Express.Multer.File): Promise<MarcaPublicaDto> {
+    try { await validarContenidoArchivo(file); } catch (error) {
+      await fs.unlink(file.path).catch(() => undefined);
+      throw error;
+    }
     let marca = await this.repo.findOne({ where: { id: 1 } });
     if (!marca) marca = this.repo.create(VALORES_INICIALES);
     const anterior = marca.logoUrl;

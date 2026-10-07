@@ -4,6 +4,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { JwtUser } from '../common/current-user.decorator';
+import { GrupoMateria } from '../entities/grupo-materia.entity';
 import { Alumno } from '../entities/alumno.entity';
 import { Grupo } from '../entities/grupo.entity';
 import { Plantel } from '../entities/plantel.entity';
@@ -73,6 +74,14 @@ export class PlantelesService {
 
   async actualizar(id: number, dto: ActualizarPlantelDto) {
     const plantel = await this.obtener(id);
+    if (dto.activo === false && plantel.activo) {
+      const [alumnos, grupos, personal] = await Promise.all([
+        this.alumnos.count({ where: { plantelId: id, estatus: 'ACTIVO' } }),
+        this.grupos.count({ where: { plantelId: id, activo: true } }),
+        this.asignaciones.count({ where: { plantelId: id, activo: true } }),
+      ]);
+      if (alumnos || grupos || personal) throw new ConflictException('Primero transfiere o da de baja alumnos, grupos y personal del plantel');
+    }
     Object.assign(plantel, dto);
     return this.planteles.save(plantel);
   }
@@ -97,7 +106,11 @@ export class PlantelesService {
     await this.validarAdministracion(user, id);
     const plantel = await this.obtener(id);
     if (plantel.directorUsuarioId === usuarioId) throw new BadRequestException('Primero asigna otro director');
-    await this.asignaciones.delete({ usuarioId, plantelId: id });
+    const clases = await this.grupos.manager.getRepository(GrupoMateria).count({
+      where: { docente: { usuarioId }, grupo: { plantelId: id, activo: true, ciclo: { activo: true } } },
+    });
+    if (clases) throw new ConflictException('Reasigna primero las clases activas del docente en este plantel');
+    await this.asignaciones.update({ usuarioId, plantelId: id }, { activo: false });
     return { ok: true };
   }
 

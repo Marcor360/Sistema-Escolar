@@ -62,11 +62,9 @@ describe('ReportesService.boletaPdf', () => {
     );
 
     await expect(service.boletaPdf(2, maestroUser, {} as any)).rejects.toThrow(
-      'El alumno no pertenece a uno de tus grupos',
+      'La boleta completa es exclusiva',
     );
-    expect(qb.andWhere).toHaveBeenCalledWith(expect.stringContaining('INNER JOIN grupos g'), {
-      grupoActivo: true, inscripcionActiva: 'ACTIVA', actorId: maestroUser.sub,
-    });
+    expect(qb.andWhere).not.toHaveBeenCalled();
   });
 });
 

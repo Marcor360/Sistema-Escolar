@@ -34,6 +34,8 @@ export default function CalendarioPage() {
   );
   const [form, setForm] = useState(FORM_INICIAL);
   const [filtroPlantel, setFiltroPlantel] = useState('');
+  const [desde, setDesde] = useState(new Date().toISOString().slice(0, 10));
+  const [hasta, setHasta] = useState(new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10));
   const [error, setError] = useState('');
 
   const crear = async (e: FormEvent) => {
@@ -64,13 +66,16 @@ export default function CalendarioPage() {
   const filtrarEventos = async () => {
     setError('');
     try {
-      const { data } = await api.get<Evento[]>('/calendario', { params: filtroPlantel ? { plantelId: filtroPlantel } : {} });
+      const { data } = await api.get<Evento[]>('/calendario', { params: { desde: `${desde}T00:00:00Z`, hasta: `${hasta}T23:59:59Z`, ...(filtroPlantel ? { plantelId: filtroPlantel } : {}) } });
       setEventos(data);
     } catch (err) { setError(mensajeDeError(err)); }
   };
 
   return (
     <>
+      <div className="fila"><div className="campo"><label htmlFor="cal-desde">Desde</label><input id="cal-desde" type="date" value={desde} onChange={(e) => setDesde(e.target.value)} /></div>
+        <div className="campo"><label htmlFor="cal-hasta">Hasta</label><input id="cal-hasta" type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} /></div>
+        <button onClick={filtrarEventos}>Consultar intervalo</button></div>
       <Encabezado titulo="Calendario académico" detalle="Exámenes, entregas, días festivos y avisos generales" />
       {(error || errorCarga) && <p className="mensaje-error">{error || errorCarga}</p>}
 

@@ -91,7 +91,7 @@ describe('CargosService.aplicarRecargos', () => {
     );
     const user = { sub: 1, roles: ['FINANZAS'] } as any;
 
-    const resultado = await service.aplicarRecargos({ porcentaje: 10 }, user);
+    const resultado = await service.aplicarRecargos({ porcentaje: 10, plantelId: 4, confirmado: true }, user);
 
     expect(cargo.recargo).toBe(90); // (1000 - 100) * 10 / 100
     expect(resultado).toEqual({ aplicados: 1, porcentaje: 10 });
@@ -186,7 +186,7 @@ describe('CargosService.generarColegiaturas', () => {
     const { service, cargos, grupos, bitacora, manager } = crearServicio(guardar);
 
     const resultado = await service.generarColegiaturas(
-      { cicloId: 3, periodo: '2026-09' } as any,
+      { cicloId: 3, periodo: '2026-09', plantelId: 2, confirmado: true } as any,
       { sub: 1, roles: ['FINANZAS'] } as any,
     );
 
@@ -212,7 +212,7 @@ describe('CargosService.generarColegiaturas', () => {
     const { service, bitacora, manager } = crearServicio(guardar);
 
     const resultado = await service.generarColegiaturas(
-      { cicloId: 3, periodo: '2026-09' } as any,
+      { cicloId: 3, periodo: '2026-09', plantelId: 2, confirmado: true } as any,
       { sub: 1, roles: ['FINANZAS'] } as any,
     );
 
@@ -231,7 +231,7 @@ describe('CargosService.generarColegiaturas', () => {
     ]);
 
     const resultado = await service.generarColegiaturas(
-      { cicloId: 3, periodo: '2026-09' } as any,
+      { cicloId: 3, periodo: '2026-09', plantelId: 2, confirmado: true } as any,
       { sub: 1, roles: ['FINANZAS'] } as any,
     );
 

@@ -15,8 +15,10 @@
 **Motor de BD conmutable.** El contrato menciona SQL Server y el cliente pidió
 también MySQL. Son motores distintos, así que las entidades TypeORM usan solo
 tipos portables y `DB_TYPE` (mysql|mssql) selecciona el driver sin tocar código.
-`database/` incluye ambos esquemas SQL equivalentes (23 tablas, snake_case vía
+`database/` incluye ambos esquemas SQL equivalentes (snake_case vía
 `typeorm-naming-strategies`).
+
+**Sesiones.** Access de 15 minutos y refresh rotativo con hash persistido, revocable por dispositivo. Cookie HttpOnly/SameSite Strict en web y SecureStore en móvil; bearer web en memoria. Cambio inicial obligatorio para altas y revocación global por versión en baja, contraseña o roles. Aplicar migración espejo de sesiones y actualizar API/clientes juntos.
 
 **Autorización.** JWT (passport-jwt), validación del usuario activo y roles vigentes en base por solicitud, más guard de roles declarativo
 (`@Roles('FINANZAS')`). `SUPERADMIN` tiene acceso total. Reglas de dominio:
@@ -26,7 +28,7 @@ grupo-materia que tiene asignados (validación de propiedad en servicios).
 **Modelo académico.** `grupo_materias` es el eje: une grupo+materia+docente y
 de él cuelgan actividades, materiales y calificaciones. Las calificaciones
 tienen unicidad (alumno, grupo_materia, parcial) con parcial 0 = final, lo que
-permite captura masiva con upsert.
+permite captura masiva con upsert. El promedio oficial usa P1-P3 completos, redondeado a un decimal; Final es independiente. Las actividades no calculan esa nota. Véase [REGLAS_PILOTO.md](REGLAS_PILOTO.md).
 
 **Finanzas (SOLID/SRP).** El dominio financiero está dividido en servicios de
 responsabilidad única, cada uno sustituible sin tocar a los demás:
@@ -52,7 +54,7 @@ porque el proveedor podría haber creado el cargo aunque la respuesta no llegara
 Sin credenciales el servicio queda deshabilitado de forma segura (503 explicativo).
 
 **Archivos.** Multer a disco (`UPLOADS_DIR`), nombre UUID, límite 5 MB y lista
-blanca de extensiones — el alcance del contrato excluye almacenamiento ilimitado
+blanca de extensiones y comprobación básica de firmas; reemplazo confirmado con limpieza del archivo anterior. El alcance del contrato excluye almacenamiento ilimitado
 y antivirus avanzado.
 
 **Seguridad.** Contraseñas con bcrypt; validación con class-validator

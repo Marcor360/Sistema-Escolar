@@ -1,3 +1,6 @@
+import { PaginacionDto } from '../common/paginacion.dto';
+import { exigirGrupoVigente, inscripcionVigente } from '../common/contexto-academico';
+import { promedioOficial } from '../common/promedio-oficial';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Repository } from 'typeorm';
@@ -54,6 +57,7 @@ export class CalificacionesService {
       });
       if (!grupoMateria) throw new NotFoundException('Grupo-materia no encontrado');
       if (!grupoMateria.grupo.activo) throw new ConflictException('El grupo no está activo');
+      exigirGrupoVigente(grupoMateria.grupo);
       if (grupoMateria.docenteId !== gm.docenteId && user.roles.includes('MAESTRO') &&
           !user.roles.some((rol) => ['SUPERADMIN', 'ADMINISTRATIVO'].includes(rol))) {
         throw new ForbiddenException('La materia ya no está asignada a este docente');
@@ -64,7 +68,7 @@ export class CalificacionesService {
       if (periodo?.estatus === 'CERRADO') throw new ConflictException('El periodo está cerrado');
       const inscripciones = manager.getRepository(Inscripcion);
       const activos = await inscripciones.find({
-        where: { alumnoId: In(ids), grupoId: gm.grupoId, estatus: 'ACTIVA' },
+        where: { ...inscripcionVigente, alumnoId: In(ids), grupoId: gm.grupoId },
       });
       const activosIds = new Set(activos.map((i) => i.alumnoId));
       if (ids.some((id) => !activosIds.has(id))) {
@@ -77,6 +81,10 @@ export class CalificacionesService {
           where: { alumnoId: item.alumnoId, grupoMateriaId: dto.grupoMateriaId, parcial: dto.parcial },
           lock: { mode: 'pessimistic_write' },
         });
+        if (existente && (Number(existente.calificacion) !== item.calificacion ||
+            (item.observaciones !== undefined && item.observaciones !== existente.observaciones)) && !dto.motivo?.trim()) {
+          throw new BadRequestException('Debes indicar el motivo para corregir una calificación existente');
+        }
         const registro = existente ?? calificaciones.create({
           alumnoId: item.alumnoId, grupoMateriaId: dto.grupoMateriaId, parcial: dto.parcial,
         });
@@ -113,7 +121,13 @@ export class CalificacionesService {
     this.validarParcial(parcial);
     await this.validarGrupoMateria(grupoMateriaId, user);
     const periodo = await this.periodos.findOne({ where: { grupoMateriaId, parcial } });
-    return { grupoMateriaId, parcial, estatus: periodo?.estatus ?? 'ABIERTO' };
+    const gm = await this.grupoMaterias.findOneOrFail({ where: { id: grupoMateriaId } });
+    const inscritos = await this.inscripciones.find({ where: { ...inscripcionVigente, grupoId: gm.grupoId } });
+    const registros = await this.repo.find({ where: { grupoMateriaId, parcial } });
+    const capturados = new Set(registros.map((c) => c.alumnoId));
+    const faltantes = inscritos.filter((i) => !capturados.has(i.alumnoId)).length;
+    return { grupoMateriaId, parcial, estatus: periodo?.estatus ?? 'ABIERTO', inscritos: inscritos.length,
+      capturados: inscritos.length - faltantes, faltantes };
   }
 
   async cambiarEstadoPeriodo(
@@ -126,6 +140,13 @@ export class CalificacionesService {
       });
       if (!gm) throw new NotFoundException('Grupo-materia no encontrado');
       await this.scope.validarGestion(user, gm.grupo.plantelId);
+      exigirGrupoVigente(gm.grupo);
+      if (estatus === 'CERRADO') {
+        const inscritos = await manager.getRepository(Inscripcion).find({ where: { ...inscripcionVigente, grupoId: gm.grupoId } });
+        const notas = await manager.getRepository(Calificacion).find({ where: { grupoMateriaId, parcial } });
+        const capturados = new Set(notas.map((c) => c.alumnoId));
+        if (inscritos.some((i) => !capturados.has(i.alumnoId))) throw new ConflictException('No puedes cerrar el periodo: hay alumnos sin calificación');
+      }
       const periodos = manager.getRepository(PeriodoCalificacion);
       const periodo = await periodos.findOne({ where: { grupoMateriaId, parcial } }) ??
         periodos.create({ grupoMateriaId, parcial, estatus: 'ABIERTO' });
@@ -144,12 +165,14 @@ export class CalificacionesService {
     });
   }
 
-  async historialPeriodo(grupoMateriaId: number, parcial: number, user: JwtUser) {
+  async historialPeriodo(grupoMateriaId: number, parcial: number, user: JwtUser, query: PaginacionDto = new PaginacionDto()) {
     this.validarParcial(parcial);
     await this.validarGrupoMateria(grupoMateriaId, user);
-    return this.historial.find({
-      where: { grupoMateriaId, parcial }, order: { id: 'DESC' }, take: 100,
+    const { pagina, porPagina } = query;
+    const [datos, total] = await this.historial.findAndCount({
+      where: { grupoMateriaId, parcial }, order: { id: 'DESC' }, skip: (pagina - 1) * porPagina, take: porPagina,
     });
+    return { datos, total, pagina, porPagina };
   }
 
   async porGrupoMateria(grupoMateriaId: number, user: JwtUser, parcial?: number) {
@@ -161,7 +184,7 @@ export class CalificacionesService {
     return registros.map((registro) => this.proyectar(registro));
   }
 
-  async porAlumno(alumnoId: number, user: JwtUser) {
+  async porAlumno(alumnoId: number, user: JwtUser, cicloId?: number) {
     const alumno = await this.alumnos.obtener(alumnoId);
     if (
       user.roles.includes('MAESTRO') &&
@@ -169,7 +192,7 @@ export class CalificacionesService {
     ) {
       const docente = await this.docentes.obtenerPorUsuario(user.sub);
       const asignaciones = await this.grupoMaterias.find({ where: { docenteId: docente.id } });
-      const asignacionesActivas = asignaciones.filter((gm) => gm.grupo.activo);
+      const asignacionesActivas = asignaciones.filter((gm) => gm.grupo.activo && gm.grupo.ciclo.activo && gm.grupo.plantel.activo && (!cicloId || gm.grupo.cicloId === cicloId));
       const grupoIds = [...new Set(asignacionesActivas.map((gm) => gm.grupoId))];
       if (grupoIds.length === 0) throw new ForbiddenException('El alumno no pertenece a uno de tus grupos');
       const inscripcionesActivas = await this.inscripciones.find({
@@ -182,18 +205,33 @@ export class CalificacionesService {
         where: { alumnoId, grupoMateriaId: In(grupoMateriaIds) },
         order: { grupoMateriaId: 'ASC', parcial: 'ASC' },
       });
-      return registros.map((registro) => this.proyectar(registro));
+      return this.proyectarConPromedio(registros);
     } else if (!user.roles.includes('SUPERADMIN')) {
       await this.scope.validarGestion(user, alumno.plantelId);
     }
-    const registros = await this.repo.find({ where: { alumnoId }, order: { grupoMateriaId: 'ASC', parcial: 'ASC' } });
-    return registros.map((registro) => this.proyectar(registro));
+    const permitidos = await this.scope.plantelesDe(user);
+    const registros = await this.repo.find({ where: { alumnoId, grupoMateria: { grupo: {
+      ...(cicloId ? { cicloId } : { activo: true, ciclo: { activo: true }, plantel: { activo: true } }),
+      ...(permitidos === null ? {} : { plantelId: In(permitidos) }),
+    } } }, order: { grupoMateriaId: 'ASC', parcial: 'ASC' } });
+    return this.proyectarConPromedio(registros);
   }
 
-  async mias(user: JwtUser) {
+  async mias(user: JwtUser, cicloId?: number) {
     const alumno = await this.alumnos.obtenerPorUsuario(user.sub);
-    const registros = await this.repo.find({ where: { alumnoId: alumno.id }, order: { grupoMateriaId: 'ASC', parcial: 'ASC' } });
-    return registros.map((registro) => this.proyectar(registro));
+    const activas = cicloId ? null : await this.inscripciones.find({ where: { ...inscripcionVigente, alumnoId: alumno.id } });
+    if (activas?.length === 0) return [];
+    const registros = await this.repo.find({
+      where: { alumnoId: alumno.id, grupoMateria: { grupo: cicloId ? { cicloId } : { id: In(activas!.map((i) => i.grupoId)), ciclo: { activo: true } } } },
+      order: { grupoMateriaId: 'ASC', parcial: 'ASC' },
+    });
+    return this.proyectarConPromedio(registros);
+  }
+
+  private proyectarConPromedio(registros: Calificacion[]) {
+    return registros.map((registro) => ({ ...this.proyectar(registro), promedioOficial: promedioOficial(new Map(
+      registros.filter((c) => c.grupoMateriaId === registro.grupoMateriaId).map((c) => [c.parcial, Number(c.calificacion)]),
+    )) }));
   }
 
   private proyectar(registro: Calificacion) {
@@ -209,6 +247,9 @@ export class CalificacionesService {
         grupo: registro.grupoMateria.grupo ? {
           id: registro.grupoMateria.grupo.id,
           nombre: registro.grupoMateria.grupo.nombre,
+          ciclo: registro.grupoMateria.grupo.ciclo ? {
+            id: registro.grupoMateria.grupo.ciclo.id, nombre: registro.grupoMateria.grupo.ciclo.nombre,
+          } : undefined,
         } : undefined,
         materia: registro.grupoMateria.materia ? {
           id: registro.grupoMateria.materia.id,

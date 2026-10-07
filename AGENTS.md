@@ -7,6 +7,6 @@
 - Los archivos de `uploads/` solo se sirven mediante el módulo `archivos` con enlaces firmados de corta vida; nunca reactivar `useStaticAssets`.
 - Verificación: `cd backend && npm run lint && npm run typecheck && npm test`; `cd web && npm run lint && npm run build`; `cd mobile && npx tsc --noEmit`.
 
-La zona horaria está documentada en `docs/ARQUITECTURA.md`; la sesión móvil admite `JWT_EXPIRES_MOVIL` con el riesgo documentado en `.env.example`.
+La zona horaria está documentada en `docs/ARQUITECTURA.md`; las sesiones usan acceso de 15 minutos y refresh rotativo de 30 días como máximo, persistido con hash y revocable por dispositivo.
 
 La identidad visual se configura en `configuracion_marca` y los clientes la consumen de `GET /api/configuracion/marca`.

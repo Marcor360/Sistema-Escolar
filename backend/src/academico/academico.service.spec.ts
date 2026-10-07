@@ -15,8 +15,8 @@ function crearServicio(overrides: {
   dataSource?: any;
   }) {
   return new AcademicoService(
-    {} as any,
-    {} as any,
+    { findOne: jest.fn().mockResolvedValue({ activo: true, ciclo: { activo: true }, plantel: { activo: true } }) } as any,
+    { findOne: jest.fn().mockResolvedValue({ activo: true, ciclo: { activo: true }, plantel: { activo: true } }) } as any,
     overrides.grupos ?? ({} as any),
     overrides.grupoMaterias ?? ({} as any),
     overrides.inscripciones ?? ({} as any),
@@ -48,7 +48,7 @@ describe('AcademicoService.crearCiclo', () => {
 describe('AcademicoService.eliminarGrupo', () => {
   it('rechaza la baja si el grupo tiene inscripciones activas', async () => {
     const grupos = {
-      findOne: jest.fn().mockResolvedValue({ id: 1, plantelId: 5, activo: true }),
+      findOne: jest.fn().mockResolvedValue({ id: 1, plantelId: 5, activo: true, ciclo: { activo: true }, plantel: { activo: true } }),
       update: jest.fn(),
     };
     const inscripciones = { count: jest.fn().mockResolvedValue(3) };
@@ -64,7 +64,7 @@ describe('AcademicoService.eliminarGrupo', () => {
 
   it('da de baja el grupo cuando no hay inscripciones activas', async () => {
     const grupos = {
-      findOne: jest.fn().mockResolvedValue({ id: 1, plantelId: 5, activo: true }),
+      findOne: jest.fn().mockResolvedValue({ id: 1, plantelId: 5, activo: true, ciclo: { activo: true }, plantel: { activo: true } }),
       update: jest.fn().mockResolvedValue(undefined),
     };
     const inscripciones = { count: jest.fn().mockResolvedValue(0) };
@@ -100,7 +100,7 @@ describe('AcademicoService.inscribirAlumno', () => {
   });
 
   it('rechaza alumnos que no están activos', async () => {
-    const grupos = { findOne: jest.fn().mockResolvedValue({ id: 4, plantelId: 2, activo: true }) };
+    const grupos = { findOne: jest.fn().mockResolvedValue({ id: 4, plantelId: 2, activo: true, ciclo: { activo: true }, plantel: { activo: true } }) };
     const alumnos = { findOne: jest.fn().mockResolvedValue({ id: 9, plantelId: 2, estatus: 'BAJA' }) };
     const inscripciones = { save: jest.fn() };
     const manager = { getRepository: jest.fn((entity) => ({ Grupo: grupos, Alumno: alumnos, Inscripcion: inscripciones })[entity.name as 'Grupo' | 'Alumno' | 'Inscripcion']) };
@@ -132,7 +132,7 @@ describe('AcademicoService.eliminarGrupoMateria', () => {
 
 describe('AcademicoService.actualizarGrupo', () => {
   it('lanza ForbiddenException cuando el grupo está fuera del alcance del usuario', async () => {
-    const grupos = { findOne: jest.fn().mockResolvedValue({ id: 1, plantelId: 5, activo: true }) };
+    const grupos = { findOne: jest.fn().mockResolvedValue({ id: 1, plantelId: 5, activo: true, ciclo: { activo: true }, plantel: { activo: true } }) };
     const scope = { validarGestion: jest.fn().mockRejectedValue(new ForbiddenException()) };
     const service = crearServicio({ grupos, scope });
 
@@ -156,23 +156,25 @@ describe('AcademicoService.alcance de grupo', () => {
 
 describe('AcademicoService.asignarMateria', () => {
   it('convierte duplicados concurrentes de grupo-materia en conflicto controlado', async () => {
-    const grupos = { findOne: jest.fn().mockResolvedValue({ id: 1, plantelId: 5, activo: true }) };
+    const grupos = { findOne: jest.fn().mockResolvedValue({ id: 1, plantelId: 5, activo: true, ciclo: { activo: true }, plantel: { activo: true } }) };
     const grupoMaterias = {
       findOne: jest.fn().mockResolvedValue(null), create: jest.fn((d) => d),
       save: jest.fn().mockRejectedValue({ number: 2601 }),
     };
-    const service = crearServicio({ grupos, grupoMaterias });
+    const manager = { getRepository: jest.fn().mockReturnValue(grupoMaterias) };
+    const dataSource = { transaction: jest.fn((fn) => fn(manager)) };
+    const service = crearServicio({ grupos, grupoMaterias, dataSource });
     await expect(service.asignarMateria(1, { materiaId: 2 } as any, {
       sub: 7, roles: ['ADMINISTRATIVO'],
     } as any)).rejects.toThrow(ConflictException);
   });
 
   it('rechaza asignar un docente de otro plantel a la materia', async () => {
-    const grupos = { findOne: jest.fn().mockResolvedValue({ id: 1, plantelId: 5, activo: true }) };
+    const grupos = { findOne: jest.fn().mockResolvedValue({ id: 1, plantelId: 5, activo: true, ciclo: { activo: true }, plantel: { activo: true } }) };
     const grupoMaterias = {
       findOne: jest.fn().mockResolvedValue(null), create: jest.fn(), save: jest.fn(),
     };
-    const docentes = { obtener: jest.fn().mockResolvedValue({ id: 8, usuarioId: 90 }) };
+    const docentes = { obtener: jest.fn().mockResolvedValue({ id: 8, usuarioId: 90, estatus: 'ACTIVO', usuario: { activo: true } }) };
     const usuarioPlanteles = { findOne: jest.fn().mockResolvedValue(null) };
     const service = crearServicio({ grupos, grupoMaterias, docentes, usuarioPlanteles });
 
@@ -192,7 +194,7 @@ describe('AcademicoService.listarGrupos', () => {
     await service.listarGrupos({ sub: 1, roles: ['ADMINISTRATIVO'] } as any, { pagina: 1, porPagina: 20 } as any);
 
     expect(grupos.findAndCount).toHaveBeenCalledWith(
-      expect.objectContaining({ where: expect.objectContaining({ activo: true }) }),
+      expect.objectContaining({ where: expect.objectContaining({ activo: true, ciclo: { activo: true }, plantel: { activo: true } }) }),
     );
   });
 
@@ -209,7 +211,7 @@ describe('AcademicoService.listarGrupos', () => {
     );
 
     expect(grupos.findAndCount).toHaveBeenCalledWith(expect.objectContaining({
-      where: expect.objectContaining({ id: expect.anything(), activo: true }),
+      where: expect.objectContaining({ id: expect.anything(), activo: true, ciclo: { activo: true }, plantel: { activo: true } }),
     }));
     expect(scope.resolverFiltro).not.toHaveBeenCalled();
   });

@@ -1,8 +1,10 @@
-import { IsDateString, IsIn, IsInt, IsNumber, IsOptional, IsString, IsUUID, Matches, Max, Min } from 'class-validator';
+import { IsBoolean, IsDateString, IsIn, IsInt, IsNumber, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, MinLength } from 'class-validator';
 import { Type } from 'class-transformer';
 import { PaginacionDto } from '../common/paginacion.dto';
 
 export class ListarCargosDto extends PaginacionDto {
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) plantelId?: number;
+  @IsOptional() @IsString() buscar?: string;
   @IsOptional() @Type(() => Number) @IsInt() alumnoId?: number;
   @IsOptional() @IsString() estatus?: string;
   @IsOptional() @Matches(/^\d{4}-(0[1-9]|1[0-2])$/) periodo?: string;
@@ -40,6 +42,7 @@ export class CrearCargoDto {
 }
 
 export class GenerarColegiaturasDto {
+  @IsOptional() @IsBoolean() confirmado?: boolean;
   @IsOptional() @Type(() => Number) @IsInt() plantelId?: number;
   @IsInt() cicloId: number;
   @Matches(/^\d{4}-(0[1-9]|1[0-2])$/) periodo: string; // YYYY-MM
@@ -48,6 +51,7 @@ export class GenerarColegiaturasDto {
 }
 
 export class AplicarRecargosDto {
+  @IsOptional() @IsBoolean() confirmado?: boolean;
   @IsOptional() @Type(() => Number) @IsInt() plantelId?: number;
   @IsOptional() @IsNumber() @Min(0) @Max(100) porcentaje?: number; // por defecto 10%
 }
@@ -64,4 +68,17 @@ export class RegistrarPagoDto {
 
 export class CrearOrdenDto {
   @IsInt() cargoId: number;
+}
+
+export class MotivoFinancieroDto {
+  @IsString() @MinLength(3) @MaxLength(500) motivo: string;
+}
+
+export class CobranzaDto {
+  @Type(() => Number) @IsInt() @Min(1) plantelId: number;
+  @IsOptional() @IsBoolean() confirmado?: boolean;
+}
+
+export class AplicarPagoDto extends MotivoFinancieroDto {
+  @IsInt() @Min(1) cargoId: number;
 }

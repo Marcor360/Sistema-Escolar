@@ -25,6 +25,35 @@ export class OrdenesService {
     private readonly dataSource: DataSource,
   ) {}
 
+  async incidencias(user: JwtUser, pagina = 1) {
+    // Obtener el alumno mediante su scope es obligatorio también al resolver una incidencia.
+    const qb = this.ordenes.createQueryBuilder('o').innerJoinAndSelect('o.alumno', 'a').leftJoinAndSelect('a.usuario', 'u')
+      .where('o.estatus IN (:...estatus)', { estatus: ['CREADA', 'PENDIENTE', 'FALLIDA'] });
+    if (!user.roles.includes('SUPERADMIN')) qb.andWhere(
+      'EXISTS (SELECT 1 FROM usuario_planteles up WHERE up.usuario_id = :actor AND up.plantel_id = a.plantel_id AND up.activo = :activo)',
+      { actor: user.sub, activo: true });
+    const [datos, total] = await qb.orderBy('o.created_at', 'ASC').skip((pagina - 1) * 20).take(20).getManyAndCount();
+    return { datos: datos.map((o) => ({ id: o.id, alumnoId: o.alumnoId, matricula: o.alumno.matricula, monto: o.monto,
+      fecha: o.createdAt, referencia: o.idExterno ?? `ORD-${o.id}`, estatus: o.estatus,
+      motivo: o.estatus === 'CREADA' ? 'Creación ambigua: verificar con el proveedor' : 'Pendiente de resultado del proveedor' })), total, pagina, porPagina: 20 };
+  }
+
+  async conciliar(id: number, motivo: string, user: JwtUser) {
+    if (!motivo.trim()) throw new BadRequestException('Indica el motivo de conciliación');
+    const orden = await this.ordenes.findOne({ where: { id } });
+    if (!orden) throw new NotFoundException('Orden no encontrada');
+    await this.alumnos.obtener(orden.alumnoId, user);
+    const charge = await this.openpay.buscarCargoPorOrden(`ORD-${id}`);
+    if (!charge) throw new ConflictException('El proveedor todavía no confirma la orden; se conserva para revisión');
+    if (charge.order_id !== `ORD-${id}` || Math.round(Number(charge.amount) * 100) !== Math.round(Number(orden.monto) * 100) ||
+        charge.currency !== 'MXN' || charge.transaction_type !== 'charge') throw new ConflictException('La respuesta del proveedor no coincide con la orden');
+    await this.aplicarRespuestaCargo(id, charge);
+    if (charge.status === 'completed') await this.pagos.registrarDePasarela(orden, Number(charge.amount), charge.id);
+    await this.bitacora.registrar(user.sub, 'CONCILIAR_ORDEN', 'orden_pago', id,
+      `estado_proveedor=${charge.status}; ${motivo.trim()}`, orden.alumno.plantelId);
+    return { id, estadoProveedor: charge.status, mensaje: 'Resultado del proveedor verificado y auditado' };
+  }
+
   async crear(cargoId: number, user: JwtUser, clienteIp?: string) {
     const cargo = await this.cargos.obtener(cargoId);
 

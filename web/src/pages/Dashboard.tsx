@@ -27,12 +27,13 @@ interface Plantel { id: number; nombre: string }
 export default function DashboardPage() {
   const { sesion, tieneRol } = useAuth();
   const [plantelId, setPlantelId] = useState('');
+  const puedeVerResumen = tieneRol('SUPERADMIN', 'ADMINISTRATIVO', 'FINANZAS');
   const { datos: planteles } = useDatos<Plantel[]>(
     () => api.get('/planteles/mios').then((r) => r.data),
     [],
   );
   const { datos: resumen, cargando, error, recargar, setDatos: setResumen, setError } = useDatos<Resumen | null>(
-    () => api.get('/reportes/resumen').then((r) => r.data),
+    () => puedeVerResumen ? api.get('/reportes/resumen').then((r) => r.data) : Promise.resolve(null),
     null,
   );
   const filtrarPlantel = (valor: string) => {
@@ -87,7 +88,7 @@ export default function DashboardPage() {
           <p className="sobrelinea">PANEL DE CONTROL</p>
           <Encabezado titulo={`Hola${sesion?.nombre ? `, ${sesion.nombre.split(' ')[0]}` : ''}`} detalle="Aquí tienes el resumen de actividad de tu comunidad escolar." />
         </div>
-        {planteles.length > 1 && (
+        {puedeVerResumen && planteles.length > 1 && (
           <div className="campo filtro-plantel">
             <label htmlFor="filtro-plantel">Plantel</label>
             <select id="filtro-plantel" value={plantelId} onChange={(e) => filtrarPlantel(e.target.value)}>
@@ -98,7 +99,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      <section className="seccion-dashboard" aria-labelledby="titulo-resumen">
+      {puedeVerResumen && <section className="seccion-dashboard" aria-labelledby="titulo-resumen">
         <div className="titulo-seccion">
           <div>
             <h2 id="titulo-resumen">Resumen general</h2>
@@ -122,7 +123,7 @@ export default function DashboardPage() {
             ))}
           </div>
         )}
-      </section>
+      </section>}
 
       <div className="dashboard-columnas">
         <section className="panel panel-eventos" aria-labelledby="titulo-eventos">

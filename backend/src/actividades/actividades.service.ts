@@ -1,6 +1,8 @@
+import { exigirGrupoVigente, inscripcionVigente } from '../common/contexto-academico';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Repository } from 'typeorm';
+import { validarContenidoArchivo } from '../common/validar-archivo';
 import { unlink } from 'fs/promises';
 import { resolve } from 'path';
 import { Actividad } from '../entities/actividad.entity';
@@ -39,6 +41,9 @@ export class ActividadesService {
   private async validarPropiedad(grupoMateriaId: number, user: JwtUser): Promise<GrupoMateria> {
     const gm = await this.grupoMaterias.findOne({ where: { id: grupoMateriaId } });
     if (!gm) throw new NotFoundException('Grupo-materia no encontrado');
+    if (!gm.grupo.activo) throw new ForbiddenException('El grupo no está activo');
+    exigirGrupoVigente(gm.grupo);
+    if (!gm.materia.activo) throw new ConflictException('La materia no está activa');
     if (user.roles.includes('SUPERADMIN')) return gm;
     if (user.roles.includes('ADMINISTRATIVO')) {
       await this.scope.validarGestion(user, gm.grupo.plantelId);
@@ -57,8 +62,9 @@ export class ActividadesService {
     const gm = await this.grupoMaterias.findOne({ where: { id: grupoMateriaId } });
     if (!gm) throw new NotFoundException('Grupo-materia no encontrado');
     if (!gm.grupo.activo) throw new ForbiddenException('El grupo no está activo');
+    exigirGrupoVigente(gm.grupo);
     const inscripcion = await this.inscripciones.findOne({
-      where: { alumnoId: alumno.id, grupoId: gm.grupoId, estatus: 'ACTIVA' },
+      where: { ...inscripcionVigente, alumnoId: alumno.id, grupoId: gm.grupoId },
     });
     if (!inscripcion) throw new ForbiddenException('El alumno no está inscrito en el grupo de esta actividad');
     return { alumno, gm };
@@ -122,8 +128,10 @@ export class ActividadesService {
 
   // ---- Entregas ----
   async entregar(actividadId: number, user: JwtUser, dto: EntregarDto, archivo?: Express.Multer.File) {
+    const reemplazo: { anterior: string | null } = { anterior: null };
     try {
-      return await this.dataSource.transaction(async (manager) => {
+      if (archivo) await validarContenidoArchivo(archivo);
+      const resultado = await this.dataSource.transaction(async (manager) => {
         const actividad = await manager.getRepository(Actividad).findOne({
           where: { id: actividadId }, lock: { mode: 'pessimistic_write' },
         });
@@ -135,12 +143,10 @@ export class ActividadesService {
           where: { actividadId, alumnoId: alumno.id }, lock: { mode: 'pessimistic_write' },
         });
         const entrega = previa ?? entregas.create({ actividadId, alumnoId: alumno.id });
-        if (previa?.estatus === 'CALIFICADA') {
-          entrega.calificacion = null;
-          entrega.comentarioDocente = null;
-        }
+        if (previa?.estatus === 'CALIFICADA') throw new ConflictException('Una entrega calificada no admite reentrega');
         entrega.comentarioAlumno = dto.comentario ?? entrega.comentarioAlumno ?? null;
         if (archivo) {
+          reemplazo.anterior = previa?.archivoRuta ?? null;
           entrega.archivoNombre = archivo.originalname;
           entrega.archivoRuta = `/uploads/${archivo.filename}`;
         }
@@ -149,6 +155,11 @@ export class ActividadesService {
         entrega.fechaEntregado = ahora;
         return entregas.save(entrega);
       });
+      if (reemplazo.anterior && archivo) {
+        const nombre = reemplazo.anterior.replace(/^\/uploads\//, '');
+        if (nombre && !nombre.includes('/') && !nombre.includes('\\')) await unlink(resolve(uploadsPath(), nombre)).catch((): undefined => undefined);
+      }
+      return resultado;
     } catch (error) {
       await limpiarArchivoFallido(archivo);
       throw error;
@@ -180,7 +191,7 @@ export class ActividadesService {
   async misTareas(user: JwtUser) {
     const alumno = await this.alumnos.obtenerPorUsuario(user.sub);
     const inscripciones = await this.inscripciones.find({
-      where: { alumnoId: alumno.id, estatus: 'ACTIVA' },
+      where: { ...inscripcionVigente, alumnoId: alumno.id },
     });
     if (inscripciones.length === 0) return [];
 
@@ -207,6 +218,7 @@ export class ActividadesService {
   async subirMaterial(grupoMateriaId: number, titulo: string, archivo: Express.Multer.File | undefined, user: JwtUser) {
     try {
       if (!archivo) throw new BadRequestException('Selecciona un archivo');
+      await validarContenidoArchivo(archivo);
       await this.validarPropiedad(grupoMateriaId, user);
       return await this.materiales.save(
         this.materiales.create({

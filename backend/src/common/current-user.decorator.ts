@@ -6,6 +6,9 @@ export interface JwtUser {
   nombre: string;
   roles: string[];
   ver?: number;
+  sid?: string;
+  kind?: 'ACCESS';
+  passwordChangeRequired?: boolean;
 }
 
 export const CurrentUser = createParamDecorator(

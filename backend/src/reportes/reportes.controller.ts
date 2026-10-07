@@ -21,9 +21,9 @@ export class ReportesController {
   }
 
   @Get('boleta/:alumnoId')
-  @Roles('ADMINISTRATIVO', 'MAESTRO', 'ALUMNO')
-  boleta(@Param('alumnoId', ParseIntPipe) alumnoId: number, @CurrentUser() user: JwtUser, @Res() res: Response) {
-    return this.service.boletaPdf(alumnoId, user, res);
+  @Roles('ADMINISTRATIVO', 'ALUMNO')
+  boleta(@Param('alumnoId', ParseIntPipe) alumnoId: number, @CurrentUser() user: JwtUser, @Res() res: Response, @Query('cicloId', new ParseIntPipe({ optional: true })) cicloId?: number, @Query('inscripcionId', new ParseIntPipe({ optional: true })) inscripcionId?: number) {
+    return this.service.boletaPdf(alumnoId, user, res, cicloId, inscripcionId);
   }
 
   @Get('grupo-materias/:id/calificaciones.xlsx')

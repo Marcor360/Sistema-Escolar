@@ -3,17 +3,26 @@
     "development": {
       "distribution": "internal",
       "environment": "development",
-      "env": { "APP_ENV": "development" }
+      "env": {
+        "APP_ENV": "development"
+      }
     },
     "preview": {
       "distribution": "internal",
       "environment": "preview",
-      "env": { "APP_ENV": "preview" }
+      "env": {
+        "APP_ENV": "preview"
+      },
+      "android": {
+        "buildType": "apk"
+      }
     },
     "production": {
       "environment": "production",
       "autoIncrement": true,
-      "env": { "APP_ENV": "production" }
+      "env": {
+        "APP_ENV": "production"
+      }
     }
   },
   "submit": {

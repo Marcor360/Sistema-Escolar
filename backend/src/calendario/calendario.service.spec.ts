@@ -20,7 +20,7 @@ describe('CalendarioService', () => {
     };
     const eventos = { createQueryBuilder: jest.fn().mockReturnValue(qb) };
     const docentes = { findOne: jest.fn().mockResolvedValue({ id: 5 }) };
-    const grupoMaterias = { find: jest.fn().mockResolvedValue([{ grupoId: 7, grupo: { activo: true, plantelId: 2 } }]) };
+    const grupoMaterias = { find: jest.fn().mockResolvedValue([{ grupoId: 7, grupo: { activo: true, plantelId: 2, ciclo: { activo: true }, plantel: { activo: true } } }]) };
     const scope = { resolverFiltro: jest.fn() };
     const service = new CalendarioService(
       eventos as any, {} as any, grupoMaterias as any, {} as any, {} as any, docentes as any, scope as any,

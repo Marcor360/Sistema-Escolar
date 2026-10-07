@@ -5,6 +5,8 @@ import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
+import { randomUUID } from 'crypto';
+import type { NextFunction, Request, Response } from 'express';
 import { mkdirSync } from 'fs';
 import { uploadsPath } from './common/uploads-path';
 import { AppModule } from './app.module';
@@ -16,12 +18,23 @@ async function bootstrap() {
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const recibido = req.header('x-request-id');
+    const requestId = recibido && /^[a-zA-Z0-9_-]{1,64}$/.test(recibido) ? recibido : randomUUID();
+    const inicio = Date.now(); res.setHeader('x-request-id', requestId);
+    res.on('finish', () => Logger.log(JSON.stringify({ requestId, metodo: req.method,
+      ruta: req.route?.path ?? 'ruta-no-encontrada', estado: res.statusCode, duracionMs: Date.now() - inicio }), 'HTTP'));
+    next();
+  });
+  app.set('trust proxy', 'loopback'); // IIS/ARR local: conserva IP del cliente para throttling.
+
   // Encabezados de seguridad
   app.use(helmet({ contentSecurityPolicy: false }));
 
   // CORS: en producción, restringir con CORS_ORIGINS=https://portal.midominio.mx,https://otro
   const origenes = process.env.CORS_ORIGINS?.split(',').map((o) => o.trim());
   app.enableCors({
+    credentials: true,
     origin: origenes?.filter(Boolean).length
       ? origenes.filter(Boolean)
       : process.env.NODE_ENV === 'production' ? false : 'http://localhost:5173',
