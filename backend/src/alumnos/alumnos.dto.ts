@@ -1,4 +1,4 @@
-import { IsDateString, MaxLength, Min, MinLength as LongitudMinima } from 'class-validator';
+import { IsDateString, MaxLength, Matches, Min, MinLength as LongitudMinima } from 'class-validator';
 import { Transform as Normalizar } from 'class-transformer';
 import { Type } from 'class-transformer';
 import { IsEmail, IsIn, IsInt, IsOptional, IsString, MinLength } from 'class-validator';
@@ -30,7 +30,7 @@ export class CrearAlumnoDto {
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim().toUpperCase() : value)
   @IsOptional() @IsString() @MaxLength(18) curp?: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsOptional() @IsDateString({ strict: true }) fechaNacimiento?: string; // YYYY-MM-DD
+  @IsOptional() @Matches(/^\d{4}-\d{2}-\d{2}$/) @IsDateString({ strict: true }) fechaNacimiento?: string; // YYYY-MM-DD
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsOptional() @IsString() @MaxLength(120) tutorNombre?: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
@@ -55,7 +55,7 @@ export class ActualizarAlumnoDto {
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim().toUpperCase() : value)
   @IsOptional() @IsString() @MaxLength(18) curp?: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsOptional() @IsDateString({ strict: true }) fechaNacimiento?: string;
+  @IsOptional() @Matches(/^\d{4}-\d{2}-\d{2}$/) @IsDateString({ strict: true }) fechaNacimiento?: string | null;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsOptional() @IsString() @MaxLength(120) tutorNombre?: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)

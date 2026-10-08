@@ -12,5 +12,5 @@ export interface Resultado { datos: Alumno[]; total: number; pagina: number; por
 
 export const FORM_INICIAL = {
   matricula: '', nombre: '', apellidoPaterno: '', apellidoMaterno: '',
-  email: '', password: '', curp: '', tutorNombre: '', tutorTelefono: '', plantelId: '',
+  email: '', password: '', telefono: '', fechaNacimiento: '', direccion: '', curp: '', tutorNombre: '', tutorTelefono: '', plantelId: '',
 };

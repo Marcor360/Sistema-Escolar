@@ -1,9 +1,10 @@
+import { registrarCicloOperativo } from './integration/recorrido-academico';
 import { ContextoIntegracion } from './integration/contexto';
 import { casos_baseline } from './integration/baseline.cases';
-import { casos_identidad } from './integration/identidad.cases';
+import { casos_identidad, registrarAltasInstitucionales } from './integration/identidad.cases';
 import { casos_academico } from './integration/academico.cases';
-import { casos_calificaciones } from './integration/calificaciones.cases';
-import { casos_finanzas } from './integration/finanzas.cases';
+import { casos_calificaciones, registrarCapturaSinCambios } from './integration/calificaciones.cases';
+import { casos_finanzas, registrarRecorridoFinanciero } from './integration/finanzas.cases';
 import { casos_archivos } from './integration/archivos.cases';
 import { casos_calendario } from './integration/calendario.cases';
 import { casos_conducta } from './integration/conducta.cases';
@@ -404,6 +405,10 @@ get emitirFinanzasB() { return emitirFinanzasB; },
 const casos = { ...casos_baseline, ...casos_identidad, ...casos_academico, ...casos_calificaciones, ...casos_finanzas, ...casos_archivos, ...casos_calendario, ...casos_conducta, ...casos_analitica, ...casos_importaciones, ...casos_roles };
 Object.keys(casos).map(Number).sort((a,b) => a-b).forEach((id) => casos[id](contexto));
 
+  registrarCapturaSinCambios(contexto);
+  registrarAltasInstitucionales(contexto);
+  registrarRecorridoFinanciero(contexto);
+
   afterAll(async () => {
     if (archivoPrueba) {
       const destino = resolve(process.cwd(), process.env.UPLOADS_DIR || 'uploads', basename(archivoPrueba));
@@ -412,14 +417,15 @@ Object.keys(casos).map(Number).sort((a,b) => a-b).forEach((id) => casos[id](cont
     if (app) await app.close();
   });
 
-  if (process.env.RUN_WEB_E2E === '1') for (const tipo of ['academico', 'financiero'] as const) {
+  if (process.env.RUN_WEB_E2E === '1') for (const tipo of ['academico', 'financiero', 'altas'] as const) {
     it(`navegador real: recorrido ${tipo} completo con API y DB reales`, async () => {
       const root = await emitirToken((await dataSource.getRepository(Usuario).findOneByOrFail({ id: superadminId })).email);
-      const usuario = await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId }); await emitirToken(usuario.email);
-      const docente = await api('/docentes', { method: 'POST', token: root, body: { email: `browserdoc_${tipo}_${sufijo}@example.invalid`, password: 'Integracion_Segura_42!', nombre: 'Docente', apellidoPaterno: 'Navegador', numEmpleado: `BW${tipo[0]}${sufijo}`, plantelIds: [plantelId] } }); expect(docente.response.status).toBe(201);
+      const usuario = await dataSource.getRepository(Usuario).findOneByOrFail({ id: tipo === 'altas' ? superadminId : adminId }); await emitirToken(usuario.email);
+      const docente = await api('/docentes', { method: 'POST', token: root, body: { email: `browserdoc_${tipo}_${sufijo}@example.invalid`, password: 'Integracion_Segura_42!', nombre: 'Docente', apellidoPaterno: 'Navegador', numEmpleado: `BW${tipo.slice(0,2)}${sufijo}`, plantelIds: [plantelId] } }); expect(docente.response.status).toBe(201);
       const clase = await dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: grupoMateriaIdMaestro });
       const concepto = await dataSource.getRepository(ConceptoPago).findOneByOrFail({ clave: `CW${sufijo}` });
       await (await import('./recorridos-web')).recorridoWeb({ baseUrl, email: usuario.email, password: passwords.get(usuario.email) ?? 'Integracion_Segura_42!', sufijo, plantelId, cicloId: clase.grupo.cicloId, materiaId: clase.materiaId, docenteId: docente.data.id, conceptoId: concepto.id }, tipo);
     });
   }
+  registrarCicloOperativo(contexto);
 });

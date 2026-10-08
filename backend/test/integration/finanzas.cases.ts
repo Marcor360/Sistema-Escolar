@@ -266,3 +266,32 @@ it('cobranza deduplica, conserva éxito parcial y exige revisión de timeout ant
   });
   },
 };
+
+export function registrarRecorridoFinanciero(ctx: ContextoIntegracion) {
+  it('recorrido financiero: descuento, pago parcial, anulación, cancelación, conciliación y Excel coherentes', async () => {
+    const token = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.superadminId })).email);
+    const alta = await ctx.api('/alumnos',{ method: 'POST',token,body: { nombre: 'Finanzas',apellidoPaterno: 'Operativo',email: `fop_${ctx.sufijo}@example.invalid`,matricula: `FO${ctx.sufijo}`,password: 'Integracion_Segura_42!',plantelId: ctx.plantelId } }); expect(alta.response.status).toBe(201);
+    const concepto = await ctx.api('/finanzas/conceptos',{ method: 'POST',token,body: { clave: `OP${ctx.sufijo}`,nombre: 'Cargo operativo',tipo: 'OTRO',montoBase: 200 } }); expect(concepto.response.status).toBe(201);
+    const crear = (descripcion: string,monto: number,descuento = 0) => ctx.api('/finanzas/cargos',{ method: 'POST',token,body: { alumnoId: alta.data.id,conceptoId: concepto.data.id,descripcion,monto,descuento,fechaVencimiento: '2026-01-01' } });
+    const cargo = await crear('Cargo con corrección',200,20); expect(cargo.response.status).toBe(201);
+    const saldo = async () => (await ctx.api(`/finanzas/alumnos/${alta.data.id}/estado-cuenta`,{ token })).data.saldoTotal;
+    expect(await saldo()).toBe(180);
+    const body = { alumnoId: alta.data.id,cargoId: cargo.data.id,monto: 50,metodo: 'EFECTIVO',referencia: `OPER${ctx.sufijo}`,claveIdempotencia: randomUUID() };
+    const pago = await ctx.api('/finanzas/pagos',{ method: 'POST',token,body }); expect(pago.response.status).toBe(201); expect(await saldo()).toBe(130);
+    expect((await ctx.api('/finanzas/pagos',{ method: 'POST',token,body })).data.id).toBe(pago.data.id); expect(await saldo()).toBe(130);
+    expect((await ctx.api(`/finanzas/cargos/${cargo.data.id}/cancelacion`,{ method: 'POST',token,body: { motivo: 'Cargo erróneo' } })).response.status).toBe(409);
+    expect((await ctx.api(`/finanzas/pagos/${pago.data.id}/anulacion`,{ method: 'POST',token,body: { motivo: 'Pago capturado en alumno incorrecto' } })).response.status).toBe(201); expect(await saldo()).toBe(180);
+    expect((await ctx.api(`/finanzas/cargos/${cargo.data.id}/cancelacion`,{ method: 'POST',token,body: { motivo: 'Cargo erróneo sin pagos vigentes' } })).response.status).toBe(201); expect(await saldo()).toBe(0);
+    const destino = await crear('Cargo para conciliación',120); expect(destino.response.status).toBe(201);
+    // Fixture representa dinero ya confirmado por pasarela; aquí no se certifica al proveedor externo.
+    const pendiente = await ctx.dataSource.getRepository(Pago).save({ alumnoId: alta.data.id,plantelId: ctx.plantelId,cargoId: null,monto: 50,metodo: 'PASARELA',referencia: `CONCOP${ctx.sufijo}`,estatus: 'CONFIRMADO' });
+    const incidentes = await ctx.api('/finanzas/conciliacion/pagos',{ token }); expect(incidentes.data).toHaveProperty("datos"); expect(incidentes.response.status).toBe(200); expect(incidentes.data.datos).toEqual(expect.arrayContaining([expect.objectContaining({ id: pendiente.id })]));
+    const aplicacion = { cargoId: destino.data.id,motivo: 'Conciliar referencia confirmada con cargo correcto' };
+    expect((await ctx.api(`/finanzas/pagos/${pendiente.id}/aplicacion`,{ method: 'POST',token,body: aplicacion })).response.status).toBe(201); expect(await saldo()).toBe(70);
+    expect((await ctx.api(`/finanzas/pagos/${pendiente.id}/aplicacion`,{ method: 'POST',token,body: aplicacion })).response.status).toBe(409); expect(await saldo()).toBe(70);
+    const excel = await fetch(`${ctx.baseUrl}/reportes/adeudos.xlsx?plantelId=${ctx.plantelId}`,{ headers: { authorization: `Bearer ${token}` } }); expect(excel.status).toBe(200);
+    const libro = new ExcelJS.Workbook(); await libro.xlsx.load(Buffer.from(await excel.arrayBuffer()) as any);
+    const filas = libro.worksheets[0].getSheetValues().filter((f) => JSON.stringify(f).includes(`FO${ctx.sufijo}`.toUpperCase())); expect(filas).toHaveLength(1); expect(JSON.stringify(filas[0])).toContain('Cargo para conciliación'); expect(filas[0]).toContain(70);
+    for (const accion of ['ANULAR_PAGO','CANCELAR_CARGO','CONCILIAR_PAGO']) expect(await ctx.dataSource.getRepository(BitacoraFinanciera).existsBy({ accion,usuarioId: ctx.superadminId })).toBe(true);
+  });
+}

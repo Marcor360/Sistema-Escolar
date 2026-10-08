@@ -1,4 +1,4 @@
-import { esMaestroRestringido } from '../common/politica-acceso';
+import { esMaestroRestringido, exigirConsultaAcademica } from '../common/politica-acceso';
 import { BitacoraAcademica } from '../entities/bitacora-academica.entity';
 import { exigirGrupoConfigurable, grupoVigente } from '../common/contexto-academico';
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
@@ -112,6 +112,24 @@ async eliminarGrupo(id: number, user: JwtUser) {
       await grupos.update(id, { activo: false });
       return { ok: true };
     });
+  }
+
+/** Selector operativo paginado: mantiene alcance de maestro aun con roles financieros. */
+async clasesParaSeleccion(user: JwtUser, query: ListarGruposDto) {
+    exigirConsultaAcademica(user);
+    const planteles = await this.scope.plantelesDe(user);
+    const docenteId = esMaestroRestringido(user) ? (await this.docentes.obtenerPorUsuario(user.sub)).id : null;
+    if (planteles?.length === 0) return { datos: [], total: 0, pagina: query.pagina, porPagina: query.porPagina };
+    const qb = this.grupoMaterias.createQueryBuilder('gm').innerJoinAndSelect('gm.grupo','g')
+      .innerJoinAndSelect('g.ciclo','c').innerJoinAndSelect('g.plantel','p').innerJoinAndSelect('gm.materia','m')
+      .where('g.activo = :si AND c.activo = :si AND p.activo = :si AND m.activo = :si',{ si: true });
+    if (planteles !== null) qb.andWhere('g.plantel_id IN (:...planteles)',{ planteles });
+    if (docenteId !== null) qb.andWhere('gm.docente_id = :docenteId',{ docenteId });
+    if (query.plantelId) { await this.scope.validarGestion(user,query.plantelId); qb.andWhere('g.plantel_id = :plantelId',{ plantelId: query.plantelId }); }
+    if (query.cicloId) qb.andWhere('g.ciclo_id = :cicloId',{ cicloId: query.cicloId });
+    if (query.buscar) qb.andWhere('(g.nombre LIKE :buscar OR m.nombre LIKE :buscar OR m.clave LIKE :buscar OR p.nombre LIKE :buscar)',{ buscar: `%${query.buscar}%` });
+    const [datos,total] = await qb.orderBy('g.nombre','ASC').addOrderBy('gm.id','ASC').skip((query.pagina-1)*query.porPagina).take(query.porPagina).getManyAndCount();
+    return { datos,total,pagina: query.pagina,porPagina: query.porPagina };
   }
 
 async listarGrupoMaterias(user: JwtUser) {

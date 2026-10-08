@@ -374,3 +374,39 @@ it('recupera push pendiente después de fallar la cola sin duplicar envíos', as
     });
   },
 };
+
+export function registrarAltasInstitucionales(ctx: ContextoIntegracion) {
+  it('altas por expediente y rol conservan campos institucionales, alcance y cambio inicial', async () => {
+    const root = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.superadminId })).email);
+    const datos = { nombre: 'Institucional',apellidoPaterno: 'Prueba',apellidoMaterno: 'Materno',telefono: '5550001111',password: 'Integracion_Segura_42!' };
+    const alumno = await ctx.api('/alumnos',{ method: 'POST',token: root,body: { ...datos,email: `insal_${ctx.sufijo}@example.invalid`,matricula: `IA${ctx.sufijo}`,plantelId: ctx.plantelId,curp: 'TEST090101HMCRXX00',fechaNacimiento: '2009-01-02',direccion: 'Calle institucional 12',tutorNombre: 'Tutor institucional',tutorTelefono: '5550002222' } }); expect(alumno.response.status).toBe(201);
+    const ficha = await ctx.api(`/alumnos/${alumno.data.id}`,{ token: root }); expect(ficha.data).toMatchObject({ fechaNacimiento: '2009-01-02',direccion: 'Calle institucional 12',usuario: { apellidoMaterno: 'Materno',telefono: '5550001111' } });
+    expect((await ctx.api(`/alumnos/${alumno.data.id}`,{ method: 'PATCH',token: root,body: { telefono: '',apellidoMaterno: '',fechaNacimiento: null } })).response.status).toBe(200);
+    const corregida = await ctx.api(`/alumnos/${alumno.data.id}`,{ token: root }); expect(corregida.data).toMatchObject({ fechaNacimiento: null,direccion: 'Calle institucional 12',usuario: { apellidoMaterno: '',telefono: '' } });
+    expect((await ctx.api(`/alumnos/${alumno.data.id}`,{ method: 'PATCH',token: root,body: { fechaNacimiento: '2009-01-02T00:00:00Z' } })).response.status).toBe(400);
+    const docente = await ctx.api('/docentes',{ method: 'POST',token: root,body: { ...datos,email: `insdoc_${ctx.sufijo}@example.invalid`,numEmpleado: `ID${ctx.sufijo}`,plantelIds: [ctx.plantelId],cedulaProfesional: 'CED123456',especialidad: 'Matemáticas' } }); expect(docente.response.status).toBe(201);
+    expect((await ctx.api(`/docentes/${docente.data.id}`,{ token: root })).data).toMatchObject({ cedulaProfesional: 'CED123456',usuario: { apellidoMaterno: 'Materno',telefono: '5550001111' } });
+    expect((await ctx.api(`/docentes/${docente.data.id}`,{ method: 'PATCH',token: root,body: { telefono: '',apellidoMaterno: '' } })).response.status).toBe(200);
+    expect((await ctx.api(`/docentes/${docente.data.id}`,{ token: root })).data.usuario).toMatchObject({ apellidoMaterno: '',telefono: '' });
+    const cuentas = [alumno.data.usuarioId,(await ctx.api(`/docentes/${docente.data.id}`,{ token: root })).data.usuario.id];
+    for (const rol of ['ADMINISTRATIVO','FINANZAS','SUPERADMIN']) {
+      const alta = await ctx.api('/usuarios',{ method: 'POST',token: root,body: { ...datos,email: `ins${rol.toLowerCase()}_${ctx.sufijo}@example.invalid`,roles: [rol],plantelIds: [ctx.plantelId] } }); expect(alta.response.status).toBe(201); cuentas.push(alta.data.id);
+      const personal = await ctx.api(`/usuarios/${alta.data.id}/personal`,{ token: root }); expect(personal.data).toMatchObject({ apellidoMaterno: 'Materno',telefono: '5550001111',plantelIds: [ctx.plantelId] });
+      expect((await ctx.api(`/usuarios/${alta.data.id}/personal`,{ method: 'PATCH',token: root,body: { telefono: '',apellidoMaterno: '',plantelIds: [ctx.plantelId] } })).response.status).toBe(200);
+      expect((await ctx.api(`/usuarios/${alta.data.id}/personal`,{ token: root })).data).toMatchObject({ telefono: '',apellidoMaterno: '' });
+    }
+    for (const id of cuentas) {
+      const u = await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id }); expect(u.passwordChangeRequired).toBe(true); expect(u.roles).toHaveLength(1);
+      const portal = u.roles[0].clave === 'ALUMNO' ? 'MOVIL' : 'WEB';
+      const inicial = await ctx.app.get(AuthService).login(u.email,datos.password,portal);
+      expect(inicial.usuario.passwordChangeRequired).toBe(true);
+      // Las rutas HTTP de cambio ya se prueban arriba. Aquí cinco altas usan el servicio
+      // real para no agotar el límite por IP compartido con el resto de la suite.
+      await ctx.app.get(AuthService).cambiarPassword(u.id,datos.password,'Institucional_Renovada_42!');
+      expect((await ctx.api('/auth/me',{ token: inicial.accessToken,headers: { 'x-portal': portal } })).response.status).toBe(401);
+      ctx.passwords.set(u.email,'Institucional_Renovada_42!');
+      const token = await ctx.emitirToken(u.email); expect(token).toBeTruthy(); expect((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id })).passwordChangeRequired).toBe(false);
+    }
+    for (const rol of ['ALUMNO','MAESTRO']) expect((await ctx.api('/usuarios',{ method: 'POST',token: root,body: { ...datos,email: `invalid${rol}_${ctx.sufijo}@example.invalid`,roles: [rol],plantelIds: [ctx.plantelId] } })).response.status).toBe(409);
+  });
+}

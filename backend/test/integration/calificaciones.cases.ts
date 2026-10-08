@@ -2,7 +2,7 @@ import { ContextoIntegracion } from './contexto';
 import { expect, it } from '@jest/globals';
 import * as ExcelJS from 'exceljs';
 import * as bcrypt from 'bcryptjs';
-import { Alumno, Calificacion, CicloEscolar, Grupo, GrupoMateria, Inscripcion, BitacoraAcademica, Entrega, Materia, Usuario } from '../../src/entities';
+import { Alumno, Calificacion, CicloEscolar, Grupo, GrupoMateria, Inscripcion, BitacoraAcademica, Entrega, Materia, Usuario, Docente } from '../../src/entities';
 export const casos_calificaciones: Record<number, (ctx: ContextoIntegracion) => void> = {
   10: (ctx) => {
 it('inscribe a un alumno, captura una calificaci??n y la muestra en su portal', async () => {
@@ -197,3 +197,34 @@ it('promueve alumnos seleccionados a preparación sin copiar notas ni habilitar 
     });
   },
 };
+
+export function registrarCapturaSinCambios(ctx: ContextoIntegracion) {
+  it('guardar una nota idéntica conserva autor, fecha e historial; audita cambios de observación', async () => {
+    const root = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.superadminId })).email);
+    const admin = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.adminId })).email);
+    const base = await ctx.dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: ctx.grupoMateriaIdMaestro });
+    const grupo = await ctx.dataSource.getRepository(Grupo).save({ nombre: `NO-${ctx.sufijo}`,cicloId: base.grupo.cicloId,plantelId: ctx.plantelId,activo: true });
+    const clase = await ctx.dataSource.getRepository(GrupoMateria).save({ grupoId: grupo.id,materiaId: base.materiaId,docenteId: null });
+    const alta = await ctx.api('/alumnos',{ method: 'POST',token: root,body: { email: `no_${ctx.sufijo}@example.invalid`,nombre: 'Nota',apellidoPaterno: 'Operativa',matricula: `NO${ctx.sufijo}`,password: 'Integracion_Segura_42!',plantelId: ctx.plantelId } }); expect(alta.response.status).toBe(201);
+    expect((await ctx.api(`/academico/grupos/${grupo.id}/alumnos`,{ method: 'POST',token: root,body: { alumnoId: alta.data.id } })).response.status).toBe(201);
+    const body = { grupoMateriaId: clase.id,parcial: 1,items: [{ alumnoId: alta.data.id,calificacion: 80.25,observaciones: 'Primera captura' }] };
+    expect((await ctx.api('/calificaciones/captura',{ method: 'POST',token: root,body })).data).toEqual({ capturadas: 1,sinCambios: 0 });
+    const repo = ctx.dataSource.getRepository(Calificacion), antes = await repo.findOneByOrFail({ alumnoId: alta.data.id,grupoMateriaId: clase.id,parcial: 1 });
+    const sinCambios = await ctx.api('/calificaciones/captura',{ method: 'POST',token: admin,body: { ...body,items: [{ alumnoId: alta.data.id,calificacion: 80.25 }] } });
+    expect(sinCambios.response.status).toBe(201); expect(sinCambios.data).toEqual({ capturadas: 0,sinCambios: 1 });
+    const despues = await repo.findOneByOrFail({ id: antes.id }); expect(despues.updatedAt).toEqual(antes.updatedAt); expect(despues.capturadaPorId).toBe(antes.capturadaPorId); expect(despues.observaciones).toBe('Primera captura');
+    const cambiar = { ...body,items: [{ alumnoId: alta.data.id,calificacion: 80.25,observaciones: '' }] };
+    expect((await ctx.api('/calificaciones/captura',{ method: 'POST',token: admin,body: cambiar })).response.status).toBe(400);
+    expect((await ctx.api('/calificaciones/captura',{ method: 'POST',token: admin,body: { ...cambiar,motivo: 'Retirar observación incorrecta' } })).response.status).toBe(201);
+    expect((await ctx.api('/calificaciones/captura',{ method: 'POST',token: admin,body: { ...cambiar,motivo: 'Mismo contenido' } })).data).toEqual({ capturadas: 0,sinCambios: 1 });
+    const historial = await ctx.api(`/calificaciones/periodos/${clase.id}/1/historial`,{ token: root }); expect(historial.data.total).toBe(2);
+    expect(historial.data.datos[0]).toMatchObject({ valorAnterior: 80.25,valorNuevo: 80.25,observacionAnterior: 'Primera captura',observacionNueva: '',usuarioId: ctx.adminId });
+    const selector = await ctx.api('/academico/clases-seleccion?porPagina=1&buscar=NO-', { token: root }); expect(selector.response.status).toBe(200); expect(selector.data.datos).toHaveLength(1); expect(selector.data.total).toBe(1);
+    const maestro = await ctx.dataSource.getRepository(Docente).findOneByOrFail({ id: base.docenteId! });
+    const usuarioMaestro = await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: maestro.usuarioId });
+    const propias = await ctx.api('/academico/clases-seleccion',{ token: await ctx.emitirToken(usuarioMaestro.email) }); expect(propias.response.status).toBe(200); expect(propias.data.datos.length).toBeGreaterThan(0); expect(propias.data.datos.every((c: { docenteId: number }) => c.docenteId === maestro.id)).toBe(true);
+    const restringidas = await ctx.api('/academico/clases-seleccion',{ token: admin }); expect(restringidas.data.datos.every((c: { grupo: { plantelId: number } }) => c.grupo.plantelId === ctx.plantelId)).toBe(true);
+    for (const id of [ctx.finanzasId,ctx.alumnoUsuarioId]) expect((await ctx.api('/academico/clases-seleccion',{ token: await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id })).email) })).response.status).toBe(403);
+
+  });
+}

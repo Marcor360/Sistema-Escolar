@@ -56,7 +56,7 @@ export default function AlumnosPage() {
     try {
       const { data } = await api.get(`/alumnos/${alumno.id}`);
       setForm({ ...FORM_INICIAL, matricula: data.matricula, plantelId: String(data.plantelId),
-        ...data.usuario, email: data.usuario.email, password: '', curp: data.curp ?? '',
+        nombre: data.usuario.nombre, apellidoPaterno: data.usuario.apellidoPaterno, apellidoMaterno: data.usuario.apellidoMaterno ?? '', telefono: data.usuario.telefono ?? '', email: data.usuario.email, password: '', curp: data.curp ?? '', fechaNacimiento: data.fechaNacimiento ?? '', direccion: data.direccion ?? '',
         tutorNombre: data.tutorNombre ?? '', tutorTelefono: data.tutorTelefono ?? '' });
       setEditando(alumno.id);
       document.getElementById('form-alumno')?.scrollIntoView();
@@ -102,13 +102,13 @@ export default function AlumnosPage() {
       if (editando) {
         await api.patch(`/alumnos/${editando}`, {
           nombre: form.nombre, apellidoPaterno: form.apellidoPaterno, apellidoMaterno: form.apellidoMaterno,
-          curp: form.curp, tutorNombre: form.tutorNombre, tutorTelefono: form.tutorTelefono,
+          telefono: form.telefono, fechaNacimiento: form.fechaNacimiento || null, direccion: form.direccion, curp: form.curp, tutorNombre: form.tutorNombre, tutorTelefono: form.tutorTelefono,
         });
       } else await api.post('/alumnos', {
         ...form,
         plantelId: Number(form.plantelId),
         apellidoMaterno: form.apellidoMaterno || undefined,
-        curp: form.curp || undefined,
+        curp: form.curp || undefined, telefono: form.telefono || undefined, fechaNacimiento: form.fechaNacimiento || undefined, direccion: form.direccion || undefined,
         tutorNombre: form.tutorNombre || undefined,
         tutorTelefono: form.tutorTelefono || undefined,
       });

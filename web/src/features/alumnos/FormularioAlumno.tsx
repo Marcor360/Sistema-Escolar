@@ -6,8 +6,8 @@ interface Props {
 editando: number | null;
 crear: (e: FormEvent) => Promise<void>;
 enviando: boolean;
-form: { matricula: string; nombre: string; apellidoPaterno: string; apellidoMaterno: string; email: string; password: string; curp: string; tutorNombre: string; tutorTelefono: string; plantelId: string; };
-setForm: React.Dispatch<React.SetStateAction<{ matricula: string; nombre: string; apellidoPaterno: string; apellidoMaterno: string; email: string; password: string; curp: string; tutorNombre: string; tutorTelefono: string; plantelId: string; }>>;
+form: typeof FORM_INICIAL;
+setForm: React.Dispatch<React.SetStateAction<typeof FORM_INICIAL>>;
 planteles: Plantel[];
 dar: (campo: Exclude<keyof typeof FORM_INICIAL, 'plantelId'>) => { value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; };
 setEditando: React.Dispatch<React.SetStateAction<number | null>>;
@@ -28,17 +28,20 @@ export function FormularioAlumno({ editando, crear, enviando, form, setForm, pla
             <div className="campo"><label htmlFor="alumnos-campo-3">Nombre</label><input id="alumnos-campo-3" required {...dar('nombre')} /></div>
             <div className="campo"><label htmlFor="alumnos-campo-4">Apellido paterno</label><input id="alumnos-campo-4" required {...dar('apellidoPaterno')} /></div>
             <div className="campo"><label htmlFor="alumnos-campo-5">Apellido materno</label><input id="alumnos-campo-5" {...dar('apellidoMaterno')} /></div>
-            <div className="campo"><label htmlFor="alumnos-campo-6">CURP</label><input id="alumnos-campo-6" {...dar('curp')} /></div>
+            <div className="campo"><label htmlFor="alumnos-campo-6">CURP</label><input maxLength={18} id="alumnos-campo-6" {...dar('curp')} /></div>
           </div>
           <div className="fila" style={{ marginTop: 10 }}>
             <div className="campo"><label htmlFor="alumnos-campo-7">Correo</label><input id="alumnos-campo-7" type="email" required disabled={editando !== null} {...dar('email')} /></div>
             {!editando && <div className="campo"><label htmlFor="alumnos-campo-8">Contraseña inicial</label><input id="alumnos-campo-8" type="password" autoComplete="new-password" required minLength={8} {...dar('password')} /></div>}
             <div className="campo"><label htmlFor="alumnos-campo-9">Tutor</label><input id="alumnos-campo-9" {...dar('tutorNombre')} /></div>
-            <div className="campo"><label htmlFor="alumnos-campo-10">Tel. tutor</label><input id="alumnos-campo-10" {...dar('tutorTelefono')} /></div>
+            <div className="campo"><label htmlFor="alumnos-campo-10">Tel. tutor</label><input id="alumnos-campo-10" type="tel" maxLength={20} {...dar('tutorTelefono')} /></div>
+            <div className="campo"><label htmlFor="alumno-telefono">Teléfono del alumno</label><input id="alumno-telefono" type="tel" maxLength={20} {...dar('telefono')} /></div>
+            <div className="campo"><label htmlFor="alumno-nacimiento">Fecha de nacimiento</label><input id="alumno-nacimiento" type="date" {...dar('fechaNacimiento')} /></div>
+            <div className="campo"><label htmlFor="alumno-direccion">Dirección</label><input id="alumno-direccion" maxLength={200} {...dar('direccion')} /></div>
             <button className="boton" disabled={enviando}>{enviando ? 'Guardando…' : 'Guardar alumno'}</button>
             {editando && <button type="button" className="boton secundario" onClick={() => { setEditando(null); setForm(FORM_INICIAL); }}>Cancelar edición</button>}
           </div>
         </fieldset></form>
-        {error && <p className="mensaje-error">{error}</p>}
-        {mensaje && <p className="mensaje-ok">{mensaje}</p>}
+        {error && <p className="mensaje-error" role="alert">{error}</p>}
+        {mensaje && <p className="mensaje-ok" role="status">{mensaje}</p>}
       </section>); }

@@ -155,7 +155,7 @@ export class DocentesService {
       const docente = await docentes.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!docente) throw new NotFoundException('Docente no encontrado');
       await this.validarAlcanceDocente(docente.usuarioId, user, true);
-      if (dto.nombre || dto.apellidoPaterno || dto.apellidoMaterno || dto.telefono) {
+      if ([dto.nombre, dto.apellidoPaterno, dto.apellidoMaterno, dto.telefono].some((v) => v !== undefined)) {
         await this.usuarios.actualizar(docente.usuarioId, {
           nombre: dto.nombre,
           apellidoPaterno: dto.apellidoPaterno,

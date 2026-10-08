@@ -100,6 +100,10 @@ export class AcademicoController {
   eliminarGrupo(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) {
     return this.service.eliminarGrupo(id, user);
   }
+  @ApiOperation({ summary: 'Clases vigentes paginadas para captura, por plantel y clases propias del maestro' })
+  @Get('clases-seleccion') @Roles('ADMINISTRATIVO','MAESTRO')
+  clasesParaSeleccion(@CurrentUser() user: JwtUser, @Query() query: ListarGruposDto) { return this.service.clasesParaSeleccion(user,query); }
+
   @Get('grupo-materias') @Roles('ADMINISTRATIVO', 'FINANZAS')
   listarGrupoMaterias(@CurrentUser() user: JwtUser) {
     return this.service.listarGrupoMaterias(user);

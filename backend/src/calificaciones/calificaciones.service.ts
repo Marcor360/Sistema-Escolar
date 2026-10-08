@@ -80,38 +80,32 @@ export class CalificacionesService {
       }
       const calificaciones = manager.getRepository(Calificacion);
       const historial = manager.getRepository(HistorialCalificacion);
-      for (const item of dto.items) {
-        const existente = await calificaciones.findOne({
-          where: { alumnoId: item.alumnoId, grupoMateriaId: dto.grupoMateriaId, parcial: dto.parcial },
-          lock: { mode: 'pessimistic_write' },
-        });
-        if (existente && (Number(existente.calificacion) !== item.calificacion ||
-            (item.observaciones !== undefined && item.observaciones !== existente.observaciones)) && !dto.motivo?.trim()) {
-          throw new BadRequestException('Debes indicar el motivo para corregir una calificación existente');
-        }
-        const registro = existente ?? calificaciones.create({
-          alumnoId: item.alumnoId, grupoMateriaId: dto.grupoMateriaId, parcial: dto.parcial,
-        });
-        const valorAnterior = existente?.calificacion ?? null;
-        const observacionAnterior = existente?.observaciones ?? null;
-        registro.calificacion = item.calificacion;
-        registro.observaciones = item.observaciones ?? registro.observaciones ?? null;
-        registro.capturadaPorId = user.sub;
-        const guardada = await calificaciones.save(registro);
-        await historial.insert({
-          calificacionId: guardada.id,
-          alumnoId: item.alumnoId,
-          grupoMateriaId: dto.grupoMateriaId,
-          parcial: dto.parcial,
-          valorAnterior,
-          valorNuevo: registro.calificacion,
-          observacionAnterior,
-          observacionNueva: registro.observaciones,
-          usuarioId: user.sub,
-          motivo: dto.motivo ?? null,
-        });
+      // Una lectura bloqueada por lote evita hidratar expedientes y repetir consultas por alumno.
+      const existentes = await calificaciones.find({
+        where: { alumnoId: In(ids), grupoMateriaId: dto.grupoMateriaId, parcial: dto.parcial },
+        order: { alumnoId: 'ASC' }, lock: { mode: 'pessimistic_write' }, loadEagerRelations: false,
+      });
+      const porAlumno = new Map(existentes.map((c) => [c.alumnoId,c]));
+      const cambios = dto.items.flatMap((item) => {
+        const existente = porAlumno.get(item.alumnoId);
+        const observaciones = item.observaciones ?? existente?.observaciones ?? null;
+        if (existente && Number(existente.calificacion) === item.calificacion && observaciones === existente.observaciones) return [];
+        if (existente && !dto.motivo?.trim()) throw new BadRequestException('Debes indicar el motivo para corregir una calificación existente');
+        const valorAnterior = existente?.calificacion ?? null, observacionAnterior = existente?.observaciones ?? null;
+        const registro = existente ?? calificaciones.create({ alumnoId: item.alumnoId, grupoMateriaId: dto.grupoMateriaId, parcial: dto.parcial });
+        registro.calificacion = item.calificacion; registro.observaciones = observaciones; registro.capturadaPorId = user.sub;
+        return [{ registro,valorAnterior,observacionAnterior }];
+      });
+      if (cambios.length) {
+        await calificaciones.save(cambios.map((c) => c.registro),{ chunk: 100 });
+        const entradas = cambios.map(({ registro,valorAnterior,observacionAnterior }) => ({
+          calificacionId: registro.id, alumnoId: registro.alumnoId, grupoMateriaId: dto.grupoMateriaId, parcial: dto.parcial,
+          valorAnterior, valorNuevo: registro.calificacion, observacionAnterior, observacionNueva: registro.observaciones,
+          usuarioId: user.sub, motivo: dto.motivo?.trim() || null,
+        }));
+        for (let i = 0; i < entradas.length; i += 100) await historial.insert(entradas.slice(i,i+100));
       }
-      return { capturadas: dto.items.length };
+      return { capturadas: cambios.length, sinCambios: dto.items.length - cambios.length };
     });
   }
 

@@ -482,3 +482,7 @@ input:focus, select:focus, textarea:focus, button:focus-visible, a:focus-visible
   .kpis-dashboard .kpi { min-height: auto; }
   .evento { grid-template-columns: 1fr; gap: 2px; align-content: center; padding: 12px 0; }
 }
+
+/* Etiquetas de controles de tabla disponibles para lectores de pantalla. */
+.solo-lector { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+input[aria-invalid="true"] { border: 2px solid #a32323; }

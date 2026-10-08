@@ -1,6 +1,6 @@
 import { useConfirmacion } from '../components/useConfirmacion';
 import { useDialogoMotivo } from '../components/useDialogoMotivo';
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { Encabezado } from '../components/Encabezado';
 import { Paginador } from '../components/Paginador';
@@ -8,16 +8,16 @@ import { Paginador } from '../components/Paginador';
 interface Docente {
   id: number;
   numEmpleado: string;
-  especialidad?: string;
+  especialidad?: string; cedulaProfesional?: string;
   estatus: string;
-  usuario: { nombre: string; apellidoPaterno: string; email: string };
+  usuario: { nombre: string; apellidoPaterno: string; apellidoMaterno?: string; telefono?: string; email: string };
   planteles: string[];
 }
 interface Plantel { id: number; nombre: string }
 interface Resultado { datos: Docente[]; total: number; pagina: number; porPagina: number }
 
 const FORM_INICIAL = {
-  numEmpleado: '', nombre: '', apellidoPaterno: '', email: '', password: '', especialidad: '',
+  numEmpleado: '', nombre: '', apellidoPaterno: '', apellidoMaterno: '', telefono: '', cedulaProfesional: '', email: '', password: '', especialidad: '',
 };
 
 export default function DocentesPage() {
@@ -32,6 +32,7 @@ export default function DocentesPage() {
   const [mensaje, setMensaje] = useState('');
   const [editando, setEditando] = useState<number | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [cargando, setCargando] = useState(false); const consulta = useRef(0);
   const [detalle, setDetalle] = useState<{ id: number; estatus: string; plantelIds: number[]; clases: { id: number; grupo: string; materia: string; ciclo: string; plantel: string; vigente: boolean }[] } | null>(null);
   const verClases = async (d: Docente) => {
     try { const { data } = await api.get(`/docentes/${d.id}`); setDetalle(data); }
@@ -50,15 +51,16 @@ export default function DocentesPage() {
   const editar = (d: Docente) => {
     setEditando(d.id); setForm({ ...FORM_INICIAL, numEmpleado: d.numEmpleado,
       nombre: d.usuario.nombre, apellidoPaterno: d.usuario.apellidoPaterno,
-      email: d.usuario.email, especialidad: d.especialidad ?? '' });
+      apellidoMaterno: d.usuario.apellidoMaterno ?? '', telefono: d.usuario.telefono ?? '', cedulaProfesional: d.cedulaProfesional ?? '', email: d.usuario.email, especialidad: d.especialidad ?? '' });
     document.getElementById('form-docente')?.scrollIntoView();
   };
 
   const cargar = useCallback((pagina = 1, plantelId = '') => {
-    setError('');
+    const actual = ++consulta.current; setCargando(true); setError('');
     api.get<Resultado>('/docentes', { params: { pagina, ...(plantelId ? { plantelId } : {}) } })
-      .then((r) => setResultado(r.data))
-      .catch((err) => setError(mensajeDeError(err)));
+      .then((r) => { if (actual === consulta.current) setResultado(r.data); })
+      .catch((err) => { if (actual === consulta.current) setError(mensajeDeError(err)); })
+      .finally(() => { if (actual === consulta.current) setCargando(false); });
   }, []);
   useEffect(() => {
     cargar(1, '');
@@ -70,7 +72,7 @@ export default function DocentesPage() {
     if (enviando) return;
     setEnviando(true); setError(''); setMensaje('');
     try {
-      if (editando) await api.patch(`/docentes/${editando}`, { nombre: form.nombre, apellidoPaterno: form.apellidoPaterno, especialidad: form.especialidad });
+      if (editando) await api.patch(`/docentes/${editando}`, { nombre: form.nombre, apellidoPaterno: form.apellidoPaterno, apellidoMaterno: form.apellidoMaterno, telefono: form.telefono, cedulaProfesional: form.cedulaProfesional, especialidad: form.especialidad });
       else await api.post('/docentes', { ...form, plantelIds, especialidad: form.especialidad || undefined });
       setMensaje(editando ? 'Docente actualizado' : 'Docente registrado'); setEditando(null);
       setForm(FORM_INICIAL);
@@ -97,7 +99,7 @@ export default function DocentesPage() {
 
       <section className="panel" id="form-docente">
         <h2>{editando ? 'Editar docente' : 'Registrar docente'}</h2>
-        <form onSubmit={crear}>
+        <form onSubmit={crear} aria-busy={enviando}><fieldset disabled={enviando} style={{ border: 0, padding: 0 }}><legend>Datos del docente</legend>
           <div className="fila">
             <div className="campo"><label htmlFor="docentes-campo-1">Núm. empleado</label><input id="docentes-campo-1" disabled={editando !== null} required {...dar('numEmpleado')} /></div>
             <div className="campo"><label htmlFor="docentes-campo-2">Nombre</label><input id="docentes-campo-2" required {...dar('nombre')} /></div>
@@ -105,14 +107,17 @@ export default function DocentesPage() {
             <div className="campo"><label htmlFor="docentes-campo-4">Especialidad</label><input id="docentes-campo-4" {...dar('especialidad')} /></div>
             <div className="campo"><label htmlFor="docentes-campo-5">Correo</label><input id="docentes-campo-5" disabled={editando !== null} type="email" required {...dar('email')} /></div>
             {!editando && <div className="campo"><label htmlFor="docentes-campo-6">Contraseña inicial</label><input id="docentes-campo-6" type="password" autoComplete="new-password" required minLength={8} {...dar('password')} /></div>}
+            <div className="campo"><label htmlFor="docente-materno">Apellido materno</label><input id="docente-materno" maxLength={80} {...dar('apellidoMaterno')} /></div>
+            <div className="campo"><label htmlFor="docente-telefono">Teléfono</label><input id="docente-telefono" type="tel" maxLength={20} {...dar('telefono')} /></div>
+            <div className="campo"><label htmlFor="docente-cedula">Cédula profesional</label><input id="docente-cedula" maxLength={20} {...dar('cedulaProfesional')} /></div>
             <button disabled={enviando} className="boton">{enviando ? 'Guardando…' : 'Guardar docente'}</button>
             {editando && <button type="button" onClick={() => { setEditando(null); setForm(FORM_INICIAL); }}>Cancelar edición</button>}
           </div>
           <div className="fila" style={{ marginTop: 12 }}>
-            <span className="campo"><label>Planteles</label></span>
+            <span className="campo">Planteles para el alta (obligatorios)</span>
             {!editando && planteles.map((p) => <label className="casilla" key={p.id}><input type="checkbox" required={plantelIds.length === 0} checked={plantelIds.includes(p.id)} onChange={() => setPlantelIds((ids) => ids.includes(p.id) ? ids.filter((id) => id !== p.id) : [...ids, p.id])} />{p.nombre}</label>)}
           </div>
-        </form>
+        </fieldset></form>
         {error && <p role="alert" className="mensaje-error">{error}</p>}
         {mensaje && <p role="status" className="mensaje-ok">{mensaje}</p>}
       </section>
@@ -126,7 +131,8 @@ export default function DocentesPage() {
         {detalle.clases.map((c) => <p key={c.id}>{c.ciclo} · {c.plantel} · {c.grupo} · {c.materia} · {c.vigente ? 'Vigente' : 'Histórico'}</p>)}
         <a href="/grupos">Reasignar clases desde Grupos</a>
       </section>}
-      <table className="tabla">
+      {cargando && <p role="status">Cargando docentes…</p>}
+      <table className="tabla" aria-busy={cargando}>
         <thead>
           <tr><th>Empleado</th><th>Nombre</th><th>Planteles</th><th>Especialidad</th><th>Correo</th><th>Estatus</th><th /></tr>
         </thead>
@@ -142,10 +148,10 @@ export default function DocentesPage() {
               <td className="derecha"><button disabled={enviando} className="boton secundario chico" onClick={() => editar(d)}>Editar</button> <button onClick={() => verClases(d)}>Planteles y clases</button> {d.estatus === 'ACTIVO' && <button disabled={enviando} className="boton peligro chico" onClick={() => baja(d)}>Dar de baja</button>}</td>
             </tr>
           ))}
-          {resultado.datos.length === 0 && <tr><td className="vacio" colSpan={7}>Sin docentes registrados.</td></tr>}
+          {!cargando && resultado.datos.length === 0 && <tr><td className="vacio" colSpan={7}>Sin docentes registrados.</td></tr>}
         </tbody>
       </table>
-      <Paginador total={resultado.total} pagina={resultado.pagina} porPagina={resultado.porPagina} onCambio={(pagina) => cargar(pagina, filtroPlantel)} />
+      <Paginador total={resultado.total} pagina={resultado.pagina} porPagina={resultado.porPagina} deshabilitado={cargando} onCambio={(pagina) => cargar(pagina, filtroPlantel)} />
     </>
   );
 }

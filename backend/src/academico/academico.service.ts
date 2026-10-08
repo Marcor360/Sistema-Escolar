@@ -11,6 +11,7 @@ export class AcademicoService {
 listarCiclos() { return this.ciclos.listarCiclos(); }
 async crearCiclo(dto: CicloDto) { return this.ciclos.crearCiclo(dto); }
 async actualizarCiclo(id: number, dto: ActualizarCicloDto) { return this.ciclos.actualizarCiclo(id, dto); }
+clasesParaSeleccion(user: JwtUser, query: ListarGruposDto) { return this.grupos.clasesParaSeleccion(user,query); }
 listarMaterias() { return this.materias.listarMaterias(); }
 crearMateria(dto: MateriaDto) { return this.materias.crearMateria(dto); }
 async actualizarMateria(id: number, dto: ActualizarMateriaDto) { return this.materias.actualizarMateria(id, dto); }
