@@ -1,3 +1,4 @@
+import { useConfirmacion } from '../components/useConfirmacion';
 import { useDialogoMotivo } from '../components/useDialogoMotivo';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
@@ -20,6 +21,7 @@ const FORM_INICIAL = {
 };
 
 export default function DocentesPage() {
+  const confirmacion = useConfirmacion();
   const dialogoMotivo = useDialogoMotivo();
   const [resultado, setResultado] = useState<Resultado>({ datos: [], total: 0, pagina: 1, porPagina: 20 });
   const [planteles, setPlanteles] = useState<Plantel[]>([]);
@@ -36,7 +38,7 @@ export default function DocentesPage() {
     catch (err) { setError(mensajeDeError(err)); }
   };
   const guardarPlanteles = async () => {
-    if (!detalle || enviando || !confirm('¿Confirmar los planteles del docente? Las clases deben reasignarse antes de retirar un plantel.')) return;
+    if (!detalle || enviando || !await confirmacion.solicitar('¿Confirmar los planteles del docente? Las clases deben reasignarse antes de retirar un plantel.')) return;
     const guardar = async (motivo?: string) => {
       await api.post(`/docentes/${detalle.id}/${detalle.estatus === 'BAJA' ? 'reactivacion' : 'planteles'}`, { plantelIds: detalle.plantelIds, ...(motivo ? { motivo } : {}) }); setMensaje('Planteles actualizados'); setDetalle(null); cargar(1, filtroPlantel);
     };
@@ -83,14 +85,14 @@ export default function DocentesPage() {
   });
 
   const baja = async (docente: Docente) => {
-    if (!confirm(`¿Dar de baja al docente ${docente.numEmpleado}?`)) return;
+    if (!await confirmacion.solicitar(`¿Dar de baja al docente ${docente.numEmpleado}?`)) return;
     setEnviando(true); setError('');
     try { await api.post(`/docentes/${docente.id}/baja`); setMensaje('Docente dado de baja. Reasigna sus clases desde Grupos.'); cargar(1, filtroPlantel); }
     catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
   return (
-    <>{dialogoMotivo.elemento}
+    <>{confirmacion.elemento}{dialogoMotivo.elemento}
       <Encabezado titulo="Docentes" detalle="Plantilla docente y cuentas de acceso" />
 
       <section className="panel" id="form-docente">

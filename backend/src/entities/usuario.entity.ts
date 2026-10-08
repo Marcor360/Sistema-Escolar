@@ -6,16 +6,16 @@ import { Rol } from './rol.entity';
 
 @Entity('usuarios')
 export class Usuario {
-  @PrimaryGeneratedColumn() id: number;
-  @Column({ length: 120, unique: true }) email: string;
-  @Column({ length: 100, select: false }) passwordHash: string;
-  @Column({ length: 80 }) nombre: string;
-  @Column({ length: 80 }) apellidoPaterno: string;
-  @Column({ type: String, length: 80, nullable: true }) apellidoMaterno: string | null;
-  @Column({ type: String, length: 20, nullable: true }) telefono: string | null;
-  @Column({ default: true }) activo: boolean;
-  @Column({ default: false }) passwordChangeRequired: boolean;
-  @Column({ name: 'session_version', type: 'int', default: 0 }) sessionVersion: number;
+  @PrimaryGeneratedColumn() id!: number;
+  @Column({ length: 120, unique: true }) email!: string;
+  @Column({ length: 100, select: false }) passwordHash!: string;
+  @Column({ length: 80 }) nombre!: string;
+  @Column({ length: 80 }) apellidoPaterno!: string;
+  @Column({ type: String, length: 80, nullable: true }) apellidoMaterno!: string | null;
+  @Column({ type: String, length: 20, nullable: true }) telefono!: string | null;
+  @Column({ default: true }) activo!: boolean;
+  @Column({ default: false }) passwordChangeRequired!: boolean;
+  @Column({ name: 'session_version', type: 'int', default: 0 }) sessionVersion!: number;
 
   @ManyToMany(() => Rol, { eager: true })
   @JoinTable({
@@ -23,14 +23,14 @@ export class Usuario {
     joinColumn: { name: 'usuario_id' },
     inverseJoinColumn: { name: 'rol_id' },
   })
-  roles: Rol[];
+  roles!: Rol[];
 
-  @CreateDateColumn() createdAt: Date;
-  @UpdateDateColumn() updatedAt: Date;
-  @DeleteDateColumn({ type: Date }) deletedAt: Date | null;
+  @CreateDateColumn() createdAt!: Date;
+  @UpdateDateColumn() updatedAt!: Date;
+  @DeleteDateColumn({ type: Date }) deletedAt!: Date | null;
 
   /** Vínculo con la base certweb para la migración inicial (ETL); no se expone en la API pública. */
-  @Column({ type: 'bigint', nullable: true }) legacyId: string | null;
+  @Column({ type: 'bigint', nullable: true }) legacyId!: string | null;
 
   get nombreCompleto(): string {
     return [this.nombre, this.apellidoPaterno, this.apellidoMaterno].filter(Boolean).join(' ');

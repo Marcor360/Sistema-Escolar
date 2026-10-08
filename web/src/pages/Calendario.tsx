@@ -1,3 +1,4 @@
+import { useConfirmacion } from '../components/useConfirmacion';
 import { FormEvent, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { Encabezado } from '../components/Encabezado';
@@ -21,6 +22,7 @@ const FORM_INICIAL = { titulo: '', tipo: 'GENERAL', fechaInicio: '', fechaFin: '
 const TONO: Record<Evento['tipo'], string> = { GENERAL: 'neutro', EXAMEN: 'mal', ENTREGA: 'aviso', FESTIVO: 'ok', PAGO: 'aviso', JUNTA: 'neutro' };
 
 export default function CalendarioPage() {
+  const confirmacion = useConfirmacion();
   const { sesion } = useAuth();
   const esSuperadmin = sesion?.roles.includes('SUPERADMIN') ?? false;
   const maestroPuro = sesion?.roles.includes('MAESTRO') && !sesion.roles.includes('ADMINISTRATIVO') && !esSuperadmin;
@@ -57,7 +59,7 @@ export default function CalendarioPage() {
   };
 
   const eliminar = async (evento: Evento) => {
-    if (!confirm(`¿Eliminar el evento "${evento.titulo}"?`)) return;
+    if (!await confirmacion.solicitar(`¿Eliminar el evento "${evento.titulo}"?`)) return;
     setError('');
     try { await api.delete(`/calendario/${evento.id}`); recargar(); }
     catch (err) { setError(mensajeDeError(err)); }
@@ -72,7 +74,7 @@ export default function CalendarioPage() {
   };
 
   return (
-    <>
+    <>{confirmacion.elemento}
       <div className="fila"><div className="campo"><label htmlFor="cal-desde">Desde</label><input id="cal-desde" type="date" value={desde} onChange={(e) => setDesde(e.target.value)} /></div>
         <div className="campo"><label htmlFor="cal-hasta">Hasta</label><input id="cal-hasta" type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} /></div>
         <button onClick={filtrarEventos}>Consultar intervalo</button></div>

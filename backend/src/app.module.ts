@@ -28,7 +28,7 @@ import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, validate: validarEntorno }),
+    ConfigModule.forRoot({ isGlobal: true, validate: validarEntorno, ignoreEnvFile: process.env.RUN_DB_INTEGRATION === '1' }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     TypeOrmModule.forRootAsync({ inject: [ConfigService], useFactory: typeOrmConfig }),
     TypeOrmModule.forFeature([BitacoraActividad]),

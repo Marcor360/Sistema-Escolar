@@ -1,3 +1,4 @@
+import { useConfirmacion } from '../components/useConfirmacion';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
@@ -21,6 +22,7 @@ interface CambioCalificacion {
 }
 
 export default function CalificacionesPage() {
+  const confirmacion = useConfirmacion();
   const { tieneRol } = useAuth();
   const [clases, setClases] = useState<GrupoMateria[]>([]);
   const [claseId, setClaseId] = useState('');
@@ -81,7 +83,7 @@ export default function CalificacionesPage() {
     try {
       const { data: resumen } = await api.get<EstadoPeriodo>(`/calificaciones/periodos/${claseId}/${parcial}`);
       if (siguiente === 'CERRADO' && resumen.faltantes) { setError(`No se puede cerrar: faltan ${resumen.faltantes} calificaciones`); return; }
-      if (!confirm(`Inscritos: ${resumen.inscritos} · Capturados: ${resumen.capturados} · Faltantes: ${resumen.faltantes}. ¿${siguiente === 'CERRADO' ? 'Cerrar' : 'Reabrir'} periodo?`)) return;
+      if (!await confirmacion.solicitar(`Inscritos: ${resumen.inscritos} · Capturados: ${resumen.capturados} · Faltantes: ${resumen.faltantes}. ¿${siguiente === 'CERRADO' ? 'Cerrar' : 'Reabrir'} periodo?`)) return;
       const { data } = await api.patch<EstadoPeriodo>(`/calificaciones/periodos/${claseId}/${parcial}`, {
         estatus: siguiente,
       });
@@ -132,7 +134,7 @@ export default function CalificacionesPage() {
   };
 
   return (
-    <>
+    <>{confirmacion.elemento}
       <Encabezado titulo="Captura de calificaciones" detalle="Evaluación oficial por parcial; las actividades de clase se registran por separado" />
       {error && <p className="mensaje-error" role="alert">{error}</p>}
       {mensaje && <p className="mensaje-ok" role="status">{mensaje}</p>}

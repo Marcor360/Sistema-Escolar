@@ -15,7 +15,7 @@
     "incremental": false,
     "skipLibCheck": true,
     "strict": true,
-    "strictPropertyInitialization": false,
+    "strictPropertyInitialization": true,
     "strictBindCallApply": true,
     "noImplicitAny": true,
     "strictNullChecks": true,

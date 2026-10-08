@@ -1,3 +1,9 @@
+import { FORM_INICIAL } from '../features/alumnos/tipos';
+import { FormularioAlumno } from '../features/alumnos/FormularioAlumno';
+import { HistorialAlumno } from '../features/alumnos/HistorialAlumno';
+import { TransferirAlumno } from '../features/alumnos/TransferirAlumno';
+import type { Alumno, Historial, Nota, Plantel, Resultado } from '../features/alumnos/tipos';
+import { useConfirmacion } from '../components/useConfirmacion';
 import { useDialogoMotivo } from '../components/useDialogoMotivo';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
@@ -5,24 +11,16 @@ import { useAuth } from '../auth/AuthContext';
 import { Encabezado } from '../components/Encabezado';
 import { Paginador } from '../components/Paginador';
 
-interface Alumno {
-  id: number;
-  matricula: string;
-  estatus: string;
-  usuario: { nombre: string; apellidoPaterno: string; apellidoMaterno?: string; email: string };
-  plantel: { id: number; nombre: string } | null;
-}
-interface Historial { id: number; estatus: string; grupo: { id: number; nombre: string; ciclo: { id: number; nombre: string }; plantel: { nombre: string } } }
-interface Nota { id: number; parcial: number; calificacion: number; promedioOficial: number | null; grupoMateria: { id: number; grupo: { id: number }; materia: { nombre: string } } }
-interface Plantel { id: number; nombre: string }
-interface Resultado { datos: Alumno[]; total: number; pagina: number; porPagina: number }
 
-const FORM_INICIAL = {
-  matricula: '', nombre: '', apellidoPaterno: '', apellidoMaterno: '',
-  email: '', password: '', curp: '', tutorNombre: '', tutorTelefono: '', plantelId: '',
-};
+
+
+
+
+
+
 
 export default function AlumnosPage() {
+  const confirmacion = useConfirmacion();
   const dialogoMotivo = useDialogoMotivo();
   const [resultado, setResultado] = useState<Resultado>({ datos: [], total: 0, pagina: 1, porPagina: 20 });
   const [planteles, setPlanteles] = useState<Plantel[]>([]);
@@ -65,14 +63,14 @@ export default function AlumnosPage() {
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
   const egresar = async (alumno: Alumno) => {
-    if (!confirm('¿Egresar al alumno? Se terminarán sus inscripciones y su acceso; conservará el expediente.')) return;
+    if (!await confirmacion.solicitar('¿Egresar al alumno? Se terminarán sus inscripciones y su acceso; conservará el expediente.')) return;
     setEnviando(true); setError('');
     try { await api.post(`/alumnos/${alumno.id}/egreso`); setMensaje('Alumno egresado'); cargar(1, buscar, plantelId); }
     catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
   const transferir = async (e: FormEvent) => {
     e.preventDefault();
-    if (!transferencia || !confirm('¿Transferir? Se darán de baja las inscripciones anteriores. Deberás inscribirlo en el grupo del nuevo plantel.')) return;
+    if (!transferencia || !await confirmacion.solicitar('¿Transferir? Se darán de baja las inscripciones anteriores. Deberás inscribirlo en el grupo del nuevo plantel.')) return;
     setEnviando(true); setError('');
     try {
       await api.post(`/alumnos/${transferencia.id}/transferencia`, { plantelId: Number(destino) });
@@ -127,7 +125,7 @@ export default function AlumnosPage() {
   });
 
   const baja = async (alumno: Alumno) => {
-    if (!confirm(`¿Dar de baja a ${alumno.usuario.nombre} ${alumno.usuario.apellidoPaterno}?`)) return;
+    if (!await confirmacion.solicitar(`¿Dar de baja a ${alumno.usuario.nombre} ${alumno.usuario.apellidoPaterno}?`)) return;
     setEnviando(true); setError('');
     try { await api.post(`/alumnos/${alumno.id}/baja`); setMensaje('Alumno dado de baja'); cargar(1, buscar, plantelId); }
     catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
@@ -145,55 +143,13 @@ export default function AlumnosPage() {
   };
 
   return (
-    <>{dialogoMotivo.elemento}
+    <>{confirmacion.elemento}{dialogoMotivo.elemento}
       <Encabezado titulo="Alumnos" detalle="Alta, consulta, boletas y baja de expedientes" />
 
-      {puedeGestionar && <section className="panel" id="form-alumno">
-        <h2>{editando ? 'Editar alumno' : 'Registrar alumno'}</h2>
-        <form onSubmit={crear} aria-busy={enviando}><fieldset disabled={enviando} style={{ border: 0, margin: 0, padding: 0 }}><legend>Datos del alumno</legend>
-          <div className="fila">
-            <div className="campo"><label htmlFor="alumnos-campo-1">Plantel</label>
-              <select id="alumnos-campo-1" required disabled={editando !== null || enviando} value={form.plantelId} onChange={(e) => setForm({ ...form, plantelId: e.target.value })}>
-                <option value="">Selecciona…</option>
-                {planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-              </select>
-            </div>
-            <div className="campo"><label htmlFor="alumnos-campo-2">Matrícula</label><input id="alumnos-campo-2" required disabled={editando !== null} {...dar('matricula')} /></div>
-            <div className="campo"><label htmlFor="alumnos-campo-3">Nombre</label><input id="alumnos-campo-3" required {...dar('nombre')} /></div>
-            <div className="campo"><label htmlFor="alumnos-campo-4">Apellido paterno</label><input id="alumnos-campo-4" required {...dar('apellidoPaterno')} /></div>
-            <div className="campo"><label htmlFor="alumnos-campo-5">Apellido materno</label><input id="alumnos-campo-5" {...dar('apellidoMaterno')} /></div>
-            <div className="campo"><label htmlFor="alumnos-campo-6">CURP</label><input id="alumnos-campo-6" {...dar('curp')} /></div>
-          </div>
-          <div className="fila" style={{ marginTop: 10 }}>
-            <div className="campo"><label htmlFor="alumnos-campo-7">Correo</label><input id="alumnos-campo-7" type="email" required disabled={editando !== null} {...dar('email')} /></div>
-            {!editando && <div className="campo"><label htmlFor="alumnos-campo-8">Contraseña inicial</label><input id="alumnos-campo-8" type="password" autoComplete="new-password" required minLength={8} {...dar('password')} /></div>}
-            <div className="campo"><label htmlFor="alumnos-campo-9">Tutor</label><input id="alumnos-campo-9" {...dar('tutorNombre')} /></div>
-            <div className="campo"><label htmlFor="alumnos-campo-10">Tel. tutor</label><input id="alumnos-campo-10" {...dar('tutorTelefono')} /></div>
-            <button className="boton" disabled={enviando}>{enviando ? 'Guardando…' : 'Guardar alumno'}</button>
-            {editando && <button type="button" className="boton secundario" onClick={() => { setEditando(null); setForm(FORM_INICIAL); }}>Cancelar edición</button>}
-          </div>
-        </fieldset></form>
-        {error && <p className="mensaje-error">{error}</p>}
-        {mensaje && <p className="mensaje-ok">{mensaje}</p>}
-      </section>}
+      {puedeGestionar && <FormularioAlumno editando={editando} crear={crear} enviando={enviando} form={form} setForm={setForm} planteles={planteles} dar={dar} setEditando={setEditando} error={error} mensaje={mensaje} />}
       {!puedeGestionar && error && <p role="alert" className="mensaje-error">{error}</p>}
-      {historial && <section className="panel"><h2>Historial de {historial.alumno.matricula}</h2>
-        {historial.registros.map((i) => <p key={i.id}>{i.grupo.ciclo.nombre} · {i.grupo.nombre} · {i.grupo.plantel.nombre} · {i.estatus}
-          <button onClick={() => boleta(historial.alumno, i.grupo.ciclo.id, i.id)}>Boleta de esta inscripción</button>
-          <button disabled={cargandoNotas} onClick={() => verNotas(historial.alumno, i)}>Ver calificaciones</button></p>)}
-        {cargandoNotas && <p role="status">Cargando calificaciones…</p>}
-        {notas && <table className="tabla"><thead><tr><th>Materia</th><th>Parcial</th><th>Nota</th><th>Promedio oficial P1-P3</th></tr></thead>
-          <tbody>{notas.map((n) => <tr key={n.id}><td>{n.grupoMateria.materia.nombre}</td><td>{n.parcial === 0 ? 'Final' : `P${n.parcial}`}</td><td>{n.calificacion}</td><td>{n.promedioOficial ?? 'Pendiente'}</td></tr>)}</tbody></table>}
-        {notas?.length === 0 && <p>Sin calificaciones en esta inscripción.</p>}
-        {!historial.registros.length && <p>Sin inscripciones registradas.</p>}<button onClick={() => setHistorial(null)}>Cerrar historial</button>
-      </section>}
-      {transferencia && <section className="panel"><h2>Transferir a {transferencia.usuario.nombre}</h2>
-        <form onSubmit={transferir}><label htmlFor="destino">Plantel de destino</label>
-          <select id="destino" required value={destino} onChange={(e) => setDestino(e.target.value)}>
-            <option value="">Selecciona…</option>{planteles.filter((p) => p.id !== transferencia.plantel?.id).map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-          </select><button disabled={enviando} className="boton">Confirmar transferencia</button>
-          <button type="button" onClick={() => setTransferencia(null)}>Cancelar</button>
-        </form></section>}
+      {historial && <HistorialAlumno historial={historial} boleta={boleta} cargandoNotas={cargandoNotas} verNotas={verNotas} notas={notas} setHistorial={setHistorial} />}
+      {transferencia && <TransferirAlumno transferencia={transferencia} transferir={transferir} destino={destino} setDestino={setDestino} planteles={planteles} enviando={enviando} setTransferencia={setTransferencia} />}
 
       <div className="fila" style={{ marginBottom: 12 }}>
         <div className="campo"><label htmlFor="alumnos-campo-11">Filtrar por plantel</label>

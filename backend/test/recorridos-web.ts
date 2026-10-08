@@ -19,6 +19,7 @@ export async function recorridoWeb(d: Datos, tipo: 'academico' | 'financiero') {
     assert(listo, 'La web no inició'); browser = await chromium.launch({ headless: true, ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE } : {}) });
     const page = await browser.newPage(); const errores: string[] = [];
     page.on('pageerror', (e: Error) => errores.push(e.message)); page.on('dialog', (dialog: { accept: () => Promise<void> }) => { void dialog.accept(); });
+    await page.addLocatorHandler(page.getByRole('dialog', { name: 'Confirmar operación', exact: true }), async () => { await page.getByRole('dialog', { name: 'Confirmar operación', exact: true }).getByRole('button', { name: 'Confirmar', exact: true }).click(); });
     await page.goto('http://127.0.0.1:5181/login'); await page.getByLabel('Correo institucional').fill(d.email); await page.getByLabel('Contraseña', { exact: true }).fill(d.password); await page.getByRole('button', { name: 'Entrar' }).click();
     await expect(page.getByRole('link', { name: 'Alumnos', exact: true })).toBeVisible();
     const matricula = `BW${tipo === 'academico' ? 'A' : 'F'}${d.sufijo}`;

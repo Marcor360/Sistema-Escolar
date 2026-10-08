@@ -2,16 +2,16 @@ import { Length, Matches } from 'class-validator';
 
 export class ActualizarMarcaDto {
   @Length(2, 150)
-  nombreInstitucion: string;
+  nombreInstitucion!: string;
 
   @Length(1, 10)
-  nombreCorto: string;
+  nombreCorto!: string;
 
   @Matches(/^#[0-9a-fA-F]{6}$/, { message: 'Color en formato #RRGGBB' })
-  colorPrimario: string;
+  colorPrimario!: string;
 
   @Matches(/^#[0-9a-fA-F]{6}$/, { message: 'Color en formato #RRGGBB' })
-  colorAcento: string;
+  colorAcento!: string;
 }
 
 export interface MarcaPublicaDto {

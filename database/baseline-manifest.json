@@ -24,7 +24,8 @@
         "migracion_cierre_historial_calificaciones.sql",
         "migracion_sesiones_rotativas.sql",
         "migracion_operacion_ampliada.sql",
-        "migracion_integridad_operativa.sql"
+        "migracion_integridad_operativa.sql",
+        "migracion_previews_importacion.sql"
       ]
     },
     "sqlserver": {
@@ -49,7 +50,8 @@
         "migracion_cierre_historial_calificaciones.sql",
         "migracion_sesiones_rotativas.sql",
         "migracion_operacion_ampliada.sql",
-        "migracion_integridad_operativa.sql"
+        "migracion_integridad_operativa.sql",
+        "migracion_previews_importacion.sql"
       ]
     }
   }

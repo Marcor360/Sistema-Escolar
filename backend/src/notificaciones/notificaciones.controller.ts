@@ -8,8 +8,8 @@ import { Roles } from '../common/roles.decorator';
 import { CurrentUser, JwtUser } from '../common/current-user.decorator';
 
 class DifundirDto {
-  @IsString() @IsNotEmpty() titulo: string;
-  @IsString() @IsNotEmpty() mensaje: string;
+  @IsString() @IsNotEmpty() titulo!: string;
+  @IsString() @IsNotEmpty() mensaje!: string;
   @IsOptional() @IsArray() usuarioIds?: number[];
   @IsOptional() @IsIn(['ALUMNO', 'MAESTRO', 'ADMINISTRATIVO', 'FINANZAS']) rol?: string;
 }

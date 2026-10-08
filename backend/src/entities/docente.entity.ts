@@ -6,18 +6,18 @@ import { Usuario } from './usuario.entity';
 
 @Entity('docentes')
 export class Docente {
-  @PrimaryGeneratedColumn() id: number;
-  @Column({ unique: true }) usuarioId: number;
+  @PrimaryGeneratedColumn() id!: number;
+  @Column({ unique: true }) usuarioId!: number;
   @OneToOne(() => Usuario, { eager: true })
   @JoinColumn({ name: 'usuario_id' })
-  usuario: Usuario;
-  @Column({ length: 20, unique: true }) numEmpleado: string;
-  @Column({ type: String, length: 20, nullable: true }) cedulaProfesional: string | null;
-  @Column({ type: String, length: 120, nullable: true }) especialidad: string | null;
-  @Column({ length: 20, default: 'ACTIVO' }) estatus: 'ACTIVO' | 'BAJA';
-  @CreateDateColumn() createdAt: Date;
-  @UpdateDateColumn() updatedAt: Date;
-  @DeleteDateColumn({ type: Date }) deletedAt: Date | null;
+  usuario!: Usuario;
+  @Column({ length: 20, unique: true }) numEmpleado!: string;
+  @Column({ type: String, length: 20, nullable: true }) cedulaProfesional!: string | null;
+  @Column({ type: String, length: 120, nullable: true }) especialidad!: string | null;
+  @Column({ length: 20, default: 'ACTIVO' }) estatus!: 'ACTIVO' | 'BAJA';
+  @CreateDateColumn() createdAt!: Date;
+  @UpdateDateColumn() updatedAt!: Date;
+  @DeleteDateColumn({ type: Date }) deletedAt!: Date | null;
   /** Vínculo con la base certweb para la migración inicial (ETL); no se expone en la API pública. */
-  @Column({ type: 'bigint', nullable: true }) legacyId: string | null;
+  @Column({ type: 'bigint', nullable: true }) legacyId!: string | null;
 }

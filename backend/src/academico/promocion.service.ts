@@ -1,3 +1,4 @@
+import { esConflictoTransaccional, esConflictoUnico } from './conflictos';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { DataSource, EntityManager, In } from 'typeorm';
 import { Plantel } from '../entities/plantel.entity';
@@ -33,18 +34,21 @@ export class PromocionService {
     return { origen, destino };
   }
   async preview(dto: PromocionDto, user: JwtUser) {
-    return this.ds.transaction(async (manager) => {
+    try { return await this.ds.transaction(async (manager) => {
       const { origen, destino } = await this.contexto(manager, dto, user);
       const inscripciones = await manager.getRepository(Inscripcion).find({ where: { grupoId: origen.id, estatus: 'ACTIVA', alumno: { estatus: 'ACTIVO', usuario: { activo: true }, plantelId: destino.plantelId } } });
       const previas = await manager.getRepository(Inscripcion).find({ where: { grupo: { cicloId: destino.cicloId }, estatus: 'ACTIVA' } });
       const ocupados = new Set(previas.map((p) => p.alumnoId));
       const alumnos = inscripciones.map((i) => ({ id: i.alumnoId, matricula: i.alumno.matricula, nombre: i.alumno.usuario.nombreCompleto, elegible: !ocupados.has(i.alumnoId) }));
       return { origen: { id: origen.id, nombre: origen.nombre, cicloId: origen.cicloId }, destino: { id: destino.id, nombre: destino.nombre, cicloId: destino.cicloId }, plantel: destino.plantel.nombre, alumnos, regla: 'Solo alumnos seleccionados; la promoción no copia calificaciones ni equivale a aprobación automática.' };
-    });
+    }); } catch (error) {
+      if (esConflictoTransaccional(error) || esConflictoUnico(error)) throw new ConflictException('El contexto de promoción cambió concurrentemente; vuelve a consultar');
+      throw error;
+    }
   }
   async confirmar(dto: ConfirmarPromocionDto, user: JwtUser) {
     if (!dto.confirmado) throw new BadRequestException('Revisa la previsualización y confirma');
-    return this.ds.transaction(async (manager) => {
+    try { return await this.ds.transaction(async (manager) => {
       const { origen, destino } = await this.contexto(manager, dto, user);
       const alumnos = await manager.getRepository(Alumno).find({ where: { id: In(dto.alumnoIds) }, order: { id: 'ASC' }, lock: { mode: 'pessimistic_write' } });
       if (alumnos.length !== dto.alumnoIds.length || alumnos.some((a) => a.estatus !== 'ACTIVO' || !a.usuario.activo || a.plantelId !== destino.plantelId)) throw new ConflictException('La selección contiene alumnos no elegibles');
@@ -58,6 +62,9 @@ export class PromocionService {
         await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId: destino.plantelId, accion: 'PROMOCION_ALUMNO', entidadId: alumno.id, detalle: `origenGrupoId=${origen.id}; destinoGrupoId=${destino.id}`, fecha: new Date() });
       }
       return { inscritos: alumnos.length, destinoGrupoId: destino.id };
-    });
+    }); } catch (error) {
+      if (esConflictoTransaccional(error) || esConflictoUnico(error)) throw new ConflictException('El contexto de promoción cambió concurrentemente; vuelve a consultar');
+      throw error;
+    }
   }
 }

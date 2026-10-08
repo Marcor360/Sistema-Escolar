@@ -57,7 +57,12 @@ it('carga controlada: 100 alumnos, 900 notas y capturas concurrentes sin alterar
     expect(resultado.response.status).toBe(200); expect(resultado.data.academico.clases).toHaveLength(3);
     for (const c of resultado.data.academico.clases) expect(c).toMatchObject({ inscritos: 100, oficialesCompletos: 100, promedioOficial: 80 });
     expect(await ctx.dataSource.getRepository(Calificacion).countBy({ grupoMateriaId: require('typeorm').In(clases) })).toBe(900);
-    tiempos.sort((a,b) => a-b); console.log(JSON.stringify({ prueba: 'carga_aislada', motor: process.env.DB_TYPE, alumnos: 100, clases: 3, notas: 900, concurrencia: 3, capturasP95Ms: tiempos[Math.ceil(tiempos.length * .95)-1], analiticaMs }));
+    for (const grupoMateriaId of clases) for (const parcial of [1,2,3]) expect((await ctx.api(`/calificaciones/periodos/${grupoMateriaId}/${parcial}`, { method: 'PATCH', token, body: { estatus: 'CERRADO' } })).response.status).toBe(200);
+    const root = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.superadminId })).email);
+    const cierreDesde = Date.now(); const cierre = await ctx.api(`/academico/ciclos/${base.grupo.cicloId}/cierre`, { token: root }); const cierreMs = Date.now()-cierreDesde;
+    expect(cierre.response.status).toBe(200); expect(cierre.data.inscritos).toBeGreaterThanOrEqual(100);
+    expect(cierre.data.faltantes.filter((f: { grupoMateriaId: number }) => clases.includes(f.grupoMateriaId))).toEqual([]);
+    tiempos.sort((a,b) => a-b); console.log(JSON.stringify({ prueba: 'carga_aislada', motor: process.env.DB_TYPE, alumnos: 100, clases: 3, notas: 900, concurrencia: 3, capturasP95Ms: tiempos[Math.ceil(tiempos.length * .95)-1], analiticaMs, cierreMs }));
   });
   },
 };

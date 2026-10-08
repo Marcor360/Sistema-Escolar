@@ -3,8 +3,8 @@ const limpiar = ({ value }: { value: unknown }) => typeof value === 'string' ? v
 import { IsDateString, MaxLength, MinLength, IsIn, IsInt, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class CrearActividadDto {
-  @IsInt() grupoMateriaId: number;
-  @Transform(limpiar) @IsString() @MinLength(1) @MaxLength(150) titulo: string;
+  @IsInt() grupoMateriaId!: number;
+  @Transform(limpiar) @IsString() @MinLength(1) @MaxLength(150) titulo!: string;
   @IsOptional() @IsString() @MaxLength(4000) descripcion?: string;
   @IsOptional() @IsIn(['TAREA', 'EXAMEN', 'PROYECTO', 'PARTICIPACION'])
   tipo?: 'TAREA' | 'EXAMEN' | 'PROYECTO' | 'PARTICIPACION';
@@ -28,10 +28,10 @@ export class EntregarDto {
 }
 
 export class CalificarEntregaDto {
-  @IsNumber() @Min(0) @Max(100) calificacion: number;
+  @IsNumber() @Min(0) @Max(100) calificacion!: number;
   @IsOptional() @IsString() @MaxLength(500) comentario?: string;
 }
 
 export class ActualizarMaterialDto {
-  @Transform(limpiar) @IsString() @MinLength(1) @MaxLength(150) titulo: string;
+  @Transform(limpiar) @IsString() @MinLength(1) @MaxLength(150) titulo!: string;
 }

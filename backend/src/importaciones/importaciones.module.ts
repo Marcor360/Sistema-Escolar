@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
-import { UsuariosModule } from '../usuarios/usuarios.module';
+import { PreviewLimpiezaService } from './preview-limpieza.service';
 import { PlantelesModule } from '../planteles/planteles.module';
 import { ImportacionesController } from './importaciones.controller';
 import { ImportacionesService } from './importaciones.service';
-@Module({ imports: [UsuariosModule, PlantelesModule], controllers: [ImportacionesController], providers: [ImportacionesService] })
+@Module({ imports: [PlantelesModule], controllers: [ImportacionesController], providers: [ImportacionesService, PreviewLimpiezaService] })
 export class ImportacionesModule {}

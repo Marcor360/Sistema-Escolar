@@ -1,3 +1,4 @@
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ContextoIntegracion } from './contexto';
 import { expect, it } from '@jest/globals';
 import * as ExcelJS from 'exceljs';
@@ -45,5 +46,21 @@ it('expone disponibilidad con verificación real de la base', async () => {
     expect(ready.response.status).toBe(200);
     expect(ready.data.schema).toBe('ok');
   });
+  },
+  50: (ctx) => {
+    it('publica contratos OpenAPI de importación, promoción, conducta y analítica con errores y alcance', () => {
+      const doc = SwaggerModule.createDocument(ctx.app, new DocumentBuilder().addBearerAuth().build());
+      const paths = Object.keys(doc.paths);
+      for (const sufijo of ['/importaciones/preview','/importaciones/confirmar','/academico/promocion/preview','/conducta/incidencias','/analitica']) {
+        const path = paths.find((p) => p.endsWith(sufijo)); expect(path).toBeDefined();
+        const operacion = doc.paths[path!].post ?? doc.paths[path!].get!;
+        for (const code of ['400','401','403','404','409']) expect(operacion.responses[code]).toBeDefined();
+        expect(operacion.security).toBeDefined();
+      }
+      const preview = doc.paths[paths.find((p) => p.endsWith('/importaciones/preview'))!].post!;
+      expect(preview.requestBody).toHaveProperty('content.multipart/form-data.schema.required', ['tipo','archivo']);
+      expect(doc.components?.schemas?.AnaliticaRespuestaDto).toHaveProperty('properties.academico');
+      expect(doc.components?.schemas?.AnaliticaRespuestaDto).toHaveProperty('properties.financiero');
+    });
   },
 };

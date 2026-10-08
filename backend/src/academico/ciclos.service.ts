@@ -22,21 +22,26 @@ export class CiclosService {
   private async resumenCon(manager: import('typeorm').EntityManager, id: number) {
     const ciclo = await manager.getRepository(CicloEscolar).findOneBy({ id });
     if (!ciclo) throw new NotFoundException('Ciclo no encontrado');
-    const clases = await manager.getRepository(GrupoMateria).find({ where: { grupo: { cicloId: id, activo: true } } });
-    const grupos = await manager.getRepository(Grupo).find({ where: { cicloId: id, activo: true } });
+    const clases = await manager.getRepository(GrupoMateria).find({ where: { grupo: { cicloId: id, activo: true } }, select: { id: true, grupoId: true }, loadEagerRelations: false });
+    const grupos = await manager.getRepository(Grupo).find({ where: { cicloId: id, activo: true }, select: { id: true }, loadEagerRelations: false });
     const grupoIds = grupos.map((g) => g.id);
-    const inscripciones = grupoIds.length ? await manager.getRepository(Inscripcion).find({ where: { grupoId: In(grupoIds), estatus: 'ACTIVA', alumno: { estatus: 'ACTIVO' } } }) : [];
-    const periodos = clases.length ? await manager.getRepository(PeriodoCalificacion).find({ where: { grupoMateriaId: In(clases.map((c) => c.id)) } }) : [];
-    const notas = clases.length ? await manager.getRepository(Calificacion).find({ where: { grupoMateriaId: In(clases.map((c) => c.id)) } }) : [];
+    const inscripciones = grupoIds.length ? await manager.getRepository(Inscripcion).find({ where: { grupoId: In(grupoIds), estatus: 'ACTIVA', alumno: { estatus: 'ACTIVO', usuario: { activo: true } } }, select: { grupoId: true, alumnoId: true }, loadEagerRelations: false }) : [];
+    const periodos = clases.length ? await manager.getRepository(PeriodoCalificacion).find({ where: { grupoMateriaId: In(clases.map((c) => c.id)) }, select: { grupoMateriaId: true, parcial: true, estatus: true }, loadEagerRelations: false }) : [];
+    const notas = clases.length ? await manager.getRepository(Calificacion).find({ where: { grupoMateriaId: In(clases.map((c) => c.id)) }, select: { grupoMateriaId: true, parcial: true, alumnoId: true }, loadEagerRelations: false }) : [];
+    const inscritosPorGrupo = new Map<number, number[]>();
+    for (const i of inscripciones) { const ids = inscritosPorGrupo.get(i.grupoId) ?? []; ids.push(i.alumnoId); inscritosPorGrupo.set(i.grupoId,ids); }
+    const gruposConMaterias = new Set(clases.map((c) => c.grupoId));
+    const notasExistentes = new Set(notas.map((n) => `${n.grupoMateriaId}:${n.parcial}:${n.alumnoId}`));
+    const cerrados = new Set(periodos.filter((p) => p.estatus === 'CERRADO').map((p) => `${p.grupoMateriaId}:${p.parcial}`));
     const faltantes: { grupoId?: number; grupoMateriaId: number; parcial: number; inscritos: number; sinNota: number; cerrado: boolean }[] = [];
     for (const grupo of grupos) {
-      const inscritos = inscripciones.filter((i) => i.grupoId === grupo.id).length;
-      if (inscritos && !clases.some((c) => c.grupoId === grupo.id)) faltantes.push({ grupoId: grupo.id, grupoMateriaId: 0, parcial: 0, inscritos, sinNota: inscritos, cerrado: false });
+      const inscritos = (inscritosPorGrupo.get(grupo.id) ?? []).length;
+      if (inscritos && !gruposConMaterias.has(grupo.id)) faltantes.push({ grupoId: grupo.id, grupoMateriaId: 0, parcial: 0, inscritos, sinNota: inscritos, cerrado: false });
     }
     for (const clase of clases) for (const parcial of [1, 2, 3]) {
-      const inscritos = inscripciones.filter((i) => i.grupoId === clase.grupoId);
-      const sinNota = inscritos.filter((i) => !notas.some((n) => n.grupoMateriaId === clase.id && n.parcial === parcial && n.alumnoId === i.alumnoId)).length;
-      const cerrado = periodos.some((p) => p.grupoMateriaId === clase.id && p.parcial === parcial && p.estatus === 'CERRADO');
+      const inscritos = inscritosPorGrupo.get(clase.grupoId) ?? [];
+      const sinNota = inscritos.filter((id) => !notasExistentes.has(`${clase.id}:${parcial}:${id}`)).length;
+      const cerrado = cerrados.has(`${clase.id}:${parcial}`);
       if (inscritos.length && (sinNota || !cerrado)) faltantes.push({ grupoMateriaId: clase.id, parcial, inscritos: inscritos.length, sinNota, cerrado });
     }
     return { ciclo, grupos: grupoIds.length, clases: clases.length, inscritos: inscripciones.length, faltantes, puedeCerrar: faltantes.length === 0 };

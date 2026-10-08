@@ -1,20 +1,25 @@
+import { MateriasGrupo } from '../features/grupos/MateriasGrupo';
+import { InscripcionesGrupo } from '../features/grupos/InscripcionesGrupo';
+import type { Ciclo, Plantel, Grupo, ResultadoGrupos, Materia, GrupoMateria, Inscripcion } from '../features/grupos/tipos';
+import { useConfirmacion } from '../components/useConfirmacion';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
-import { SelectorBuscable } from '../components/SelectorBuscable';
+
 import { Encabezado } from '../components/Encabezado';
 import { Paginador } from '../components/Paginador';
 
-interface Ciclo { id: number; clave: string; activo: boolean; estado: string }
-interface Plantel { id: number; nombre: string }
-interface Grupo { id: number; nombre: string; grado?: string; turno?: string; ciclo: Ciclo; plantel: Plantel | null }
-interface ResultadoGrupos { datos: Grupo[]; total: number; pagina: number; porPagina: number }
-interface Materia { id: number; clave: string; nombre: string }
-interface Docente { id: number; numEmpleado: string; usuario: { nombre: string; apellidoPaterno: string } }
-interface GrupoMateria { id: number; materia: Materia; docente: Docente | null }
-interface Inscripcion { id: number; alumno: { id: number; matricula: string; usuario: { nombre: string; apellidoPaterno: string } } }
-interface Alumno { id: number; matricula: string; usuario: { nombre: string; apellidoPaterno: string } }
+
+
+
+
+
+
+
+
+
 
 export default function GruposPage() {
+  const confirmacion = useConfirmacion();
   const [ciclos, setCiclos] = useState<Ciclo[]>([]);
   const [planteles, setPlanteles] = useState<Plantel[]>([]);
   const [filtroCiclo, setFiltroCiclo] = useState('');
@@ -35,7 +40,7 @@ export default function GruposPage() {
   const [reasignando, setReasignando] = useState<number | null>(null);
   const [nuevoDocente, setNuevoDocente] = useState('');
   const operar = async (ruta: string, metodo: 'delete' | 'patch', datos?: object) => {
-    if (enviando || !confirm('¿Confirmar esta corrección? El historial académico se conserva.')) return;
+    if (enviando || !await confirmacion.solicitar('¿Confirmar esta corrección? El historial académico se conserva.')) return;
     setEnviando(true); setError('');
     try { await api.request({ url: ruta, method: metodo, data: datos }); setMensaje('Corrección completada');
       await cargar(1, filtroPlantel); if (seleccionado) await abrirGrupo(seleccionado);
@@ -121,7 +126,7 @@ export default function GruposPage() {
   };
 
   return (
-    <>
+    <>{confirmacion.elemento}
       <Encabezado titulo="Grupos" detalle="Grupos por ciclo, materias asignadas e inscripciones" />
       {error && <p role="alert" className="mensaje-error">{error}</p>}{mensaje && <p role="status" className="mensaje-ok">{mensaje}</p>}
 
@@ -186,59 +191,9 @@ export default function GruposPage() {
 
       {seleccionado && (
         <>
-          <section className="panel">
-            <h2>Materias del grupo {seleccionado.nombre} · {seleccionado.ciclo.clave} · {seleccionado.plantel?.nombre}</h2>
-            {reasignando && <div className="fila"><SelectorBuscable<Docente> ruta="/docentes" valor={nuevoDocente} cambiar={setNuevoDocente}
-              etiqueta="Nuevo docente" filtros={{ plantelId: seleccionado.plantel?.id }} texto={(d) => `${d.numEmpleado} — ${d.usuario.nombre} ${d.usuario.apellidoPaterno}`} />
-              <button disabled={enviando || !nuevoDocente} onClick={() => operar(`/academico/grupo-materias/${reasignando}/docente/${nuevoDocente}`, 'patch')}>Confirmar reasignación</button>
-              <button onClick={() => setReasignando(null)}>Cancelar</button></div>}
-            <form onSubmit={asignarMateria} className="fila" style={{ marginBottom: 14 }}>
-              <div className="campo"><label htmlFor="grupos-campo-7">Materia</label>
-                <select id="grupos-campo-7" required value={materiaId} onChange={(e) => setMateriaId(e.target.value)}>
-                  <option value="">Selecciona…</option>
-                  {materias.map((m) => <option key={m.id} value={m.id}>{m.clave} — {m.nombre}</option>)}
-                </select>
-              </div>
-              <SelectorBuscable<Docente> ruta="/docentes" valor={docenteId} cambiar={setDocenteId} etiqueta="Docente" requerido={false}
-                filtros={{ plantelId: seleccionado.plantel?.id }} texto={(d) => `${d.numEmpleado} — ${d.usuario.nombre} ${d.usuario.apellidoPaterno}`} />
-              <button disabled={enviando} className="boton">Asignar materia</button>
-            </form>
-            <table className="tabla">
-              <thead><tr><th>Materia</th><th>Docente</th><th>Correcciones</th></tr></thead>
-              <tbody>
-                {asignaciones.map((gm) => (
-                  <tr key={gm.id}>
-                    <td>{gm.materia.clave} — {gm.materia.nombre}</td>
-                    <td>{gm.docente ? `${gm.docente.usuario.nombre} ${gm.docente.usuario.apellidoPaterno}` : <span className="sello aviso">Sin docente</span>}</td>
-                    <td><button disabled={enviando} onClick={() => { setReasignando(gm.id); setNuevoDocente(''); }}>Reasignar docente</button>
-                      <button disabled={enviando} onClick={() => operar(`/academico/grupo-materias/${gm.id}`, 'delete')}>Quitar materia</button></td>
-                  </tr>
-                ))}
-                {asignaciones.length === 0 && <tr><td className="vacio" colSpan={2}>Sin materias asignadas.</td></tr>}
-              </tbody>
-            </table>
-          </section>
+          <MateriasGrupo seleccionado={seleccionado} reasignando={reasignando} nuevoDocente={nuevoDocente} setNuevoDocente={setNuevoDocente} enviando={enviando} operar={operar} setReasignando={setReasignando} asignarMateria={asignarMateria} materiaId={materiaId} setMateriaId={setMateriaId} materias={materias} docenteId={docenteId} setDocenteId={setDocenteId} asignaciones={asignaciones} />
 
-          <section className="panel">
-            <h2>Alumnos inscritos en {seleccionado.nombre}</h2>
-            <form onSubmit={inscribir} className="fila" style={{ marginBottom: 14 }}>
-              <SelectorBuscable<Alumno> ruta="/alumnos" valor={alumnoId} cambiar={setAlumnoId} etiqueta="Alumno"
-                filtros={{ plantelId: seleccionado.plantel?.id }} texto={(a) => `${a.matricula} — ${a.usuario.nombre} ${a.usuario.apellidoPaterno}`} />
-              <button disabled={enviando} className="boton">Inscribir</button>
-            </form>
-            <table className="tabla">
-              <thead><tr><th>Matrícula</th><th>Alumno</th><th>Correcciones</th></tr></thead>
-              <tbody>
-                {inscritos.map((i) => (
-                  <tr key={i.id}>
-                    <td>{i.alumno.matricula}</td>
-                    <td>{i.alumno.usuario.nombre} {i.alumno.usuario.apellidoPaterno}</td><td><button disabled={enviando} onClick={() => operar(`/academico/inscripciones/${i.id}`, 'delete')}>Dar de baja inscripción</button></td>
-                  </tr>
-                ))}
-                {inscritos.length === 0 && <tr><td className="vacio" colSpan={2}>Sin alumnos inscritos.</td></tr>}
-              </tbody>
-            </table>
-          </section>
+          <InscripcionesGrupo seleccionado={seleccionado} inscribir={inscribir} alumnoId={alumnoId} setAlumnoId={setAlumnoId} enviando={enviando} inscritos={inscritos} operar={operar} />
         </>
       )}
     </>

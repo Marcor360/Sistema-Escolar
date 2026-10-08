@@ -10,20 +10,20 @@ export class ListarDocentesDto extends PaginacionDto {
 }
 
 export class CrearDocenteDto {
-  @IsArray() @ArrayNotEmpty() @Type(() => Number) @IsInt({ each: true }) plantelIds: number[];
+  @IsArray() @ArrayNotEmpty() @Type(() => Number) @IsInt({ each: true }) plantelIds!: number[];
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim().toLowerCase() : value)
-  @IsEmail() @MaxLength(120) email: string;
-  @IsString() @MinLength(8) password: string;
+  @IsEmail() @MaxLength(120) email!: string;
+  @IsString() @MinLength(8) password!: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsString() @LongitudMinima(1) @MaxLength(80) nombre: string;
+  @IsString() @LongitudMinima(1) @MaxLength(80) nombre!: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsString() @LongitudMinima(1) @MaxLength(80) apellidoPaterno: string;
+  @IsString() @LongitudMinima(1) @MaxLength(80) apellidoPaterno!: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsOptional() @IsString() @MaxLength(80) apellidoMaterno?: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsOptional() @IsString() @MaxLength(20) telefono?: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim().toUpperCase() : value)
-  @IsString() @LongitudMinima(1) @MaxLength(20) numEmpleado: string;
+  @IsString() @LongitudMinima(1) @MaxLength(20) numEmpleado!: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsOptional() @IsString() @MaxLength(20) cedulaProfesional?: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
@@ -47,9 +47,9 @@ export class ActualizarDocenteDto {
 }
 
 export class PlantelesDocenteDto {
-  @IsArray() @ArrayNotEmpty() @Type(() => Number) @IsInt({ each: true }) plantelIds: number[];
+  @IsArray() @ArrayNotEmpty() @Type(() => Number) @IsInt({ each: true }) plantelIds!: number[];
 }
 
 export class ReactivarDocenteDto extends PlantelesDocenteDto {
-  @IsString() @MinLength(3) @MaxLength(500) motivo: string;
+  @IsString() @MinLength(3) @MaxLength(500) motivo!: string;
 }

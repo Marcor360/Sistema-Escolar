@@ -361,4 +361,16 @@ it('recupera push pendiente después de fallar la cola sin duplicar envíos', as
     expect(await ctx.dataSource.getRepository(PushEnvio).countBy({ notificacionId: nueva.id })).toBe(1);
   });
   },
+  52: (ctx) => {
+    it('reactivación y baja concurrentes mantienen coherentes expediente, usuario e inscripciones', async () => {
+      const token = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.adminId })).email);
+      const alta = await ctx.api('/alumnos',{ method: 'POST',token,body: { email: `rb_${ctx.sufijo}@example.invalid`,nombre: 'Carrera',apellidoPaterno: 'Identidad',password: 'Integracion_Segura_42!',matricula: `RB${ctx.sufijo}`,plantelId: ctx.plantelId } }); expect(alta.response.status).toBe(201);
+      expect((await ctx.api(`/alumnos/${alta.data.id}/baja`,{ method: 'POST',token })).response.status).toBe(201);
+      const respuestas = await Promise.all([ctx.api(`/alumnos/${alta.data.id}/reactivacion`,{ method: 'POST',token,body: { motivo: 'Reactivación institucional autorizada' } }),ctx.api(`/alumnos/${alta.data.id}/baja`,{ method: 'POST',token })]);
+      expect(respuestas.every((r) => [201,409].includes(r.response.status))).toBe(true);
+      const alumno = await ctx.dataSource.getRepository(Alumno).findOneByOrFail({ id: alta.data.id });
+      expect(alumno.usuario.activo).toBe(alumno.estatus === 'ACTIVO');
+      expect(await ctx.dataSource.getRepository(Inscripcion).countBy({ alumnoId: alumno.id,estatus: 'ACTIVA' })).toBe(0);
+    });
+  },
 };

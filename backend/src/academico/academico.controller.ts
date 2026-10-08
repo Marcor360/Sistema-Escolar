@@ -1,7 +1,9 @@
+import { ApiErroresOperacion } from '../common/api-operacion';
+import { PreviewPromocionRespuestaDto, ConfirmacionPromocionRespuestaDto, CicloRespuestaDto, ResumenCierreRespuestaDto } from './respuestas.dto';
 import { PromocionService } from './promocion.service';
 import { PromocionDto, ConfirmarPromocionDto } from './promocion.dto';
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags, ApiOperation, ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
 import { CiclosService } from './ciclos.service';
 import { TransicionCicloDto } from './academico.dto';
 import { AcademicoService } from './academico.service';
@@ -13,7 +15,7 @@ import { RolesGuard } from '../common/roles.guard';
 import { Roles } from '../common/roles.decorator';
 import { CurrentUser, JwtUser } from '../common/current-user.decorator';
 
-@ApiTags('academico')
+@ApiErroresOperacion() @ApiTags('academico')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('academico')
@@ -22,7 +24,11 @@ export class AcademicoController {
 
   // ---- Panel maestro ----
   @Get('bitacora') @Roles('ADMINISTRATIVO') bitacora(@CurrentUser() user: JwtUser, @Query() query: ListarGruposDto) { return this.service.bitacoraAcademica(user, query); }
+  @ApiOperation({ summary: 'Alumnos elegibles entre ciclo cerrado y preparación del mismo plantel' })
+  @ApiCreatedResponse({ type: PreviewPromocionRespuestaDto })
   @Post('promocion/preview') @Roles('ADMINISTRATIVO') previewPromocion(@Body() dto: PromocionDto, @CurrentUser() user: JwtUser) { return this.promocion.preview(dto, user); }
+  @ApiOperation({ summary: 'Promoción seleccionada y atómica con bloqueo; conserva notas del origen' })
+  @ApiCreatedResponse({ type: ConfirmacionPromocionRespuestaDto })
   @Post('promocion/confirmar') @Roles('ADMINISTRATIVO') confirmarPromocion(@Body() dto: ConfirmarPromocionDto, @CurrentUser() user: JwtUser) { return this.promocion.confirmar(dto, user); }
 
   @Get('mis-grupos')
@@ -42,12 +48,20 @@ export class AcademicoController {
     return this.service.actualizarCiclo(id, dto);
   }
 
+  @ApiOperation({ summary: 'Resumen previo al cierre, sin mezclar ciclos; reservado a Superadmin' })
+  @ApiOkResponse({ type: ResumenCierreRespuestaDto })
   @Get('ciclos/:id/cierre') @Roles('SUPERADMIN')
   resumenCierre(@Param('id', ParseIntPipe) id: number) { return this.ciclos.resumen(id); }
+  @ApiOperation({ summary: 'Activar ciclo preparado; rechaza otro ciclo vigente' })
+  @ApiCreatedResponse({ type: CicloRespuestaDto })
   @Post('ciclos/:id/activar') @Roles('SUPERADMIN')
   activar(@Param('id', ParseIntPipe) id: number, @Body() dto: TransicionCicloDto, @CurrentUser() user: JwtUser) { return this.ciclos.transicion(id, 'activar', dto.confirmado, user); }
+  @ApiOperation({ summary: 'Iniciar cierre del ciclo vigente sin grupos inscritos sin materias' })
+  @ApiCreatedResponse({ type: CicloRespuestaDto })
   @Post('ciclos/:id/iniciar-cierre') @Roles('SUPERADMIN')
   iniciarCierre(@Param('id', ParseIntPipe) id: number, @Body() dto: TransicionCicloDto, @CurrentUser() user: JwtUser) { return this.ciclos.transicion(id, 'iniciar-cierre', dto.confirmado, user); }
+  @ApiOperation({ summary: 'Cerrar ciclo solo con P1-P3 completos y periodos cerrados' })
+  @ApiCreatedResponse({ type: CicloRespuestaDto })
   @Post('ciclos/:id/cerrar') @Roles('SUPERADMIN')
   cerrar(@Param('id', ParseIntPipe) id: number, @Body() dto: TransicionCicloDto, @CurrentUser() user: JwtUser) { return this.ciclos.transicion(id, 'cerrar', dto.confirmado, user); }
 

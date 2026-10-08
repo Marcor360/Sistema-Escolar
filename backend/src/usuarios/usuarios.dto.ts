@@ -11,17 +11,17 @@ const ROLES: RolClave[] = ['ALUMNO', 'MAESTRO', 'ADMINISTRATIVO', 'FINANZAS', 'S
 export class CrearUsuarioDto {
   @IsOptional() @IsArray() @ArrayNotEmpty() @Type(() => Number) @IsInt({ each: true }) plantelIds?: number[];
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim().toLowerCase() : value)
-  @IsEmail() @MaxLength(120) email: string;
-  @IsString() @MinLength(8) password: string;
+  @IsEmail() @MaxLength(120) email!: string;
+  @IsString() @MinLength(8) password!: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsString() @LongitudMinima(1) @MaxLength(80) nombre: string;
+  @IsString() @LongitudMinima(1) @MaxLength(80) nombre!: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsString() @LongitudMinima(1) @MaxLength(80) apellidoPaterno: string;
+  @IsString() @LongitudMinima(1) @MaxLength(80) apellidoPaterno!: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsOptional() @IsString() @MaxLength(80) apellidoMaterno?: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsOptional() @IsString() @MaxLength(20) telefono?: string;
-  @IsArray() @ArrayNotEmpty() @IsIn(ROLES, { each: true }) roles: RolClave[];
+  @IsArray() @ArrayNotEmpty() @IsIn(ROLES, { each: true }) roles!: RolClave[];
 }
 
 export class ActualizarUsuarioDto {
@@ -39,12 +39,12 @@ export class ActualizarUsuarioDto {
 }
 
 export class ListadoUsuariosDto extends PaginacionDto {
-  @IsIn(['ALUMNO', 'DOCENTE', 'ADMINISTRATIVO']) tipo: 'ALUMNO' | 'DOCENTE' | 'ADMINISTRATIVO';
+  @IsIn(['ALUMNO', 'DOCENTE', 'ADMINISTRATIVO']) tipo!: 'ALUMNO' | 'DOCENTE' | 'ADMINISTRATIVO';
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) plantelId?: number;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsOptional() @IsString() buscar?: string;
 }
 
 export class ActualizarPersonalDto extends ActualizarUsuarioDto {
-  @IsArray() @Type(() => Number) @IsInt({ each: true }) @Min(1, { each: true }) plantelIds: number[];
+  @IsArray() @Type(() => Number) @IsInt({ each: true }) @Min(1, { each: true }) plantelIds!: number[];
 }

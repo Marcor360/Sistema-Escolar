@@ -7,19 +7,19 @@ import { Docente } from './docente.entity';
 @Entity('grupo_materias')
 @Unique('uq_gm', ['grupoId', 'materiaId'])
 export class GrupoMateria {
-  @PrimaryGeneratedColumn() id: number;
-  @Column() grupoId: number;
+  @PrimaryGeneratedColumn() id!: number;
+  @Column() grupoId!: number;
   @ManyToOne(() => Grupo, { eager: true, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'grupo_id' })
-  grupo: Grupo;
-  @Column() materiaId: number;
+  grupo!: Grupo;
+  @Column() materiaId!: number;
   @ManyToOne(() => Materia, { eager: true })
   @JoinColumn({ name: 'materia_id' })
-  materia: Materia;
-  @Column({ type: 'int', nullable: true }) docenteId: number | null;
+  materia!: Materia;
+  @Column({ type: 'int', nullable: true }) docenteId!: number | null;
   @ManyToOne(() => Docente, { eager: true, nullable: true })
   @JoinColumn({ name: 'docente_id' })
-  docente: Docente | null;
+  docente!: Docente | null;
   /** Vínculo con la base certweb para la migración inicial (ETL); no se expone en la API pública. */
-  @Column({ type: 'bigint', nullable: true }) legacyId: string | null;
+  @Column({ type: 'bigint', nullable: true }) legacyId!: string | null;
 }

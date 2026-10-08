@@ -11,25 +11,25 @@ export type OrdenEstatus = 'CREADA' | 'PENDIENTE' | 'COMPLETADA' | 'FALLIDA' | '
 
 @Entity('ordenes_pago')
 export class OrdenPago {
-  @PrimaryGeneratedColumn() id: number;
-  @Index('idx_orden_pago_plantel') @Column() plantelId: number;
-  @ManyToOne(() => Plantel) @JoinColumn({ name: 'plantel_id' }) plantel: Plantel;
-  @Column() alumnoId: number;
+  @PrimaryGeneratedColumn() id!: number;
+  @Index('idx_orden_pago_plantel') @Column() plantelId!: number;
+  @ManyToOne(() => Plantel) @JoinColumn({ name: 'plantel_id' }) plantel!: Plantel;
+  @Column() alumnoId!: number;
   @ManyToOne(() => Alumno, { eager: true })
   @JoinColumn({ name: 'alumno_id' })
-  alumno: Alumno;
-  @Column({ type: 'int', nullable: true }) cargoId: number | null;
+  alumno!: Alumno;
+  @Column({ type: 'int', nullable: true }) cargoId!: number | null;
   @ManyToOne(() => Cargo, { nullable: true })
   @JoinColumn({ name: 'cargo_id' })
-  cargo: Cargo | null;
-  @Column('decimal', { precision: 12, scale: 2, transformer: decimalTransformer }) monto: number;
-  @Column({ length: 200 }) descripcion: string;
-  @Column({ length: 20, default: 'OPENPAY' }) proveedor: string;
-  @Index('idx_orden_externo') @Column({ type: String, length: 60, nullable: true }) idExterno: string | null;
-  @Column({ type: String, length: 300, nullable: true }) urlPago: string | null;
-  @Column({ length: 15, default: 'CREADA' }) estatus: OrdenEstatus;
-  @Column({ type: 'datetime', nullable: true }) expiraEn: Date | null;
-  @Column({ type: 'text', nullable: true }) payloadWebhook: string | null;
-  @CreateDateColumn() createdAt: Date;
-  @UpdateDateColumn() updatedAt: Date;
+  cargo!: Cargo | null;
+  @Column('decimal', { precision: 12, scale: 2, transformer: decimalTransformer }) monto!: number;
+  @Column({ length: 200 }) descripcion!: string;
+  @Column({ length: 20, default: 'OPENPAY' }) proveedor!: string;
+  @Index('idx_orden_externo') @Column({ type: String, length: 60, nullable: true }) idExterno!: string | null;
+  @Column({ type: String, length: 300, nullable: true }) urlPago!: string | null;
+  @Column({ length: 15, default: 'CREADA' }) estatus!: OrdenEstatus;
+  @Column({ type: 'datetime', nullable: true }) expiraEn!: Date | null;
+  @Column({ type: 'text', nullable: true }) payloadWebhook!: string | null;
+  @CreateDateColumn() createdAt!: Date;
+  @UpdateDateColumn() updatedAt!: Date;
 }

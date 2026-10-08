@@ -13,20 +13,20 @@ export class ListarAlumnosDto extends PaginacionDto {
 export class CrearAlumnoDto {
   // Cuenta
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim().toLowerCase() : value)
-  @IsEmail() @MaxLength(120) email: string;
-  @IsString() @MinLength(8) password: string;
+  @IsEmail() @MaxLength(120) email!: string;
+  @IsString() @MinLength(8) password!: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsString() @LongitudMinima(1) @MaxLength(80) nombre: string;
+  @IsString() @LongitudMinima(1) @MaxLength(80) nombre!: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsString() @LongitudMinima(1) @MaxLength(80) apellidoPaterno: string;
+  @IsString() @LongitudMinima(1) @MaxLength(80) apellidoPaterno!: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsOptional() @IsString() @MaxLength(80) apellidoMaterno?: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsOptional() @IsString() @MaxLength(20) telefono?: string;
   // Expediente
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim().toUpperCase() : value)
-  @IsString() @LongitudMinima(1) @MaxLength(20) matricula: string;
-  @Type(() => Number) @IsInt() @Min(1) plantelId: number;
+  @IsString() @LongitudMinima(1) @MaxLength(20) matricula!: string;
+  @Type(() => Number) @IsInt() @Min(1) plantelId!: number;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim().toUpperCase() : value)
   @IsOptional() @IsString() @MaxLength(18) curp?: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
@@ -40,7 +40,7 @@ export class CrearAlumnoDto {
 }
 
 export class TransferirAlumnoDto {
-  @Type(() => Number) @IsInt() @Min(1) plantelId: number;
+  @Type(() => Number) @IsInt() @Min(1) plantelId!: number;
 }
 
 export class ActualizarAlumnoDto {
@@ -67,5 +67,5 @@ export class ActualizarAlumnoDto {
 }
 
 export class ReactivarAlumnoDto {
-  @IsString() @LongitudMinima(3) @MaxLength(500) motivo: string;
+  @IsString() @LongitudMinima(3) @MaxLength(500) motivo!: string;
 }

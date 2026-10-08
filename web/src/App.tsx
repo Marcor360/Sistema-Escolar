@@ -1,3 +1,4 @@
+import { Cargando } from './components/Cargando';
 import { lazy } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './auth/AuthContext';
@@ -27,7 +28,7 @@ const ConfiguracionPage = lazy(() => import('./pages/Configuracion'));
 
 export default function App() {
   const { sesion, cargando, errorInicio } = useAuth();
-  if (cargando) return null;
+  if (cargando) return <Cargando />;
   if (errorInicio) return (
     <main className="login-fondo">
       <div className="login-caja">

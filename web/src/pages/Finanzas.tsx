@@ -1,3 +1,4 @@
+import { useConfirmacion } from '../components/useConfirmacion';
 import { PanelCargos } from '../features/finanzas/PanelCargos';
 import { PanelPagos } from '../features/finanzas/PanelPagos';
 import { PanelAdeudos } from '../features/finanzas/PanelAdeudos';
@@ -13,6 +14,7 @@ import { Conciliacion } from '../components/Conciliacion';
 import { Encabezado } from '../components/Encabezado';
 
 export default function FinanzasPage() {
+  const confirmacion = useConfirmacion();
   const dialogoMotivo = useDialogoMotivo();
   const [tab, setTab] = useState<'cargos' | 'pagos' | 'adeudos'>('cargos');
   const [conceptos, setConceptos] = useState<Concepto[]>([]);
@@ -33,7 +35,7 @@ export default function FinanzasPage() {
   const confirmarMasiva = async (preview: string, datos: object) => {
     if (!plantelOperacion) throw new Error('Selecciona el plantel de la operación masiva');
     const { data } = await api.post(preview, { ...datos, plantelId: Number(plantelOperacion) });
-    return confirm(`Plantel: ${planteles.find((p) => p.id === Number(plantelOperacion))?.nombre}\nCiclo: ${data.cicloId ?? 'Vigente / cargos existentes'}\nPeriodo: ${data.periodo ?? 'Cargos vencidos'}\nRegistros afectados: ${data.registros ?? data.generados ?? 0}\nTotal estimado: ${pesos(data.totalEstimado ?? 0)}\n¿Confirmar operación?`);
+    return await confirmacion.solicitar(`Plantel: ${planteles.find((p) => p.id === Number(plantelOperacion))?.nombre}\nCiclo: ${data.cicloId ?? 'Vigente / cargos existentes'}\nPeriodo: ${data.periodo ?? 'Cargos vencidos'}\nRegistros afectados: ${data.registros ?? data.generados ?? 0}\nTotal estimado: ${pesos(data.totalEstimado ?? 0)}\n¿Confirmar operación?`);
   };
   const corregir = (tipo: 'cargos' | 'pagos', id: number) => {
     dialogoMotivo.abrir({ titulo: tipo === 'cargos' ? 'Cancelar cargo' : 'Anular pago', advertencia: 'La operación conservará motivo, actor y fecha en la bitácora.', ejecutar: async (motivo) => {
@@ -187,7 +189,7 @@ export default function FinanzasPage() {
   };
 
   return (
-    <>{dialogoMotivo.elemento}
+    <>{confirmacion.elemento}{dialogoMotivo.elemento}
       <Encabezado titulo="Finanzas" detalle="Cargos, pagos, adeudos y cobranza" />
       <CatalogoConceptos cambiado={() => { void cargarCatalogos(); }} />
 

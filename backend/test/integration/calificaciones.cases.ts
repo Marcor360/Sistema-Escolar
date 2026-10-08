@@ -179,4 +179,21 @@ it('promueve alumnos seleccionados a preparación sin copiar notas ni habilitar 
     expect(await ctx.dataSource.getRepository(BitacoraAcademica).countBy({ accion: 'PROMOCION_ALUMNO', entidadId: ctx.alumnoId })).toBe(1);
   });
   },
+  53: (ctx) => {
+    it('cierre y captura concurrentes no permiten escribir después del cierre', async () => {
+      const token = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.adminId })).email);
+      const base = await ctx.dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: ctx.grupoMateriaIdMaestro });
+      const grupo = await ctx.dataSource.getRepository(Grupo).save({ nombre: `CC-${ctx.sufijo}`,cicloId: base.grupo.cicloId,plantelId: ctx.plantelId,activo: true });
+      const gm = await ctx.dataSource.getRepository(GrupoMateria).save({ grupoId: grupo.id,materiaId: base.materiaId,docenteId: null });
+      const alta = await ctx.api('/alumnos',{ method: 'POST',token,body: { email: `cc_${ctx.sufijo}@example.invalid`,nombre: 'Carrera',apellidoPaterno: 'Calificaciones',password: 'Integracion_Segura_42!',matricula: `CC${ctx.sufijo}`,plantelId: ctx.plantelId } }); expect(alta.response.status).toBe(201);
+      expect((await ctx.api(`/academico/grupos/${grupo.id}/alumnos`,{ method: 'POST',token,body: { alumnoId: alta.data.id } })).response.status).toBe(201);
+      const body = { grupoMateriaId: gm.id,parcial: 1,items: [{ alumnoId: alta.data.id,calificacion: 80 }] };
+      expect((await ctx.api('/calificaciones/captura',{ method: 'POST',token,body })).response.status).toBe(201);
+      const respuestas = await Promise.all([ctx.api(`/calificaciones/periodos/${gm.id}/1`,{ method: 'PATCH',token,body: { estatus: 'CERRADO' } }),ctx.api('/calificaciones/captura',{ method: 'POST',token,body: { ...body,motivo: 'Corrección concurrente autorizada',items: [{ alumnoId: alta.data.id,calificacion: 90 }] } })]);
+      expect(respuestas[0].response.status).toBe(200); expect([201,409]).toContain(respuestas[1].response.status);
+      const nota = await ctx.dataSource.getRepository(Calificacion).findOneByOrFail({ alumnoId: alta.data.id,grupoMateriaId: gm.id,parcial: 1 });
+      expect(Number(nota.calificacion)).toBe(respuestas[1].response.status === 201 ? 90 : 80);
+      expect((await ctx.api('/calificaciones/captura',{ method: 'POST',token,body: { ...body,motivo: 'Cambio tardío',items: [{ alumnoId: alta.data.id,calificacion: 95 }] } })).response.status).toBe(409);
+    });
+  },
 };

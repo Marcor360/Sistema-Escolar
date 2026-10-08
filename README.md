@@ -2,7 +2,17 @@
 
 > Portal web administrativo/docente, app móvil del alumno y API para gestión académica y financiera. El código cubre los flujos principales del MVP; todavía no hay certificación de piloto institucional ni despliegue productivo.
 
-**Versión candidata: `1.17.0` · Commit: `1.17.0` · 8 de octubre de 2026.** Backend, web, móvil y Expo declaran la misma versión. La CI del SHA publicado debe comprobarse en [GitHub Actions](https://github.com/Marcor360/Sistema-Escolar/actions/workflows/ci.yml). El piloto requiere todavía certificación sobre el servidor y dispositivos reales.
+**Versión candidata: `1.18.0` · Commit: `1.18.0` · 8 de octubre de 2026.** Backend, web, móvil y Expo declaran la misma versión. La CI del SHA publicado debe comprobarse en [GitHub Actions](https://github.com/Marcor360/Sistema-Escolar/actions/workflows/ci.yml). El piloto requiere todavía certificación sobre el servidor y dispositivos reales.
+
+## Estabilización 1.18.0
+
+- Importaciones de hasta 500 filas con previews persistentes cifrados, expiración, consumo único y confirmación atómica; catálogos por lote y bcrypt fuera de la transacción.
+- Resumen de cierre con columnas mínimas, mapas y conjuntos; pruebas de carga y carreras de promoción, inscripción, identidad y captura/cierre.
+- Contratos Swagger de importación, promoción, conducta y analítica; inicialización estricta de propiedades habilitada.
+- Confirmaciones accesibles en toda la web, carga visible al restaurar sesión y paneles separados de Alumnos, Grupos y Maestro.
+- Migración incremental espejo `migracion_previews_importacion.sql`; baseline conservado y DB_SYNC=false.
+
+Detalle, resultados, inventario y límites: [ESTABILIZACION_1.18.0.md](docs/ESTABILIZACION_1.18.0.md).
 
 ## Refactor y configuración 1.17.0
 
