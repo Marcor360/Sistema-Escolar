@@ -1,3 +1,4 @@
+import { esMaestroRestringido, exigirConsultaAcademica } from '../common/politica-acceso';
 import { CicloEscolar } from '../entities/ciclo-escolar.entity';
 import { PaginacionDto } from '../common/paginacion.dto';
 import { exigirGrupoVigente, inscripcionVigente } from '../common/contexto-academico';
@@ -31,12 +32,12 @@ export class CalificacionesService {
   ) {}
 
   private async validarGrupoMateria(grupoMateriaId: number, user: JwtUser) {
+    exigirConsultaAcademica(user);
     const gm = await this.grupoMaterias.findOne({ where: { id: grupoMateriaId } });
     if (!gm) throw new NotFoundException('Grupo-materia no encontrado');
     if (user.roles.includes('SUPERADMIN')) return gm;
     if (
-      user.roles.includes('MAESTRO') &&
-      !user.roles.some((rol) => ['ADMINISTRATIVO', 'FINANZAS'].includes(rol))
+      esMaestroRestringido(user)
     ) {
       const docente = await this.docentes.obtenerPorUsuario(user.sub);
       if (gm.docenteId !== docente.id) throw new ForbiddenException('La materia no está asignada a este docente');
@@ -62,8 +63,7 @@ export class CalificacionesService {
       if (!grupoMateria.grupo.activo) throw new ConflictException('El grupo no está activo');
       grupoMateria.grupo.ciclo = cicloActual;
       exigirGrupoVigente(grupoMateria.grupo);
-      if (grupoMateria.docenteId !== gm.docenteId && user.roles.includes('MAESTRO') &&
-          !user.roles.some((rol) => ['SUPERADMIN', 'ADMINISTRATIVO'].includes(rol))) {
+      if (grupoMateria.docenteId !== gm.docenteId && esMaestroRestringido(user)) {
         throw new ForbiddenException('La materia ya no está asignada a este docente');
       }
       const periodo = await manager.getRepository(PeriodoCalificacion).findOne({
@@ -195,10 +195,10 @@ export class CalificacionesService {
   }
 
   async porAlumno(alumnoId: number, user: JwtUser, cicloId?: number) {
+    exigirConsultaAcademica(user);
     const alumno = await this.alumnos.obtener(alumnoId);
     if (
-      user.roles.includes('MAESTRO') &&
-      !user.roles.some((rol) => ['SUPERADMIN', 'ADMINISTRATIVO', 'FINANZAS'].includes(rol))
+      esMaestroRestringido(user)
     ) {
       const docente = await this.docentes.obtenerPorUsuario(user.sub);
       const asignaciones = await this.grupoMaterias.find({ where: { docenteId: docente.id } });

@@ -1,3 +1,4 @@
+import { esMaestroRestringido } from '../common/politica-acceso';
 import { BitacoraAcademica } from '../entities/bitacora-academica.entity';
 import { inscripcionVigente } from '../common/contexto-academico';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
@@ -26,8 +27,7 @@ export class AlumnosService {
   async listar(query: ListarAlumnosDto, user?: JwtUser) {
     const pagina = query.pagina || 1;
     const porPagina = query.porPagina || 20;
-    const maestroPuro = user?.roles.includes('MAESTRO') &&
-      !user.roles.some((rol) => ['SUPERADMIN', 'ADMINISTRATIVO', 'FINANZAS'].includes(rol));
+    const maestroPuro = user ? esMaestroRestringido(user) : false;
     const planteles = user && !maestroPuro ? await this.scope.resolverFiltro(user, query.plantelId) : null;
     const qb = this.alumnos.createQueryBuilder('a')
       .leftJoinAndSelect('a.usuario', 'u')
@@ -71,8 +71,7 @@ export class AlumnosService {
     const alumno = await this.alumnos.findOne({ where: { id } });
     if (!alumno) throw new NotFoundException('Alumno no encontrado');
     if (user) {
-      const maestroPuro = user.roles.includes('MAESTRO') &&
-        !user.roles.some((rol) => ['SUPERADMIN', 'ADMINISTRATIVO', 'FINANZAS'].includes(rol));
+      const maestroPuro = esMaestroRestringido(user);
       if (maestroPuro) {
         const permitido = await this.inscripciones.createQueryBuilder('i')
           .where('i.alumno_id = :alumnoId', { alumnoId: id })

@@ -1,3 +1,4 @@
+import { esMaestroRestringido, puedeConsultarAcademico, puedeAdministrarFinanzas } from '../common/politica-acceso';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { ScopeService } from '../planteles/scope.service';
@@ -15,10 +16,9 @@ export class AnaliticaService {
     if (!ciclo) throw new NotFoundException('Selecciona un ciclo existente');
     const historico = ciclo.estado === 'CERRADO';
     const planteles = await this.scope.resolverFiltro(user, query.plantelId);
-    const maestro = user.roles.includes('MAESTRO') && !user.roles.some((r) => ['SUPERADMIN', 'ADMINISTRATIVO'].includes(r));
-    const soloFinanzas = user.roles.includes('FINANZAS') && !user.roles.some((r) => ['SUPERADMIN', 'ADMINISTRATIVO', 'MAESTRO'].includes(r));
+    const maestro = esMaestroRestringido(user);
     let academico: { clases: unknown[]; regla: string } | undefined;
-    if (!soloFinanzas) {
+    if (puedeConsultarAcademico(user)) {
       const qb = this.ds.getRepository(GrupoMateria).createQueryBuilder('gm').innerJoin('gm.grupo', 'g').innerJoin('gm.materia', 'm').innerJoin('g.plantel', 'p')
         .select('gm.id', 'clase').addSelect('g.id', 'grupoId').addSelect('g.nombre', 'grupo').addSelect('m.nombre', 'materia').addSelect('p.nombre', 'plantel')
         .where('g.ciclo_id = :ciclo', { ciclo: ciclo.id });
@@ -69,7 +69,7 @@ export class AnaliticaService {
       }
     }
     let financiero: { cargos: number; facturado: number; aplicado: number; saldo: number } | undefined;
-    if (!maestro && user.roles.some((r) => ['SUPERADMIN','ADMINISTRATIVO','FINANZAS'].includes(r))) {
+    if (puedeAdministrarFinanzas(user)) {
       const cargos = this.ds.getRepository(Cargo).createQueryBuilder('c').where('c.ciclo_id = :ciclo AND c.estatus <> :cancelado', { ciclo: ciclo.id, cancelado: 'CANCELADO' });
       if (planteles !== null) cargos.andWhere('c.plantel_id IN (:...planteles)', { planteles });
       const total = await cargos.clone().select('COUNT(*)', 'cargos').addSelect('COALESCE(SUM(c.monto - c.descuento + c.recargo),0)', 'facturado').getRawOne<Fila>();

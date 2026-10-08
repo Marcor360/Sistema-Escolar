@@ -1,3 +1,4 @@
+import { esMaestroRestringido } from '../common/politica-acceso';
 import { grupoVigente, inscripcionVigente } from '../common/contexto-academico';
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -45,8 +46,7 @@ export class CalendarioService {
         { plantelAlumno: alumno.plantelId, gruposAlumno: grupos },
       );
     } else {
-      const maestroPuro = user.roles.includes('MAESTRO') &&
-        !user.roles.some((rol) => ['SUPERADMIN', 'ADMINISTRATIVO', 'FINANZAS'].includes(rol));
+      const maestroPuro = esMaestroRestringido(user);
       if (maestroPuro) {
         const docente = await this.docentes.findOne({ where: { usuarioId: user.sub } });
         const asignaciones = docente

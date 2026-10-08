@@ -31,3 +31,7 @@ Resume lo que la API implementa hoy. No sustituye la autorización del servidor:
 - ¿Los permisos deben variar por nivel escolar, turno o periodo además del plantel/grupo?
 
 Rutas y roles por endpoint: [API.md](API.md). La decisión final debe documentarse por la institución y validarse con cuentas de prueba por rol y plantel.
+
+## Cuentas con varios roles (1.16.1)
+
+La capacidad depende de la operación. SUPERADMIN es global. ADMINISTRATIVO concede gestión académica en planteles asignados, incluso combinado con MAESTRO. MAESTRO sin ADMINISTRATIVO/SUPERADMIN sigue limitado a clases asignadas aunque también tenga FINANZAS. FINANZAS no concede consulta/captura/exportación de calificaciones, gestión de inscripciones ni conducta. Concede operación financiera por planteles; `/finanzas/alumnos` es el selector mínimo financiero independiente. La analítica suma el bloque financiero a las clases propias del maestro sin ampliar el alcance académico. Calendario GET admite ALUMNO, MAESTRO, ADMINISTRATIVO y SUPERADMIN; FINANZAS solo recibe 403.

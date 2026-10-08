@@ -1,3 +1,4 @@
+import { esMaestroRestringido } from '../common/politica-acceso';
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, In, Repository, SelectQueryBuilder } from 'typeorm';
@@ -42,8 +43,7 @@ export class UsuariosService {
   async listado(query: ListadoUsuariosDto, user: JwtUser) {
     const pagina = query.pagina || 1;
     const porPagina = Math.min(query.porPagina || 20, 100);
-    const maestroPuro = user.roles.includes('MAESTRO') &&
-      !user.roles.some((r) => ['SUPERADMIN', 'ADMINISTRATIVO', 'FINANZAS'].includes(r));
+    const maestroPuro = esMaestroRestringido(user);
     if (maestroPuro && query.tipo !== 'ALUMNO') {
       throw new ForbiddenException('Un maestro solo puede consultar alumnos de sus grupos');
     }

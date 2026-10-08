@@ -1472,6 +1472,78 @@ describe('Integración de flujos críticos (base aislada)', () => {
     expect(await dataSource.getRepository(Calificacion).countBy({ grupoMateriaId: require('typeorm').In(clases) })).toBe(900);
     tiempos.sort((a,b) => a-b); console.log(JSON.stringify({ prueba: 'carga_aislada', motor: process.env.DB_TYPE, alumnos: 100, clases: 3, notas: 900, concurrencia: 3, capturasP95Ms: tiempos[Math.ceil(tiempos.length * .95)-1], analiticaMs }));
   });
+  it('aplica capacidades por operación a seis combinaciones de roles sin ampliar clases por Finanzas', async () => {
+    const ciclo = await dataSource.getRepository(CicloEscolar).findOneByOrFail({ activo: true });
+    const passwordHash = await bcrypt.hash('Integracion_Segura_42!', 4);
+    const rolesRepo = dataSource.getRepository(Rol);
+    const nuevo = async (clave: string, roles: string[]) => dataSource.getRepository(Usuario).save({ email: `multi_${clave}_${sufijo}@example.invalid`, nombre: 'Multirol', apellidoPaterno: clave, passwordHash, activo: true, roles: await rolesRepo.findBy({ clave: require('typeorm').In(roles) }) });
+    const grupos = await dataSource.getRepository(Grupo).save([0,1].map((i) => ({ plantelId, cicloId: ciclo.id, nombre: `Multi${i}-${sufijo}`, activo: true })));
+    const materia = await dataSource.getRepository(Materia).save({ clave: `MUL${sufijo}`, nombre: 'Materia multirol', creditos: 0, activo: true });
+    const alumnos = [];
+    for (let i=0;i<2;i++) {
+      const u = await nuevo(`alumno${i}`, ['ALUMNO']);
+      const a = await dataSource.getRepository(Alumno).save({ usuarioId: u.id, plantelId, matricula: `MU${i}${sufijo}`, estatus: 'ACTIVO' }); alumnos.push(a);
+      await dataSource.getRepository(Inscripcion).save({ grupoId: grupos[i].id, alumnoId: a.id, estatus: 'ACTIVA' });
+    }
+    const externo = await nuevo('docenteExterno', ['MAESTRO']);
+    const docenteExterno = await dataSource.getRepository(Docente).save({ usuarioId: externo.id, numEmpleado: `MX${sufijo}`, estatus: 'ACTIVO' });
+    const ajena = await dataSource.getRepository(GrupoMateria).save({ grupoId: grupos[1].id, materiaId: materia.id, docenteId: docenteExterno.id });
+    const root = await emitirToken((await dataSource.getRepository(Usuario).findOneByOrFail({ id: superadminId })).email);
+    const incidencia = await api('/conducta/incidencias', { method: 'POST', token: root, body: { alumnoId: alumnos[1].id, grupoId: grupos[1].id, tipo: 'Seguimiento', gravedad: 'LEVE', descripcion: 'Solo personal autorizado', fecha: new Date().toISOString() } }); expect(incidencia.response.status).toBe(201);
+    const combinaciones = [['MAESTRO'], ['FINANZAS'], ['MAESTRO','FINANZAS'], ['ADMINISTRATIVO','MAESTRO'], ['ADMINISTRATIVO','FINANZAS'], ['SUPERADMIN']];
+    for (let i=0;i<combinaciones.length;i++) {
+      const roles = combinaciones[i], u = await nuevo(String(i), roles);
+      await dataSource.getRepository(UsuarioPlantel).save({ usuarioId: u.id, plantelId, activo: true });
+      const admin = roles.includes('ADMINISTRATIVO') || roles.includes('SUPERADMIN'), maestro = roles.includes('MAESTRO'), financiero = admin || roles.includes('FINANZAS');
+      const docente = maestro ? await dataSource.getRepository(Docente).save({ usuarioId: u.id, numEmpleado: `MM${i}${sufijo}`, estatus: 'ACTIVO' }) : null;
+      const propia = await dataSource.getRepository(GrupoMateria).save({ grupoId: grupos[0].id, materiaId: (await dataSource.getRepository(Materia).save({ clave: `MM${i}${sufijo}`, nombre: `Clase ${i}`, activo: true, creditos: 0 })).id, docenteId: docente?.id ?? null });
+      const token = await emitirToken(u.email);
+      const consultar = async (ruta: string, permitido: boolean) => expect((await api(ruta, { token })).response.status).toBe(permitido ? 200 : 403);
+      await consultar(`/alumnos/${alumnos[1].id}`, admin || !maestro);
+      await consultar(`/academico/grupos/${grupos[1].id}/alumnos`, admin);
+      await consultar(`/calificaciones/grupo-materia/${ajena.id}`, admin);
+      await consultar(`/calificaciones/grupo-materia/${propia.id}`, admin || maestro);
+      await consultar(`/calificaciones/alumno/${alumnos[1].id}`, admin);
+      const captura = await api('/calificaciones/captura', { method: 'POST', token, body: { grupoMateriaId: ajena.id, parcial: 1, motivo: 'Comprobación de capacidad', items: [{ alumnoId: alumnos[1].id, calificacion: 80 }] } }); expect(captura.response.status).toBe(admin ? 201 : 403);
+      await consultar(`/reportes/grupo-materias/${ajena.id}/calificaciones.xlsx`, admin);
+      await consultar('/calendario', admin || maestro);
+      await consultar(`/conducta/incidencias/${incidencia.data.id}`, admin);
+      await consultar('/finanzas/cargos', financiero);
+      const analitica = await api(`/analitica?cicloId=${ciclo.id}`, { token }); expect(analitica.response.status).toBe(200);
+      expect(analitica.data.financiero !== undefined).toBe(financiero);
+      expect(analitica.data.academico !== undefined).toBe(admin || maestro);
+      if (maestro && !admin) {
+        expect(analitica.data.academico.clases.some((c: any) => c.grupoMateriaId === ajena.id)).toBe(false);
+        expect(analitica.data.academico.clases.some((c: any) => c.grupoMateriaId === propia.id)).toBe(true);
+        const listado = await api(`/academico/grupos?buscar=Multi1-${sufijo}`, { token }); expect(listado.data.datos).toEqual([]);
+      }
+    }
+  });
+
+  it('promoción bloquea grupos y revalida una desactivación concurrente antes de inscribir', async () => {
+    const origenCiclo = await dataSource.getRepository(CicloEscolar).save({ clave: `PCO${sufijo}`, nombre: 'Origen carrera', fechaInicio: '2034-01-01', fechaFin: '2034-12-31', activo: false, estado: 'CERRADO' });
+    const destinoCiclo = await dataSource.getRepository(CicloEscolar).save({ clave: `PCD${sufijo}`, nombre: 'Destino carrera', fechaInicio: '2035-01-01', fechaFin: '2035-12-31', activo: false, estado: 'PREPARACION' });
+    const origen = await dataSource.getRepository(Grupo).save({ cicloId: origenCiclo.id, plantelId, nombre: `PCO-${sufijo}`, activo: false });
+    const destino = await dataSource.getRepository(Grupo).save({ cicloId: destinoCiclo.id, plantelId, nombre: `PCD-${sufijo}`, activo: true });
+    await dataSource.getRepository(Inscripcion).save({ grupoId: origen.id, alumnoId, estatus: 'ACTIVA' });
+    const token = await emitirToken((await dataSource.getRepository(Usuario).findOneByOrFail({ id: adminId })).email);
+    const holder = dataSource.createQueryRunner(); await holder.connect(); await holder.startTransaction();
+    await holder.manager.getRepository(Grupo).createQueryBuilder('g').select('g.id').where('g.id = :id', { id: destino.id }).setLock('pessimistic_write').getOne();
+    let senal!: () => void; const bloqueoSolicitado = new Promise<void>((r) => { senal = r; });
+    const original = dataSource.createQueryRunner.bind(dataSource);
+    const espia = jest.spyOn(dataSource, 'createQueryRunner').mockImplementation((modo) => {
+      const runner = original(modo), query = runner.query.bind(runner);
+      runner.query = ((sql: string, ...args: any[]) => { if (/grupos/i.test(sql) && /FOR UPDATE|UPDLOCK/i.test(sql)) senal(); return query(sql, ...args); }) as typeof runner.query;
+      return runner;
+    });
+    try {
+      const pendiente = api('/academico/promocion/confirmar', { method: 'POST', token, body: { origenGrupoId: origen.id, destinoGrupoId: destino.id, alumnoIds: [alumnoId], confirmado: true } });
+      await bloqueoSolicitado;
+      await holder.manager.getRepository(Grupo).update(destino.id, { activo: false }); await holder.commitTransaction();
+      expect((await pendiente).response.status).toBe(409);
+      expect(await dataSource.getRepository(Inscripcion).countBy({ grupoId: destino.id, estatus: 'ACTIVA' })).toBe(0);
+    } finally { espia.mockRestore(); if (holder.isTransactionActive) await holder.rollbackTransaction(); await holder.release(); }
+  });
   if (process.env.RUN_WEB_E2E === '1') for (const tipo of ['academico', 'financiero'] as const) {
     it(`navegador real: recorrido ${tipo} completo con API y DB reales`, async () => {
       const root = await emitirToken((await dataSource.getRepository(Usuario).findOneByOrFail({ id: superadminId })).email);

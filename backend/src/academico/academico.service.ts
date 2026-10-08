@@ -1,3 +1,4 @@
+import { esMaestroRestringido } from '../common/politica-acceso';
 import { BitacoraAcademica } from '../entities/bitacora-academica.entity';
 import { exigirGrupoConfigurable, grupoVigente } from '../common/contexto-academico';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
@@ -393,8 +394,7 @@ export class AcademicoService {
   }
 
   private esMaestroLimitado(user: JwtUser): boolean {
-    return user.roles.includes('MAESTRO') &&
-      !user.roles.some((rol) => ['SUPERADMIN', 'ADMINISTRATIVO', 'FINANZAS'].includes(rol));
+    return esMaestroRestringido(user);
   }
 
   private async validarAccesoGrupo(grupoId: number, user: JwtUser): Promise<void> {

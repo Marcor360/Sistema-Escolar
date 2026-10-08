@@ -2,7 +2,16 @@
 
 > Portal web administrativo/docente, app móvil del alumno y API para gestión académica y financiera. El código cubre los flujos principales del MVP; todavía no hay certificación de piloto institucional ni despliegue productivo.
 
-**Versión candidata: `1.16.0` · Commit: `1.16.0` · 7 de octubre de 2026.** Backend, web, móvil y Expo declaran la misma versión. La CI del SHA publicado debe comprobarse en [GitHub Actions](https://github.com/Marcor360/Sistema-Escolar/actions/workflows/ci.yml). El piloto requiere todavía certificación sobre el servidor y dispositivos reales.
+**Versión candidata: `1.16.1` · Commit: `1.16.1` · 8 de octubre de 2026.** Backend, web, móvil y Expo declaran la misma versión. La CI del SHA publicado debe comprobarse en [GitHub Actions](https://github.com/Marcor360/Sistema-Escolar/actions/workflows/ci.yml). El piloto requiere todavía certificación sobre el servidor y dispositivos reales.
+
+## Correcciones de seguridad 1.16.1
+
+- Política central por operación: Finanzas no amplía acceso académico de maestros; la analítica entrega capacidades académicas y financieras por separado.
+- Calendario exclusivo de alumno, maestro, administrativo y superadmin; Finanzas solo no tiene acceso.
+- Promoción bloquea ciclos, plantel y grupos en orden determinista y revalida contexto antes de inscribir.
+- Pruebas de seis combinaciones de roles y promoción frente a desactivación concurrente en MySQL/SQL Server.
+
+Detalle: [CORRECCIONES_1.16.1.md](docs/CORRECCIONES_1.16.1.md).
 
 ## Cambios incluidos en la versión 1.16.0
 

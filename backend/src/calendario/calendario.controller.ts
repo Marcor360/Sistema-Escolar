@@ -15,6 +15,7 @@ export class CalendarioController {
   constructor(private readonly service: CalendarioService) {}
 
   @Get()
+  @Roles('ALUMNO', 'MAESTRO', 'ADMINISTRATIVO')
   listar(
     @CurrentUser() user: JwtUser,
     @Query('desde') desde?: string,
