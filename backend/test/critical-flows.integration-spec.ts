@@ -1,3 +1,4 @@
+import { registrarBarrido } from './integration/barrido.cases';
 import { registrarCicloOperativo } from './integration/recorrido-academico';
 import { ContextoIntegracion } from './integration/contexto';
 import { casos_baseline } from './integration/baseline.cases';
@@ -408,6 +409,7 @@ Object.keys(casos).map(Number).sort((a,b) => a-b).forEach((id) => casos[id](cont
   registrarCapturaSinCambios(contexto);
   registrarAltasInstitucionales(contexto);
   registrarRecorridoFinanciero(contexto);
+  registrarBarrido(contexto);
 
   afterAll(async () => {
     if (archivoPrueba) {

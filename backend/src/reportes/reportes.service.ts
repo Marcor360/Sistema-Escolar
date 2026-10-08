@@ -1,3 +1,4 @@
+import { contentDisposition } from '../common/content-disposition';
 import { promedioOficial } from '../common/promedio-oficial';
 import { Inscripcion } from '../entities/inscripcion.entity';
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
@@ -154,7 +155,7 @@ export class ReportesService {
 
     const nombre = `calificaciones-${gm.grupo.nombre}-${gm.materia.clave}.xlsx`.replace(/\s+/g, '_');
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename=${nombre}`);
+    res.setHeader('Content-Disposition', contentDisposition(nombre, 'attachment'));
     await wb.xlsx.write(res);
     res.end();
   }
@@ -198,7 +199,7 @@ export class ReportesService {
 
     const institucion = this.config.get<string>('NOMBRE_INSTITUCION') || 'Institución Educativa';
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `inline; filename=boleta-${alumno.matricula}.pdf`);
+    res.setHeader('Content-Disposition', contentDisposition(`boleta-${alumno.matricula}.pdf`, 'inline'));
 
     const doc = new PDFDocument({ margin: 50, size: 'LETTER' });
     doc.pipe(res);
@@ -285,7 +286,7 @@ export class ReportesService {
       });
     }
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename=adeudos.xlsx');
+    res.setHeader('Content-Disposition', contentDisposition('adeudos.xlsx', 'attachment'));
     await wb.xlsx.write(res);
     res.end();
   }

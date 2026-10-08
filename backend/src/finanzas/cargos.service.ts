@@ -314,7 +314,7 @@ export class CargosService {
     const qb = this.cargos.createQueryBuilder('c').leftJoinAndSelect('c.alumno', 'a').leftJoinAndSelect('a.usuario', 'u')
       .where('c.estatus IN (:...estatus)', { estatus: ['PENDIENTE', 'PARCIAL', 'VENCIDO'] });
     if (planteles !== null) qb.andWhere('c.plantel_id IN (:...planteles)', { planteles });
-    const [cargos, total] = await qb.orderBy('c.fecha_vencimiento', 'ASC').addOrderBy('c.id', 'ASC')
+    const [cargos, total] = await qb.orderBy('c.fechaVencimiento', 'ASC').addOrderBy('c.id', 'ASC')
       .skip((pagina - 1) * porPagina).take(porPagina).getManyAndCount();
     const pagado = await this.pagadoPorCargo(cargos.map((c) => c.id));
     return { datos: cargos.map((c) => this.proyectarCargoFinanciero({ ...c, total: this.totalDeCargo(c),

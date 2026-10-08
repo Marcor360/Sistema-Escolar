@@ -52,6 +52,8 @@ describe('UsuariosService.actualizar revoca sesiones', () => {
       findOne: jest.fn().mockResolvedValue(cuenta),
       save: jest.fn(async (usuario) => usuario),
     };
+    const manager = { getRepository: jest.fn(() => usuarios) };
+    Object.assign(usuarios, { manager: { transaction: jest.fn(async (cb) => cb(manager)) } });
     const service = new UsuariosService(usuarios as any, {} as any, {} as any, {} as any, {} as any, {} as any);
 
     const resultado = await service.actualizar(1, { activo: true } as any);

@@ -1,3 +1,4 @@
+import { contentDisposition } from '../common/content-disposition';
 import { ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
@@ -177,7 +178,10 @@ export class ArchivosService {
     const ruta = join(uploadsDir, basename(archivoRuta));
     if (!existsSync(ruta)) throw new NotFoundException('Archivo no encontrado');
     res.setHeader('Content-Type', mime);
-    res.setHeader('Content-Disposition', `inline; filename="${archivoNombre.replace(/"/g, "'")}"`);
-    createReadStream(ruta).pipe(res);
+    res.setHeader('Content-Disposition', contentDisposition(archivoNombre, 'inline'));
+    createReadStream(ruta).on('error', () => {
+      if (!res.headersSent) res.status(404).end();
+      else res.destroy();
+    }).pipe(res);
   }
 }

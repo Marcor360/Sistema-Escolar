@@ -209,17 +209,22 @@ export class UsuariosService {
   }
 
   async actualizar(id: number, dto: ActualizarUsuarioDto, manager?: EntityManager) {
-    const usuarios = manager?.getRepository(Usuario) ?? this.usuarios;
-    const usuario = await usuarios.findOne({ where: { id } });
+    if (!manager) return this.usuarios.manager.transaction((m) => this.actualizarBloqueado(id, dto, m, false));
+    return this.actualizarBloqueado(id, dto, manager, true);
+  }
+
+  private async actualizarBloqueado(id: number, dto: ActualizarUsuarioDto, manager: EntityManager, desdeExpediente: boolean) {
+    const usuarios = manager.getRepository(Usuario);
+    const usuario = await usuarios.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
     if (!usuario) throw new NotFoundException('Usuario no encontrado');
-    if (!manager && dto.activo !== undefined && usuario.roles.some((r) => ['ALUMNO', 'MAESTRO'].includes(r.clave))) {
+    if (!desdeExpediente && dto.activo !== undefined && usuario.roles.some((r) => ['ALUMNO', 'MAESTRO'].includes(r.clave))) {
       throw new ConflictException('Gestiona el estado de la cuenta desde su expediente');
     }
     if (dto.password) { usuario.passwordHash = await bcrypt.hash(dto.password, 10); usuario.passwordChangeRequired = true; }
     const cambiaEstado = dto.activo !== undefined && dto.activo !== usuario.activo;
     if (dto.password || cambiaEstado) usuario.sessionVersion = (usuario.sessionVersion ?? 0) + 1;
     if (dto.roles) {
-      if (!manager) throw new ConflictException('Gestiona los roles y planteles desde la edición de personal');
+      if (!desdeExpediente) throw new ConflictException('Gestiona los roles y planteles desde la edición de personal');
       for (const rol of ['ALUMNO', 'MAESTRO'] as const) {
         if (dto.roles.includes(rol) !== usuario.roles.some((r) => r.clave === rol)) {
           throw new ConflictException('Los roles de alumno y docente se gestionan desde sus expedientes');

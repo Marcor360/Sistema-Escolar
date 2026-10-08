@@ -1,5 +1,5 @@
 import { esMaestroRestringido } from '../common/politica-acceso';
-import { grupoVigente, inscripcionVigente } from '../common/contexto-academico';
+import { exigirGrupoConfigurable, grupoVigente, inscripcionVigente } from '../common/contexto-academico';
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -105,6 +105,7 @@ export class CalendarioService {
     if (dto.grupoId) {
       const grupo = await this.grupos.findOne({ where: { id: dto.grupoId } });
       if (!grupo) throw new NotFoundException('Grupo no encontrado');
+      exigirGrupoConfigurable(grupo);
       if (maestroPuro && !grupo.activo) throw new ForbiddenException('No puedes crear eventos para un grupo inactivo');
       if (plantelId && grupo.plantelId !== plantelId) throw new ForbiddenException('El grupo no pertenece al plantel indicado');
       plantelId = grupo.plantelId;

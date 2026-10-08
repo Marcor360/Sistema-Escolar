@@ -32,7 +32,7 @@ export class OrdenesService {
     if (!user.roles.includes('SUPERADMIN')) qb.andWhere(
       'EXISTS (SELECT 1 FROM usuario_planteles up WHERE up.usuario_id = :actor AND up.plantel_id = o.plantel_id AND up.activo = :activo)',
       { actor: user.sub, activo: true });
-    const [datos, total] = await qb.orderBy('o.created_at', 'ASC').skip((pagina - 1) * 20).take(20).getManyAndCount();
+    const [datos, total] = await qb.orderBy('o.createdAt', 'ASC').addOrderBy('o.id', 'ASC').skip((pagina - 1) * 20).take(20).getManyAndCount();
     return { datos: datos.map((o) => ({ id: o.id, alumnoId: o.alumnoId, matricula: o.alumno.matricula, monto: o.monto,
       fecha: o.createdAt, referencia: o.idExterno ?? `ORD-${o.id}`, estatus: o.estatus,
       motivo: o.estatus === 'CREADA' ? 'Creación ambigua: verificar con el proveedor' : 'Pendiente de resultado del proveedor' })), total, pagina, porPagina: 20 };

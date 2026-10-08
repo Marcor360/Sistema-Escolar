@@ -136,10 +136,11 @@ export class AuthService {
         throw new UnauthorizedException('La contraseña actual no es correcta');
       }
       if (actual === nueva) throw new BadRequestException('Elige una contraseña distinta de la temporal');
-      usuario.passwordHash = await bcrypt.hash(nueva, 10);
-      usuario.passwordChangeRequired = false;
-      usuario.sessionVersion = (usuario.sessionVersion ?? 0) + 1;
-      await usuarios.save(usuario);
+      const actualizado = await usuarios.update({ id: usuario.id, activo: true }, {
+        passwordHash: await bcrypt.hash(nueva, 10), passwordChangeRequired: false,
+        sessionVersion: () => 'COALESCE(session_version, 0) + 1',
+      });
+      if (actualizado.affected !== 1) throw new UnauthorizedException('La cuenta ya no está activa');
       await manager.getRepository(PasswordResetToken).update(
         { usuarioId, usado: false }, { usado: true },
       );
@@ -179,6 +180,12 @@ export class AuthService {
       throw new BadRequestException('Token inválido o expirado');
     }
     await this.dataSource.transaction(async (manager) => {
+      // Mismo orden de bloqueo que cambio de contraseña: usuario antes de tokens.
+      const usuarios = manager.getRepository(Usuario);
+      const usuario = await usuarios.findOne({
+        where: { id: registro.usuarioId, activo: true }, select: ['id'], lock: { mode: 'pessimistic_write' },
+      });
+      if (!usuario) throw new UnauthorizedException('La cuenta ya no está activa');
       const tokens = manager.getRepository(PasswordResetToken);
       const consumo = await tokens.createQueryBuilder()
         .update(PasswordResetToken)
@@ -189,15 +196,11 @@ export class AuthService {
         .execute();
       if (consumo.affected !== 1) throw new BadRequestException('Token inválido o expirado');
 
-      const usuarios = manager.getRepository(Usuario);
-      const usuario = await usuarios.findOne({
-        where: { id: registro.usuarioId, activo: true }, select: ['id', 'passwordHash', 'sessionVersion'],
+      const actualizado = await usuarios.update({ id: usuario.id, activo: true }, {
+        passwordHash: await bcrypt.hash(password, 10), passwordChangeRequired: false,
+        sessionVersion: () => 'COALESCE(session_version, 0) + 1',
       });
-      if (!usuario) throw new UnauthorizedException('La cuenta ya no está activa');
-      usuario.passwordHash = await bcrypt.hash(password, 10);
-      usuario.passwordChangeRequired = false;
-      usuario.sessionVersion = (usuario.sessionVersion ?? 0) + 1;
-      await usuarios.save(usuario);
+      if (actualizado.affected !== 1) throw new UnauthorizedException('La cuenta ya no está activa');
       await tokens.update({ usuarioId: registro.usuarioId, usado: false }, { usado: true });
     });
     return { mensaje: 'Contraseña actualizada' };

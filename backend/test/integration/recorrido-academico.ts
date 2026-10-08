@@ -36,6 +36,7 @@ export function registrarCicloOperativo(ctx: ContextoIntegracion) {
       expect((await post(`/academico/ciclos/${ciclo.data.id}/iniciar-cierre`,{ confirmado: true })).response.status).toBe(201);
       const resumen = await ctx.api(`/academico/ciclos/${ciclo.data.id}/cierre`,{ token }); expect(resumen.data).toMatchObject({ inscritos: 1,faltantes: [],puedeCerrar: true });
       expect((await post(`/academico/ciclos/${ciclo.data.id}/cerrar`,{ confirmado: true })).response.status).toBe(201);
+      expect((await post('/calendario',{ titulo: 'Evento tardío',grupoId: grupoB.data.id,fechaInicio: '2039-01-01T12:00:00Z' })).response.status).toBe(409);
       expect((await post('/calificaciones/captura',{ grupoMateriaId: claseB.data.id,parcial: 1,motivo: 'Cambio tardío',items: [{ alumnoId: alumno.data.id,calificacion: 95 }] })).response.status).toBe(409);
       const futuro = await post('/academico/ciclos',{ clave: `OF${ctx.sufijo}`,nombre: 'Siguiente ciclo operativo',fechaInicio: '2039-08-01',fechaFin: '2040-07-31' }); expect(futuro.response.status).toBe(201); ciclosCreados.push(futuro.data.id);
       const destino = await post('/academico/grupos',{ cicloId: futuro.data.id,plantelId: ctx.otroPlantelId,nombre: 'Operativo promovido' }); expect(destino.response.status).toBe(201);

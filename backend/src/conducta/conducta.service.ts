@@ -36,7 +36,8 @@ export class ConductaService {
       const ids = [...new Set((await this.gruposDocente(user)).map((c) => c.grupoId))];
       if (!ids.length) return { datos: [], total: 0, pagina: query.pagina, porPagina: query.porPagina };
       qb.andWhere('i.grupo_id IN (:...grupos)', { grupos: ids });
-    } else if (permitidos !== null) qb.andWhere('g.plantel_id IN (:...planteles)', { planteles: permitidos });
+    }
+    if (permitidos !== null) qb.andWhere('g.plantel_id IN (:...planteles)', { planteles: permitidos });
     const [datos, total] = await qb.orderBy('i.id', 'DESC').skip((query.pagina - 1) * query.porPagina).take(query.porPagina).getManyAndCount();
     return { datos, total, pagina: query.pagina, porPagina: query.porPagina };
   }
