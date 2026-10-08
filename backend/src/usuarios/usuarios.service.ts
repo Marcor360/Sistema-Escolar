@@ -1,8 +1,8 @@
+import { hashPasswordNueva } from '../common/password-bcrypt';
 import { esMaestroRestringido } from '../common/politica-acceso';
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, In, Repository, SelectQueryBuilder } from 'typeorm';
-import * as bcrypt from 'bcryptjs';
 import { Usuario } from '../entities/usuario.entity';
 import { Rol } from '../entities/rol.entity';
 import { ActualizarPersonalDto, ActualizarUsuarioDto, CrearUsuarioDto } from './usuarios.dto';
@@ -198,7 +198,7 @@ export class UsuariosService {
     const roles = await this.resolverRoles(dto.roles, manager);
     const usuario = usuarios.create({
       email: dto.email,
-      passwordHash: await bcrypt.hash(dto.password, 10),
+      passwordHash: await hashPasswordNueva(dto.password),
       nombre: dto.nombre,
       apellidoPaterno: dto.apellidoPaterno,
       apellidoMaterno: dto.apellidoMaterno ?? null,
@@ -220,7 +220,7 @@ export class UsuariosService {
     if (!desdeExpediente && dto.activo !== undefined && usuario.roles.some((r) => ['ALUMNO', 'MAESTRO'].includes(r.clave))) {
       throw new ConflictException('Gestiona el estado de la cuenta desde su expediente');
     }
-    if (dto.password) { usuario.passwordHash = await bcrypt.hash(dto.password, 10); usuario.passwordChangeRequired = true; }
+    if (dto.password) { usuario.passwordHash = await hashPasswordNueva(dto.password); usuario.passwordChangeRequired = true; }
     const cambiaEstado = dto.activo !== undefined && dto.activo !== usuario.activo;
     if (dto.password || cambiaEstado) usuario.sessionVersion = (usuario.sessionVersion ?? 0) + 1;
     if (dto.roles) {
@@ -236,8 +236,8 @@ export class UsuariosService {
     Object.assign(usuario, {
       nombre: dto.nombre ?? usuario.nombre,
       apellidoPaterno: dto.apellidoPaterno ?? usuario.apellidoPaterno,
-      apellidoMaterno: dto.apellidoMaterno ?? usuario.apellidoMaterno,
-      telefono: dto.telefono ?? usuario.telefono,
+      apellidoMaterno: dto.apellidoMaterno === undefined ? usuario.apellidoMaterno : dto.apellidoMaterno,
+      telefono: dto.telefono === undefined ? usuario.telefono : dto.telefono,
       activo: dto.activo ?? usuario.activo,
     });
     return this.proyectar(await usuarios.save(usuario));

@@ -12,6 +12,8 @@ import { Material } from '../entities/material.entity';
 import { Entrega } from '../entities/entrega.entity';
 import { Inscripcion } from '../entities/inscripcion.entity';
 import { Usuario } from '../entities/usuario.entity';
+import { Sesion } from '../entities/sesion.entity';
+import { grupoVigente } from '../common/contexto-academico';
 import { ScopeService } from '../planteles/scope.service';
 import { JwtUser } from '../common/current-user.decorator';
 
@@ -21,6 +23,9 @@ interface EnlacePayload {
   sub: number;
   rec: RecursoArchivo;
   id: number;
+  sid: string;
+  ver: number;
+  kind: 'FILE';
 }
 
 /** Deducción de Content-Type para entregas (los materiales ya guardan su `mime`). */
@@ -60,13 +65,13 @@ export class ArchivosService {
   async enlaceMaterial(id: number, user: JwtUser) {
     const material = await this.obtenerMaterial(id);
     await this.validarAccesoMaterial(material, user);
-    return { url: `/api/archivos/materiales/${id}?t=${this.firmar({ sub: user.sub, rec: 'material', id })}` };
+    return { url: `/api/archivos/materiales/${id}?t=${this.firmar({ sub: user.sub, rec: 'material', id }, user)}` };
   }
 
   async descargarMaterial(id: number, token: string, res: Response) {
     const payload = this.verificarToken(token, 'material', id);
     const material = await this.obtenerMaterial(id);
-    const user = await this.usuarioDesdeToken(payload.sub);
+    const user = await this.usuarioDesdeToken(payload);
     await this.validarAccesoMaterial(material, user);
     this.enviarArchivo(res, material.archivoRuta, material.archivoNombre, material.mime ?? undefined);
   }
@@ -75,13 +80,13 @@ export class ArchivosService {
   async enlaceEntrega(id: number, user: JwtUser) {
     const entrega = await this.obtenerEntrega(id);
     await this.validarAccesoEntrega(entrega, user);
-    return { url: `/api/archivos/entregas/${id}?t=${this.firmar({ sub: user.sub, rec: 'entrega', id })}` };
+    return { url: `/api/archivos/entregas/${id}?t=${this.firmar({ sub: user.sub, rec: 'entrega', id }, user)}` };
   }
 
   async descargarEntrega(id: number, token: string, res: Response) {
     const payload = this.verificarToken(token, 'entrega', id);
     const entrega = await this.obtenerEntrega(id);
-    const user = await this.usuarioDesdeToken(payload.sub);
+    const user = await this.usuarioDesdeToken(payload);
     await this.validarAccesoEntrega(entrega, user);
     const mime = MIME_POR_EXTENSION[extname(entrega.archivoNombre ?? '').toLowerCase()] ?? 'application/octet-stream';
     this.enviarArchivo(res, entrega.archivoRuta as string, entrega.archivoNombre as string, mime);
@@ -113,7 +118,7 @@ export class ArchivosService {
       await this.scope.validarGestion(user, grupo.plantelId);
       return;
     }
-    if (user.roles.includes('MAESTRO') && material.grupoMateria.docente?.usuarioId === user.sub && grupo.activo) return;
+    if (user.roles.includes('MAESTRO') && material.grupoMateria.docente?.usuarioId === user.sub && grupoVigente(grupo)) return;
     if (user.roles.includes('ALUMNO') && (await this.alumnoInscritoEnGrupo(grupo.id, user.sub))) return;
     throw new ForbiddenException('No tienes acceso a este material');
   }
@@ -125,7 +130,7 @@ export class ArchivosService {
       await this.scope.validarGestion(user, grupo.plantelId);
       return;
     }
-    if (user.roles.includes('MAESTRO') && entrega.actividad.grupoMateria.docente?.usuarioId === user.sub && grupo.activo) return;
+    if (user.roles.includes('MAESTRO') && entrega.actividad.grupoMateria.docente?.usuarioId === user.sub && grupoVigente(grupo)) return;
     if (user.roles.includes('ALUMNO') && entrega.alumno.usuarioId === user.sub) return;
     throw new ForbiddenException('No tienes acceso a esta entrega');
   }
@@ -137,27 +142,28 @@ export class ArchivosService {
       .where('i.grupo_id = :grupoId', { grupoId })
       .andWhere('i.estatus = :activa', { activa: 'ACTIVA' })
       .andWhere(
-        'EXISTS (SELECT 1 FROM alumnos al INNER JOIN grupos g ON g.id = i.grupo_id WHERE al.id = i.alumno_id AND al.usuario_id = :usuarioId AND g.activo = :grupoActivo)',
-        { usuarioId, grupoActivo: true },
+        'EXISTS (SELECT 1 FROM alumnos al INNER JOIN grupos g ON g.id = i.grupo_id INNER JOIN ciclos_escolares c ON c.id = g.ciclo_id INNER JOIN planteles p ON p.id = g.plantel_id WHERE al.id = i.alumno_id AND al.usuario_id = :usuarioId AND al.estatus = :alumnoActivo AND g.activo = :grupoActivo AND c.activo = :grupoActivo AND p.activo = :grupoActivo)',
+        { usuarioId, grupoActivo: true, alumnoActivo: 'ACTIVO' },
       )
       .getCount();
     return total > 0;
   }
 
   /** Reconstruye el JwtUser (con roles vigentes) a partir del `sub` del enlace firmado. */
-  private async usuarioDesdeToken(usuarioId: number): Promise<JwtUser> {
-    const usuario = await this.usuarios.findOne({ where: { id: usuarioId, activo: true } });
-    if (!usuario) throw new UnauthorizedException('Enlace inválido o expirado');
+  private async usuarioDesdeToken(payload: EnlacePayload): Promise<JwtUser> {
+    const usuario = await this.usuarios.findOne({ where: { id: payload.sub, activo: true } });
+    if (!usuario || usuario.passwordChangeRequired || usuario.sessionVersion !== payload.ver) throw new UnauthorizedException('Enlace inválido o sesión revocada');
+    const sesion = await this.usuarios.manager.getRepository(Sesion).findOne({ where: { id: payload.sid, usuarioId: usuario.id, revocada: false } });
+    if (!sesion || sesion.expiraEn <= new Date() || sesion.version !== payload.ver) throw new UnauthorizedException('La sesión del enlace fue revocada');
     return {
-      sub: usuario.id,
-      email: usuario.email,
-      nombre: usuario.nombreCompleto,
-      roles: usuario.roles.map((r) => r.clave),
+      sub: usuario.id, email: usuario.email, nombre: usuario.nombreCompleto,
+      roles: usuario.roles.map((r) => r.clave), ver: payload.ver, sid: payload.sid, kind: 'ACCESS',
     };
   }
 
-  private firmar(payload: EnlacePayload): string {
-    return this.jwt.sign(payload, { expiresIn: '5m' });
+  private firmar(payload: Pick<EnlacePayload, 'sub' | 'rec' | 'id'>, user: JwtUser): string {
+    if (!user.sid || !Number.isInteger(user.ver)) throw new UnauthorizedException('La sesión no tiene identificador válido');
+    return this.jwt.sign({ ...payload, sid: user.sid, ver: user.ver, kind: 'FILE' }, { expiresIn: '5m' });
   }
 
   private verificarToken(token: string, rec: RecursoArchivo, id: number): EnlacePayload {
@@ -170,6 +176,7 @@ export class ArchivosService {
     if (payload.rec !== rec || payload.id !== id) {
       throw new ForbiddenException('El enlace no corresponde a este archivo');
     }
+    if (payload.kind !== 'FILE' || typeof payload.sid !== 'string' || !payload.sid || !Number.isInteger(payload.sub) || !Number.isInteger(payload.ver)) throw new UnauthorizedException('Enlace inválido');
     return payload;
   }
 

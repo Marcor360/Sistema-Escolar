@@ -168,3 +168,15 @@ POST `/notificaciones/difundir` (ADMINISTRATIVO; por `usuarioIds` o `rol`, limit
 - PATCH de materia/concepto/ciclo/grupo exige al menos un campo válido. Omisión conserva valor; null se admite solo donde el dominio lo permite. Fechas DATE usan YYYY-MM-DD; importes respetan DECIMAL(12,2), sin redondear entradas de más de dos decimales. Claves duplicadas producen 409 y recursos inexistentes 404.
 
 Swagger y los DTO/controladores son el contrato detallado por endpoint; esta guía es un resumen operativo.
+
+## Precisiones de 1.18.4
+
+- Enlaces de `/archivos/*/:id/enlace`: JWT de tipo FILE de cinco minutos, ligado a la sesión y versión del usuario. Logout revoca los enlaces de ese dispositivo; cambio de contraseña/estado revoca por versión. Un enlace antiguo sin sid/ver se debe regenerar. Materiales operativos requieren ciclo/grupo/plantel vigente; alumno mantiene lectura de sus entregas históricas.
+- PATCH nullable: omitir conserva el dato; null elimina apellido materno, teléfono y campos opcionales del expediente, descripción de actividad y comentarios de entrega. Las respuestas de alumno/docente incluyen el nombre recién actualizado.
+- Captura oficial: retirar `observaciones` con null es una corrección real y requiere motivo; guarda historial. Nota y ponderación de actividad admiten como máximo dos decimales.
+- Recuperación de una orden CREADA que Openpay confirma completed aplica el pago idempotentemente y devuelve COMPLETADA. Móvil comunica el pago confirmado y recarga el estado de cuenta.
+- Eventos: título con contenido después de trim e intervalo no invertido, incluso al indicar solo hasta. Configuración institucional normaliza nombres antes de validar longitud.
+
+Contraseñas nuevas: mínimo ocho caracteres y máximo 72 bytes UTF-8 en altas, edición, cambio y recuperación. El límite cuenta bytes, no caracteres; el login de una cuenta existente mantiene compatibilidad.
+
+El formato nuevo de hash conserva bcrypt y marca que el límite fue validado. El login rechaza entradas con bytes sobrantes para esos hashes. Hashes anteriores conservan compatibilidad para permitir renovar contraseñas; una contraseña legacy excesiva debe renovarse para retirar su truncamiento. La columna de hash existente no cambia.

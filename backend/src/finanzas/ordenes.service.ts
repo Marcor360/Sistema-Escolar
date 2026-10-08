@@ -47,8 +47,7 @@ export class OrdenesService {
     if (!charge) throw new ConflictException('El proveedor todavía no confirma la orden; se conserva para revisión');
     if (charge.order_id !== `ORD-${id}` || Math.round(Number(charge.amount) * 100) !== Math.round(Number(orden.monto) * 100) ||
         charge.currency !== 'MXN' || charge.transaction_type !== 'charge') throw new ConflictException('La respuesta del proveedor no coincide con la orden');
-    await this.aplicarRespuestaCargo(id, charge);
-    if (charge.status === 'completed') await this.pagos.registrarDePasarela(orden, Number(charge.amount), charge.id);
+    await this.aplicarResultadoVerificado(id, charge);
     await this.bitacora.registrar(user.sub, 'CONCILIAR_ORDEN', 'orden_pago', id,
       `estado_proveedor=${charge.status}; ${motivo.trim()}`, orden.plantelId);
     return { id, estadoProveedor: charge.status, mensaje: 'Resultado del proveedor verificado y auditado' };
@@ -97,7 +96,7 @@ export class OrdenesService {
             existente.currency !== 'MXN' || existente.transaction_type !== 'charge') {
           throw new ConflictException('El cargo encontrado requiere revisión');
         }
-        const conciliada = await this.aplicarRespuestaCargo(orden.id, existente);
+        const conciliada = await this.aplicarResultadoVerificado(orden.id, existente);
         return this.proyectarOrden(conciliada);
       }
       // A reserved order is never submitted twice. Even if lookup is temporarily empty,
@@ -122,9 +121,11 @@ export class OrdenesService {
       const status = respuesta && typeof respuesta === 'object' && 'status' in respuesta &&
         typeof respuesta.status === 'number' ? respuesta.status : undefined;
       if (status && status >= 400 && status < 500 && ![408, 409, 429].includes(status)) {
-        orden.estatus = 'FALLIDA';
-        await this.ordenes.save(orden);
+        await this.ordenes.update({ id: orden.id, estatus: 'CREADA' }, { estatus: 'FALLIDA' });
       }
+      // El webhook puede haber confirmado el pago mientras fallaba la respuesta del proveedor.
+      const confirmada = await this.ordenes.findOne({ where: { id: orden.id } }).catch((): null => null);
+      if (confirmada?.estatus === 'COMPLETADA') return this.proyectarOrden(confirmada);
       await this.bitacora.registrar(
         user.sub,
         'FALLO_CREAR_ORDEN',
@@ -139,14 +140,21 @@ export class OrdenesService {
     if (charge.order_id !== `ORD-${orden.id}` || Math.round(Number(charge.amount) * 100) !== Math.round(Number(orden.monto) * 100) ||
         charge.currency !== 'MXN' || charge.transaction_type !== 'charge') {
       // The provider response does not prove a matching local intent. Keep reservation for reconciliation.
-      await this.ordenes.save(orden);
       throw new ConflictException('Openpay devolvió un cargo que requiere conciliación');
     }
-    const actualizada = await this.aplicarRespuestaCargo(orden.id, charge);
+    const actualizada = await this.aplicarResultadoVerificado(orden.id, charge);
     await this.bitacora.registrar(
       user.sub, 'CREAR_ORDEN', 'orden_pago', orden.id, `openpay=${charge.id} $${orden.monto}`, cargo.plantelId,
     );
     return this.proyectarOrden(actualizada);
+  }
+
+  private async aplicarResultadoVerificado(id: number, charge: OpenpayCharge): Promise<OrdenPago> {
+    const orden = await this.aplicarRespuestaCargo(id, charge);
+    if (charge.status !== 'completed') return orden;
+    // El registro idempotente bloquea cargo y orden; se ejecuta después de liberar el bloqueo anterior.
+    await this.pagos.registrarDePasarela(orden, Number(charge.amount), charge.id);
+    return this.ordenes.findOneByOrFail({ id });
   }
 
   private async aplicarRespuestaCargo(ordenId: number, charge: OpenpayCharge): Promise<OrdenPago> {

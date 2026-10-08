@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useRef, useState } from 'react';
 import { api, archivosBase, mensajeDeError } from '../api/client';
 import { useMarca } from '../marca/MarcaContext';
 
@@ -13,6 +13,7 @@ export default function ConfiguracionPage() {
   const [mensaje, setMensaje] = useState('');
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState(false);
+  const mutando = useRef(false);
 
   useEffect(() => {
     setNombreInstitucion(marca.nombreInstitucion);
@@ -32,6 +33,7 @@ export default function ConfiguracionPage() {
 
   const guardar = async (evento: FormEvent) => {
     evento.preventDefault();
+    if (mutando.current) return; mutando.current = true;
     setError(''); setMensaje(''); setGuardando(true);
     try {
       await api.put('/configuracion/marca', { nombreInstitucion, nombreCorto, colorPrimario, colorAcento });
@@ -46,11 +48,12 @@ export default function ConfiguracionPage() {
     } catch (err) {
       setError(mensajeDeError(err));
     } finally {
-      setGuardando(false);
+      mutando.current = false; setGuardando(false);
     }
   };
 
   const quitarLogo = async () => {
+    if (mutando.current) return; mutando.current = true;
     setError(''); setMensaje(''); setGuardando(true);
     try {
       await api.delete('/configuracion/marca/logo');
@@ -60,14 +63,14 @@ export default function ConfiguracionPage() {
     } catch (err) {
       setError(mensajeDeError(err));
     } finally {
-      setGuardando(false);
+      mutando.current = false; setGuardando(false);
     }
   };
 
   const logoVisible = vistaPrevia || (marca.logoUrl ? archivosBase + marca.logoUrl : null);
   return <>
     <header className="encabezado"><h1>Configuración institucional</h1><p className="detalle">Nombre, logo y colores de los clientes.</p></header>
-    <form className="panel" onSubmit={guardar}>
+    <form className="panel" onSubmit={guardar} aria-busy={guardando}>
       <div className="fila">
         <div className="campo"><label htmlFor="nombre-institucion">Nombre de la institución</label><input id="nombre-institucion" maxLength={150} minLength={2} value={nombreInstitucion} onChange={(e) => setNombreInstitucion(e.target.value)} required /></div>
         <div className="campo"><label htmlFor="nombre-corto">Nombre corto</label><input id="nombre-corto" maxLength={10} value={nombreCorto} onChange={(e) => setNombreCorto(e.target.value)} required /></div>
@@ -79,8 +82,8 @@ export default function ConfiguracionPage() {
         <input id="logo" type="file" accept=".png,.jpg,.jpeg,.webp" onChange={seleccionarLogo} />
         {logoVisible && <img className="logo-marca vista-logo" src={logoVisible} alt="Vista previa del logo" />}
       </div>
-      {error && <p className="mensaje-error">{error}</p>}
-      {mensaje && <p className="mensaje-ok">{mensaje}</p>}
+      {error && <p role="alert" className="mensaje-error">{error}</p>}
+      {mensaje && <p role="status" className="mensaje-ok">{mensaje}</p>}
       <div className="fila">
         <button className="boton" disabled={guardando}>{guardando ? 'Guardando…' : 'Guardar cambios'}</button>
         {marca.logoUrl && <button type="button" className="boton peligro" onClick={quitarLogo} disabled={guardando}>Quitar logo</button>}

@@ -1,3 +1,4 @@
+import { PasswordNuevaValida } from '../common/password-bcrypt';
 import { OpcionalNoNulo } from '../common/opcional-no-nulo';
 import { MaxLength, Min, MinLength as LongitudMinima } from 'class-validator';
 import { Transform as Normalizar } from 'class-transformer';
@@ -13,15 +14,15 @@ export class CrearUsuarioDto {
   @OpcionalNoNulo() @IsArray() @ArrayNotEmpty() @Type(() => Number) @IsInt({ each: true }) plantelIds?: number[];
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim().toLowerCase() : value)
   @IsEmail() @MaxLength(120) email!: string;
-  @IsString() @MinLength(8) password!: string;
+  @IsString() @MinLength(8) @PasswordNuevaValida() password!: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsString() @LongitudMinima(1) @MaxLength(80) nombre!: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsString() @LongitudMinima(1) @MaxLength(80) apellidoPaterno!: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsOptional() @IsString() @MaxLength(80) apellidoMaterno?: string;
+  @IsOptional() @IsString() @MaxLength(80) apellidoMaterno?: string | null;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsOptional() @IsString() @MaxLength(20) telefono?: string;
+  @IsOptional() @IsString() @MaxLength(20) telefono?: string | null;
   @IsArray() @ArrayNotEmpty() @IsIn(ROLES, { each: true }) roles!: RolClave[];
 }
 
@@ -31,11 +32,11 @@ export class ActualizarUsuarioDto {
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @OpcionalNoNulo() @IsString() @LongitudMinima(1) @MaxLength(80) apellidoPaterno?: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsOptional() @IsString() @MaxLength(80) apellidoMaterno?: string;
+  @IsOptional() @IsString() @MaxLength(80) apellidoMaterno?: string | null;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsOptional() @IsString() @MaxLength(20) telefono?: string;
+  @IsOptional() @IsString() @MaxLength(20) telefono?: string | null;
   @OpcionalNoNulo() @IsBoolean() activo?: boolean;
-  @OpcionalNoNulo() @IsString() @MinLength(8) password?: string;
+  @OpcionalNoNulo() @IsString() @MinLength(8) @PasswordNuevaValida() password?: string;
   @OpcionalNoNulo() @IsArray() @IsIn(ROLES, { each: true }) roles?: RolClave[];
 }
 

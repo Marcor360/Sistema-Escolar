@@ -1,4 +1,5 @@
-import { useCallback, useState } from 'react';
+import { crearControlLectura } from '../api/lectura-vigente';
+import { useCallback, useRef, useState } from 'react';
 import { Alert, Linking, ScrollView, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { api, mensajeDeError } from '../api/client';
@@ -23,30 +24,34 @@ export default function EstadoCuentaScreen() {
   const [ultimaActualizacion, setUltimaActualizacion] = useState<string | null>(null);
   const [pagando, setPagando] = useState(false);
 
+  const lectura = useRef(crearControlLectura());
   const cargar = useCallback(() => {
     setError('');
     setCargando(true);
-    api.get<Estado>('/finanzas/me/estado-cuenta')
-      .then((r) => { setEstado(r.data); setUltimaActualizacion(new Date().toLocaleString()); })
-      .catch((fallo) => setError(mensajeDeError(fallo)))
-      .finally(() => setCargando(false));
+    void lectura.current.cargar(() => api.get<Estado>('/finanzas/me/estado-cuenta'),
+      (r) => { setEstado(r.data); setUltimaActualizacion(new Date().toLocaleString()); },
+      (fallo) => setError(mensajeDeError(fallo)),
+      () => setCargando(false));
   }, []);
 
-  useFocusEffect(useCallback(() => { cargar(); }, [cargar]));
+  useFocusEffect(useCallback(() => { cargar(); return () => lectura.current.invalidar(); }, [cargar]));
 
+  const pagoEnCurso = useRef(false);
   const pagarEnLinea = async (cargo: CargoDetalle) => {
-    if (pagando) return;
+    if (pagoEnCurso.current) return; pagoEnCurso.current = true;
     setPagando(true);
     try {
       const { data } = await api.post('/finanzas/ordenes', { cargoId: cargo.id });
-      if (data.urlPago) {
+      if (data.estatus === 'COMPLETADA') {
+        Alert.alert('Pago confirmado', 'El pago ya quedó registrado. Se actualizará tu estado de cuenta.'); cargar();
+      } else if (data.urlPago) {
         await Linking.openURL(data.urlPago);
       } else {
         Alert.alert('Orden creada', 'La pasarela no devolvió una URL de pago. Consulta a finanzas.');
       }
     } catch (err) {
       Alert.alert('No se pudo generar la orden', mensajeDeError(err));
-    } finally { setPagando(false); }
+    } finally { pagoEnCurso.current = false; setPagando(false); }
   };
 
   const tono = (estatus: string) =>

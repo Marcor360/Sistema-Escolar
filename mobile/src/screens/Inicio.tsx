@@ -1,4 +1,5 @@
-import { useCallback, useState } from 'react';
+import { crearControlLectura } from '../api/lectura-vigente';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { api, mensajeDeError } from '../api/client';
@@ -22,35 +23,37 @@ export default function InicioScreen() {
   const [cargaInicialCompleta, setCargaInicialCompleta] = useState(false);
   const [error, setError] = useState('');
 
+  const lectura = useRef(crearControlLectura());
   const cargar = useCallback(() => {
     setError('');
     setCargando(true);
     const hoy = new Date().toISOString();
     const en30 = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-    Promise.all([
+    void lectura.current.cargar(() => Promise.all([
       api.get<Tarea[]>('/alumnos/me/tareas'),
       api.get<Estado>('/finanzas/me/estado-cuenta'),
       api.get<Aviso[]>('/notificaciones/mias'),
       api.get<Evento[]>('/calendario', { params: { desde: hoy, hasta: en30 } }),
-    ])
-      .then(([tareas, estado, notifs, cal]) => {
+    ]),
+      ([tareas, estado, notifs, cal]) => {
         setPendientes(tareas.data.filter((t) => !t.entrega).length);
         setSaldo(estado.data.saldoTotal);
         setAvisos(notifs.data);
         setEventos(cal.data);
         setCargaInicialCompleta(true);
-      })
-      .catch((fallo) => setError(mensajeDeError(fallo)))
-      .finally(() => setCargando(false));
+      },
+      (fallo) => setError(mensajeDeError(fallo)),
+      () => setCargando(false));
   }, []);
 
-  useFocusEffect(useCallback(() => { cargar(); }, [cargar]));
+  useFocusEffect(useCallback(() => { cargar(); return () => lectura.current.invalidar(); }, [cargar]));
 
   const leerAviso = async (aviso: Aviso) => {
     if (aviso.leida) return;
     try {
       await api.patch(`/notificaciones/${aviso.id}/leer`);
       setAvisos((previos) => previos.map((a) => (a.id === aviso.id ? { ...a, leida: true } : a)));
+      cargar();
     } catch (fallo) {
       setError(mensajeDeError(fallo));
     }

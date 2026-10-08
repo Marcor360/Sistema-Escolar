@@ -88,7 +88,7 @@ export class CalificacionesService {
       const porAlumno = new Map(existentes.map((c) => [c.alumnoId,c]));
       const cambios = dto.items.flatMap((item) => {
         const existente = porAlumno.get(item.alumnoId);
-        const observaciones = item.observaciones ?? existente?.observaciones ?? null;
+        const observaciones = item.observaciones === undefined ? existente?.observaciones ?? null : item.observaciones;
         if (existente && Number(existente.calificacion) === item.calificacion && observaciones === existente.observaciones) return [];
         if (existente && !dto.motivo?.trim()) throw new BadRequestException('Debes indicar el motivo para corregir una calificación existente');
         const valorAnterior = existente?.calificacion ?? null, observacionAnterior = existente?.observaciones ?? null;

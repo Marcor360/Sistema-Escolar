@@ -34,4 +34,11 @@ Aplicar las migraciones pendientes, incluidas `migracion_sesiones_rotativas.sql`
 
 ## Comprobación y límites
 
-La suite HTTP se amplía con pruebas de push, incidencias internas, analítica, importación atómica, reactivación, promoción, recargos y personal; el número y evidencia actuales constan en CORRECCIONES_1.16.0.md. La suite cubre las transiciones y permisos en bases aisladas MySQL 8.4 y SQL Server 2022. Estas pruebas no certifican Openpay real, SMTP, una base institucional histórica, dispositivos, navegadores ni accesibilidad AA completa. El detalle actual está en [BARRIDO_GENERAL_1.18.3.md](BARRIDO_GENERAL_1.18.3.md). Hay recorridos Chromium con API/DB reales, que no equivalen a certificación física ni QA de Edge/Android/iOS.
+La suite HTTP se amplía con pruebas de push, incidencias internas, analítica, importación atómica, reactivación, promoción, recargos y personal; el número y evidencia actuales constan en CORRECCIONES_1.16.0.md. La suite cubre las transiciones y permisos en bases aisladas MySQL 8.4 y SQL Server 2022. Estas pruebas no certifican Openpay real, SMTP, una base institucional histórica, dispositivos, navegadores ni accesibilidad AA completa. El detalle actual está en [REBARRIDO_1.18.4.md](REBARRIDO_1.18.4.md). Hay recorridos Chromium con API/DB reales, que no equivalen a certificación física ni QA de Edge/Android/iOS.
+
+- **Archivos y sesiones:** los enlaces firmados pertenecen a la sesión que los genera. Logout invalida los de esa sesión; cambios de credenciales/estado invalidan por versión. Los materiales operativos requieren contexto vigente; las entregas históricas propias conservan su lectura autorizada.
+- **Corrección de datos:** omitir un campo conserva el valor; null permite retirar datos opcionales. Eliminar una observación de calificación oficial requiere motivo y queda en historial.
+
+- **Contraseñas:** mínimo ocho caracteres y máximo 72 bytes UTF-8 al establecer una contraseña nueva. Se rechaza el exceso antes de bcrypt; no se trunca ni modifica la contraseña. Cuentas existentes mantienen login y pueden cambiarla mediante el flujo autorizado.
+
+Las cuentas con hash anterior conservan compatibilidad. Si alguna utilizaba más de 72 bytes, debe renovar su contraseña antes del piloto; el formato marcado nuevo rechaza también sufijos excesivos en login.

@@ -2,7 +2,19 @@
 
 > Portal web administrativo/docente, app móvil del alumno y API para gestión académica y financiera. El código cubre los flujos principales del MVP; todavía no hay certificación de piloto institucional ni despliegue productivo.
 
-**Versión candidata: `1.18.3` · Commit: `1.18.3` · 8 de octubre de 2026.** Backend, web, móvil y Expo declaran la misma versión. La CI del SHA publicado debe comprobarse en [GitHub Actions](https://github.com/Marcor360/Sistema-Escolar/actions/workflows/ci.yml). El piloto requiere todavía certificación sobre el servidor y dispositivos reales.
+**Versión candidata: `1.18.4` · Commit: `1.18.4` · 8 de octubre de 2026.** Backend, web, móvil y Expo declaran la misma versión. La CI del SHA publicado debe comprobarse en [GitHub Actions](https://github.com/Marcor360/Sistema-Escolar/actions/workflows/ci.yml). El piloto requiere todavía certificación sobre el servidor y dispositivos reales.
+
+## Segunda revisión y regresiones 1.18.4
+
+- Contraseñas nuevas limitadas a 72 bytes UTF-8 para evitar truncamiento de bcrypt, con compatibilidad de login existente.
+- Enlaces firmados ligados a sesión y versión, revocados al cerrar sesión o cambiar credenciales; materiales operativos limitados al ciclo vigente.
+- Campos opcionales se pueden limpiar con null; las ediciones de expedientes devuelven los nombres recién guardados. Corregir observaciones oficiales exige motivo e historial.
+- Edición de actividades protegida frente a baja concurrente; notas de entregas y ponderaciones rechazan precisión excesiva.
+- Recuperación de órdenes ya cobradas con aplicación idempotente; respuestas tardías no sobrescriben una confirmación de webhook.
+- Lecturas móviles protegidas frente a respuestas antiguas y salida de pantalla; bloqueo inmediato de doble toque en pagos/entregas.
+- Configuración institucional con validación de nombres, protección de doble envío, errores accesibles y datos conservados al fallar.
+
+Regresiones, verificaciones, inventario y límites: [REBARRIDO_1.18.4.md](docs/REBARRIDO_1.18.4.md). Sin cambios físicos de esquema ni migraciones nuevas.
 
 ## Barrido general y conexiones 1.18.3
 

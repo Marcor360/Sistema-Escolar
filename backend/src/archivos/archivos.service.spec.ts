@@ -3,8 +3,8 @@ import { ArchivosService } from './archivos.service';
 import { ScopeService } from '../planteles/scope.service';
 import { JwtUser } from '../common/current-user.decorator';
 
-const alumnoUser: JwtUser = { sub: 10, email: 'alumno@escuela.mx', nombre: 'Alumno', roles: ['ALUMNO'] };
-const maestroUser: JwtUser = { sub: 20, email: 'maestro@escuela.mx', nombre: 'Maestro', roles: ['MAESTRO'] };
+const alumnoUser: JwtUser = { sub: 10, email: 'alumno@escuela.mx', nombre: 'Alumno', roles: ['ALUMNO'], sid: 'sesion-alumno', ver: 0 };
+const maestroUser: JwtUser = { sub: 20, email: 'maestro@escuela.mx', nombre: 'Maestro', roles: ['MAESTRO'], sid: 'sesion-maestro', ver: 0 };
 
 const materialConGrupo = (grupoId: number, docenteUsuarioId: number | null) => ({
   id: 1,
@@ -13,7 +13,7 @@ const materialConGrupo = (grupoId: number, docenteUsuarioId: number | null) => (
   mime: 'application/pdf',
   grupoMateria: {
     docente: docenteUsuarioId ? { usuarioId: docenteUsuarioId } : null,
-    grupo: { id: grupoId, plantelId: 1, activo: true },
+    grupo: { id: grupoId, plantelId: 1, activo: true, ciclo: { activo: true }, plantel: { activo: true } },
   },
 });
 
@@ -25,7 +25,7 @@ const entregaDe = (alumnoUsuarioId: number, docenteUsuarioId: number | null) => 
   actividad: {
     grupoMateria: {
       docente: docenteUsuarioId ? { usuarioId: docenteUsuarioId } : null,
-      grupo: { id: 3, plantelId: 1, activo: true },
+      grupo: { id: 3, plantelId: 1, activo: true, ciclo: { activo: true }, plantel: { activo: true } },
     },
   },
 });
@@ -90,4 +90,20 @@ describe('ArchivosService', () => {
     const { service } = crearService({ jwt });
     await expect(service.descargarMaterial(1, 'token', {} as any)).rejects.toBeInstanceOf(UnauthorizedException);
   });
+  it.each(['revocada', 'expirada', 'version'])('rechaza enlace firmado con sesión %s', async (caso) => {
+    const payload = { sub: 20, rec: 'material', id: 1, kind: 'FILE', sid: 'sesion-maestro', ver: 0 };
+    const usuario = { id: 20, activo: true, sessionVersion: caso === 'version' ? 1 : 0, roles: [{ clave: 'MAESTRO' }] };
+    const sesiones = { findOne: jest.fn().mockResolvedValue(caso === 'revocada' ? null : { version: 0, expiraEn: new Date(caso === 'expirada' ? 0 : Date.now() + 60000) }) };
+    const usuariosRepo = { findOne: jest.fn().mockResolvedValue(usuario), manager: { getRepository: () => sesiones } };
+    const jwt = { sign: jest.fn(), verify: jest.fn().mockReturnValue(payload) };
+    const { service, materialesRepo } = crearService({ usuariosRepo, jwt });
+    materialesRepo.findOne.mockResolvedValue(materialConGrupo(7, 20));
+    await expect(service.descargarMaterial(1, 'firmado', {} as any)).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+  it('el maestro no obtiene materiales de ciclos cerrados', async () => {
+    const { service, materialesRepo } = crearService(); const material = materialConGrupo(7,20);
+    material.grupoMateria.grupo.ciclo.activo = false; materialesRepo.findOne.mockResolvedValue(material);
+    await expect(service.enlaceMaterial(1,maestroUser)).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
 });

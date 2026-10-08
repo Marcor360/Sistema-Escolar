@@ -1,3 +1,4 @@
+import { PasswordNuevaValida } from '../../common/password-bcrypt';
 import { Transform } from 'class-transformer';
 import { IsOptional } from 'class-validator';
 import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
@@ -15,12 +16,12 @@ export class ForgotPasswordDto {
 
 export class ResetPasswordDto {
   @IsString() @IsNotEmpty() token!: string;
-  @IsString() @MinLength(8) password!: string;
+  @IsString() @MinLength(8) @PasswordNuevaValida() password!: string;
 }
 
 export class CambiarPasswordDto {
   @IsString() @IsNotEmpty() actual!: string;
-  @IsString() @MinLength(8) nueva!: string;
+  @IsString() @MinLength(8) @PasswordNuevaValida() nueva!: string;
 }
 
 export class RefreshDto {

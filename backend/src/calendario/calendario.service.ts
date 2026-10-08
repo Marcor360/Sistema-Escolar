@@ -31,6 +31,7 @@ export class CalendarioService {
     const qb = this.eventos.createQueryBuilder('e').leftJoinAndSelect('e.plantel', 'p');
     const inicioVentana = desde ? new Date(desde) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const finVentana = hasta ? new Date(hasta) : new Date(inicioVentana.getTime() + 90 * 24 * 60 * 60 * 1000);
+    if (finVentana < inicioVentana) throw new BadRequestException('El fin de la consulta no puede preceder al inicio');
     if (finVentana.getTime() - inicioVentana.getTime() > 366 * 24 * 60 * 60 * 1000) throw new BadRequestException('Consulta una ventana de hasta un año');
     qb.andWhere('(e.fecha_inicio >= :desde OR e.fecha_fin >= :desde)', { desde: inicioVentana });
     qb.andWhere('e.fecha_inicio <= :hasta', { hasta: finVentana });

@@ -1,3 +1,4 @@
+import { PasswordNuevaValida } from '../common/password-bcrypt';
 import { OpcionalNoNulo } from '../common/opcional-no-nulo';
 import { MaxLength, Min, MinLength as LongitudMinima } from 'class-validator';
 import { Transform as Normalizar } from 'class-transformer';
@@ -14,21 +15,21 @@ export class CrearDocenteDto {
   @IsArray() @ArrayNotEmpty() @Type(() => Number) @IsInt({ each: true }) plantelIds!: number[];
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim().toLowerCase() : value)
   @IsEmail() @MaxLength(120) email!: string;
-  @IsString() @MinLength(8) password!: string;
+  @IsString() @MinLength(8) @PasswordNuevaValida() password!: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsString() @LongitudMinima(1) @MaxLength(80) nombre!: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsString() @LongitudMinima(1) @MaxLength(80) apellidoPaterno!: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsOptional() @IsString() @MaxLength(80) apellidoMaterno?: string;
+  @IsOptional() @IsString() @MaxLength(80) apellidoMaterno?: string | null;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsOptional() @IsString() @MaxLength(20) telefono?: string;
+  @IsOptional() @IsString() @MaxLength(20) telefono?: string | null;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim().toUpperCase() : value)
   @IsString() @LongitudMinima(1) @MaxLength(20) numEmpleado!: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsOptional() @IsString() @MaxLength(20) cedulaProfesional?: string;
+  @IsOptional() @IsString() @MaxLength(20) cedulaProfesional?: string | null;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsOptional() @IsString() @MaxLength(120) especialidad?: string;
+  @IsOptional() @IsString() @MaxLength(120) especialidad?: string | null;
 }
 
 export class ActualizarDocenteDto {
@@ -37,13 +38,13 @@ export class ActualizarDocenteDto {
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @OpcionalNoNulo() @IsString() @LongitudMinima(1) @MaxLength(80) apellidoPaterno?: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsOptional() @IsString() @MaxLength(80) apellidoMaterno?: string;
+  @IsOptional() @IsString() @MaxLength(80) apellidoMaterno?: string | null;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsOptional() @IsString() @MaxLength(20) telefono?: string;
+  @IsOptional() @IsString() @MaxLength(20) telefono?: string | null;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsOptional() @IsString() @MaxLength(20) cedulaProfesional?: string;
+  @IsOptional() @IsString() @MaxLength(20) cedulaProfesional?: string | null;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsOptional() @IsString() @MaxLength(120) especialidad?: string;
+  @IsOptional() @IsString() @MaxLength(120) especialidad?: string | null;
   @OpcionalNoNulo() @IsIn(['ACTIVO', 'BAJA']) estatus?: 'ACTIVO' | 'BAJA';
 }
 

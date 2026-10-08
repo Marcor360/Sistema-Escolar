@@ -199,14 +199,15 @@ export class AlumnosService {
         }, manager);
       }
       Object.assign(alumno, {
-        curp: dto.curp ?? alumno.curp,
+        curp: dto.curp === undefined ? alumno.curp : dto.curp,
         fechaNacimiento: dto.fechaNacimiento === undefined ? alumno.fechaNacimiento : dto.fechaNacimiento,
-        tutorNombre: dto.tutorNombre ?? alumno.tutorNombre,
-        tutorTelefono: dto.tutorTelefono ?? alumno.tutorTelefono,
-        direccion: dto.direccion ?? alumno.direccion,
+        tutorNombre: dto.tutorNombre === undefined ? alumno.tutorNombre : dto.tutorNombre,
+        tutorTelefono: dto.tutorTelefono === undefined ? alumno.tutorTelefono : dto.tutorTelefono,
+        direccion: dto.direccion === undefined ? alumno.direccion : dto.direccion,
 
       });
-      return alumnos.save(alumno);
+      await alumnos.save(alumno);
+      return alumnos.findOneOrFail({ where: { id } });
     });
   }
 

@@ -4,7 +4,7 @@ import { ArrayNotEmpty, ArrayUnique, IsArray, IsIn, IsInt, IsNumber, IsOptional,
 export class ItemCapturaDto {
   @IsInt() alumnoId!: number;
   @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) @Max(100) calificacion!: number;
-  @IsOptional() @IsString() @MaxLength(300) observaciones?: string;
+  @IsOptional() @IsString() @MaxLength(300) observaciones?: string | null;
 }
 
 export class CapturaCalificacionesDto {

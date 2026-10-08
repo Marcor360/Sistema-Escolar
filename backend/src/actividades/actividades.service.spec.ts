@@ -77,3 +77,15 @@ describe('ActividadesService.entregar', () => {
       .rejects.toThrow('Selecciona un archivo');
   });
 });
+
+describe('edición de actividad frente a baja concurrente', () => {
+  it('usa el estado bloqueado y conserva la baja ocurrida después de la lectura inicial', async () => {
+    const antigua = { id: 5, grupoMateriaId: 12, activo: true, titulo: 'Antes', descripcion: 'Texto', tipo: 'TAREA', parcial: 1, ponderacion: 0, fechaEntrega: null };
+    const actual = { ...antigua, activo: false };
+    const repo = { findOne: jest.fn().mockResolvedValueOnce(antigua).mockResolvedValueOnce(actual), save: jest.fn(async (dato) => dato) };
+    const ds = { transaction: jest.fn((fn) => fn({ getRepository: () => repo })) };
+    const service = new ActividadesService(repo as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, ds as any);
+    jest.spyOn(service as any,'validarPropiedad').mockResolvedValue({});
+    await expect(service.actualizar(5,{ titulo: 'Corregido',descripcion: null },{ sub: 1,roles: ['SUPERADMIN'] } as any)).resolves.toMatchObject({ activo: false,titulo: 'Corregido',descripcion: null });
+  });
+});

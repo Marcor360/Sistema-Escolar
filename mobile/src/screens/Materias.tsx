@@ -1,4 +1,5 @@
-import { useCallback, useState } from 'react';
+import { crearControlLectura } from '../api/lectura-vigente';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Linking, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { api, archivosBase, mensajeDeError } from '../api/client';
@@ -28,16 +29,17 @@ export default function MateriasScreen() {
   const [error, setError] = useState('');
   const [ultimaActualizacion, setUltimaActualizacion] = useState<string | null>(null);
 
+  const lectura = useRef(crearControlLectura());
   const cargar = useCallback(() => {
     setError('');
     setCargando(true);
-    api.get<Materia[]>('/alumnos/me/materias')
-      .then((r) => { setMaterias(r.data); setUltimaActualizacion(new Date().toLocaleString()); setCargaInicialCompleta(true); })
-      .catch((fallo) => setError(mensajeDeError(fallo)))
-      .finally(() => setCargando(false));
+    void lectura.current.cargar(() => api.get<Materia[]>('/alumnos/me/materias'),
+      (r) => { setMaterias(r.data); setUltimaActualizacion(new Date().toLocaleString()); setCargaInicialCompleta(true); },
+      (fallo) => setError(mensajeDeError(fallo)),
+      () => setCargando(false));
   }, []);
 
-  useFocusEffect(useCallback(() => { cargar(); }, [cargar]));
+  useFocusEffect(useCallback(() => { cargar(); return () => lectura.current.invalidar(); }, [cargar]));
 
   /** Despliega la materia y carga sus materiales la primera vez. */
   const alternar = async (materia: Materia) => {

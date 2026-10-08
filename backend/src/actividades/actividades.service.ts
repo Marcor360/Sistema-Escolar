@@ -98,17 +98,22 @@ export class ActividadesService {
   }
 
   async actualizar(id: number, dto: ActualizarActividadDto, user: JwtUser) {
-    const actividad = await this.obtener(id);
-    await this.validarPropiedad(actividad.grupoMateriaId, user);
-    Object.assign(actividad, {
-      titulo: dto.titulo ?? actividad.titulo,
-      descripcion: dto.descripcion ?? actividad.descripcion,
-      tipo: dto.tipo ?? actividad.tipo,
-      parcial: dto.parcial ?? actividad.parcial,
-      ponderacion: dto.ponderacion ?? actividad.ponderacion,
-      fechaEntrega: dto.fechaEntrega === undefined ? actividad.fechaEntrega : dto.fechaEntrega ? new Date(dto.fechaEntrega) : null,
+    const referencia = await this.obtener(id);
+    await this.validarPropiedad(referencia.grupoMateriaId, user);
+    return this.dataSource.transaction(async (manager) => {
+      const actividades = manager.getRepository(Actividad);
+      const actividad = await actividades.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+      if (!actividad) throw new NotFoundException('Actividad no encontrada');
+      Object.assign(actividad, {
+        titulo: dto.titulo ?? actividad.titulo,
+        descripcion: dto.descripcion === undefined ? actividad.descripcion : dto.descripcion,
+        tipo: dto.tipo ?? actividad.tipo,
+        parcial: dto.parcial ?? actividad.parcial,
+        ponderacion: dto.ponderacion ?? actividad.ponderacion,
+        fechaEntrega: dto.fechaEntrega === undefined ? actividad.fechaEntrega : dto.fechaEntrega ? new Date(dto.fechaEntrega) : null,
+      });
+      return actividades.save(actividad);
     });
-    return this.actividades.save(actividad);
   }
 
   async desactivar(id: number, user: JwtUser) {
@@ -147,7 +152,7 @@ export class ActividadesService {
         });
         const entrega = previa ?? entregas.create({ actividadId, alumnoId: alumno.id });
         if (previa?.estatus === 'CALIFICADA') throw new ConflictException('Una entrega calificada no admite reentrega');
-        entrega.comentarioAlumno = dto.comentario ?? entrega.comentarioAlumno ?? null;
+        entrega.comentarioAlumno = dto.comentario === undefined ? entrega.comentarioAlumno ?? null : dto.comentario;
         if (archivo) {
           reemplazo.anterior = previa?.archivoRuta ?? null;
           if (reemplazo.anterior) await programarLimpieza(manager, reemplazo.anterior);
@@ -185,7 +190,7 @@ export class ActividadesService {
       const actual = await entregas.findOne({ where: { id: entregaId }, lock: { mode: 'pessimistic_write' } });
       if (!actual) throw new NotFoundException('Entrega no encontrada');
       actual.calificacion = dto.calificacion;
-      actual.comentarioDocente = dto.comentario ?? actual.comentarioDocente;
+      actual.comentarioDocente = dto.comentario === undefined ? actual.comentarioDocente : dto.comentario;
       actual.estatus = 'CALIFICADA';
       return entregas.save(actual);
     });

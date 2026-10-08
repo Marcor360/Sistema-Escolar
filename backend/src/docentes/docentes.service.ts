@@ -164,11 +164,12 @@ export class DocentesService {
         }, manager);
       }
       Object.assign(docente, {
-        cedulaProfesional: dto.cedulaProfesional ?? docente.cedulaProfesional,
-        especialidad: dto.especialidad ?? docente.especialidad,
+        cedulaProfesional: dto.cedulaProfesional === undefined ? docente.cedulaProfesional : dto.cedulaProfesional,
+        especialidad: dto.especialidad === undefined ? docente.especialidad : dto.especialidad,
 
       });
-      return this.proyectarDocente(await docentes.save(docente));
+      await docentes.save(docente);
+      return this.proyectarDocente(await docentes.findOneOrFail({ where: { id } }));
     });
   }
 

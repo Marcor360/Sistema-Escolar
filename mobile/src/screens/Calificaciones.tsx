@@ -1,4 +1,5 @@
-import { useCallback, useState } from 'react';
+import { crearControlLectura } from '../api/lectura-vigente';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { api, mensajeDeError } from '../api/client';
@@ -20,16 +21,17 @@ export default function CalificacionesScreen() {
   const [error, setError] = useState('');
   const [ultimaActualizacion, setUltimaActualizacion] = useState<string | null>(null);
 
+  const lectura = useRef(crearControlLectura());
   const cargar = useCallback(() => {
     setError('');
     setCargando(true);
-    api.get<Calificacion[]>('/calificaciones/mias')
-      .then((r) => { setRegistros(r.data); setUltimaActualizacion(new Date().toLocaleString()); setCargaInicialCompleta(true); })
-      .catch((fallo) => setError(mensajeDeError(fallo)))
-      .finally(() => setCargando(false));
+    void lectura.current.cargar(() => api.get<Calificacion[]>('/calificaciones/mias'),
+      (r) => { setRegistros(r.data); setUltimaActualizacion(new Date().toLocaleString()); setCargaInicialCompleta(true); },
+      (fallo) => setError(mensajeDeError(fallo)),
+      () => setCargando(false));
   }, []);
 
-  useFocusEffect(useCallback(() => { cargar(); }, [cargar]));
+  useFocusEffect(useCallback(() => { cargar(); return () => lectura.current.invalidar(); }, [cargar]));
 
   // Agrupar por materia para lectura tipo boleta
   const materias = new Map<string, { nombre: string; parciales: Calificacion[] }>();

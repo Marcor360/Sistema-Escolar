@@ -1,10 +1,12 @@
+import { Transform } from 'class-transformer';
+const limpiar = ({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value;
 import { Length, Matches } from 'class-validator';
 
 export class ActualizarMarcaDto {
-  @Length(2, 150)
+  @Transform(limpiar) @Length(2, 150)
   nombreInstitucion!: string;
 
-  @Length(1, 10)
+  @Transform(limpiar) @Length(1, 10)
   nombreCorto!: string;
 
   @Matches(/^#[0-9a-fA-F]{6}$/, { message: 'Color en formato #RRGGBB' })

@@ -1,3 +1,6 @@
+import 'reflect-metadata';
+import { EventoDto } from '../calendario/calendario.dto';
+import { ActualizarMarcaDto } from '../configuracion/configuracion.dto';
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 import { ActualizarMateriaDto, ActualizarCicloDto, CicloDto } from '../academico/academico.dto';
@@ -18,4 +21,12 @@ it('el ciclo exige días civiles válidos, sin aceptar instantes truncados por D
 });
 it('los conceptos financieros respetan longitud y precisión física sin redondear entrada inválida', () => {
   for (const datos of [{ clave: 'X'.repeat(21) }, { nombre: 'X'.repeat(121) }, { montoBase: 1.234 }, { montoBase: 10000000000 }]) expect(validateSync(plainToInstance(ConceptoDto,{ clave: 'COL',nombre: 'Colegiatura',tipo: 'COLEGIATURA',montoBase: 1200,...datos })).length).toBeGreaterThan(0);
+});
+it('actividad y entrega no redondean silenciosamente más de dos decimales', () => {
+  expect(validateSync(plainToInstance(ActualizarActividadDto,{ ponderacion: 12.345 })).map((e) => e.property)).toContain('ponderacion');
+});
+
+it('nombre institucional y evento no aceptan espacios como contenido', () => {
+  expect(validateSync(plainToInstance(ActualizarMarcaDto,{ nombreInstitucion: '  ',nombreCorto: 'SE',colorPrimario: '#14343B',colorAcento: '#C79A3C' })).map((e) => e.property)).toContain('nombreInstitucion');
+  expect(validateSync(plainToInstance(EventoDto,{ titulo: '  ',fechaInicio: '2027-01-01T12:00:00Z' })).map((e) => e.property)).toContain('titulo');
 });

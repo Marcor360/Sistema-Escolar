@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import ExitStack
 
 from . import extract, load, transform
 from .config import cargar_config
@@ -44,13 +45,12 @@ def main() -> None:
         parser.error(f"El pipeline de '{args.entidad}' aún no está implementado; disponibles: planteles, alumnos")
 
     config = cargar_config()
-    legacy_conn = extract.conectar_legacy(config)
-    target_conn = load.conectar_destino(config)
-    try:
+    with ExitStack() as conexiones:
+        legacy_conn = extract.conectar_legacy(config)
+        conexiones.callback(legacy_conn.close)
+        target_conn = load.conectar_destino(config)
+        conexiones.callback(target_conn.close)
         resumen = PIPELINES[args.entidad](legacy_conn, target_conn, args.dry_run, config.target_engine)
-    finally:
-        legacy_conn.close()
-        target_conn.close()
 
     modo = "DRY-RUN (sin escribir)" if args.dry_run else "APLICADO"
     print(f"[{args.entidad}] modo={modo}")

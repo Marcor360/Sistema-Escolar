@@ -67,6 +67,8 @@ describe('OrdenesService.crear', () => {
     const ordenes = {
       create: jest.fn((datos) => datos),
       save: jest.fn().mockImplementation((orden) => Promise.resolve({ id: 19, ...orden })),
+      update: jest.fn().mockResolvedValue({ affected: 1 }),
+      findOne: jest.fn().mockResolvedValue(null),
     };
     const openpay = { crearCargoRedirect: jest.fn().mockRejectedValue(error) };
     const bitacora = { registrar: jest.fn().mockResolvedValue(undefined) };
@@ -75,8 +77,8 @@ describe('OrdenesService.crear', () => {
     );
 
     await expect(service.crear(1, finanzasUser)).rejects.toBe(error);
-    expect(ordenes.save).toHaveBeenCalledTimes(1);
-    expect(ordenes.save.mock.calls[0][0].estatus).toBe('FALLIDA');
+    expect(ordenes.update).toHaveBeenCalledWith({ id: 19, estatus: 'CREADA' }, { estatus: 'FALLIDA' });
+    expect(ordenes.save).not.toHaveBeenCalled();
     expect(bitacora.registrar).toHaveBeenCalledWith(
       77, 'FALLO_CREAR_ORDEN', 'orden_pago', 19,
       'ORD-19: fallo al crear cargo Openpay; requiere conciliación', 2,
@@ -87,7 +89,7 @@ describe('OrdenesService.crear', () => {
     const cargo = { id: 1, alumnoId: 10, plantelId: 2, descripcion: 'Colegiatura', alumno: { plantelId: 2, usuario: { nombreCompleto: 'X Y', email: 'x@escuela.mx' } } };
     const cargos = { validarAcceso: jest.fn().mockResolvedValue(undefined), obtener: jest.fn().mockResolvedValue(cargo), saldoDeCargo: jest.fn().mockResolvedValue(500) };
     const alumnos = { obtenerPorUsuario: jest.fn().mockRejectedValue(new Error()), obtener: jest.fn().mockResolvedValue({ id: 10 }) };
-    const ordenes = { create: jest.fn((d) => d), save: jest.fn() };
+    const ordenes = { create: jest.fn((d) => d), save: jest.fn(), findOne: jest.fn().mockResolvedValue(null) };
     const timeout = new Error('timeout');
     const openpay = { crearCargoRedirect: jest.fn().mockRejectedValue(timeout) };
     const service = new OrdenesService(ordenes as any, alumnos as any, cargos as any, {} as any,

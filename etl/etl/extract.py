@@ -3,12 +3,12 @@ from __future__ import annotations
 
 from typing import Any
 
-import pymssql
-
 from .config import Config
 
 
 def conectar_legacy(config: Config):
+    import pymssql
+
     return pymssql.connect(
         server=config.legacy_host,
         port=str(config.legacy_port),

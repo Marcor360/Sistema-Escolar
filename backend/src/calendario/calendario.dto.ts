@@ -1,11 +1,11 @@
-import { IsDateString, MaxLength, Min } from 'class-validator';
+import { IsDateString, MaxLength, MinLength, Min } from 'class-validator';
 import { Transform as Normalizar } from 'class-transformer';
 import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, IsString } from 'class-validator';
 
 export class EventoDto {
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsString() @MaxLength(150) titulo!: string;
+  @IsString() @MinLength(1) @MaxLength(150) titulo!: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsOptional() @IsString() @MaxLength(400) descripcion?: string;
   @IsOptional() @IsIn(['GENERAL', 'EXAMEN', 'ENTREGA', 'FESTIVO', 'PAGO', 'JUNTA'])

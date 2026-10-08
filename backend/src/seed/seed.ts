@@ -1,3 +1,4 @@
+import { hashPasswordNueva } from '../common/password-bcrypt';
 /**
  * Seed de datos: roles, catálogos, superadmin y datos demo end-to-end
  * (docente, alumnos, ciclo, grupo, materia, cargos).
@@ -9,7 +10,6 @@ loadEnv();
 
 import { DataSource, DataSourceOptions } from 'typeorm';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
-import * as bcrypt from 'bcryptjs';
 import { join } from 'path';
 import {
   Rol, Usuario, Alumno, Docente, CicloEscolar, Materia, Grupo, GrupoMateria,
@@ -127,7 +127,7 @@ async function main() {
   const crearUsuario = async (email: string, password: string, nombre: string, ap: string, rolClaves: string[]) => {
     let usuario = await usuariosRepo.findOne({ where: { email } });
     if (!usuario) usuario = usuariosRepo.create({ email, nombre, apellidoPaterno: ap });
-    usuario.passwordHash = await bcrypt.hash(password, 10);
+    usuario.passwordHash = await hashPasswordNueva(password);
     usuario.nombre = nombre;
     usuario.apellidoPaterno = ap;
     usuario.roles = rolClaves.map((c) => roles.get(c)!);

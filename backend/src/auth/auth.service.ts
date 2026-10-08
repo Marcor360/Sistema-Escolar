@@ -1,9 +1,9 @@
+import { compararPassword, hashPasswordNueva } from '../common/password-bcrypt';
 import { BadRequestException, ForbiddenException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import * as bcrypt from 'bcryptjs';
 import { createHash, randomUUID } from 'crypto';
 import { Sesion } from '../entities/sesion.entity';
 import { Alumno } from '../entities/alumno.entity';
@@ -33,7 +33,7 @@ export class AuthService {
       where: { email, activo: true },
       select: ['id', 'email', 'passwordHash', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'sessionVersion', 'passwordChangeRequired'],
     });
-    if (!usuario || !(await bcrypt.compare(password, usuario.passwordHash))) {
+    if (!usuario || !(await compararPassword(password, usuario.passwordHash))) {
       await this.registrarLoginFallido(usuario?.id ?? null, 'FALLIDO', ip);
       throw new UnauthorizedException('Credenciales inválidas');
     }
@@ -132,12 +132,12 @@ export class AuthService {
       const usuario = await usuarios.findOne({
         where: { id: usuarioId, activo: true }, select: ['id', 'passwordHash', 'sessionVersion'],
       });
-      if (!usuario || !(await bcrypt.compare(actual, usuario.passwordHash))) {
+      if (!usuario || !(await compararPassword(actual, usuario.passwordHash))) {
         throw new UnauthorizedException('La contraseña actual no es correcta');
       }
       if (actual === nueva) throw new BadRequestException('Elige una contraseña distinta de la temporal');
       const actualizado = await usuarios.update({ id: usuario.id, activo: true }, {
-        passwordHash: await bcrypt.hash(nueva, 10), passwordChangeRequired: false,
+        passwordHash: await hashPasswordNueva(nueva), passwordChangeRequired: false,
         sessionVersion: () => 'COALESCE(session_version, 0) + 1',
       });
       if (actualizado.affected !== 1) throw new UnauthorizedException('La cuenta ya no está activa');
@@ -197,7 +197,7 @@ export class AuthService {
       if (consumo.affected !== 1) throw new BadRequestException('Token inválido o expirado');
 
       const actualizado = await usuarios.update({ id: usuario.id, activo: true }, {
-        passwordHash: await bcrypt.hash(password, 10), passwordChangeRequired: false,
+        passwordHash: await hashPasswordNueva(password), passwordChangeRequired: false,
         sessionVersion: () => 'COALESCE(session_version, 0) + 1',
       });
       if (actualizado.affected !== 1) throw new UnauthorizedException('La cuenta ya no está activa');

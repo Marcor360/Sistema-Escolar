@@ -57,3 +57,5 @@ cuyo plantel legacy aún no se ha migrado).
   esquema real de certweb antes de usarse contra un entorno productivo.
 - Pruebas del adaptador de carga: `python -m unittest discover -s etl/tests -v`.
 - GitHub Actions ejecuta estas pruebas con Python 3.11; las pruebas no conectan con bases reales.
+
+El CLI cierra ambas conexiones al fallar un pipeline y cierra el origen si no logra abrir el destino. Los drivers y dotenv se cargan al ejecutar su operación, de modo que `--help` y las pruebas con conexiones simuladas no requieren motores ni credenciales. Esto no certifica una importación real de certweb.

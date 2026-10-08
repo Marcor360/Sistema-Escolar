@@ -4,10 +4,6 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
-from dotenv import load_dotenv
-
-load_dotenv()
-
 _REQUERIDAS = (
     "LEGACY_DB_HOST", "LEGACY_DB_PORT", "LEGACY_DB_NAME", "LEGACY_DB_USER", "LEGACY_DB_PASSWORD",
     "TARGET_DB_ENGINE", "TARGET_DB_HOST", "TARGET_DB_PORT", "TARGET_DB_NAME", "TARGET_DB_USER", "TARGET_DB_PASSWORD",
@@ -30,6 +26,9 @@ class Config:
 
 
 def cargar_config() -> Config:
+    from dotenv import load_dotenv
+
+    load_dotenv()
     faltantes = [nombre for nombre in _REQUERIDAS if not os.getenv(nombre)]
     if faltantes:
         raise RuntimeError(f"Faltan variables de entorno requeridas: {', '.join(faltantes)}")

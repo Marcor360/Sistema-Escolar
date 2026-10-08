@@ -1,4 +1,5 @@
-import { useCallback, useState } from 'react';
+import { crearControlLectura } from '../api/lectura-vigente';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, TextInput, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import * as DocumentPicker from 'expo-document-picker';
@@ -25,18 +26,21 @@ export default function TareasScreen() {
   const [comentarios, setComentarios] = useState<Record<number, string>>({});
   const [entregandoId, setEntregandoId] = useState<number | null>(null);
 
+  const lectura = useRef(crearControlLectura());
   const cargar = useCallback(() => {
     setError('');
     setCargando(true);
-    api.get<Tarea[]>('/alumnos/me/tareas')
-      .then((r) => { setTareas(r.data); setUltimaActualizacion(new Date().toLocaleString()); setCargaInicialCompleta(true); })
-      .catch((fallo) => setError(mensajeDeError(fallo)))
-      .finally(() => setCargando(false));
+    void lectura.current.cargar(() => api.get<Tarea[]>('/alumnos/me/tareas'),
+      (r) => { setTareas(r.data); setUltimaActualizacion(new Date().toLocaleString()); setCargaInicialCompleta(true); },
+      (fallo) => setError(mensajeDeError(fallo)),
+      () => setCargando(false));
   }, []);
 
-  useFocusEffect(useCallback(() => { cargar(); }, [cargar]));
+  useFocusEffect(useCallback(() => { cargar(); return () => lectura.current.invalidar(); }, [cargar]));
 
+  const entregaEnCurso = useRef(false);
   const entregar = async (tarea: Tarea) => {
+    if (entregaEnCurso.current) return; entregaEnCurso.current = true;
     try {
       setEntregandoId(tarea.id);
       const resultado = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true });
@@ -59,7 +63,7 @@ export default function TareasScreen() {
     } catch (err) {
       Alert.alert('No se pudo entregar', mensajeDeError(err));
     } finally {
-      setEntregandoId(null);
+      entregaEnCurso.current = false; setEntregandoId(null);
     }
   };
 

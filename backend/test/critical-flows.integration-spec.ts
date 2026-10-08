@@ -1,3 +1,4 @@
+import { registrarRebarrido } from './integration/rebarrido.cases';
 import { registrarBarrido } from './integration/barrido.cases';
 import { registrarCicloOperativo } from './integration/recorrido-academico';
 import { ContextoIntegracion } from './integration/contexto';
@@ -410,6 +411,7 @@ Object.keys(casos).map(Number).sort((a,b) => a-b).forEach((id) => casos[id](cont
   registrarAltasInstitucionales(contexto);
   registrarRecorridoFinanciero(contexto);
   registrarBarrido(contexto);
+  registrarRebarrido(contexto);
 
   afterAll(async () => {
     if (archivoPrueba) {
