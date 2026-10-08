@@ -1,3 +1,6 @@
+import { MateriasService } from './materias.service';
+import { GruposService } from './grupos.service';
+import { InscripcionesService } from './inscripciones.service';
 import { PromocionService } from './promocion.service';
 import { CiclosService } from './ciclos.service';
 import { Module } from '@nestjs/common';
@@ -26,7 +29,7 @@ import { PlantelesModule } from '../planteles/planteles.module';
     DocentesModule,
     PlantelesModule,
   ],
-  providers: [AcademicoService, CiclosService, PromocionService],
+  providers: [AcademicoService, CiclosService, PromocionService, MateriasService, GruposService, InscripcionesService],
   controllers: [AcademicoController],
   exports: [AcademicoService],
 })

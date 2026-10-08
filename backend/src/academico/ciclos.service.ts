@@ -1,3 +1,5 @@
+import { ActualizarCicloDto, CicloDto } from './academico.dto';
+import { esConflictoTransaccional } from './conflictos';
 import { Grupo } from '../entities/grupo.entity';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { DataSource, In } from 'typeorm';
@@ -66,6 +68,43 @@ export class CiclosService {
     }); } catch (error) {
       const e = error as { code?: string; errno?: number; number?: number; driverError?: { number?: number }; originalError?: { info?: { number?: number } } };
       if (e?.code === 'ER_LOCK_DEADLOCK' || e?.code === 'ER_LOCK_WAIT_TIMEOUT' || e?.errno === 1213 || e?.number === 1205 || e?.driverError?.number === 1205 || e?.originalError?.info?.number === 1205) throw new ConflictException('El ciclo cambió concurrentemente; vuelve a consultar');
+      throw error;
+    }
+  }
+listarCiclos() { return this.dataSource.getRepository(CicloEscolar).find({ order: { fechaInicio: 'DESC' } }); }
+
+async crearCiclo(dto: CicloDto) {
+    if (dto.activo === true) throw new BadRequestException('Crea el ciclo en preparación y usa la activación explícita');
+    if (dto.fechaFin < dto.fechaInicio) throw new BadRequestException('La fecha de fin debe ser posterior o igual al inicio');
+    try {
+      return await this.dataSource.transaction('SERIALIZABLE', async (manager) => {
+        const ciclos = manager.getRepository(CicloEscolar);
+        return ciclos.save(ciclos.create({ ...dto, activo: false, estado: 'PREPARACION' }));
+      });
+    } catch (error) {
+      if (esConflictoTransaccional(error)) {
+        throw new ConflictException('Otro cambio de ciclo ocurrió al mismo tiempo; vuelve a intentar');
+      }
+      throw error;
+    }
+  }
+
+async actualizarCiclo(id: number, dto: ActualizarCicloDto) {
+    if (dto.activo !== undefined) throw new BadRequestException('Usa activar, iniciar cierre o cerrar; PATCH solo corrige datos');
+    try {
+      return await this.dataSource.transaction('SERIALIZABLE', async (manager) => {
+        const ciclos = manager.getRepository(CicloEscolar);
+        const actual = await ciclos.findOne({ where: { id } });
+        if (!actual) throw new NotFoundException('Ciclo escolar no encontrado');
+        if ((dto.fechaFin ?? actual.fechaFin) < (dto.fechaInicio ?? actual.fechaInicio)) throw new BadRequestException('La fecha de fin debe ser posterior o igual al inicio');
+        if (actual.estado === 'CERRADO') throw new ConflictException('No se edita un ciclo cerrado');
+        await ciclos.update(id, dto);
+        return ciclos.findOne({ where: { id } });
+      });
+    } catch (error) {
+      if (esConflictoTransaccional(error)) {
+        throw new ConflictException('Otro cambio de ciclo ocurrió al mismo tiempo; vuelve a intentar');
+      }
       throw error;
     }
   }

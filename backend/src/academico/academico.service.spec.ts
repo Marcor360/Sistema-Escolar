@@ -1,3 +1,7 @@
+import { CiclosService } from './ciclos.service';
+import { MateriasService } from './materias.service';
+import { GruposService } from './grupos.service';
+import { InscripcionesService } from './inscripciones.service';
 import { ConflictException, ForbiddenException } from '@nestjs/common';
 import { AcademicoService } from './academico.service';
 
@@ -14,21 +18,7 @@ function crearServicio(overrides: {
   scope?: any;
   dataSource?: any;
   }) {
-  return new AcademicoService(
-    { findOne: jest.fn().mockResolvedValue({ activo: true, ciclo: { activo: true, estado: 'ACTIVO' }, plantel: { activo: true } }) } as any,
-    { findOne: jest.fn().mockResolvedValue({ activo: true, ciclo: { activo: true, estado: 'ACTIVO' }, plantel: { activo: true } }) } as any,
-    overrides.grupos ?? ({} as any),
-    overrides.grupoMaterias ?? ({} as any),
-    overrides.inscripciones ?? ({} as any),
-    overrides.alumnos ?? ({} as any),
-    overrides.calificaciones ?? ({} as any),
-    overrides.actividades ?? ({} as any),
-    overrides.materiales ?? ({} as any),
-    overrides.docentes ?? ({} as any),
-    overrides.scope ?? ({ validarGestion: jest.fn().mockResolvedValue(undefined) } as any),
-    overrides.usuarioPlanteles ?? ({} as any),
-    overrides.dataSource ?? ({} as any),
-  );
+  return new AcademicoService(new CiclosService(overrides.dataSource ?? ({} as any)), new MateriasService({ findOne: jest.fn().mockResolvedValue({ activo: true, ciclo: { activo: true, estado: 'ACTIVO' }, plantel: { activo: true } }) } as any, overrides.grupoMaterias ?? ({} as any)), new GruposService({ findOne: jest.fn().mockResolvedValue({ activo: true, ciclo: { activo: true, estado: 'ACTIVO' }, plantel: { activo: true } }) } as any, { findOne: jest.fn().mockResolvedValue({ activo: true, ciclo: { activo: true, estado: 'ACTIVO' }, plantel: { activo: true } }) } as any, overrides.grupos ?? ({} as any), overrides.grupoMaterias ?? ({} as any), overrides.inscripciones ?? ({} as any), overrides.calificaciones ?? ({} as any), overrides.actividades ?? ({} as any), overrides.materiales ?? ({} as any), overrides.docentes ?? ({} as any), overrides.scope ?? ({ validarGestion: jest.fn().mockResolvedValue(undefined) } as any), overrides.usuarioPlanteles ?? ({} as any), overrides.dataSource ?? ({} as any)), new InscripcionesService(overrides.grupos ?? ({} as any), overrides.inscripciones ?? ({} as any), overrides.scope ?? ({ validarGestion: jest.fn().mockResolvedValue(undefined) } as any), overrides.dataSource ?? ({} as any), new GruposService({ findOne: jest.fn().mockResolvedValue({ activo: true, ciclo: { activo: true, estado: 'ACTIVO' }, plantel: { activo: true } }) } as any, { findOne: jest.fn().mockResolvedValue({ activo: true, ciclo: { activo: true, estado: 'ACTIVO' }, plantel: { activo: true } }) } as any, overrides.grupos ?? ({} as any), overrides.grupoMaterias ?? ({} as any), overrides.inscripciones ?? ({} as any), overrides.calificaciones ?? ({} as any), overrides.actividades ?? ({} as any), overrides.materiales ?? ({} as any), overrides.docentes ?? ({} as any), overrides.scope ?? ({ validarGestion: jest.fn().mockResolvedValue(undefined) } as any), overrides.usuarioPlanteles ?? ({} as any), overrides.dataSource ?? ({} as any))));
 }
 
 describe('AcademicoService.crearCiclo', () => {

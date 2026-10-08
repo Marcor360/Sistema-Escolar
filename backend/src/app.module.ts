@@ -1,6 +1,7 @@
 import { ImportacionesModule } from './importaciones/importaciones.module';
 import { ConductaModule } from './conducta/conducta.module';
 import { AnaliticaModule } from './analitica/analitica.module';
+import { validarEntorno } from './config/validar-entorno';
 import { Module } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -27,7 +28,7 @@ import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, validate: validarEntorno }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     TypeOrmModule.forRootAsync({ inject: [ConfigService], useFactory: typeOrmConfig }),
     TypeOrmModule.forFeature([BitacoraActividad]),

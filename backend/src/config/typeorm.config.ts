@@ -10,7 +10,7 @@ import { readFileSync } from 'fs';
  * en correspondencia 1:1 con database/{mysql,sqlserver}/schema.sql.
  */
 export function typeOrmConfig(config: ConfigService): TypeOrmModuleOptions {
-  const type = (config.get<string>('DB_TYPE') || 'mysql') as 'mysql' | 'mssql';
+  const type = config.getOrThrow<string>('DB_TYPE') as 'mysql' | 'mssql';
   const production = config.get<string>('NODE_ENV') === 'production';
   const synchronize = config.get<string>('DB_SYNC') === 'true';
   if (production && synchronize) {
@@ -24,11 +24,11 @@ export function typeOrmConfig(config: ConfigService): TypeOrmModuleOptions {
 
   const base = {
     type,
-    host: config.get<string>('DB_HOST') || 'localhost',
-    port: Number(config.get('DB_PORT')) || (type === 'mssql' ? 1433 : 3306),
-    username: config.get<string>('DB_USER') || 'root',
-    password: config.get<string>('DB_PASS') || '',
-    database: config.get<string>('DB_NAME') || 'escolar',
+    host: config.getOrThrow<string>('DB_HOST'),
+    port: Number(config.getOrThrow<string>('DB_PORT')),
+    username: config.getOrThrow<string>('DB_USER'),
+    password: config.getOrThrow<string>('DB_PASS'),
+    database: config.getOrThrow<string>('DB_NAME'),
     entities: [join(__dirname, '..', 'entities', '*.entity{.ts,.js}')],
     synchronize,
     namingStrategy: new SnakeNamingStrategy(),
