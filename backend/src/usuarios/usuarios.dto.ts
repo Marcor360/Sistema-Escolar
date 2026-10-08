@@ -1,3 +1,4 @@
+import { OpcionalNoNulo } from '../common/opcional-no-nulo';
 import { MaxLength, Min, MinLength as LongitudMinima } from 'class-validator';
 import { Transform as Normalizar } from 'class-transformer';
 import { ArrayNotEmpty, IsArray, IsBoolean, IsEmail, IsIn, IsOptional, IsString, MinLength } from 'class-validator';
@@ -9,7 +10,7 @@ import { PaginacionDto } from '../common/paginacion.dto';
 const ROLES: RolClave[] = ['ALUMNO', 'MAESTRO', 'ADMINISTRATIVO', 'FINANZAS', 'SUPERADMIN'];
 
 export class CrearUsuarioDto {
-  @IsOptional() @IsArray() @ArrayNotEmpty() @Type(() => Number) @IsInt({ each: true }) plantelIds?: number[];
+  @OpcionalNoNulo() @IsArray() @ArrayNotEmpty() @Type(() => Number) @IsInt({ each: true }) plantelIds?: number[];
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim().toLowerCase() : value)
   @IsEmail() @MaxLength(120) email!: string;
   @IsString() @MinLength(8) password!: string;
@@ -26,16 +27,16 @@ export class CrearUsuarioDto {
 
 export class ActualizarUsuarioDto {
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsOptional() @IsString() @LongitudMinima(1) @MaxLength(80) nombre?: string;
+  @OpcionalNoNulo() @IsString() @LongitudMinima(1) @MaxLength(80) nombre?: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsOptional() @IsString() @LongitudMinima(1) @MaxLength(80) apellidoPaterno?: string;
+  @OpcionalNoNulo() @IsString() @LongitudMinima(1) @MaxLength(80) apellidoPaterno?: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsOptional() @IsString() @MaxLength(80) apellidoMaterno?: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsOptional() @IsString() @MaxLength(20) telefono?: string;
-  @IsOptional() @IsBoolean() activo?: boolean;
-  @IsOptional() @IsString() @MinLength(8) password?: string;
-  @IsOptional() @IsArray() @IsIn(ROLES, { each: true }) roles?: RolClave[];
+  @OpcionalNoNulo() @IsBoolean() activo?: boolean;
+  @OpcionalNoNulo() @IsString() @MinLength(8) password?: string;
+  @OpcionalNoNulo() @IsArray() @IsIn(ROLES, { each: true }) roles?: RolClave[];
 }
 
 export class ListadoUsuariosDto extends PaginacionDto {

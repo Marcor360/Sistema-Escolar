@@ -1,9 +1,81 @@
+import { inflateSync } from 'zlib';
+import { ArchivoLimpieza, Inscripcion } from '../../src/entities';
 import { ContextoIntegracion } from './contexto';
 import { expect,it } from '@jest/globals';
 import { AuthService } from '../../src/auth/auth.service';
 import { UsuariosService } from '../../src/usuarios/usuarios.service';
 import { Usuario, OrdenPago, Alumno, GrupoMateria } from '../../src/entities';
 export function registrarBarrido(ctx: ContextoIntegracion) {
+  it('edición de marca y carga concurrente preservan el logo; la sustitución conserva su limpieza',async () => {
+    const root = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.superadminId })).email);
+    const { data: original } = await ctx.api('/configuracion/marca');
+    const body = { nombreInstitucion: 'Marca Concurrente',nombreCorto: original.nombreCorto,colorPrimario: original.colorPrimario,colorAcento: original.colorAcento };
+    const subir = () => {
+      const form = new FormData();
+      form.append('logo',new Blob([Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l9sAAAAASUVORK5CYII=','base64')],{ type: 'image/png' }),'logo.png');
+      return ctx.api('/configuracion/marca/logo',{ method: 'POST',token: root,body: form });
+    };
+    try {
+      const [edicion,carga] = await Promise.all([ctx.api('/configuracion/marca',{ method: 'PUT',token: root,body }),subir()]);
+      expect(edicion.response.status).toBe(200); expect(carga.response.status).toBe(201);
+      expect((await ctx.api('/configuracion/marca')).data).toMatchObject({ nombreInstitucion: body.nombreInstitucion,logoUrl: carga.data.logoUrl });
+      const reemplazo = await subir(); expect(reemplazo.response.status).toBe(201); expect(reemplazo.data.logoUrl).not.toBe(carga.data.logoUrl);
+      expect(await ctx.dataSource.getRepository(ArchivoLimpieza).existsBy({ nombre: carga.data.logoUrl.slice('/uploads/'.length) })).toBe(true);
+      expect((await ctx.api('/configuracion/marca')).data.logoUrl).toBe(reemplazo.data.logoUrl);
+      expect((await ctx.api('/configuracion/marca/logo',{ method: 'DELETE',token: root })).response.status).toBe(200);
+      expect(await ctx.dataSource.getRepository(ArchivoLimpieza).existsBy({ nombre: reemplazo.data.logoUrl.slice('/uploads/'.length) })).toBe(true);
+    } finally {
+      await ctx.api('/configuracion/marca/logo',{ method: 'DELETE',token: root });
+      await ctx.api('/configuracion/marca',{ method: 'PUT',token: root,body: { ...body,nombreInstitucion: original.nombreInstitucion } });
+    }
+  });
+
+  it('la boleta usa la misma identidad institucional configurable que web y móvil',async () => {
+    const root = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.superadminId })).email);
+    const { data: original } = await ctx.api('/configuracion/marca');
+    const nombreInstitucion = 'Colegio Institucional General';
+    try {
+      expect((await ctx.api('/configuracion/marca',{ method: 'PUT',token: root,body: { nombreInstitucion,nombreCorto: original.nombreCorto,colorPrimario: original.colorPrimario,colorAcento: original.colorAcento } })).response.status).toBe(200);
+      expect((await ctx.api('/configuracion/marca')).data.nombreInstitucion).toBe(nombreInstitucion);
+      const clase = await ctx.dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: ctx.grupoMateriaIdMaestro });
+      const inscripcion = await ctx.dataSource.getRepository(Inscripcion).findOneByOrFail({ alumnoId: ctx.alumnoId,grupoId: clase.grupoId });
+      const response = await fetch(`${ctx.baseUrl}/reportes/boleta/${ctx.alumnoId}?cicloId=${clase.grupo.cicloId}&inscripcionId=${inscripcion.id}`,{ headers: { authorization: `Bearer ${root}` } }); expect(response.status).toBe(200);
+      const documento = Buffer.from(await response.arrayBuffer()).toString('latin1');
+      const textos = [...documento.matchAll(/stream\r?\n([\s\S]*?)\r?\nendstream/g)].flatMap((m) => {
+        const contenido = inflateSync(Buffer.from(m[1],'latin1')).toString('latin1');
+        return [...contenido.matchAll(/<([0-9a-f]+)>/gi)].map((h) => Buffer.from(h[1],'hex').toString('latin1'));
+      }).join('');
+      expect(textos).toContain(nombreInstitucion);
+    } finally { await ctx.api('/configuracion/marca',{ method: 'PUT',token: root,body: { nombreInstitucion: original.nombreInstitucion,nombreCorto: original.nombreCorto,colorPrimario: original.colorPrimario,colorAcento: original.colorAcento } }); }
+  });
+
+  it('contratos rechazan null, fechas con hora y valores que exceden las columnas antes de escribir',async () => {
+    const root = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.superadminId })).email);
+    const clase = await ctx.dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: ctx.grupoMateriaIdMaestro });
+    const pruebas: [string,string,unknown][] = [
+      ['PATCH',`/academico/materias/${clase.materiaId}`,{ nombre: null }],
+      ['PATCH',`/academico/materias/${clase.materiaId}`,{ creditos: null }],
+      ['POST','/academico/ciclos',{ clave: `GDATE${ctx.sufijo}`,nombre: 'Civil',fechaInicio: '2027-01-01T00:00:00Z',fechaFin: '2027-12-31' }],
+      ['POST','/finanzas/conceptos',{ clave: 'X'.repeat(21),nombre: 'Largo',tipo: 'OTRO',montoBase: 10 }],
+      ['POST','/finanzas/conceptos',{ clave: `GP${ctx.sufijo}`,nombre: 'Precisión',tipo: 'OTRO',montoBase: 1.234 }],
+    ];
+    for (const [method,ruta,body] of pruebas) expect((await ctx.api(ruta,{ method,token: root,body })).response.status).toBe(400);
+  });
+  it('PATCH vacío, materia inexistente y claves duplicadas tienen errores de dominio, sin error 500',async () => {
+    const root = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.superadminId })).email);
+    const clase = await ctx.dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: ctx.grupoMateriaIdMaestro });
+    for (const ruta of [`/academico/materias/${clase.materiaId}`,`/academico/grupos/${clase.grupoId}`,`/academico/ciclos/${clase.grupo.cicloId}`]) expect((await ctx.api(ruta,{ method: 'PATCH',token: root,body: {} })).response.status).toBe(400);
+    expect((await ctx.api('/academico/materias/2147483647',{ method: 'PATCH',token: root,body: { nombre: 'Inexistente' } })).response.status).toBe(404);
+    expect((await ctx.api('/academico/materias',{ method: 'POST',token: root,body: { clave: clase.materia.clave,nombre: 'Duplicada' } })).response.status).toBe(409);
+    const concepto = await ctx.api('/finanzas/conceptos',{ method: 'POST',token: root,body: { clave: `GCO${ctx.sufijo}`,nombre: 'General',tipo: 'OTRO',montoBase: 10 } }); expect(concepto.response.status).toBe(201);
+    expect((await ctx.api('/finanzas/conceptos',{ method: 'POST',token: root,body: { clave: `GCO${ctx.sufijo}`,nombre: 'General',tipo: 'OTRO',montoBase: 10 } })).response.status).toBe(409);
+    expect((await ctx.api(`/finanzas/conceptos/${concepto.data.id}`,{ method: 'PATCH',token: root,body: {} })).response.status).toBe(400);
+  });
+  it('difusión rechaza destinatarios inválidos y mensajes que exceden el almacenamiento',async () => {
+    const root = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.superadminId })).email);
+    for (const body of [{ titulo: 'Prueba',mensaje: 'Texto',usuarioIds: ['no-es-id'] },{ titulo: 'X'.repeat(151),mensaje: 'Texto',rol: 'ALUMNO' },{ titulo: 'Prueba',mensaje: 'X'.repeat(601),rol: 'ALUMNO' }]) expect((await ctx.api('/notificaciones/difundir',{ method: 'POST',token: root,body })).response.status).toBe(400);
+  });
+
   it('el filtro de plantel de conducta se respeta para docentes con clases en dos planteles',async () => {
     const root = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.superadminId })).email);
     const post = (ruta: string,body: unknown,token = root) => ctx.api(ruta,{ method: 'POST',token,body });

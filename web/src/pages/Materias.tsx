@@ -1,3 +1,4 @@
+import { useDialogoMotivo } from '../components/useDialogoMotivo';
 import { useConfirmacion } from '../components/useConfirmacion';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
@@ -9,7 +10,7 @@ interface ResumenCierre { grupos: number; clases: number; inscritos: number; pue
 const MATERIA = { clave: '', nombre: '', creditos: '0', descripcion: '' };
 const CICLO = { clave: '', nombre: '', fechaInicio: '', fechaFin: '' };
 export default function MateriasPage() {
-  const confirmacion = useConfirmacion();
+  const confirmacion = useConfirmacion(); const dialogo = useDialogoMotivo();
   const [materias, setMaterias] = useState<Materia[]>([]); const [ciclos, setCiclos] = useState<Ciclo[]>([]);
   const [formMateria, setFormMateria] = useState(MATERIA); const [formCiclo, setFormCiclo] = useState(CICLO);
   const [editarMateria, setEditarMateria] = useState<number | null>(null); const [editarCiclo, setEditarCiclo] = useState<number | null>(null);
@@ -17,8 +18,8 @@ export default function MateriasPage() {
   const [resumen, setResumen] = useState<ResumenCierre | null>(null); const { tieneRol } = useAuth();
   const cargar = useCallback(async () => { const [m, c] = await Promise.all([api.get<Materia[]>('/academico/materias'), api.get<Ciclo[]>('/academico/ciclos')]); setMaterias(m.data); setCiclos(c.data); }, []);
   useEffect(() => { void cargar().catch((err) => setError(mensajeDeError(err))); }, [cargar]);
-  const operar = async (trabajo: () => Promise<void>) => { if (enviando) return; setEnviando(true); setError(''); setMensaje('');
-    try { await trabajo(); await cargar(); setMensaje('Operación completada'); } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); } };
+  const operar = async (trabajo: () => Promise<void>, anunciar = true) => { if (enviando) return; setEnviando(true); setError(''); setMensaje('');
+    try { await trabajo(); await cargar(); if (anunciar) setMensaje('Operación completada'); } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); } };
   const guardarMateria = (e: FormEvent) => { e.preventDefault(); void operar(async () => {
     const datos = { ...formMateria, creditos: Number(formMateria.creditos) };
     if (editarMateria) await api.patch(`/academico/materias/${editarMateria}`, datos); else await api.post('/academico/materias', datos);
@@ -31,10 +32,17 @@ export default function MateriasPage() {
   const transicion = (c: Ciclo, accion: string) => { void operar(async () => {
     const { data } = await api.get<ResumenCierre>(`/academico/ciclos/${c.id}/cierre`); setResumen(data);
     if (accion === 'cerrar' && !data.puedeCerrar) throw new Error('Completa las notas y cierra P1-P3 antes de cerrar el ciclo.');
-    if (prompt(`Acción: ${accion}. Grupos: ${data.grupos}; clases: ${data.clases}; inscritos: ${data.inscritos}. Escribe ${c.clave} para confirmar.`) !== c.clave) return;
-    await api.post(`/academico/ciclos/${c.id}/${accion}`, { confirmado: true });
-  }); };
-  return <>{confirmacion.elemento}<Encabezado titulo="Materias y ciclos" detalle="Preparar un ciclo no cambia el ciclo vigente. Activación y cierre institucional por Superadmin." />
+    dialogo.abrir({ titulo: `Confirmar ${accion}`, minimo: 1, maximo: 20,
+      advertencia: `Grupos: ${data.grupos}; clases: ${data.clases}; inscritos: ${data.inscritos}. Escribe ${c.clave} para confirmar.`,
+      ejecutar: async (valor) => {
+        if (valor !== c.clave) throw new Error(`Escribe exactamente ${c.clave} para confirmar.`);
+        setEnviando(true);
+        try { await api.post(`/academico/ciclos/${c.id}/${accion}`, { confirmado: true }); await cargar(); setMensaje('Operación completada'); }
+        finally { setEnviando(false); }
+      },
+    });
+  }, false); };
+  return <>{confirmacion.elemento}{dialogo.elemento}<Encabezado titulo="Materias y ciclos" detalle="Preparar un ciclo no cambia el ciclo vigente. Activación y cierre institucional por Superadmin." />
     {error && <p role="alert" className="mensaje-error">{error}</p>}{mensaje && <p role="status">{mensaje}</p>}
     <section className="panel"><h2>{editarMateria ? 'Editar materia' : 'Nueva materia'}</h2><form onSubmit={guardarMateria} className="fila">
       <label htmlFor="mat-clave">Clave<input id="mat-clave" required maxLength={20} value={formMateria.clave} onChange={(e) => setFormMateria({ ...formMateria, clave: e.target.value })} /></label>

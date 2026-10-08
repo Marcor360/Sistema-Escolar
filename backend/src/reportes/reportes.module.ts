@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfiguracionModule } from '../configuracion/configuracion.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Alumno } from '../entities/alumno.entity';
 import { Docente } from '../entities/docente.entity';
@@ -20,6 +21,7 @@ import { PlantelesModule } from '../planteles/planteles.module';
     DocentesModule,
     AlumnosModule,
     PlantelesModule,
+    ConfiguracionModule,
   ],
   providers: [ReportesService],
   controllers: [ReportesController],

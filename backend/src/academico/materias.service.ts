@@ -1,3 +1,5 @@
+import { exigirCambios } from '../common/exigir-cambios';
+import { esConflictoUnico } from './conflictos';
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -10,10 +12,16 @@ export class MateriasService {
 @InjectRepository(GrupoMateria) private readonly grupoMaterias: Repository<GrupoMateria>) {}
 listarMaterias() { return this.materias.find({ where: { activo: true }, order: { clave: 'ASC' } }); }
 
-crearMateria(dto: MateriaDto) { return this.materias.save(this.materias.create(dto)); }
+async crearMateria(dto: MateriaDto) {
+    try { return await this.materias.save(this.materias.create(dto)); }
+    catch (error) { if (esConflictoUnico(error)) throw new ConflictException('La clave de materia ya está registrada'); throw error; }
+  }
 
 async actualizarMateria(id: number, dto: ActualizarMateriaDto) {
-    await this.materias.update(id, dto);
+    if (!await this.materias.findOne({ where: { id } })) throw new NotFoundException('Materia no encontrada');
+    exigirCambios(dto);
+    try { await this.materias.update(id, dto); }
+    catch (error) { if (esConflictoUnico(error)) throw new ConflictException('La clave de materia ya está registrada'); throw error; }
     return this.materias.findOne({ where: { id } });
   }
 

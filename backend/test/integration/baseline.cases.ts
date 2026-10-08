@@ -16,6 +16,12 @@ it('mantiene paridad de columnas nullable entre las entidades y el baseline migr
           .toEqual(metadata.columns.map((column) => column.databaseName).sort());
         for (const column of metadata.columns) {
           const physical = table!.findColumnByName(column.databaseName)!;
+          const tipo = ctx.dataSource.driver.normalizeType(column);
+          // SQL Server conserva datetime2 y NVARCHAR(MAX) para instantes/textos portables.
+          const compatibles = ctx.dataSource.options.type === 'mssql' && tipo === 'datetime' ? ['datetime', 'datetime2']
+            : ctx.dataSource.options.type === 'mssql' && tipo === 'text' ? ['text', 'nvarchar'] : [tipo];
+          expect(compatibles).toContain(physical.type);
+          if (ctx.dataSource.options.type === 'mssql' && tipo === 'text' && physical.type === 'nvarchar') expect(physical.length).toBe('MAX');
           expect(`${metadata.tableName}.${column.databaseName}: ${physical.isNullable}`)
             .toBe(`${metadata.tableName}.${column.databaseName}: ${column.isNullable}`);
           if (column.length) expect(physical.length).toBe(column.length);

@@ -1,3 +1,4 @@
+import { exigirCambios } from '../common/exigir-cambios';
 import { ActualizarCicloDto, CicloDto } from './academico.dto';
 import { esConflictoTransaccional } from './conflictos';
 import { Grupo } from '../entities/grupo.entity';
@@ -103,6 +104,7 @@ async actualizarCiclo(id: number, dto: ActualizarCicloDto) {
         if (!actual) throw new NotFoundException('Ciclo escolar no encontrado');
         if ((dto.fechaFin ?? actual.fechaFin) < (dto.fechaInicio ?? actual.fechaInicio)) throw new BadRequestException('La fecha de fin debe ser posterior o igual al inicio');
         if (actual.estado === 'CERRADO') throw new ConflictException('No se edita un ciclo cerrado');
+        exigirCambios(dto);
         await ciclos.update(id, dto);
         return ciclos.findOne({ where: { id } });
       });

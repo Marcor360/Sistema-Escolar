@@ -1,0 +1,21 @@
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, expect, it, vi } from 'vitest';
+import CalendarioPage from './Calendario';
+import { api } from '../api/client';
+import { intervaloDias } from '../utils/formato';
+vi.mock('../auth/AuthContext', () => ({ useAuth: () => ({ sesion: { roles: ['SUPERADMIN'] } }) }));
+afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+it('conserva intervalo aplicado al recargar tras crear y bloquea envíos duplicados', async () => {
+  const get = vi.spyOn(api, 'get').mockResolvedValue({ data: [] });
+  let terminar!: (valor: { data: object }) => void;
+  const post = vi.spyOn(api, 'post').mockImplementation(() => new Promise((resolve) => { terminar = resolve; }));
+  render(<CalendarioPage />); await waitFor(() => expect((screen.getByText('Consultar intervalo') as HTMLButtonElement).disabled).toBe(false));
+  fireEvent.change(screen.getByLabelText('Desde'), { target: { value: '' } }); fireEvent.click(screen.getByText('Consultar intervalo')); await screen.findByRole('alert');
+  fireEvent.change(screen.getByLabelText('Desde'), { target: { value: '2027-01-05' } }); fireEvent.change(screen.getByLabelText('Hasta'), { target: { value: '2027-01-06' } }); fireEvent.click(screen.getByText('Consultar intervalo'));
+  await waitFor(() => expect(get).toHaveBeenCalledWith('/calendario', { params: intervaloDias('2027-01-05','2027-01-06') }));
+  fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Evento' } }); fireEvent.change(screen.getByLabelText('Inicio'), { target: { value: '2027-01-05T10:00' } });
+  const formulario = screen.getByLabelText('Título').closest('form')!; fireEvent.submit(formulario); fireEvent.submit(formulario);
+  expect(post).toHaveBeenCalledTimes(1); expect((screen.getByText('Guardando…') as HTMLButtonElement).disabled).toBe(true);
+  terminar({ data: {} }); await waitFor(() => expect((screen.getByLabelText('Título') as HTMLInputElement).value).toBe(''));
+  const consultas = get.mock.calls.filter(([url]) => url === '/calendario'); expect(consultas[consultas.length - 1]?.[1]).toEqual({ params: intervaloDias('2027-01-05','2027-01-06') });
+});

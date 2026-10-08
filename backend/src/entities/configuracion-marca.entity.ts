@@ -7,7 +7,7 @@ export class ConfiguracionMarca {
   @Column({ length: 150 }) nombreInstitucion!: string;
   @Column({ length: 10 }) nombreCorto!: string;
   @Column({ type: String, length: 255, nullable: true }) logoUrl!: string | null;
-  @Column({ length: 7 }) colorPrimario!: string;
-  @Column({ length: 7 }) colorAcento!: string;
+  @Column({ type: 'char', length: 7 }) colorPrimario!: string;
+  @Column({ type: 'char', length: 7 }) colorAcento!: string;
   @UpdateDateColumn() actualizadoEn!: Date;
 }

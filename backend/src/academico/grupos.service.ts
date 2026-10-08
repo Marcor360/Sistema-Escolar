@@ -1,3 +1,4 @@
+import { exigirCambios } from '../common/exigir-cambios';
 import { esMaestroRestringido, exigirConsultaAcademica } from '../common/politica-acceso';
 import { BitacoraAcademica } from '../entities/bitacora-academica.entity';
 import { exigirGrupoConfigurable, grupoVigente } from '../common/contexto-academico';
@@ -79,6 +80,7 @@ async actualizarGrupo(id: number, dto: ActualizarGrupoDto, user: JwtUser) {
     const grupo = await this.grupos.findOne({ where: { id } });
     if (!grupo) throw new NotFoundException('Grupo no encontrado');
     await this.scope.validarGestion(user, grupo.plantelId);
+    exigirCambios(dto);
     if (dto.cicloId !== undefined && dto.cicloId !== grupo.cicloId) {
       throw new ConflictException('El ciclo del grupo es inmutable; crea un grupo en el ciclo de destino');
     }

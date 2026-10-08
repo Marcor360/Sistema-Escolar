@@ -1,3 +1,4 @@
+import { OpcionalNoNulo } from '../common/opcional-no-nulo';
 import { IsBoolean, IsEmail, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 
 export class CrearPlantelDto {
@@ -10,11 +11,11 @@ export class CrearPlantelDto {
 }
 
 export class ActualizarPlantelDto {
-  @IsOptional() @IsString() @MinLength(3) @MaxLength(120) nombre?: string;
+  @OpcionalNoNulo() @IsString() @MinLength(3) @MaxLength(120) nombre?: string;
   @IsOptional() @IsString() @MaxLength(200) direccion?: string;
   @IsOptional() @IsString() @MaxLength(80) municipio?: string;
   @IsOptional() @IsString() @MaxLength(20) telefono?: string;
-  @IsOptional() @IsBoolean() activo?: boolean;
+  @OpcionalNoNulo() @IsBoolean() activo?: boolean;
 }
 
 export class PersonalPlantelDto {

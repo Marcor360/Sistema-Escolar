@@ -1,7 +1,7 @@
 # API — Sistema Escolar MVP
 
 Base: `http://localhost:3000/api` · Autenticación: `Authorization: Bearer <token>` ·
-Documentación interactiva: `/api/docs` (Swagger). Los DTO anotados con validadores generan sus esquemas al compilar mediante el plugin oficial `@nestjs/swagger`. `SUPERADMIN` accede a todo.
+Documentación interactiva: `/api/docs` (Swagger), solo fuera de producción. Los DTO anotados con validadores generan sus esquemas al compilar mediante el plugin oficial `@nestjs/swagger`. `SUPERADMIN` accede a todo.
 
 Para el resumen por rol y las decisiones que requieren validación institucional, consulta
 [MATRIZ_ACCESO.md](MATRIZ_ACCESO.md).
@@ -16,24 +16,28 @@ Para el resumen por rol y las decisiones que requieren validación institucional
 | Método | Ruta | Rol | Descripción |
 |---|---|---|---|
 | POST | /auth/login | público | Devuelve `accessToken` y la sesión |
+| POST | /auth/refresh | público con refresh válido | Rotación controlada por sesión; web usa cookie HttpOnly y móvil envía refreshToken |
 | GET | /auth/me | autenticado | Perfil del usuario |
-| POST | /auth/logout | autenticado | Cierra todas las sesiones emitidas con la versión actual del usuario; los JWT anteriores dejan de ser válidos |
+| POST | /auth/logout | autenticado | Revoca la sesión/dispositivo actual y limpia su cookie; baja/cambio de contraseña invalidan todas las sesiones por versión |
 | POST | /auth/forgot-password | público | Genera token de recuperación (1 h; se persiste solo su hash sha256) |
 | POST | /auth/reset-password | público | Cambia contraseña con el token en claro recibido por correo |
 | POST | /auth/cambiar-password | autenticado | Cambio propio (exige la contraseña actual) |
 
 Encabezado `x-portal: WEB|MOVIL` (default `WEB`): decide qué roles pueden iniciar sesión
 en `/auth/login` (`WEB` → MAESTRO/ADMINISTRATIVO/FINANZAS/SUPERADMIN; `MOVIL` → ALUMNO) y
-la vigencia del token — la app móvil usa `JWT_EXPIRES_MOVIL` si está definido (por
-defecto, más larga que `JWT_EXPIRES` del portal web). Los intentos de login fallidos
-(credenciales inválidas o portal incorrecto) se registran en la bitácora de actividad.
+la sesión de renovación. Access de 15 minutos en ambos portales; refresh rotativo con
+vencimiento máximo de 30 días. Web conserva bearer en memoria y refresh en cookie
+HttpOnly/SameSite Strict/Secure en producción; móvil conserva tokens en SecureStore.
+No existen JWT_EXPIRES/JWT_EXPIRES_MOVIL como parámetros de vigencia. Errores temporales
+al renovar no borran la sesión; un rechazo 401/403 sí exige iniciar sesión nuevamente.
+Los intentos fallidos se registran sin almacenar contraseñas ni tokens.
 
 ## Paginación
 Los listados paginados responden `{ datos, total, pagina, porPagina }` (`pagina` inicia
 en 1, `porPagina` por defecto 20, máximo 100). Aplica a: `GET /usuarios`, `GET /usuarios/listado`,
 `GET /alumnos`, `GET /academico/grupos`, `GET /docentes`, `GET /finanzas/cargos` y
-`GET /finanzas/pagos`. No aplica a `/calendario` (acotado por rango de fechas), a
-`/finanzas/adeudos` (alimenta el resumen del dashboard) ni a los endpoints móviles.
+`GET /finanzas/pagos`, `GET /finanzas/adeudos` y `GET /academico/clases-seleccion`. No aplica a `/calendario` (acotado por rango de fechas), a
+los endpoints móviles; el dashboard calcula su resumen en servidor. Conciliación y envíos de cobranza también responden con páginas.
 
 ## Usuarios (SUPERADMIN)
 CRUD en `/usuarios`. Regla de dominio: `ALUMNO` no se combina con roles de personal.
@@ -76,8 +80,7 @@ CRUD en `/docentes`. `GET /docentes?plantelId=&pagina=&porPagina=` está paginad
   `inactivos=true`, permitido solo a ADMINISTRATIVO/SUPERADMIN. `mis-grupos` aplica la
   misma exclusión. Las consultas directas de actividades, materiales y calificaciones
   de MAESTRO también requieren que el grupo siga activo.
-- `PATCH /academico/grupos/:id` (ADMINISTRATIVO): edita `nombre`, `grado`, `turno`,
-  `cicloId`; no permite cambiar el plantel del grupo. Valida alcance por plantel.
+- `PATCH /academico/grupos/:id` (ADMINISTRATIVO): edita `nombre`, `grado`, `turno`; ciclo y plantel son inmutables. Valida alcance por plantel.
 - `DELETE /academico/grupos/:id` (ADMINISTRATIVO): baja lógica (`activo=false`).
   Rechaza con 409 si el grupo tiene inscripciones con `estatus=ACTIVA`.
 - `DELETE /academico/grupo-materias/:id` (ADMINISTRATIVO): quita una materia asignada
@@ -102,29 +105,38 @@ resultante con `<a>`/`Linking.openURL` — el token vuelve a validarse (firma, e
 y pertenencia) en el propio streaming.
 
 ## Actividades y entregas
-- POST `/actividades`, PATCH/DELETE `/actividades/:id` (MAESTRO dueño o ADMINISTRATIVO).
+- POST `/actividades`, PATCH/DELETE `/actividades/:id` (MAESTRO dueño o ADMINISTRATIVO dentro de su alcance).
 - GET `/grupo-materias/:id/actividades` · `/grupo-materias/:id/materiales`.
-- POST `/actividades/:id/entrega` (ALUMNO, multipart `archivo` ≤ 5 MB, formatos permitidos).
+- POST `/actividades/:id/entrega` (ALUMNO, multipart `archivo`, límite MAX_UPLOAD_MB (5 MB por defecto), formatos permitidos).
 - GET `/actividades/:id/entregas` y PATCH `/entregas/:id/calificar` (docente dueño).
 - POST `/grupo-materias/:id/materiales` (multipart) para subir material de clase.
 
 ## Calificaciones
+Actividades son seguimiento independiente; no calculan la nota oficial. El promedio
+oficial usa P1-P3 completos; final (parcial 0) es independiente. Corregir una nota
+existente exige motivo; una captura idéntica no crea historial ni modifica el registro.
+Los periodos cerrados rechazan captura; control escolar puede reabrir dentro de su alcance.
+GET/PATCH `/calificaciones/periodos/:grupoMateriaId/:parcial`, GET del mismo prefijo
+`/historial` paginado. Cierre requiere todas las notas de inscritos vigentes.
+`/calificaciones/mias` usa el ciclo vigente; `cicloId` explícito consulta historial.
+
 - POST `/calificaciones/captura`: captura masiva `{grupoMateriaId, parcial (0=final,1..3), items[]}` con upsert.
 - GET `/calificaciones/grupo-materia/:id?parcial=` · `/calificaciones/alumno/:id` · `/calificaciones/mias`.
 
 ## Calendario
-GET `/calendario?desde&hasta` (autenticado) · POST/DELETE (MAESTRO, ADMINISTRATIVO).
+GET `/calendario?desde=&hasta=&plantelId=` (ALUMNO, MAESTRO, ADMINISTRATIVO; FINANZAS solo recibe 403) · POST/DELETE (MAESTRO, ADMINISTRATIVO).
 El MAESTRO recibe eventos globales y de planteles/grupos donde conserva grupos activos; sin
-grupos activos solo recibe los eventos globales. No puede crear eventos en grupos inactivos.
+grupos activos solo recibe los eventos globales. No puede crear eventos en grupos inactivos ni ciclos cerrados; las altas de grupo requieren contexto configurable. Un evento de grupo no se muestra a otro grupo del mismo plantel. Los intervalos usan instantes ISO e incluyen los eventos que se solapan; máximo un año.
 
 ## Notificaciones
 GET `/notificaciones/mias` · PATCH `/notificaciones/:id/leer` ·
-POST `/notificaciones/difundir` (ADMINISTRATIVO; por `usuarioIds` o `rol`, limitado a destinatarios de sus planteles).
+POST `/notificaciones/difundir` (ADMINISTRATIVO; por `usuarioIds` o `rol`, limitado a destinatarios de sus planteles). Título 150 y mensaje 600 caracteres; IDs enteros positivos, máximo 500 destinatarios explícitos.
 
 ## Finanzas
 | Método | Ruta | Rol | Notas |
 |---|---|---|---|
-| GET/POST/PATCH | /finanzas/conceptos | FINANZAS | Inscripción, colegiatura, recargo, descuento, beca |
+| GET | /finanzas/conceptos | FINANZAS, ADMINISTRATIVO, ALUMNO | Catálogo activo |
+| POST / PATCH | /finanzas/conceptos[/:id] | FINANZAS | Conceptos de cobro; beca/descuento/recargo siguen su flujo específico |
 | GET/POST | /finanzas/cargos | FINANZAS, ADMINISTRATIVO (solo GET) | Filtros `alumnoId`, `estatus`, `periodo`; GET paginado |
 | POST | /finanzas/cargos/generar-colegiaturas | FINANZAS | Masivo por ciclo+periodo, idempotente |
 | POST | /finanzas/cargos/aplicar-recargos | FINANZAS | % a vencidos, una vez por cargo |
@@ -133,7 +145,7 @@ POST `/notificaciones/difundir` (ADMINISTRATIVO; por `usuarioIds` o `rol`, limit
 | GET/POST | /finanzas/pagos | FINANZAS, ADMINISTRATIVO (solo GET) | Pago manual actualiza estatus del cargo; GET paginado |
 | POST | /finanzas/ordenes | ALUMNO, FINANZAS | Crea cargo Openpay y devuelve `urlPago`; los timeouts ambiguos conservan la orden local para conciliación y los reintentos no crean un segundo cargo |
 | POST | /finanzas/webhook/openpay | público* | Confirma `order_id`, monto, moneda y tipo; el procesamiento es idempotente (*Basic Auth opcional en desarrollo; requerida en producción*) |
-| GET | /finanzas/adeudos | FINANZAS, ADMINISTRATIVO | Cargos con saldo |
+| GET | /finanzas/adeudos | FINANZAS, ADMINISTRATIVO | Cargos con saldo, paginados |
 | POST | /finanzas/avisos-cobranza | FINANZAS | Correo con plantilla + notificación in-app |
 | GET | /finanzas/bitacora | FINANZAS | Bitácora financiera limitada a los planteles asignados |
 
@@ -141,7 +153,18 @@ POST `/notificaciones/difundir` (ADMINISTRATIVO; por `usuarioIds` o `rol`, limit
 
 ## Reportes
 - GET `/reportes/resumen` (ADMINISTRATIVO, FINANZAS): KPIs académicos y financieros de los planteles asignados.
-- GET `/reportes/boleta/:alumnoId`: boleta PDF (parciales y promedios).
+- GET `/reportes/boleta/:alumnoId?cicloId=&inscripcionId=`: boleta PDF propia de alumno o control escolar dentro de scope. Maestro no obtiene boleta institucional completa. Varias inscripciones del ciclo exigen seleccionar una. Nombre institucional viene de configuración de marca, compartido con los clientes.
 - GET `/reportes/grupo-materias/:id/calificaciones.xlsx`: concentrado de la clase
   (parciales, final, promedio); el maestro solo descarga sus clases.
 - GET `/reportes/adeudos.xlsx`: reporte de adeudos en Excel.
+
+## Operación ampliada y errores de contrato
+
+- Alumnos: POST `/:id/baja`, `/:id/egreso`, `/:id/transferencia`, `/:id/reactivacion`; PATCH solo datos. Altas ALUMNO/MAESTRO se realizan desde expedientes, nunca desde alta genérica de personal.
+- Ciclos: POST `/academico/ciclos/:id/activar`, `/iniciar-cierre`, `/cerrar`, reservado a SUPERADMIN con `confirmado=true`; GET `/cierre` resume faltantes.
+- Importaciones: POST `/importaciones/preview` multipart y `/confirmar`, plantillas por tipo; previews cifrados persistentes por actor, expiran en 15 minutos y sobreviven reinicios. Promoción `/academico/promocion/preview` y `/confirmar` conserva historial.
+- Conducta: `/conducta/incidencias`, interno de maestro/control escolar; no se expone al alumno. Analítica `/analitica`, capacidades académicas y financieras independientes.
+- Finanzas: POST `/finanzas/cargos/:id/cancelacion`, `/pagos/:id/anulacion` con motivo. Operaciones masivas requieren plantel, preview y confirmación. GET `/conciliacion/ordenes`, `/conciliacion/pagos`; resolución auditable `/finanzas/ordenes/:id/conciliacion` y `/finanzas/pagos/:id/aplicacion`. Cargos/pagos/órdenes conservan plantel de origen tras transferencias.
+- PATCH de materia/concepto/ciclo/grupo exige al menos un campo válido. Omisión conserva valor; null se admite solo donde el dominio lo permite. Fechas DATE usan YYYY-MM-DD; importes respetan DECIMAL(12,2), sin redondear entradas de más de dos decimales. Claves duplicadas producen 409 y recursos inexistentes 404.
+
+Swagger y los DTO/controladores son el contrato detallado por endpoint; esta guía es un resumen operativo.

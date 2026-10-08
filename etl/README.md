@@ -42,6 +42,8 @@ python -m etl.run --entidad planteles --aplicar
 python -m etl.run --entidad alumnos --aplicar
 ```
 
+Cada alumno nuevo recibe el rol ALUMNO dentro de la misma transacción que su usuario y expediente. El catálogo de roles debe estar configurado previamente. Si falla una fila se revierte el lote completo; no queda un usuario sin expediente ni un alumno sin rol. Las bases ya cargadas con versiones anteriores requieren revisar las cuentas sin rol antes de habilitar acceso.
+
 El resumen reporta altas, actualizaciones y registros omitidos (por ejemplo, un alumno
 cuyo plantel legacy aún no se ha migrado).
 

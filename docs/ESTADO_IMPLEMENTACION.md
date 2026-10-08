@@ -1,4 +1,4 @@
-# Estado de implementación — 1.16.0
+# Estado de implementación — 1.18.3
 
 Código implementado no equivale a certificación del piloto. El servidor existe según el usuario, pero todavía no se dispone de configuración y acceso de staging verificados ni evidencia de pruebas físicas.
 
@@ -21,7 +21,7 @@ Código implementado no equivale a certificación del piloto. El servidor existe
 | Base | Baseline v1 intacto, migraciones espejo, DB_SYNC=false y paridad física probada en ambos motores | Ensayo de copia histórica y actualización real del servidor |
 | SMTP | Recuperación con token de un uso, expiración y logs sin destinatario/asunto | Proveedor, buzón real, remitente y errores reales |
 | Operación | Scripts Windows, IIS/ARR, proxy local confiable, logs con request ID, health live/ready y carga de consultas | DNS/TLS/firewall, servicio, ACL, monitoreo, restore cifrado externo y RPO/RTO observado |
-| ETL | Parcial, planteles/alumnos; tres pruebas automatizadas | Esquema certweb sanitizado para completar mapeos sin inventarlos; decidir si historial entra al piloto |
+| ETL | Parcial, planteles/alumnos; cinco pruebas automatizadas | Esquema certweb sanitizado para completar mapeos sin inventarlos; decidir si historial entra al piloto |
 | Privacidad/publicación | Documentación técnica disponible | Aviso aprobado, responsable de operación, cuentas de distribución y aprobación de salida |
 
 La ampliación de código y sus archivos se registran en [AMPLIACION_1.15.0.md](AMPLIACION_1.15.0.md).
@@ -30,7 +30,9 @@ La actualización 1.16.0, verificaciones e inventario constan en [CORRECCIONES_1
 
 ## Evidencia y archivos
 
-[CORRECCIONES_1.16.0.md](CORRECCIONES_1.16.0.md) registra las verificaciones y archivos actuales; [AMPLIACION_1.15.0.md](AMPLIACION_1.15.0.md) conserva la ampliación anterior; [CORRECCIONES_1.15.0.md](CORRECCIONES_1.15.0.md) conserva la primera publicación. [REGLAS_PILOTO.md](REGLAS_PILOTO.md) fija las políticas. [PUBLICAR_SERVIDOR_EXISTENTE.md](PUBLICAR_SERVIDOR_EXISTENTE.md) guía la configuración del servidor existente.
+El barrido vigente, sus regresiones y el inventario completo constan en [BARRIDO_GENERAL_1.18.3.md](BARRIDO_GENERAL_1.18.3.md). Las publicaciones anteriores se conservan como evidencia histórica.
+
+[CORRECCIONES_1.16.0.md](CORRECCIONES_1.16.0.md) conserva las verificaciones y archivos de esa versión; [AMPLIACION_1.15.0.md](AMPLIACION_1.15.0.md) conserva la ampliación anterior; [CORRECCIONES_1.15.0.md](CORRECCIONES_1.15.0.md) conserva la primera publicación. [REGLAS_PILOTO.md](REGLAS_PILOTO.md) fija las políticas. [PUBLICAR_SERVIDOR_EXISTENTE.md](PUBLICAR_SERVIDOR_EXISTENTE.md) guía la configuración del servidor existente.
 
 La CI previa de `a63e921ddbec5ce4c259725f94da08bc1010d7f4` pasó [los siete jobs](https://github.com/Marcor360/Sistema-Escolar/actions/runs/37692539108). Es evidencia de ese baseline; cada nuevo SHA debe tener su propia ejecución. La versión 1.16.0 añade un octavo job obligatorio de recorridos web. No emitir ACTA DE PREPARACIÓN PARA PILOTO aprobada hasta obtener todas las pruebas externas de la Fase 5.
 

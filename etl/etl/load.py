@@ -50,29 +50,36 @@ def upsert_planteles(
     marcador = _marcador(engine)
     resumen = {"altas": 0, "actualizaciones": 0, "omitidos": 0}
     cursor = conn.cursor()
-    for plantel in planteles:
-        id_existente = _buscar_id_por_legacy(cursor, "planteles", plantel["legacy_id"], engine)
-        if id_existente:
-            resumen["actualizaciones"] += 1
-            if not dry_run:
-                cursor.execute(
-                    f"UPDATE planteles SET clave={marcador}, nombre={marcador}, direccion={marcador}, "
-                    f"municipio={marcador}, telefono={marcador} WHERE id={marcador}",
-                    (plantel["clave"], plantel["nombre"], plantel["direccion"], plantel["municipio"],
-                     plantel["telefono"], id_existente),
-                )
-        else:
-            resumen["altas"] += 1
-            if not dry_run:
-                cursor.execute(
-                    f"INSERT INTO planteles (clave, nombre, direccion, municipio, telefono, legacy_id) "
-                    f"VALUES ({', '.join([marcador] * 6)})",
-                    (plantel["clave"], plantel["nombre"], plantel["direccion"], plantel["municipio"],
-                     plantel["telefono"], plantel["legacy_id"]),
-                )
-    if not dry_run:
-        conn.commit()
-    return resumen
+    try:
+        for plantel in planteles:
+            id_existente = _buscar_id_por_legacy(cursor, "planteles", plantel["legacy_id"], engine)
+            if id_existente:
+                resumen["actualizaciones"] += 1
+                if not dry_run:
+                    cursor.execute(
+                        f"UPDATE planteles SET clave={marcador}, nombre={marcador}, direccion={marcador}, "
+                        f"municipio={marcador}, telefono={marcador} WHERE id={marcador}",
+                        (plantel["clave"], plantel["nombre"], plantel["direccion"], plantel["municipio"],
+                         plantel["telefono"], id_existente),
+                    )
+            else:
+                resumen["altas"] += 1
+                if not dry_run:
+                    cursor.execute(
+                        f"INSERT INTO planteles (clave, nombre, direccion, municipio, telefono, legacy_id) "
+                        f"VALUES ({', '.join([marcador] * 6)})",
+                        (plantel["clave"], plantel["nombre"], plantel["direccion"], plantel["municipio"],
+                         plantel["telefono"], plantel["legacy_id"]),
+                    )
+        if not dry_run:
+            conn.commit()
+        return resumen
+    except Exception:
+        if not dry_run:
+            conn.rollback()
+        raise
+    finally:
+        cursor.close()
 
 
 def upsert_alumnos(
@@ -81,61 +88,79 @@ def upsert_alumnos(
     marcador = _marcador(engine)
     resumen = {"altas": 0, "actualizaciones": 0, "omitidos": 0, "passwords_generadas": 0}
     cursor = conn.cursor()
-    for alumno in alumnos:
-        plantel_id = _buscar_id_por_legacy(cursor, "planteles", alumno["plantel_legacy_id"], engine)
-        if not plantel_id:
-            resumen["omitidos"] += 1
-            continue
+    try:
+        rol_alumno_id = None
+        if alumnos and not dry_run:
+            cursor.execute(f"SELECT id FROM roles WHERE clave = {marcador}", ("ALUMNO",))
+            rol = cursor.fetchone()
+            if not rol:
+                raise RuntimeError("Falta el rol ALUMNO en el destino; configura el catálogo antes de importar")
+            rol_alumno_id = rol[0]
+        for alumno in alumnos:
+            plantel_id = _buscar_id_por_legacy(cursor, "planteles", alumno["plantel_legacy_id"], engine)
+            if not plantel_id:
+                resumen["omitidos"] += 1
+                continue
 
-        id_existente = _buscar_id_por_legacy(cursor, "alumnos", alumno["legacy_id"], engine)
-        if id_existente:
-            resumen["actualizaciones"] += 1
-            if not dry_run:
+            id_existente = _buscar_id_por_legacy(cursor, "alumnos", alumno["legacy_id"], engine)
+            if id_existente:
+                resumen["actualizaciones"] += 1
+                if not dry_run:
+                    cursor.execute(
+                        f"UPDATE alumnos SET matricula={marcador}, curp={marcador}, fecha_nacimiento={marcador}, "
+                        f"tutor_nombre={marcador}, tutor_telefono={marcador}, direccion={marcador} "
+                        f"WHERE id={marcador}",
+                        (alumno["matricula"], alumno["curp"], alumno["fecha_nacimiento"], alumno["tutor_nombre"],
+                         alumno["tutor_telefono"], alumno["direccion"], id_existente),
+                    )
+                continue
+
+            resumen["altas"] += 1
+            resumen["passwords_generadas"] += 1
+            if dry_run:
+                continue
+
+            # El alumno nuevo requiere primero su usuario (hash bcrypt de contraseña aleatoria: nunca se migran hashes legacy).
+            columnas_usuario = (
+                "email, password_hash, nombre, apellido_paterno, apellido_materno, telefono, legacy_id"
+            )
+            valores_usuario = (
+                alumno["email"], _hash_password_temporal(), alumno["nombre"], alumno["apellido_paterno"],
+                alumno["apellido_materno"], alumno["telefono"], alumno["legacy_id"],
+            )
+            if engine == "sqlserver":
                 cursor.execute(
-                    f"UPDATE alumnos SET matricula={marcador}, curp={marcador}, fecha_nacimiento={marcador}, "
-                    f"tutor_nombre={marcador}, tutor_telefono={marcador}, direccion={marcador} "
-                    f"WHERE id={marcador}",
-                    (alumno["matricula"], alumno["curp"], alumno["fecha_nacimiento"], alumno["tutor_nombre"],
-                     alumno["tutor_telefono"], alumno["direccion"], id_existente),
+                    f"INSERT INTO usuarios ({columnas_usuario}) OUTPUT INSERTED.id "
+                    f"VALUES ({', '.join([marcador] * len(valores_usuario))})",
+                    valores_usuario,
                 )
-            continue
-
-        resumen["altas"] += 1
-        resumen["passwords_generadas"] += 1
-        if dry_run:
-            continue
-
-        # El alumno nuevo requiere primero su usuario (hash bcrypt de contraseña aleatoria: nunca se migran hashes legacy).
-        columnas_usuario = (
-            "email, password_hash, nombre, apellido_paterno, apellido_materno, telefono, legacy_id"
-        )
-        valores_usuario = (
-            alumno["email"], _hash_password_temporal(), alumno["nombre"], alumno["apellido_paterno"],
-            alumno["apellido_materno"], alumno["telefono"], alumno["legacy_id"],
-        )
-        if engine == "sqlserver":
+                fila_usuario = cursor.fetchone()
+                if not fila_usuario:
+                    raise RuntimeError("SQL Server no devolvió el id del usuario insertado")
+                usuario_id = fila_usuario[0]
+            else:
+                cursor.execute(
+                    f"INSERT INTO usuarios ({columnas_usuario}) VALUES "
+                    f"({', '.join([marcador] * len(valores_usuario))})",
+                    valores_usuario,
+                )
+                usuario_id = cursor.lastrowid
             cursor.execute(
-                f"INSERT INTO usuarios ({columnas_usuario}) OUTPUT INSERTED.id "
-                f"VALUES ({', '.join([marcador] * len(valores_usuario))})",
-                valores_usuario,
+                f"INSERT INTO alumnos (usuario_id, plantel_id, matricula, curp, fecha_nacimiento, tutor_nombre, "
+                f"tutor_telefono, direccion, legacy_id) VALUES ({', '.join([marcador] * 9)})",
+                (usuario_id, plantel_id, alumno["matricula"], alumno["curp"], alumno["fecha_nacimiento"],
+                 alumno["tutor_nombre"], alumno["tutor_telefono"], alumno["direccion"], alumno["legacy_id"]),
             )
-            fila_usuario = cursor.fetchone()
-            if not fila_usuario:
-                raise RuntimeError("SQL Server no devolvió el id del usuario insertado")
-            usuario_id = fila_usuario[0]
-        else:
             cursor.execute(
-                f"INSERT INTO usuarios ({columnas_usuario}) VALUES "
-                f"({', '.join([marcador] * len(valores_usuario))})",
-                valores_usuario,
+                f"INSERT INTO usuario_roles (usuario_id, rol_id) VALUES ({marcador}, {marcador})",
+                (usuario_id, rol_alumno_id),
             )
-            usuario_id = cursor.lastrowid
-        cursor.execute(
-            f"INSERT INTO alumnos (usuario_id, plantel_id, matricula, curp, fecha_nacimiento, tutor_nombre, "
-            f"tutor_telefono, direccion, legacy_id) VALUES ({', '.join([marcador] * 9)})",
-            (usuario_id, plantel_id, alumno["matricula"], alumno["curp"], alumno["fecha_nacimiento"],
-             alumno["tutor_nombre"], alumno["tutor_telefono"], alumno["direccion"], alumno["legacy_id"]),
-        )
-    if not dry_run:
-        conn.commit()
-    return resumen
+        if not dry_run:
+            conn.commit()
+        return resumen
+    except Exception:
+        if not dry_run:
+            conn.rollback()
+        raise
+    finally:
+        cursor.close()

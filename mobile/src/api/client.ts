@@ -42,7 +42,8 @@ api.interceptors.response.use(
         error.config.headers['x-reintento-sesion'] = '1';
         return api.request(error.config);
       } catch (refreshError) {
-        if (!(refreshError as { response?: unknown }).response && (refreshError as Error).message !== 'Sin refresh') return Promise.reject(refreshError);
+        const status = (refreshError as { response?: { status?: number } }).response?.status;
+        if (![401, 403].includes(status ?? 0) && (refreshError as Error).message !== 'Sin refresh') return Promise.reject(refreshError);
       }
       await SecureStore.deleteItemAsync(REFRESH_KEY).catch(() => undefined);
       await SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => undefined);
@@ -52,5 +53,5 @@ api.interceptors.response.use(
   },
 );
 
-/** Base sin /api, para abrir archivos servidos en /uploads. */
+/** Base sin /api, para enlaces firmados de archivos y recursos públicos de marca. */
 export const archivosBase = baseURL.replace(/\/api$/, '');

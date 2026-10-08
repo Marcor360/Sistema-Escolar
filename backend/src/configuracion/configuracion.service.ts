@@ -1,10 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { promises as fs } from 'fs';
-import { basename, join } from 'path';
-import { uploadsPath } from '../common/uploads-path';
 import { validarContenidoArchivo } from '../common/validar-archivo';
 import { Repository } from 'typeorm';
+import { programarLimpieza } from '../archivos/archivo-limpieza.service';
 import { ConfiguracionMarca } from '../entities';
 import { ActualizarMarcaDto, MarcaPublicaDto } from './configuracion.dto';
 
@@ -28,47 +27,39 @@ export class ConfiguracionService {
   }
 
   async actualizar(dto: ActualizarMarcaDto): Promise<MarcaPublicaDto> {
-    let marca = await this.repo.findOne({ where: { id: 1 } });
-    if (!marca) marca = this.repo.create(VALORES_INICIALES);
-    Object.assign(marca, dto, {
-      colorPrimario: dto.colorPrimario.toUpperCase(),
-      colorAcento: dto.colorAcento.toUpperCase(),
+    return this.modificar((marca) => {
+      Object.assign(marca, dto, {
+        colorPrimario: dto.colorPrimario.toUpperCase(),
+        colorAcento: dto.colorAcento.toUpperCase(),
+      });
     });
-    await this.repo.save(marca);
-    return this.obtener();
   }
 
   async guardarLogo(file: Express.Multer.File): Promise<MarcaPublicaDto> {
-    try { await validarContenidoArchivo(file); } catch (error) {
+    try {
+      await validarContenidoArchivo(file);
+      return await this.modificar((marca) => { marca.logoUrl = `/uploads/${file.filename}`; });
+    } catch (error) {
       await fs.unlink(file.path).catch(() => undefined);
       throw error;
     }
-    let marca = await this.repo.findOne({ where: { id: 1 } });
-    if (!marca) marca = this.repo.create(VALORES_INICIALES);
-    const anterior = marca.logoUrl;
-    marca.logoUrl = `/uploads/${file.filename}`;
-    await this.repo.save(marca);
-    await this.eliminarArchivo(anterior);
-    return this.obtener();
   }
 
   async quitarLogo(): Promise<MarcaPublicaDto> {
-    let marca = await this.repo.findOne({ where: { id: 1 } });
-    if (!marca) marca = this.repo.create(VALORES_INICIALES);
-    const anterior = marca.logoUrl;
-    marca.logoUrl = null;
-    await this.repo.save(marca);
-    await this.eliminarArchivo(anterior);
-    return this.obtener();
+    return this.modificar((marca) => { marca.logoUrl = null; });
   }
 
-  private async eliminarArchivo(url: string | null): Promise<void> {
-    if (!url) return;
-    try {
-      await fs.unlink(join(uploadsPath(), basename(url)));
-    } catch {
-      // La limpieza es best-effort: una ausencia previa no invalida la configuración.
-    }
+  private async modificar(cambio: (marca: ConfiguracionMarca) => void): Promise<MarcaPublicaDto> {
+    await this.obtener();
+    return this.repo.manager.transaction(async (manager) => {
+      const repo = manager.getRepository(ConfiguracionMarca);
+      const marca = await repo.findOneOrFail({ where: { id: 1 }, lock: { mode: 'pessimistic_write' } });
+      const anterior = marca.logoUrl;
+      cambio(marca);
+      const guardada = await repo.save(marca);
+      if (anterior && anterior !== guardada.logoUrl) await programarLimpieza(manager, anterior);
+      return this.aPublica(guardada);
+    });
   }
 
   private aPublica(marca: ConfiguracionMarca): MarcaPublicaDto {

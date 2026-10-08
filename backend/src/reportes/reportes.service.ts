@@ -2,7 +2,7 @@ import { contentDisposition } from '../common/content-disposition';
 import { promedioOficial } from '../common/promedio-oficial';
 import { Inscripcion } from '../entities/inscripcion.entity';
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { ConfiguracionService } from '../configuracion/configuracion.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import type { Response } from 'express';
@@ -33,7 +33,7 @@ export class ReportesService {
     private readonly docentes: DocentesService,
     private readonly alumnosService: AlumnosService,
     private readonly scope: ScopeService,
-    private readonly config: ConfigService,
+    private readonly configuracion: ConfiguracionService,
   ) {}
 
   /** Contadores para el dashboard. */
@@ -197,7 +197,7 @@ export class ReportesService {
       materias.set(c.grupoMateriaId, fila);
     }
 
-    const institucion = this.config.get<string>('NOMBRE_INSTITUCION') || 'Institución Educativa';
+    const institucion = (await this.configuracion.obtener()).nombreInstitucion;
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', contentDisposition(`boleta-${alumno.matricula}.pdf`, 'inline'));
 
@@ -212,7 +212,7 @@ export class ReportesService {
     doc.text(`Matrícula: ${alumno.matricula}`);
     doc.text(`Ciclo: ${inscripcion.grupo.ciclo.nombre} · Grupo: ${inscripcion.grupo.nombre}`);
     doc.text(`Plantel: ${inscripcion.grupo.plantel.nombre} · Inscripción: ${inscripcion.id}`);
-    doc.text(`Fecha de emisión: ${new Date().toLocaleDateString('es-MX')}`);
+    doc.text(`Fecha de emisión: ${new Date().toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City' })}`);
     doc.moveDown();
 
     const x = 50;

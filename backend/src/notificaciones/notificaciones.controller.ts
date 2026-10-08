@@ -1,18 +1,11 @@
 import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { IsArray, IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { DifundirDto } from './notificaciones.dto';
 import { NotificacionesService } from './notificaciones.service';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { RolesGuard } from '../common/roles.guard';
 import { Roles } from '../common/roles.decorator';
 import { CurrentUser, JwtUser } from '../common/current-user.decorator';
-
-class DifundirDto {
-  @IsString() @IsNotEmpty() titulo!: string;
-  @IsString() @IsNotEmpty() mensaje!: string;
-  @IsOptional() @IsArray() usuarioIds?: number[];
-  @IsOptional() @IsIn(['ALUMNO', 'MAESTRO', 'ADMINISTRATIVO', 'FINANZAS']) rol?: string;
-}
 
 @ApiTags('notificaciones')
 @ApiBearerAuth()

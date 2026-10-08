@@ -20,6 +20,7 @@ jobs:
           cache: npm
           cache-dependency-path: backend/package-lock.json
       - run: node ../scripts/ci-install.cjs
+      - run: node ../scripts/check-project-consistency.cjs
       - run: npm audit
       - run: npm run lint
       - run: npm run typecheck

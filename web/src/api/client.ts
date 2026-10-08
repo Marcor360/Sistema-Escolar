@@ -1,13 +1,14 @@
 import axios, { AxiosError } from 'axios';
 export { mensajeDeError } from './errores';
 
+const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api').trim().replace(/\/+$/, '');
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
+  baseURL: apiUrl,
   headers: { 'x-portal': 'WEB' }, withCredentials: true, timeout: 20000,
 });
 
 /** Base sin /api, para recursos públicos como el logo institucional. */
-export const archivosBase = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api').replace(/\/api$/, '');
+export const archivosBase = apiUrl.replace(/\/api$/, '');
 
 api.interceptors.request.use((config) => {
   const token = accessToken;
@@ -45,6 +46,12 @@ api.interceptors.response.use((res) => res, async (error: AxiosError) => {
 
 /** Pide un enlace firmado de corta vida y lo abre en una pestaña nueva (sin exponer /uploads). */
 export async function abrirArchivo(tipo: 'materiales' | 'entregas', id: number): Promise<void> {
-  const { data } = await api.get<{ url: string }>(`/archivos/${tipo}/${id}/enlace`);
-  window.open(archivosBase + data.url, '_blank');
+  // La pestaña se abre durante el clic; después de await el navegador puede bloquearla.
+  const pestaña = window.open('about:blank', '_blank');
+  if (!pestaña) throw new Error('Permite abrir pestañas para consultar el archivo.');
+  pestaña.opener = null;
+  try {
+    const { data } = await api.get<{ url: string }>(`/archivos/${tipo}/${id}/enlace`);
+    pestaña.location.replace(archivosBase + data.url);
+  } catch (error) { pestaña.close(); throw error; }
 }

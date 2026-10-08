@@ -1,3 +1,4 @@
+import { OpcionalNoNulo } from '../common/opcional-no-nulo';
 import { IsDateString, MaxLength, Matches, Min, MinLength as LongitudMinima } from 'class-validator';
 import { Transform as Normalizar } from 'class-transformer';
 import { Type } from 'class-transformer';
@@ -45,9 +46,9 @@ export class TransferirAlumnoDto {
 
 export class ActualizarAlumnoDto {
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsOptional() @IsString() @LongitudMinima(1) @MaxLength(80) nombre?: string;
+  @OpcionalNoNulo() @IsString() @LongitudMinima(1) @MaxLength(80) nombre?: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsOptional() @IsString() @LongitudMinima(1) @MaxLength(80) apellidoPaterno?: string;
+  @OpcionalNoNulo() @IsString() @LongitudMinima(1) @MaxLength(80) apellidoPaterno?: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsOptional() @IsString() @MaxLength(80) apellidoMaterno?: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
@@ -63,7 +64,7 @@ export class ActualizarAlumnoDto {
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsOptional() @IsString() @MaxLength(200) direccion?: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) plantelId?: number;
-  @IsOptional() @IsIn(['ACTIVO', 'BAJA', 'EGRESADO']) estatus?: 'ACTIVO' | 'BAJA' | 'EGRESADO';
+  @OpcionalNoNulo() @IsIn(['ACTIVO', 'BAJA', 'EGRESADO']) estatus?: 'ACTIVO' | 'BAJA' | 'EGRESADO';
 }
 
 export class ReactivarAlumnoDto {

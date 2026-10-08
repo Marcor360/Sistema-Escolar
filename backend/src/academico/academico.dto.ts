@@ -1,5 +1,6 @@
+import { OpcionalNoNulo } from '../common/opcional-no-nulo';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsDateString, MaxLength, Min, MinLength as LongitudMinima } from 'class-validator';
+import { Matches, IsDateString, MaxLength, Min, MinLength as LongitudMinima } from 'class-validator';
 import { Transform as Normalizar } from 'class-transformer';
 import { Transform, Type } from 'class-transformer';
 import { IsBoolean, IsIn, IsInt, IsOptional, IsString } from 'class-validator';
@@ -26,29 +27,29 @@ export class CicloDto {
   @IsString() @LongitudMinima(1) @MaxLength(80) nombre!: string;
   @ApiProperty({ type: String, format: 'date' })
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsDateString({ strict: true }) fechaInicio!: string; // YYYY-MM-DD
+  @Matches(/^\d{4}-\d{2}-\d{2}$/) @IsDateString({ strict: true }) fechaInicio!: string; // YYYY-MM-DD
   @ApiProperty({ type: String, format: 'date' })
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsDateString({ strict: true }) fechaFin!: string;
+  @Matches(/^\d{4}-\d{2}-\d{2}$/) @IsDateString({ strict: true }) fechaFin!: string;
   @ApiPropertyOptional({ type: Boolean })
-  @IsOptional() @IsBoolean() activo?: boolean;
+  @OpcionalNoNulo() @IsBoolean() activo?: boolean;
 }
 
 export class ActualizarCicloDto {
   @ApiPropertyOptional({ type: String })
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim().toUpperCase() : value)
-  @IsOptional() @IsString() @LongitudMinima(1) @MaxLength(20) clave?: string;
+  @OpcionalNoNulo() @IsString() @LongitudMinima(1) @MaxLength(20) clave?: string;
   @ApiPropertyOptional({ type: String })
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsOptional() @IsString() @LongitudMinima(1) @MaxLength(80) nombre?: string;
+  @OpcionalNoNulo() @IsString() @LongitudMinima(1) @MaxLength(80) nombre?: string;
   @ApiPropertyOptional({ type: String, format: 'date' })
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsOptional() @IsDateString({ strict: true }) fechaInicio?: string;
+  @OpcionalNoNulo() @Matches(/^\d{4}-\d{2}-\d{2}$/) @IsDateString({ strict: true }) fechaInicio?: string;
   @ApiPropertyOptional({ type: String, format: 'date' })
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsOptional() @IsDateString({ strict: true }) fechaFin?: string;
+  @OpcionalNoNulo() @Matches(/^\d{4}-\d{2}-\d{2}$/) @IsDateString({ strict: true }) fechaFin?: string;
   @ApiPropertyOptional({ type: Boolean })
-  @IsOptional() @IsBoolean() activo?: boolean;
+  @OpcionalNoNulo() @IsBoolean() activo?: boolean;
 }
 
 export class MateriaDto {
@@ -62,21 +63,21 @@ export class MateriaDto {
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsOptional() @IsString() @MaxLength(300) descripcion?: string;
   @ApiPropertyOptional({ type: Number, minimum: 0 })
-  @IsOptional() @IsInt() @Min(0) creditos?: number;
+  @OpcionalNoNulo() @IsInt() @Min(0) creditos?: number;
 }
 
 export class ActualizarMateriaDto {
   @ApiPropertyOptional({ type: String })
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim().toUpperCase() : value)
-  @IsOptional() @IsString() @LongitudMinima(1) @MaxLength(20) clave?: string;
+  @OpcionalNoNulo() @IsString() @LongitudMinima(1) @MaxLength(20) clave?: string;
   @ApiPropertyOptional({ type: String })
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsOptional() @IsString() @LongitudMinima(1) @MaxLength(120) nombre?: string;
+  @OpcionalNoNulo() @IsString() @LongitudMinima(1) @MaxLength(120) nombre?: string;
   @ApiPropertyOptional({ type: String })
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsOptional() @IsString() @MaxLength(300) descripcion?: string;
   @ApiPropertyOptional({ type: Number, minimum: 0 })
-  @IsOptional() @IsInt() @Min(0) creditos?: number;
+  @OpcionalNoNulo() @IsInt() @Min(0) creditos?: number;
 }
 
 export class GrupoDto {
@@ -99,7 +100,7 @@ export class ActualizarGrupoDto {
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) cicloId?: number;
   @ApiPropertyOptional({ type: String })
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsOptional() @IsString() @LongitudMinima(1) @MaxLength(40) nombre?: string;
+  @OpcionalNoNulo() @IsString() @LongitudMinima(1) @MaxLength(40) nombre?: string;
   @ApiPropertyOptional({ type: String })
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsOptional() @IsString() @MaxLength(20) grado?: string;

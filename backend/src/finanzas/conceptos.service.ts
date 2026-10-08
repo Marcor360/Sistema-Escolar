@@ -1,4 +1,6 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { exigirCambios } from '../common/exigir-cambios';
+import { esConflictoUnico } from '../academico/conflictos';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConceptoPago } from '../entities/concepto-pago.entity';
@@ -16,15 +18,18 @@ export class ConceptosService {
     return this.repo.find({ where: incluirInactivos ? {} : { activo: true }, order: { clave: 'ASC' } });
   }
 
-  crear(dto: ConceptoDto) {
+  async crear(dto: ConceptoDto) {
     this.validarTipo(dto.tipo);
-    return this.repo.save(this.repo.create(dto));
+    try { return await this.repo.save(this.repo.create(dto)); }
+    catch (error) { if (esConflictoUnico(error)) throw new ConflictException('La clave de concepto ya está registrada'); throw error; }
   }
 
   async actualizar(id: number, dto: ActualizarConceptoDto) {
     await this.obtener(id);
     if (dto.tipo) this.validarTipo(dto.tipo);
-    await this.repo.update(id, dto);
+    exigirCambios(dto);
+    try { await this.repo.update(id, dto); }
+    catch (error) { if (esConflictoUnico(error)) throw new ConflictException('La clave de concepto ya está registrada'); throw error; }
     return this.repo.findOne({ where: { id } });
   }
 

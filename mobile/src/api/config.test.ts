@@ -14,3 +14,7 @@ describe('URL de API móvil', () => {
       .toBe('https://api.escuela.example/api');
   });
 });
+it('normaliza espacios y slash final para que API y enlaces de archivo compartan la base', () => {
+  expect(resolverApiUrl('preview',' https://api.example.invalid/api/ ')).toBe('https://api.example.invalid/api');
+  expect(resolverApiUrl('development','http://localhost:3000/api/')).toBe('http://localhost:3000/api');
+});

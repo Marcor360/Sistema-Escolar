@@ -2,7 +2,18 @@
 
 > Portal web administrativo/docente, app móvil del alumno y API para gestión académica y financiera. El código cubre los flujos principales del MVP; todavía no hay certificación de piloto institucional ni despliegue productivo.
 
-**Versión candidata: `1.18.2` · Commit: `1.18.2` · 8 de octubre de 2026.** Backend, web, móvil y Expo declaran la misma versión. La CI del SHA publicado debe comprobarse en [GitHub Actions](https://github.com/Marcor360/Sistema-Escolar/actions/workflows/ci.yml). El piloto requiere todavía certificación sobre el servidor y dispositivos reales.
+**Versión candidata: `1.18.3` · Commit: `1.18.3` · 8 de octubre de 2026.** Backend, web, móvil y Expo declaran la misma versión. La CI del SHA publicado debe comprobarse en [GitHub Actions](https://github.com/Marcor360/Sistema-Escolar/actions/workflows/ci.yml). El piloto requiere todavía certificación sobre el servidor y dispositivos reales.
+
+## Barrido general y conexiones 1.18.3
+
+- Validación de nulos, fechas civiles, precisión monetaria y mensajes; errores de dominio para cambios vacíos y duplicados.
+- Sesión móvil conservada ante fallos transitorios; descargas firmadas abiertas desde la acción del usuario.
+- Calendario con filtros persistentes, protección de doble envío y fechas locales; cierre de ciclos con confirmación accesible y recuperable.
+- Identidad institucional compartida con la boleta; cambios de marca serializados y limpieza persistente de logos sustituidos.
+- ETL con rol ALUMNO transaccional y rollback; metadata contrastada con los tipos físicos de ambos motores.
+- Verificación automática de versiones, baseline, migraciones espejo, enlaces y rutas de cliente incorporada a CI.
+
+Evidencia, archivos y límites: [BARRIDO_GENERAL_1.18.3.md](docs/BARRIDO_GENERAL_1.18.3.md). No cambia el DDL ni crea migraciones.
 
 ## Barrido y correcciones 1.18.2
 

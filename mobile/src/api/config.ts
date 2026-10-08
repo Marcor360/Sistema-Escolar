@@ -1,5 +1,6 @@
 /** La configuración Expo se incorpora al bundle; nunca usar localhost en preview/producción. */
 export function resolverApiUrl(appEnv: string, apiUrl?: string): string {
+  apiUrl = apiUrl?.trim().replace(/\/+$/, '');
   if (appEnv === 'development') return apiUrl || 'http://localhost:3000/api';
   if (!apiUrl) throw new Error(`Falta la URL de la API para ${appEnv}`);
   let url: URL;
