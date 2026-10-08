@@ -11,3 +11,5 @@ FinanzasPage coordina estado, idempotencia, carga y operaciones. PanelCargos, Pa
 `ConfigModule` valida entorno antes de construir providers. NODE_ENV, motor, conexión, secreto, uploads y DB_SYNC=false son explícitos. Verifica puertos, booleanos, URLs, pares de credenciales, CORS y requisitos de proveedores según modo. Producción y staging exigen TLS y CORS HTTPS; producción exige secreto de 32 caracteres. Staging conserva proveedores opcionales. Openpay mantiene sus validaciones de URL/proveedor de producción. No se imprimen valores de credenciales en errores. TypeORM ya no toma root/contraseña vacía/base escolar por defecto.
 
 Validación: backend lint/typecheck/build y 166 unitarias; web lint/test/build; integración 47 casos SQL Server y 49 casos MySQL con Chromium. La publicación debe confirmar ocho jobs verdes para su SHA exacto. El refactor no certifica infraestructura ni piloto.
+
+Los tres jobs de integración declaran UPLOADS_DIR antes de importar AppModule. La configuración local no debe ocultar requisitos de CI; validar el arranque con las variables explícitas del job.
