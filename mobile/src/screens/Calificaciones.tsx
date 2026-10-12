@@ -58,7 +58,7 @@ export default function CalificacionesScreen() {
           const promedio = materia.parciales[0]?.promedioOficial;
           return (
             <Tarjeta>
-              <Text style={base.tituloTarjeta}>{materia.nombre}</Text>
+              <Text style={base.tituloTarjeta} accessibilityRole="header">{materia.nombre}</Text>
               {materia.parciales
                 .sort((a, b) => a.parcial - b.parcial)
                 .map((p) => (
