@@ -1,5 +1,5 @@
-import { Suspense, useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { Suspense, useEffect, useState } from 'react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { Cargando } from '../components/Cargando';
 import { Campana } from '../components/Campana';
@@ -28,22 +28,34 @@ const secciones = [
 export function Shell() {
   const { sesion, logout, tieneRol } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { marca } = useMarca();
   const [errorCierre, setErrorCierre] = useState('');
+  const [menuAbierto, setMenuAbierto] = useState(false);
+
+  useEffect(() => { setMenuAbierto(false); }, [location.pathname]);
+  useEffect(() => {
+    const cerrarConEscape = (evento: KeyboardEvent) => {
+      if (evento.key === 'Escape') setMenuAbierto(false);
+    };
+    window.addEventListener('keydown', cerrarConEscape);
+    return () => window.removeEventListener('keydown', cerrarConEscape);
+  }, []);
 
   return (
     <div className="shell">
       <a className="skip-link" href="#contenido-principal">Saltar al contenido principal</a>
-      <aside className="lateral">
+      <aside className={`lateral${menuAbierto ? ' lateral-abierto' : ''}`}>
+        <button type="button" className="menu-movil" aria-expanded={menuAbierto} aria-controls="navegacion-escolar" onClick={() => setMenuAbierto((abierto) => !abierto)}>{menuAbierto ? 'Cerrar menú' : 'Abrir menú'} <span aria-hidden="true">{menuAbierto ? '×' : '☰'}</span></button>
         {marca.logoUrl
           ? <img className="logo-marca" src={archivosBase + marca.logoUrl} alt={marca.nombreInstitucion} />
           : <div className="monograma" aria-hidden>{marca.nombreCorto}</div>}
         <p className="lateral-titulo">{marca.nombreInstitucion}</p>
-        <nav aria-label="Navegación principal">
+        <nav id="navegacion-escolar" aria-label="Navegación principal">
           {secciones
             .filter((s) => tieneRol(...s.roles))
             .map((s) => (
-              <NavLink key={s.destino} to={s.destino} end={s.destino === '/'}>
+              <NavLink key={s.destino} to={s.destino} end={s.destino === '/'} onClick={() => setMenuAbierto(false)}>
                 {s.etiqueta}
               </NavLink>
             ))}
@@ -71,6 +83,7 @@ export function Shell() {
       </aside>
       <main className="contenido" id="contenido-principal" tabIndex={-1}>
         <div className="barra-superior">
+          <span className="barra-contexto">Espacio de trabajo <strong>{sesion?.roles.join(' · ')}</strong></span>
           <Campana />
         </div>
         <Suspense fallback={<Cargando />}>
