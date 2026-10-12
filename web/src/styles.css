@@ -815,3 +815,27 @@ input:disabled, select:disabled { background: #f2f5f6; }
   .paginador-acciones { width: 100%; justify-content: space-between; }
   .paginador-acciones .boton { padding-inline: 12px; }
 }
+
+
+/* Colores de contenido con contraste calculado para la identidad institucional. */
+:root { --texto-sobre-pizarra: #ffffff; --texto-sobre-dorado: #19272c; }
+.lateral, .lateral nav a, .lateral nav a.active,
+.lateral .pie-enlace, .lateral .boton.fantasma {
+  color: var(--texto-sobre-pizarra);
+}
+.lateral nav a { opacity: .94; }
+.lateral nav a.active { opacity: 1; }
+.boton:not(.secundario, .peligro, .fantasma) { color: var(--texto-sobre-pizarra); }
+.lateral nav a:focus-visible, .lateral button:focus-visible {
+  outline: 3px solid var(--texto-sobre-pizarra);
+  outline-offset: 2px;
+}
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline-color: #295cb0;
+}
+.lateral :where(button, a):focus-visible { outline-color: var(--texto-sobre-pizarra); }
+.tabla-contenedor { -webkit-overflow-scrolling: touch; }
+.tabla-contenedor .tabla { width: 100%; }
+@media (max-width: 800px) {
+  .tabla-contenedor .tabla { display: table; overflow: visible; }
+}
