@@ -1,6 +1,7 @@
 import { crearControlLectura } from '../api/lectura-vigente';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, TouchableOpacity, TextInput, View } from 'react-native';
+import { Text } from '../components/Texto';
 import { useFocusEffect } from '@react-navigation/native';
 import * as DocumentPicker from 'expo-document-picker';
 import { api, mensajeDeError } from '../api/client';
