@@ -379,7 +379,7 @@ export function registrarAltasInstitucionales(ctx: ContextoIntegracion) {
     const root = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.superadminId })).email);
     const datos = { nombre: 'Institucional',apellidoPaterno: 'Prueba',apellidoMaterno: 'Materno',telefono: '5550001111',password: 'Integracion_Segura_42!' };
     const alumno = await ctx.api('/alumnos',{ method: 'POST',token: root,body: { ...{ nombre: datos.nombre, apellidoPaterno: datos.apellidoPaterno, apellidoMaterno: datos.apellidoMaterno, telefono: datos.telefono },email: `insal_${ctx.sufijo}@example.invalid`,matricula: `IA${ctx.sufijo}`,plantelId: ctx.plantelId,curp: 'TEST090101HMCRXX00',fechaNacimiento: '2009-01-02',direccion: 'Calle institucional 12',tutorNombre: 'Tutor institucional',tutorTelefono: '5550002222' } }); expect(alumno.response.status).toBe(201);
-    const inicioAlumno = await ctx.api('/auth/login', { method: 'POST', headers: { 'x-portal': 'WEB' }, body: { email: `insal_${ctx.sufijo}@example.invalid`, password: `IA${ctx.sufijo}` } });
+    const inicioAlumno = await ctx.api('/auth/login', { method: 'POST', headers: { 'x-portal': 'MOVIL' }, body: { email: `insal_${ctx.sufijo}@example.invalid`, password: `IA${ctx.sufijo}` } });
     expect(inicioAlumno.response.status).toBe(201);
     expect(inicioAlumno.data.usuario.passwordChangeRequired).toBe(true);
     const ficha = await ctx.api(`/alumnos/${alumno.data.id}`,{ token: root }); expect(ficha.data).toMatchObject({ fechaNacimiento: '2009-01-02',direccion: 'Calle institucional 12',usuario: { apellidoMaterno: 'Materno',telefono: '5550001111' } });
