@@ -10,7 +10,7 @@ import { useFonts } from 'expo-font';
 import * as SecureStore from 'expo-secure-store';
 import { api, mensajeDeError, registrarSesionExpirada, TOKEN_KEY, REFRESH_KEY } from './src/api/client';
 import { Sesion, SesionContext } from './src/sesion';
-import { colores } from './src/theme';
+import { colores, textoSobreFondo } from './src/theme';
 import LoginScreen from './src/screens/Login';
 import InicioScreen from './src/screens/Inicio';
 import MateriasScreen from './src/screens/Materias';
@@ -179,9 +179,9 @@ function AppInterna() {
         {sesion ? (
           <Tab.Navigator
             screenOptions={({ route }) => ({
-              headerStyle: { backgroundColor: colores.pizarra },
-              headerTintColor: '#fff',
-              tabBarActiveTintColor: marca.colorPrimario,
+              headerStyle: { backgroundColor: marca.colorPrimario },
+              headerTintColor: textoSobreFondo(marca.colorPrimario),
+              tabBarActiveTintColor: textoSobreFondo(colores.papel) === '#ffffff' ? '#ffffff' : colores.pizarraOscuro,
               tabBarInactiveTintColor: colores.gris,
               tabBarHideOnKeyboard: true,
               tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
