@@ -176,7 +176,7 @@ function AppInterna() {
     <MarcaContext.Provider value={{ marca }}>
       <SesionContext.Provider value={{ sesion, iniciar, cerrar }}>
         <NavigationContainer ref={navegacion} theme={tema} onReady={() => { if (sesion && Notifications.getLastNotificationResponse()) navegacion.navigate('Inicio'); }}>
-        <StatusBar style="light" />
+        <StatusBar style={textoSobreFondo(marca.colorPrimario) === '#ffffff' ? 'light' : 'dark'} />
         {sesion ? (
           <Tab.Navigator
             screenOptions={({ route }) => ({
