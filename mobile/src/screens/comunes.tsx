@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colores } from '../theme';
+import { colores, espacio, radio, tipografia } from '../theme';
 
 export function Tarjeta({ children }: { children: React.ReactNode }) {
   return <View style={base.tarjeta}>{children}</View>;
@@ -29,19 +29,19 @@ export function ErrorCarga({ mensaje, reintentar }: { mensaje: string; reintenta
 }
 
 export const base = StyleSheet.create({
-  pantalla: { flex: 1, backgroundColor: colores.papel, padding: 16 },
+  pantalla: { flex: 1, backgroundColor: colores.papel, padding: espacio.lg },
   tarjeta: {
     backgroundColor: '#fff', borderWidth: 1, borderColor: colores.linea,
-    padding: 14, marginBottom: 10,
+    padding: espacio.lg, marginBottom: espacio.md, borderRadius: radio.md,
   },
-  tituloTarjeta: { fontSize: 15, fontWeight: '600', color: colores.tinta, marginBottom: 2 },
-  secundario: { fontSize: 12.5, color: colores.gris },
+  tituloTarjeta: { fontSize: tipografia.cuerpo, fontWeight: '700', color: colores.tinta, marginBottom: 2 },
+  secundario: { fontSize: tipografia.secundaria, color: colores.gris },
   sello: {
-    alignSelf: 'flex-start', borderWidth: 1, paddingHorizontal: 7, paddingVertical: 1,
+    alignSelf: 'flex-start', borderWidth: 1, paddingHorizontal: 9, paddingVertical: 4, borderRadius: radio.sm,
     fontSize: 10, letterSpacing: 0.5, textTransform: 'uppercase', marginTop: 6,
   },
   vacio: { color: colores.gris, textAlign: 'center', marginTop: 40, paddingHorizontal: 20 },
-  errorCarga: { backgroundColor: '#fff', borderWidth: 1, borderColor: colores.peligro, padding: 12, marginBottom: 10 },
+  errorCarga: { backgroundColor: '#fff', borderWidth: 1, borderColor: colores.peligro, padding: espacio.lg, marginBottom: espacio.md, borderRadius: radio.md },
   errorTexto: { color: colores.peligro, marginBottom: 8 },
   reintentar: { color: colores.pizarra, textDecorationLine: 'underline', fontWeight: '600' },
   botonAccesible: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start', paddingHorizontal: 8 },
