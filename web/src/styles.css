@@ -881,3 +881,7 @@ input:disabled, select:disabled { background: #f2f5f6; }
   background: var(--pizarra-2);
   color: var(--texto-sobre-pizarra-2);
 }
+
+.boton:not(.secundario, .peligro, .fantasma):hover {
+  color: var(--texto-sobre-pizarra-2);
+}

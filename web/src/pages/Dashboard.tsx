@@ -36,6 +36,7 @@ export default function DashboardPage() {
     FINANZAS: { titulo: 'Gestión financiera', detalle: 'Revisa cobranza, saldos pendientes y operaciones financieras.' },
     MAESTRO: { titulo: 'Espacio docente', detalle: 'Accede a tus clases, evaluaciones y actividades del calendario.' },
   }[rolPrincipal];
+  const tieneVariosRoles = (sesion?.roles.length ?? 0) > 1 && !sesion?.roles.includes('SUPERADMIN');
   const puedeVerResumen = tieneRol('SUPERADMIN', 'ADMINISTRATIVO', 'FINANZAS');
   const { datos: planteles } = useDatos<Plantel[]>(
     () => api.get('/planteles/mios').then((r) => r.data),
@@ -71,38 +72,38 @@ export default function DashboardPage() {
   ] : [];
 
   const metricasVisibles = metricas.filter((metrica) =>
-    rolPrincipal === 'SUPERADMIN' ||
-    (rolPrincipal === 'FINANZAS' ? ['Cobrado este mes', 'Saldo pendiente', 'Cargos con adeudo'].includes(metrica.etiqueta) :
-      ['Alumnos activos', 'Docentes activos', 'Grupos'].includes(metrica.etiqueta)),
+    tieneRol('SUPERADMIN') ||
+    (['Cobrado este mes', 'Saldo pendiente', 'Cargos con adeudo'].includes(metrica.etiqueta)
+      ? tieneRol('FINANZAS') : tieneRol('ADMINISTRATIVO')),
   );
 
   const accesos = [
-    ...(rolPrincipal === 'ADMINISTRATIVO' ? [
+    ...(sesion?.roles.includes('ADMINISTRATIVO') ? [
       { ruta: '/operaciones', titulo: 'Importar alumnos', detalle: 'Carga masiva y revisión previa de registros' },
       { ruta: '/alumnos', titulo: 'Alumnos', detalle: 'Consulta y administra la matrícula' },
       { ruta: '/grupos', titulo: 'Grupos', detalle: 'Organiza grupos y ciclos escolares' },
       { ruta: '/calendario', titulo: 'Calendario', detalle: 'Revisa fechas y actividades' },
     ] : []),
-    ...(rolPrincipal === 'FINANZAS' ? [
+    ...(sesion?.roles.includes('FINANZAS') ? [
       { ruta: '/finanzas', titulo: 'Finanzas', detalle: 'Da seguimiento a cargos y pagos' },
       { ruta: '/alumnos', titulo: 'Alumnos', detalle: 'Consulta datos de familias' },
     ] : []),
-    ...(rolPrincipal === 'MAESTRO' ? [
+    ...(sesion?.roles.includes('MAESTRO') ? [
       { ruta: '/maestro', titulo: 'Mis clases', detalle: 'Consulta tus grupos y materias' },
       { ruta: '/calificaciones', titulo: 'Calificaciones', detalle: 'Captura y revisa evaluaciones' },
       { ruta: '/calendario', titulo: 'Calendario', detalle: 'Revisa fechas y actividades' },
     ] : []),
-    ...(rolPrincipal === 'SUPERADMIN' ? [
+    ...(sesion?.roles.includes('SUPERADMIN') ? [
       { ruta: '/configuracion', titulo: 'Configuración', detalle: 'Administra la identidad institucional' },
     ] : []),
-  ].slice(0, 3);
+  ];
 
   return (
     <>
       <div className="panel-bienvenida">
         <div>
-          <p className="sobrelinea">{contextoRol.titulo.toUpperCase()}</p>
-          <Encabezado titulo={`Hola${sesion?.nombre ? `, ${sesion.nombre.split(' ')[0]}` : ''}`} detalle={contextoRol.detalle} />
+          <p className="sobrelinea">{tieneVariosRoles ? 'ESPACIO DE TRABAJO' : contextoRol.titulo.toUpperCase()}</p>
+          <Encabezado titulo={`Hola${sesion?.nombre ? `, ${sesion.nombre.split(' ')[0]}` : ''}`} detalle={tieneVariosRoles ? 'Indicadores y accesos de tus funciones asignadas.' : contextoRol.detalle} />
         </div>
         {puedeVerResumen && planteles.length > 1 && (
           <div className="campo filtro-plantel">
