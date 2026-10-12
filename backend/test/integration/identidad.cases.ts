@@ -400,11 +400,12 @@ export function registrarAltasInstitucionales(ctx: ContextoIntegracion) {
     for (const id of cuentas) {
       const u = await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id }); expect(u.passwordChangeRequired).toBe(true); expect(u.roles).toHaveLength(1);
       const portal = u.roles[0].clave === 'ALUMNO' ? 'MOVIL' : 'WEB';
-      const inicial = await ctx.app.get(AuthService).login(u.email,datos.password,portal);
+      const passwordInicial = u.roles[0].clave === 'ALUMNO' ? `IA${ctx.sufijo}` : datos.password;
+      const inicial = await ctx.app.get(AuthService).login(u.email,passwordInicial,portal);
       expect(inicial.usuario.passwordChangeRequired).toBe(true);
       // Las rutas HTTP de cambio ya se prueban arriba. Aquí cinco altas usan el servicio
       // real para no agotar el límite por IP compartido con el resto de la suite.
-      await ctx.app.get(AuthService).cambiarPassword(u.id,datos.password,'Institucional_Renovada_42!');
+      await ctx.app.get(AuthService).cambiarPassword(u.id,passwordInicial,'Institucional_Renovada_42!');
       expect((await ctx.api('/auth/me',{ token: inicial.accessToken,headers: { 'x-portal': portal } })).response.status).toBe(401);
       ctx.passwords.set(u.email,'Institucional_Renovada_42!');
       const token = await ctx.emitirToken(u.email); expect(token).toBeTruthy(); expect((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id })).passwordChangeRequired).toBe(false);
