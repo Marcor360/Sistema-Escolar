@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { Cargando } from '../components/Cargando';
@@ -32,11 +32,18 @@ export function Shell() {
   const { marca } = useMarca();
   const [errorCierre, setErrorCierre] = useState('');
   const [menuAbierto, setMenuAbierto] = useState(false);
+  const botonMenu = useRef<HTMLButtonElement>(null);
+  const lateral = useRef<HTMLElement>(null);
 
   useEffect(() => { setMenuAbierto(false); }, [location.pathname]);
   useEffect(() => {
     const cerrarConEscape = (evento: KeyboardEvent) => {
-      if (evento.key === 'Escape') setMenuAbierto(false);
+      if (evento.key === 'Escape') {
+        if (botonMenu.current?.getAttribute('aria-expanded') === 'true' && lateral.current?.contains(document.activeElement)) {
+          botonMenu.current.focus();
+        }
+        setMenuAbierto(false);
+      }
     };
     window.addEventListener('keydown', cerrarConEscape);
     return () => window.removeEventListener('keydown', cerrarConEscape);
@@ -45,8 +52,8 @@ export function Shell() {
   return (
     <div className="shell">
       <a className="skip-link" href="#contenido-principal">Saltar al contenido principal</a>
-      <aside className={`lateral${menuAbierto ? ' lateral-abierto' : ''}`}>
-        <button type="button" className="menu-movil" aria-expanded={menuAbierto} aria-controls="navegacion-escolar" onClick={() => setMenuAbierto((abierto) => !abierto)}>{menuAbierto ? 'Cerrar menú' : 'Abrir menú'} <span aria-hidden="true">{menuAbierto ? '×' : '☰'}</span></button>
+      <aside ref={lateral} className={`lateral${menuAbierto ? ' lateral-abierto' : ''}`}>
+        <button ref={botonMenu} type="button" className="menu-movil" aria-expanded={menuAbierto} aria-controls="navegacion-escolar" onClick={() => setMenuAbierto((abierto) => !abierto)}>{menuAbierto ? 'Cerrar menú' : 'Abrir menú'} <span aria-hidden="true">{menuAbierto ? '×' : '☰'}</span></button>
         {marca.logoUrl
           ? <img className="logo-marca" src={archivosBase + marca.logoUrl} alt={marca.nombreInstitucion} />
           : <div className="monograma" aria-hidden>{marca.nombreCorto}</div>}

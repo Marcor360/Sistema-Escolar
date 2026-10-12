@@ -716,7 +716,7 @@ input:disabled, select:disabled { background: #f2f5f6; }
   .barra-superior { margin-bottom: 20px; }
   .panel { padding: 18px; }
   .panel-bienvenida { padding: 20px 18px 0; }
-  .tabla { border-radius: var(--radio-sm); }
+  .tabla { border-radius: var(--radio-sm); overflow-x: auto; }
 }
 @media (max-width: 420px) {
   .login-caja { padding: 26px 20px; }
