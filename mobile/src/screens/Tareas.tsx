@@ -5,7 +5,7 @@ import { Text } from '../components/Texto';
 import { useFocusEffect } from '@react-navigation/native';
 import * as DocumentPicker from 'expo-document-picker';
 import { api, mensajeDeError } from '../api/client';
-import { colores, radio, espacio, tipografia } from '../theme';
+import { colores, tipografia } from '../theme';
 import { base, ErrorCarga, Sello, Tarjeta, Vacio } from './comunes';
 
 interface Tarea {
