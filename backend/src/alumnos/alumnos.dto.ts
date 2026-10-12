@@ -1,4 +1,3 @@
-import { PasswordNuevaValida } from '../common/password-bcrypt';
 import { OpcionalNoNulo } from '../common/opcional-no-nulo';
 import { IsDateString, MaxLength, Matches, Min, MinLength as LongitudMinima } from 'class-validator';
 import { Transform as Normalizar } from 'class-transformer';
@@ -16,7 +15,6 @@ export class CrearAlumnoDto {
   // Cuenta
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim().toLowerCase() : value)
   @IsEmail() @MaxLength(120) email!: string;
-  @IsString() @MinLength(8) @PasswordNuevaValida() password!: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsString() @LongitudMinima(1) @MaxLength(80) nombre!: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
@@ -30,7 +28,7 @@ export class CrearAlumnoDto {
   @IsString() @LongitudMinima(1) @MaxLength(20) matricula!: string;
   @Type(() => Number) @IsInt() @Min(1) plantelId!: number;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim().toUpperCase() : value)
-  @IsOptional() @IsString() @MaxLength(18) curp?: string | null;
+  @IsString() @Matches(/^[A-ZÑ&]{4}\d{6}[HM][A-ZÑ]{5}[A-Z0-9]\d$/) curp!: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsOptional() @Matches(/^\d{4}-\d{2}-\d{2}$/) @IsDateString({ strict: true }) fechaNacimiento?: string; // YYYY-MM-DD
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)

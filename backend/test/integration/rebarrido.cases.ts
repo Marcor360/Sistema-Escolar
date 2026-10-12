@@ -26,7 +26,7 @@ export function registrarRebarrido(ctx: ContextoIntegracion) {
     expect((await ctx.api('/calendario?hasta=1970-01-01T00:00:00Z',{ token })).response.status).toBe(400);
     expect((await ctx.api('/calendario',{ method: 'POST',token,body: { titulo: '  ',fechaInicio: '2027-01-01T12:00:00Z' } })).response.status).toBe(400);
     for (const password of ['x'.repeat(73),'á'.repeat(37),'\ud800'.repeat(8)]) expect((await ctx.api('/usuarios',{ method: 'POST',token,body: { email: `rlarga_${ctx.sufijo}@example.invalid`,nombre: 'Password',apellidoPaterno: 'Límite',password,roles: ['FINANZAS'],plantelIds: [ctx.plantelId] } })).response.status).toBe(400);
-    const alta = await ctx.api('/alumnos',{ method: 'POST',token,body: { email: `rn_${ctx.sufijo}@example.invalid`,password: 'Integracion_Segura_42!',nombre: 'Antes',apellidoPaterno: 'Alumno',apellidoMaterno: 'Materno',telefono: '55555',matricula: `RN${ctx.sufijo}`,plantelId: ctx.plantelId,curp: 'CURP',tutorNombre: 'Tutor',tutorTelefono: '55555',direccion: 'Dirección' } }); expect(alta.response.status).toBe(201);
+    const alta = await ctx.api('/alumnos',{ method: 'POST',token,body: { email: `rn_${ctx.sufijo}@example.invalid`,nombre: 'Antes',apellidoPaterno: 'Alumno',apellidoMaterno: 'Materno',telefono: '55555',matricula: `RN${ctx.sufijo}`,plantelId: ctx.plantelId,curp: 'GODE561231HDFRRN09',tutorNombre: 'Tutor',tutorTelefono: '55555',direccion: 'Dirección' } }); expect(alta.response.status).toBe(201);
     const patch = await ctx.api(`/alumnos/${alta.data.id}`,{ method: 'PATCH',token,body: { nombre: 'Después',apellidoMaterno: null,telefono: null,curp: null,tutorNombre: null,tutorTelefono: null,direccion: null } }); expect(patch.response.status).toBe(200);
     expect(patch.data.usuario).toMatchObject({ nombre: 'Después',apellidoMaterno: null,telefono: null }); expect(patch.data).toMatchObject({ curp: null,tutorNombre: null,tutorTelefono: null,direccion: null });
     const alumno = await ctx.dataSource.getRepository(Alumno).findOneByOrFail({ id: alta.data.id }); expect(alumno.usuario.nombre).toBe('Después');
@@ -36,7 +36,7 @@ export function registrarRebarrido(ctx: ContextoIntegracion) {
   });
   it('observaciones y comentarios nullable se limpian; la nota oficial conserva motivo e historial', async () => {
     const token = await root();
-    const alumno = await ctx.api('/alumnos',{ method: 'POST',token,body: { email: `rnota_${ctx.sufijo}@example.invalid`,password: 'Integracion_Segura_42!',nombre: 'Nota',apellidoPaterno: 'Limpieza',matricula: `RT${ctx.sufijo}`,plantelId: ctx.plantelId } }); expect(alumno.response.status).toBe(201);
+    const alumno = await ctx.api('/alumnos',{ method: 'POST',token,body: { email: `rnota_${ctx.sufijo}@example.invalid`,nombre: 'Nota',apellidoPaterno: 'Limpieza',matricula: `RT${ctx.sufijo}`,plantelId: ctx.plantelId, curp: 'GODE561231HDFRRN09' } }); expect(alumno.response.status).toBe(201);
     const gm = await ctx.dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: ctx.grupoMateriaIdMaestro });
     expect((await ctx.api(`/academico/grupos/${gm.grupoId}/alumnos`,{ method: 'POST',token,body: { alumnoId: alumno.data.id } })).response.status).toBe(201);
     const body = { grupoMateriaId: gm.id,parcial: 3,items: [{ alumnoId: alumno.data.id,calificacion: 85,observaciones: 'Texto anterior' }] };
