@@ -17,10 +17,15 @@ export async function recorridoWeb(d: Datos, tipo: 'academico' | 'financiero' | 
       await new Promise((r) => setTimeout(r, 100));
     }
     assert(listo, 'La web no inició'); browser = await chromium.launch({ headless: true, ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE } : {}) });
-    const page = await browser.newPage(); const errores: string[] = [];
+    // Cada recorrido representa un cliente distinto tras el proxy local; conserva el throttling real por IP.
+    const ipCliente = tipo === 'academico' ? '203.0.113.1' : tipo === 'financiero' ? '203.0.113.2' : '203.0.113.3';
+    const page = await browser.newPage({ extraHTTPHeaders: { 'x-forwarded-for': ipCliente } }); const errores: string[] = [];
     page.on('pageerror', (e: Error) => errores.push(e.message)); page.on('dialog', (dialog: { accept: () => Promise<void> }) => { void dialog.accept(); });
     await page.addLocatorHandler(page.getByRole('dialog', { name: 'Confirmar operación', exact: true }), async () => { await page.getByRole('dialog', { name: 'Confirmar operación', exact: true }).getByRole('button', { name: 'Confirmar', exact: true }).click(); });
-    await page.goto('http://127.0.0.1:5181/login'); await page.getByLabel('Correo institucional').fill(d.email); await page.getByLabel('Contraseña', { exact: true }).fill(d.password); await page.getByRole('button', { name: 'Entrar' }).click();
+    await page.goto('http://127.0.0.1:5181/login'); await page.getByLabel('Correo institucional').fill(d.email); await page.getByLabel('Contraseña', { exact: true }).fill(d.password); const respuestaLogin = page.waitForResponse((r: { url: () => string; request: () => { method: () => string } }) => r.url().endsWith('/auth/login') && r.request().method() === 'POST');
+    await page.getByRole('button', { name: 'Entrar' }).click();
+    const login = await respuestaLogin;
+    assert.equal(login.status(), 201, `Login del recorrido ${tipo}: ${await login.text()}`);
     await expect(page.getByRole('link', { name: 'Alumnos', exact: true })).toBeVisible();
     const matricula = `BW${tipo === 'academico' ? 'A' : tipo === 'financiero' ? 'F' : 'U'}${d.sufijo}`;
     await page.getByRole('link', { name: 'Alumnos', exact: true }).click();
