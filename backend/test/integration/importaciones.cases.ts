@@ -24,6 +24,9 @@ it('importa con preview ligado al actor, valida duplicados y confirma una sola v
     expect((await ctx.api('/importaciones/confirmar', { method: 'POST', token: admin, body: { previewId: preview.data.previewId, confirmado: true } })).response.status).toBe(404);
     const cuenta = await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ email }); expect(cuenta.passwordChangeRequired).toBe(true);
     expect(await ctx.dataSource.getRepository(Alumno).countBy({ usuarioId: cuenta.id })).toBe(1);
+    const inicio = await ctx.api('/auth/login', { method: 'POST', headers: { 'x-portal': 'WEB' }, body: { email, password: `IMP${ctx.sufijo}` } });
+    expect(inicio.response.status).toBe(201);
+    expect(inicio.data.usuario.passwordChangeRequired).toBe(true);
     expect(await ctx.dataSource.getRepository(BitacoraAcademica).countBy({ accion: 'IMPORTAR_ALUMNOS' })).toBe(1);
   });
   },
