@@ -31,8 +31,9 @@ export function contrasteAA(fondo: string, texto: string): number {
   return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 }
 
-export function textoAccesible(fondo: string): '#ffffff' | '#19272c' {
-  return contrasteAA(fondo, '#ffffff') >= 4.5 ? '#ffffff' : '#19272c';
+export function textoAccesible(fondo: string): '#ffffff' | '#19272c' | '#000000' {
+  if (contrasteAA(fondo, '#ffffff') >= 4.5) return '#ffffff';
+  return contrasteAA(fondo, '#19272c') >= 4.5 ? '#19272c' : '#000000';
 }
 
 const MarcaContext = createContext<{ marca: Marca; recargar: () => Promise<void> } | null>(null);
