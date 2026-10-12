@@ -5,7 +5,8 @@ import { ImportacionPreview, ImportacionFila, Docente, Grupo, GrupoMateria, Insc
 import { ContextoIntegracion } from './contexto';
 import { expect, it } from '@jest/globals';
 import * as ExcelJS from 'exceljs';
-import * as bcrypt from 'bcryptjs';
+import { compararPassword } from '../../src/common/password-bcrypt';
+import { AuthService } from '../../src/auth/auth.service';
 import { Alumno, BitacoraAcademica, Usuario } from '../../src/entities';
 export const casos_importaciones: Record<number, (ctx: ContextoIntegracion) => void> = {
   33: (ctx) => {
@@ -24,9 +25,18 @@ it('importa con preview ligado al actor, valida duplicados y confirma una sola v
     expect((await ctx.api('/importaciones/confirmar', { method: 'POST', token: admin, body: { previewId: preview.data.previewId, confirmado: true } })).response.status).toBe(404);
     const cuenta = await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ email }); expect(cuenta.passwordChangeRequired).toBe(true);
     expect(await ctx.dataSource.getRepository(Alumno).countBy({ usuarioId: cuenta.id })).toBe(1);
-    const inicio = await ctx.api('/auth/login', { method: 'POST', headers: { 'x-portal': 'MOVIL' }, body: { email, password: `IMP${ctx.sufijo}` } });
+    const inicio = await ctx.api('/auth/login', { method: 'POST', headers: { 'x-portal': 'MOVIL' }, body: { email, password: `IMP${ctx.sufijo}`.toUpperCase() } });
     expect(inicio.response.status).toBe(201);
     expect(inicio.data.usuario.passwordChangeRequired).toBe(true);
+    expect(await compararPassword(`IMP${ctx.sufijo}`.toUpperCase(), cuenta.passwordHash)).toBe(true);
+    expect((await ctx.api('/calificaciones/mias', { token: inicio.data.accessToken })).response.status).toBe(403);
+    expect((await ctx.api('/auth/cambiar-password', { method: 'POST', token: inicio.data.accessToken,
+      body: { actual: `IMP${ctx.sufijo}`.toUpperCase(), nueva: 'Alumno_Renovada_42!' } })).response.status).toBe(201);
+    expect((await ctx.api('/auth/me', { token: inicio.data.accessToken })).response.status).toBe(401);
+    await expect(ctx.app.get(AuthService).login(email, `IMP${ctx.sufijo}`.toUpperCase(), 'MOVIL')).rejects.toThrow();
+    const definitiva = await ctx.app.get(AuthService).login(email, 'Alumno_Renovada_42!', 'MOVIL');
+    expect(definitiva.usuario.passwordChangeRequired).toBe(false);
+    expect((await ctx.api('/calificaciones/mias', { token: definitiva.accessToken })).response.status).toBe(200);
     expect(await ctx.dataSource.getRepository(BitacoraAcademica).countBy({ accion: 'IMPORTAR_ALUMNOS' })).toBe(1);
   });
   },
@@ -88,12 +98,12 @@ it('revierte el lote completo si surge un duplicado después del preview', async
         expect((await servicio.confirmar(p.previewId!,true,user)).insertados).toBe(1);
       };
       const email = `docimp_${ctx.sufijo}@example.invalid`;
-      await importar('DOCENTES',`email,nombre,apellidoPaterno,numEmpleado,plantelIds\n${email},Docente,Importado,DI${ctx.sufijo},${ctx.plantelId},GODE561231HDFRRN09`);
+      await importar('DOCENTES',`email,nombre,apellidoPaterno,numEmpleado,plantelIds\n${email},Docente,Importado,DI${ctx.sufijo},${ctx.plantelId}`);
       const docenteUsuario = await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ email });
       expect(docenteUsuario.roles.map((r) => r.clave)).toEqual(['MAESTRO']); expect(await ctx.dataSource.getRepository(Docente).countBy({ usuarioId: docenteUsuario.id })).toBe(1);
       expect(await ctx.dataSource.getRepository(UsuarioPlantel).countBy({ usuarioId: docenteUsuario.id,plantelId: ctx.plantelId,activo: true })).toBe(1);
       const personalEmail = `perimp_${ctx.sufijo}@example.invalid`;
-      await importar('PERSONAL',`email,nombre,apellidoPaterno,roles,plantelIds\n${personalEmail},Personal,Importado,ADMINISTRATIVO;FINANZAS,${ctx.plantelId},GODE561231HDFRRN09`);
+      await importar('PERSONAL',`email,nombre,apellidoPaterno,roles,plantelIds\n${personalEmail},Personal,Importado,ADMINISTRATIVO;FINANZAS,${ctx.plantelId}`);
       const personal = await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ email: personalEmail }); expect(personal.roles.map((r) => r.clave).sort()).toEqual(['ADMINISTRATIVO','FINANZAS']);
       expect(await ctx.dataSource.getRepository(UsuarioPlantel).countBy({ usuarioId: personal.id,plantelId: ctx.plantelId,activo: true })).toBe(1);
       const base = await ctx.dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: ctx.grupoMateriaIdMaestro });

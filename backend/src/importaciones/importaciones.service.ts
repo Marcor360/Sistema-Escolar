@@ -122,7 +122,7 @@ export class ImportacionesService {
         await repo.insert(p); for (const lote of trozos(cifradas)) await manager.getRepository(ImportacionFila).insert(lote);
       }); previewId = p.id;
     }
-    return { previewId, registros: filas.length, errores, identificadores: filas.map((f,i) => ({ fila: i+2, identificador: f.matricula ?? f.numEmpleado ?? f.email })), regla: 'Confirmación atómica. Cuentas nuevas se activan estableciendo contraseña mediante recuperación por correo; no se entregan contraseñas en la importación.' };
+    return { previewId, registros: filas.length, errores, identificadores: filas.map((f,i) => ({ fila: i+2, identificador: f.matricula ?? f.numEmpleado ?? f.email })), regla: tipo === 'ALUMNOS' ? 'Confirmación atómica. Acceso inicial con correo institucional y matrícula como contraseña temporal; cambio obligatorio en el primer ingreso.' : 'Confirmación atómica. Cuentas nuevas se activan estableciendo contraseña mediante recuperación por correo; no se entregan contraseñas en la importación.' };
   }
   private comprobar(p: ImportacionPreview | null, user: JwtUser): asserts p is ImportacionPreview { if (!p || p.expira < new Date() || p.actorId !== user.sub) throw new NotFoundException('Previsualización expirada, consumida o no disponible para tu sesión'); this.autorizar(p.tipo,user); }
   async confirmar(previewId: string, confirmado: boolean, user: JwtUser) {

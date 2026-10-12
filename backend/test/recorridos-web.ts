@@ -28,8 +28,9 @@ export async function recorridoWeb(d: Datos, tipo: 'academico' | 'financiero' | 
     await form.getByLabel('Matrícula').fill(matricula); await form.getByLabel('Nombre', { exact: true }).fill('Navegador'); await form.getByLabel('Apellido paterno').fill(tipo);
     const plantelNombre = await form.getByLabel('Plantel', { exact: true }).locator(`option[value="${d.plantelId}"]`).innerText();
     await form.getByLabel('Apellido materno').fill('Institucional'); await form.getByLabel('Teléfono del alumno', { exact: true }).fill('5550001111'); await form.getByLabel('Fecha de nacimiento').fill('2009-01-02'); await form.getByLabel('Dirección').fill('Calle escolar 12');
-    await expect(form.getByLabel('Contraseña inicial')).toHaveAttribute('type','password');
-    await form.getByLabel('Correo', { exact: true }).fill(`${matricula}@example.invalid`); await form.getByLabel('Contraseña inicial').fill('Integracion_Segura_42!'); await form.getByRole('button', { name: 'Guardar alumno' }).click();
+    await expect(form.getByLabel('Contraseña inicial')).toHaveCount(0);
+    await form.getByLabel('CURP').fill('GODE561231HDFRRN09');
+    await form.getByLabel('Correo institucional', { exact: true }).fill(`${matricula}@example.invalid`); await form.getByRole('button', { name: 'Guardar alumno' }).click();
     await expect(page.getByText(`Alumno ${matricula} registrado`, { exact: false })).toBeVisible();
     let fila = page.locator('tr').filter({ hasText: matricula }); await expect(fila).toBeVisible();
     if (tipo === 'academico') {
