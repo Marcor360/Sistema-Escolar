@@ -4,7 +4,7 @@ import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, Toucha
 import { useFocusEffect } from '@react-navigation/native';
 import { api, mensajeDeError } from '../api/client';
 import { useSesion } from '../sesion';
-import { colores } from '../theme';
+import { colores, radio, espacio, tipografia } from '../theme';
 import { pesos } from '../formato';
 import { base, Tarjeta } from './comunes';
 
@@ -66,7 +66,8 @@ export default function InicioScreen() {
       style={base.pantalla}
       refreshControl={<RefreshControl refreshing={cargando} onRefresh={cargar} />}
     >
-      <Text style={estilos.saludo}>Hola, {nombre}</Text>
+      <Text style={estilos.saludo} accessibilityRole="header">Hola, {nombre}</Text>
+      <Text style={estilos.introduccion}>Aquí encontrarás tus actividades, avisos y próximos eventos.</Text>
       {error !== '' && (
         <View accessibilityRole="alert" style={estilos.error}>
           <Text style={estilos.errorTexto}>{error}</Text>
@@ -131,16 +132,18 @@ const estilos = StyleSheet.create({
   error: { borderWidth: 1, borderColor: colores.peligro, padding: 12, marginBottom: 12, backgroundColor: '#fff' },
   errorTexto: { color: colores.peligro, marginBottom: 8 },
   reintentar: { color: colores.pizarra, textDecorationLine: 'underline', fontWeight: '600' },
-  saludo: { fontSize: 22, color: colores.tinta, marginBottom: 12, fontWeight: '600' },
-  resumen: { flexDirection: 'row', gap: 10, marginBottom: 18 },
+  saludo: { fontSize: tipografia.titulo, color: colores.tinta, marginBottom: 4, fontWeight: '700' },
+  introduccion: { fontSize: tipografia.secundaria, color: colores.gris, marginBottom: espacio.xl },
+  resumen: { flexDirection: 'row', gap: espacio.md, marginBottom: espacio.xl },
   kpi: {
     flex: 1,
     backgroundColor: colores.pizarra,
-    padding: 14,
+    padding: espacio.lg,
+    borderRadius: radio.md,
     borderLeftWidth: 3,
     borderLeftColor: colores.dorado,
   },
-  kpiValor: { color: '#fff', fontSize: 21, fontVariant: ['tabular-nums'], fontWeight: '600' },
+  kpiValor: { color: '#fff', fontSize: tipografia.dato, fontVariant: ['tabular-nums'], fontWeight: '600' },
   kpiEtiqueta: { color: '#C8D2CD', fontSize: 11, letterSpacing: 0.5, textTransform: 'uppercase', marginTop: 2 },
   subtitulo: {
     fontSize: 12,
@@ -152,9 +155,10 @@ const estilos = StyleSheet.create({
   },
   aviso: {
     backgroundColor: '#fff',
+    borderRadius: radio.md,
     borderWidth: 1,
     borderColor: colores.linea,
-    padding: 14,
+    padding: espacio.lg,
     marginBottom: 10,
   },
   avisoSinLeer: { borderLeftWidth: 3, borderLeftColor: colores.dorado, backgroundColor: '#FDFBF5' },
