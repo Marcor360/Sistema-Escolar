@@ -56,7 +56,7 @@ export default function AlumnosPage() {
     try {
       const { data } = await api.get(`/alumnos/${alumno.id}`);
       setForm({ ...FORM_INICIAL, matricula: data.matricula, plantelId: String(data.plantelId),
-        nombre: data.usuario.nombre, apellidoPaterno: data.usuario.apellidoPaterno, apellidoMaterno: data.usuario.apellidoMaterno ?? '', telefono: data.usuario.telefono ?? '', email: data.usuario.email, password: '', curp: data.curp ?? '', fechaNacimiento: data.fechaNacimiento ?? '', direccion: data.direccion ?? '',
+        nombre: data.usuario.nombre, apellidoPaterno: data.usuario.apellidoPaterno, apellidoMaterno: data.usuario.apellidoMaterno ?? '', telefono: data.usuario.telefono ?? '', email: data.usuario.email, curp: data.curp ?? '', fechaNacimiento: data.fechaNacimiento ?? '', direccion: data.direccion ?? '',
         tutorNombre: data.tutorNombre ?? '', tutorTelefono: data.tutorTelefono ?? '' });
       setEditando(alumno.id);
       document.getElementById('form-alumno')?.scrollIntoView();
@@ -108,7 +108,7 @@ export default function AlumnosPage() {
         ...form,
         plantelId: Number(form.plantelId),
         apellidoMaterno: form.apellidoMaterno || undefined,
-        curp: form.curp || undefined, telefono: form.telefono || undefined, fechaNacimiento: form.fechaNacimiento || undefined, direccion: form.direccion || undefined,
+        curp: form.curp, telefono: form.telefono || undefined, fechaNacimiento: form.fechaNacimiento || undefined, direccion: form.direccion || undefined,
         tutorNombre: form.tutorNombre || undefined,
         tutorTelefono: form.tutorTelefono || undefined,
       });
