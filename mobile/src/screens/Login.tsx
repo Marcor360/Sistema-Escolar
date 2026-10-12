@@ -4,7 +4,7 @@ import {
 import { Text } from '../components/Texto';
 import { useSesion } from '../sesion';
 import { archivosBase, mensajeDeError } from '../api/client';
-import { colores, radio, espacio, tipografia } from '../theme';
+import { colores, radio, espacio, tipografia, textoSobreFondo } from '../theme';
 import { useMarca } from '../marca';
 
 export default function LoginScreen() {
@@ -51,7 +51,7 @@ export default function LoginScreen() {
           accessibilityLabel={enviando ? 'Verificando credenciales' : 'Entrar'}
           accessibilityState={{ disabled: enviando || !email.trim() || !password }}
         >
-          <Text style={estilos.botonTexto}>{enviando ? 'Verificando…' : 'Entrar'}</Text>
+          <Text style={[estilos.botonTexto, { color: textoSobreFondo(marca.colorPrimario) }]}>{enviando ? 'Verificando…' : 'Entrar'}</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
