@@ -44,6 +44,7 @@ function aplicarMarca(marca: Marca) {
   raiz.setProperty('--pizarra-2', marca.colorPrimarioOscuro);
   raiz.setProperty('--dorado', marca.colorAcento);
   raiz.setProperty('--texto-sobre-pizarra', textoAccesible(marca.colorPrimario));
+  raiz.setProperty('--texto-sobre-pizarra-2', textoAccesible(marca.colorPrimarioOscuro));
   raiz.setProperty('--texto-sobre-dorado', textoAccesible(marca.colorAcento));
   document.title = `${marca.nombreInstitucion} — Panel`;
 }

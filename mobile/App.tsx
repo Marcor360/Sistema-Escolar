@@ -1,6 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import { activarPush } from './src/push';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { NavigationContainer, DefaultTheme, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
@@ -28,6 +28,7 @@ const iconos: Record<string, string> = {
 };
 
 function AppInterna() {
+  const fuenteLista = useContext(FuenteContext);
   const [sesion, setSesion] = useState<Sesion | null>(null);
   const [listo, setListo] = useState(false);
   const [marca, setMarca] = useState<Marca>(MARCA_POR_DEFECTO);
@@ -165,7 +166,7 @@ function AppInterna() {
           onPress={() => { void restaurarSesion(); }} accessibilityRole="button" accessibilityLabel="Reintentar sesión"
           style={{ backgroundColor: marca.colorPrimario, padding: 14 }}
         >
-          <Text style={{ color: '#fff' }}>Reintentar</Text>
+          <Text style={{ color: textoSobreFondo(marca.colorPrimario) }}>Reintentar</Text>
         </TouchableOpacity>
       </View>
     );
@@ -181,13 +182,13 @@ function AppInterna() {
             screenOptions={({ route }) => ({
               headerStyle: { backgroundColor: marca.colorPrimario },
               headerTintColor: textoSobreFondo(marca.colorPrimario),
-              headerTitleStyle: { fontFamily: 'Onest', fontWeight: '700' },
+              headerTitleStyle: { fontFamily: fuenteLista ? 'Onest' : undefined, fontWeight: '700' },
               tabBarActiveTintColor: textoSobreFondo(colores.papel),
               tabBarInactiveTintColor: colores.gris,
               tabBarHideOnKeyboard: true,
-              tabBarLabelStyle: { fontFamily: 'Onest', fontSize: 11, fontWeight: '600' },
+              tabBarLabelStyle: { fontFamily: fuenteLista ? 'Onest' : undefined, fontSize: 11, fontWeight: '600' },
               tabBarItemStyle: { minHeight: 48 },
-              tabBarStyle: { backgroundColor: colores.papel, borderTopColor: colores.linea, height: 68, paddingTop: 6 },
+              tabBarStyle: { backgroundColor: colores.papel, borderTopColor: colores.linea, minHeight: 68, paddingTop: 6 },
               tabBarIcon: () => <Text>{iconos[route.name] ?? '•'}</Text>,
             })}
           >

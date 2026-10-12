@@ -872,3 +872,12 @@ input:disabled, select:disabled { background: #f2f5f6; }
   .panel .fila > .campo :where(input, select, textarea) { width: 100%; min-width: 0; }
   .tabla th, .tabla td { padding: 12px 10px; }
 }
+
+/* El fondo del estado activo también es configurable y necesita su propio contraste. */
+:root { --texto-sobre-pizarra-2: #ffffff; }
+.lateral .menu-movil, .lateral-pie .rol { color: var(--texto-sobre-pizarra); }
+.lateral nav a { opacity: 1; }
+.lateral nav a:hover, .lateral nav a.active {
+  background: var(--pizarra-2);
+  color: var(--texto-sobre-pizarra-2);
+}
