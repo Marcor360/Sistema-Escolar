@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../components/Texto';
 import { colores, espacio, radio, tipografia } from '../theme';
 
 export function Tarjeta({ children }: { children: React.ReactNode }) {
