@@ -46,6 +46,9 @@ export class AlumnosController {
     return this.service.obtenerParaApi(id, user);
   }
 
+  @ApiOperation({ summary: 'Registrar alumno con CURP obligatoria; correo institucional y matrícula como contraseña temporal de primer acceso' })
+  @ApiResponse({ status: 400, description: 'Campos obligatorios o CURP inválidos' })
+  @ApiResponse({ status: 409, description: 'Correo o matrícula ya registrados' })
   @Post()
   @Roles('ADMINISTRATIVO')
   crear(@Body() dto: CrearAlumnoDto, @CurrentUser() user: JwtUser) {
