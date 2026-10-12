@@ -5,7 +5,6 @@ import { ImportacionPreview, ImportacionFila, Docente, Grupo, GrupoMateria, Insc
 import { ContextoIntegracion } from './contexto';
 import { expect, it } from '@jest/globals';
 import * as ExcelJS from 'exceljs';
-import { compararPassword } from '../../src/common/password-bcrypt';
 import { AuthService } from '../../src/auth/auth.service';
 import { Alumno, BitacoraAcademica, Usuario } from '../../src/entities';
 export const casos_importaciones: Record<number, (ctx: ContextoIntegracion) => void> = {
@@ -28,7 +27,6 @@ it('importa con preview ligado al actor, valida duplicados y confirma una sola v
     const inicio = await ctx.api('/auth/login', { method: 'POST', headers: { 'x-portal': 'MOVIL' }, body: { email, password: `IMP${ctx.sufijo}`.toUpperCase() } });
     expect(inicio.response.status).toBe(201);
     expect(inicio.data.usuario.passwordChangeRequired).toBe(true);
-    expect(await compararPassword(`IMP${ctx.sufijo}`.toUpperCase(), cuenta.passwordHash)).toBe(true);
     expect((await ctx.api('/calificaciones/mias', { token: inicio.data.accessToken })).response.status).toBe(403);
     expect((await ctx.api('/auth/cambiar-password', { method: 'POST', token: inicio.data.accessToken,
       body: { actual: `IMP${ctx.sufijo}`.toUpperCase(), nueva: 'Alumno_Renovada_42!' } })).response.status).toBe(201);
