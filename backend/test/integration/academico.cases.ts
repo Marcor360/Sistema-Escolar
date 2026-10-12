@@ -47,7 +47,7 @@ it('impide inscribir en grupos inactivos y a alumnos dados de baja', async () =>
     const alumnoBaja = await ctx.api('/alumnos', {
       method: 'POST', token,
       body: {
-        email: `alumno_baja_${ctx.sufijo}@example.invalid`, password: 'Integracion_Segura_42!',
+        email: `alumno_baja_${ctx.sufijo}@example.invalid`, curp: 'GODE561231HDFRRN09',
         nombre: 'Alumno', apellidoPaterno: 'Baja', matricula: `AB${ctx.sufijo}`, plantelId: ctx.plantelId,
       },
     });
@@ -80,7 +80,7 @@ it('MAESTRO solo lista y consulta alumnos de sus grupos, aunque compartan plante
     const segundoAlumno = await ctx.api('/alumnos', {
       method: 'POST', token: tokenAdmin,
       body: {
-        email: `alumno_otro_grupo_${ctx.sufijo}@example.invalid`, password: 'Integracion_Segura_42!',
+        email: `alumno_otro_grupo_${ctx.sufijo}@example.invalid`, curp: 'GODE561231HDFRRN09',
         nombre: 'Alumno', apellidoPaterno: 'Otro grupo', matricula: `O${ctx.sufijo}`, plantelId: ctx.plantelId,
       },
     });
@@ -115,7 +115,7 @@ it('impide doble inscripción concurrente y cambios de ciclo; rechaza grupos en 
     const grupoA = await ctx.dataSource.getRepository(Grupo).findOneByOrFail({ nombre: `G${ctx.sufijo}`, plantelId: ctx.plantelId });
     const grupoB = await ctx.dataSource.getRepository(Grupo).findOneByOrFail({ nombre: `Y${ctx.sufijo}`, plantelId: ctx.plantelId });
     const alta = await ctx.api('/alumnos', { method: 'POST', token, body: { nombre: 'Concurrente', apellidoPaterno: 'Prueba',
-      matricula: `CON${ctx.sufijo}`, email: `con_${ctx.sufijo}@example.invalid`, password: 'Integracion_Segura_42!', plantelId: ctx.plantelId } });
+      matricula: `CON${ctx.sufijo}`, email: `con_${ctx.sufijo}@example.invalid`, curp: 'GODE561231HDFRRN09', plantelId: ctx.plantelId } });
     expect(alta.response.status).toBe(201);
     const respuestas = await Promise.all([grupoA, grupoB].map((g) => ctx.api(`/academico/grupos/${g.id}/alumnos`, {
       method: 'POST', token, body: { alumnoId: alta.data.id },
@@ -156,7 +156,7 @@ it('promoción bloquea grupos y revalida una desactivación concurrente antes de
   51: (ctx) => {
     it('promoción e inscripción manual concurrentes conservan una inscripción por ciclo', async () => {
       const token = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.adminId })).email);
-      const alta = await ctx.api('/alumnos',{ method: 'POST',token,body: { email: `pm_${ctx.sufijo}@example.invalid`,nombre: 'Carrera',apellidoPaterno: 'Promoción',password: 'Integracion_Segura_42!',matricula: `PM${ctx.sufijo}`,plantelId: ctx.plantelId } }); expect(alta.response.status).toBe(201);
+      const alta = await ctx.api('/alumnos',{ method: 'POST',token,body: { email: `pm_${ctx.sufijo}@example.invalid`,nombre: 'Carrera',apellidoPaterno: 'Promoción',curp: 'GODE561231HDFRRN09',matricula: `PM${ctx.sufijo}`,plantelId: ctx.plantelId } }); expect(alta.response.status).toBe(201);
       const ciclos = await ctx.dataSource.getRepository(CicloEscolar).save([{ clave: `MO${ctx.sufijo}`,nombre: 'Origen manual',fechaInicio: '2040-01-01',fechaFin: '2040-12-31',estado: 'CERRADO' as const,activo: false },{ clave: `MD${ctx.sufijo}`,nombre: 'Destino manual',fechaInicio: '2041-01-01',fechaFin: '2041-12-31',estado: 'PREPARACION' as const,activo: false }]);
       const grupos = await ctx.dataSource.getRepository(Grupo).save([{ cicloId: ciclos[0].id,plantelId: ctx.plantelId,nombre: `MO-${ctx.sufijo}`,activo: false },{ cicloId: ciclos[1].id,plantelId: ctx.plantelId,nombre: `MD-${ctx.sufijo}`,activo: true }]);
       await ctx.dataSource.getRepository(Inscripcion).save({ alumnoId: alta.data.id,grupoId: grupos[0].id,estatus: 'ACTIVA' });

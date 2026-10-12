@@ -5,7 +5,7 @@ import { ImportacionPreview, ImportacionFila, Docente, Grupo, GrupoMateria, Insc
 import { ContextoIntegracion } from './contexto';
 import { expect, it } from '@jest/globals';
 import * as ExcelJS from 'exceljs';
-import * as bcrypt from 'bcryptjs';
+import { AuthService } from '../../src/auth/auth.service';
 import { Alumno, BitacoraAcademica, Usuario } from '../../src/entities';
 export const casos_importaciones: Record<number, (ctx: ContextoIntegracion) => void> = {
   33: (ctx) => {
@@ -14,8 +14,8 @@ it('importa con preview ligado al actor, valida duplicados y confirma una sola v
     const superadmin = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.superadminId })).email);
     const enviar = (texto: string) => { const f = new FormData(); f.append('tipo', 'ALUMNOS'); f.append('archivo', new Blob([texto]), 'alumnos.csv'); return ctx.api('/importaciones/preview', { method: 'POST', token: admin, body: f }); };
     const email = `importado_${ctx.sufijo}@example.invalid`;
-    const fila = `${email},Importado,Prueba,IMP${ctx.sufijo},${ctx.plantelId}`;
-    const csv = 'email,nombre,apellidoPaterno,matricula,plantelId\n' + fila;
+    const fila = `${email},Importado,Prueba,IMP${ctx.sufijo},${ctx.plantelId},GODE561231HDFRRN09`;
+    const csv = 'email,nombre,apellidoPaterno,matricula,plantelId,curp\n' + fila;
     const duplicado = await enviar(csv + '\n' + fila); expect(duplicado.response.status).toBe(201); expect(duplicado.data.previewId).toBeNull(); expect(duplicado.data.errores).toHaveLength(1);
     expect(await ctx.dataSource.getRepository(Usuario).findOneBy({ email })).toBeNull();
     const preview = await enviar(csv); expect(preview.response.status).toBe(201); expect(preview.data.errores).toEqual([]);
@@ -24,6 +24,17 @@ it('importa con preview ligado al actor, valida duplicados y confirma una sola v
     expect((await ctx.api('/importaciones/confirmar', { method: 'POST', token: admin, body: { previewId: preview.data.previewId, confirmado: true } })).response.status).toBe(404);
     const cuenta = await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ email }); expect(cuenta.passwordChangeRequired).toBe(true);
     expect(await ctx.dataSource.getRepository(Alumno).countBy({ usuarioId: cuenta.id })).toBe(1);
+    const inicio = await ctx.api('/auth/login', { method: 'POST', headers: { 'x-portal': 'MOVIL' }, body: { email, password: `IMP${ctx.sufijo}`.toUpperCase() } });
+    expect(inicio.response.status).toBe(201);
+    expect(inicio.data.usuario.passwordChangeRequired).toBe(true);
+    expect((await ctx.api('/calificaciones/mias', { token: inicio.data.accessToken })).response.status).toBe(403);
+    expect((await ctx.api('/auth/cambiar-password', { method: 'POST', token: inicio.data.accessToken,
+      body: { actual: `IMP${ctx.sufijo}`.toUpperCase(), nueva: 'Alumno_Renovada_42!' } })).response.status).toBe(201);
+    expect((await ctx.api('/auth/me', { token: inicio.data.accessToken })).response.status).toBe(401);
+    await expect(ctx.app.get(AuthService).login(email, `IMP${ctx.sufijo}`.toUpperCase(), 'MOVIL')).rejects.toThrow();
+    const definitiva = await ctx.app.get(AuthService).login(email, 'Alumno_Renovada_42!', 'MOVIL');
+    expect(definitiva.usuario.passwordChangeRequired).toBe(false);
+    expect((await ctx.api('/calificaciones/mias', { token: definitiva.accessToken })).response.status).toBe(200);
     expect(await ctx.dataSource.getRepository(BitacoraAcademica).countBy({ accion: 'IMPORTAR_ALUMNOS' })).toBe(1);
   });
   },
@@ -31,9 +42,9 @@ it('importa con preview ligado al actor, valida duplicados y confirma una sola v
 it('revierte el lote completo si surge un duplicado después del preview', async () => {
     const admin = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.adminId })).email);
     const email1 = `atomic1_${ctx.sufijo}@example.invalid`; const email2 = `atomic2_${ctx.sufijo}@example.invalid`;
-    const f = new FormData(); f.append('tipo', 'ALUMNOS'); f.append('archivo', new Blob([`email,nombre,apellidoPaterno,matricula,plantelId\n${email1},Primero,Lote,AT1${ctx.sufijo},${ctx.plantelId}\n${email2},Segundo,Lote,AT2${ctx.sufijo},${ctx.plantelId}`]), 'lote.csv');
+    const f = new FormData(); f.append('tipo', 'ALUMNOS'); f.append('archivo', new Blob([`email,nombre,apellidoPaterno,matricula,plantelId,curp\n${email1},Primero,Lote,AT1${ctx.sufijo},${ctx.plantelId},GODE561231HDFRRN09\n${email2},Segundo,Lote,AT2${ctx.sufijo},${ctx.plantelId},GODE561231HDFRRN09`]), 'lote.csv');
     const preview = await ctx.api('/importaciones/preview', { method: 'POST', token: admin, body: f }); expect(preview.data.errores).toEqual([]);
-    expect((await ctx.api('/alumnos', { method: 'POST', token: admin, body: { email: email2, password: 'Integracion_Segura_42!', nombre: 'Segundo', apellidoPaterno: 'Concurrente', matricula: `OT2${ctx.sufijo}`, plantelId: ctx.plantelId } })).response.status).toBe(201);
+    expect((await ctx.api('/alumnos', { method: 'POST', token: admin, body: { email: email2, nombre: 'Segundo', apellidoPaterno: 'Concurrente', matricula: `OT2${ctx.sufijo}`, plantelId: ctx.plantelId, curp: 'GODE561231HDFRRN09' } })).response.status).toBe(201);
     expect((await ctx.api('/importaciones/confirmar', { method: 'POST', token: admin, body: { previewId: preview.data.previewId, confirmado: true } })).response.status).toBe(409);
     expect(await ctx.dataSource.getRepository(Usuario).findOneBy({ email: email1 })).toBeNull(); expect(await ctx.dataSource.getRepository(Alumno).countBy({ matricula: `AT1${ctx.sufijo}`.toUpperCase() })).toBe(0);
     expect(await ctx.dataSource.getRepository(BitacoraAcademica).countBy({ accion: 'IMPORTAR_ALUMNOS' })).toBe(1);
@@ -45,7 +56,7 @@ it('revierte el lote completo si surge un duplicado después del preview', async
       const user = { sub: cuenta.id, email: cuenta.email, nombre: cuenta.nombre, roles: ['ADMINISTRATIVO'] };
       const otra = new ImportacionesService(ctx.dataSource, ctx.app.get(ScopeService), ctx.app.get(ConfigService));
       const email = `persistente_${ctx.sufijo}@example.invalid`;
-      const preview = await ctx.app.get(ImportacionesService).preview('ALUMNOS', Buffer.from(`email,nombre,apellidoPaterno,matricula,plantelId\n${email},Persistente,Prueba,PS${ctx.sufijo},${ctx.plantelId}`), 'persistente.csv', user);
+      const preview = await ctx.app.get(ImportacionesService).preview('ALUMNOS', Buffer.from(`email,nombre,apellidoPaterno,matricula,plantelId,curp\n${email},Persistente,Prueba,PS${ctx.sufijo},${ctx.plantelId},GODE561231HDFRRN09`), 'persistente.csv', user);
       expect(preview.previewId).not.toBeNull();
       const filas = await ctx.dataSource.getRepository(ImportacionFila).findBy({ previewId: preview.previewId! });
       expect(filas).toHaveLength(1); expect(filas[0].contenido).not.toContain(email);
@@ -53,7 +64,7 @@ it('revierte el lote completo si surge un duplicado después del preview', async
       expect(resultados.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
       expect(await ctx.dataSource.getRepository(Usuario).countBy({ email })).toBe(1);
       expect(await ctx.dataSource.getRepository(ImportacionFila).countBy({ previewId: preview.previewId! })).toBe(0);
-      const vencido = await otra.preview('ALUMNOS', Buffer.from(`email,nombre,apellidoPaterno,matricula,plantelId\nvencido_${ctx.sufijo}@example.invalid,Vencido,Prueba,VE${ctx.sufijo},${ctx.plantelId}`),'vencido.csv',user);
+      const vencido = await otra.preview('ALUMNOS', Buffer.from(`email,nombre,apellidoPaterno,matricula,plantelId,curp\nvencido_${ctx.sufijo}@example.invalid,Vencido,Prueba,VE${ctx.sufijo},${ctx.plantelId},GODE561231HDFRRN09`),'vencido.csv',user);
       await ctx.dataSource.getRepository(ImportacionPreview).update(vencido.previewId!,{ expira: new Date(Date.now()-1000) });
       await expect(otra.confirmar(vencido.previewId!,true,user)).rejects.toThrow('Previsualización expirada');
     });
@@ -63,9 +74,9 @@ it('revierte el lote completo si surge un duplicado después del preview', async
       const cuenta = await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.adminId });
       const user = { sub: cuenta.id, email: cuenta.email, nombre: cuenta.nombre, roles: ['ADMINISTRATIVO'] };
       const servicio = ctx.app.get(ImportacionesService);
-      const filas = Array.from({ length: 500 }, (_,i) => `masivo${i}_${ctx.sufijo}@example.invalid,Masivo,Alumno,MI${i}${ctx.sufijo},${ctx.plantelId}`);
+      const filas = Array.from({ length: 500 }, (_,i) => `masivo${i}_${ctx.sufijo}@example.invalid,Masivo,Alumno,MI${i}${ctx.sufijo},${ctx.plantelId},GODE561231HDFRRN09`);
       const desde = Date.now();
-      const preview = await servicio.preview('ALUMNOS',Buffer.from('email,nombre,apellidoPaterno,matricula,plantelId\n'+filas.join('\n')),'masivo.csv',user);
+      const preview = await servicio.preview('ALUMNOS',Buffer.from('email,nombre,apellidoPaterno,matricula,plantelId,curp\n'+filas.join('\n')),'masivo.csv',user);
       const previewMs = Date.now()-desde; expect(preview.errores).toEqual([]);
       const confirmarDesde = Date.now(); const resultado = await servicio.confirmar(preview.previewId!,true,user);
       expect(resultado.insertados).toBe(500);

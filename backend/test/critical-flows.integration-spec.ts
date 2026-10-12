@@ -243,11 +243,14 @@ describe('Integración de flujos críticos (base aislada)', () => {
       where: { email },
       relations: ['roles'],
     });
+    const alumno = usuario.roles.some((r) => r.clave === 'ALUMNO')
+      ? await dataSource.getRepository(Alumno).findOneBy({ usuarioId: usuario.id }) : null;
+    const passwordInicial = passwords.get(email) ?? alumno?.matricula ?? 'Integracion_Segura_42!';
     if (usuario.passwordChangeRequired) {
-      await app.get(AuthService).cambiarPassword(usuario.id, passwords.get(email) ?? 'Integracion_Segura_42!', 'Integracion_Renovada_42!');
+      await app.get(AuthService).cambiarPassword(usuario.id, passwordInicial, 'Integracion_Renovada_42!');
       passwords.set(email, 'Integracion_Renovada_42!');
     }
-    return (await app.get(AuthService).login(email, passwords.get(email) ?? 'Integracion_Segura_42!',
+    return (await app.get(AuthService).login(email, passwords.get(email) ?? passwordInicial,
       usuario.roles.some((r) => r.clave === 'ALUMNO') ? 'MOVIL' : 'WEB')).accessToken;
   };
 
@@ -351,6 +354,7 @@ describe('Integración de flujos críticos (base aislada)', () => {
       apellidoMaterno: null, telefono: null, activo: true, roles: [alumnoRole],
     }));
     alumnoUsuarioId = alumnoUsuario.id;
+    passwords.set(alumnoUsuario.email, password);
     const alumno = await dataSource.getRepository(Alumno).save(
       dataSource.getRepository(Alumno).create({
         usuarioId: alumnoUsuario.id, plantelId, matricula: `M${sufijo}`,
