@@ -5,7 +5,8 @@ import { NavigationContainer, DefaultTheme, createNavigationContainerRef } from 
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, TextInput, TouchableOpacity, View } from 'react-native';
-import { Text } from './src/components/Texto';
+import { Text, FuenteContext } from './src/components/Texto';
+import { useFonts } from 'expo-font';
 import * as SecureStore from 'expo-secure-store';
 import { api, mensajeDeError, registrarSesionExpirada, TOKEN_KEY, REFRESH_KEY } from './src/api/client';
 import { Sesion, SesionContext } from './src/sesion';
@@ -26,7 +27,7 @@ const iconos: Record<string, string> = {
   Inicio: '🏠', Materias: '📚', Tareas: '📝', Calificaciones: '🎓', Pagos: '💳', Perfil: '👤',
 };
 
-export default function App() {
+function AppInterna() {
   const [sesion, setSesion] = useState<Sesion | null>(null);
   const [listo, setListo] = useState(false);
   const [marca, setMarca] = useState<Marca>(MARCA_POR_DEFECTO);
@@ -203,4 +204,19 @@ export default function App() {
       </SesionContext.Provider>
     </MarcaContext.Provider>
   );
+}
+
+/** Se empaqueta la fuente OFL en el APK/IPA: sin peticiones de red para renderizar Onest. */
+export default function App() {
+  const [fuenteLista, errorFuente] = useFonts({
+    Onest: require('./src/assets/fonts/OnestVariable.ttf'),
+  });
+  if (!fuenteLista && !errorFuente) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colores.papel }}>
+        <ActivityIndicator accessibilityLabel="Preparando tipografía" color={colores.pizarra} />
+      </View>
+    );
+  }
+  return <FuenteContext.Provider value={fuenteLista}><AppInterna /></FuenteContext.Provider>;
 }
