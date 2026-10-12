@@ -16,6 +16,25 @@ export const MARCA_POR_DEFECTO: Marca = {
   colorPrimario: '#14343B', colorPrimarioOscuro: '#0E262B', colorAcento: '#C79A3C', actualizadoEn: '',
 };
 
+export function contrasteAA(fondo: string, texto: string): number {
+  const canal = (valor: number): number => {
+    const normalizado = valor / 255;
+    return normalizado <= 0.04045 ? normalizado / 12.92 : ((normalizado + 0.055) / 1.055) ** 2.4;
+  };
+  const luminancia = (hex: string): number => {
+    if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return 0;
+    const canales = [1, 3, 5].map((pos) => canal(Number.parseInt(hex.slice(pos, pos + 2), 16)));
+    return 0.2126 * canales[0] + 0.7152 * canales[1] + 0.0722 * canales[2];
+  };
+  const a = luminancia(fondo);
+  const b = luminancia(texto);
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
+
+export function textoAccesible(fondo: string): '#ffffff' | '#19272c' {
+  return contrasteAA(fondo, '#ffffff') >= 4.5 ? '#ffffff' : '#19272c';
+}
+
 const MarcaContext = createContext<{ marca: Marca; recargar: () => Promise<void> } | null>(null);
 
 function aplicarMarca(marca: Marca) {
@@ -23,6 +42,8 @@ function aplicarMarca(marca: Marca) {
   raiz.setProperty('--pizarra', marca.colorPrimario);
   raiz.setProperty('--pizarra-2', marca.colorPrimarioOscuro);
   raiz.setProperty('--dorado', marca.colorAcento);
+  raiz.setProperty('--texto-sobre-pizarra', textoAccesible(marca.colorPrimario));
+  raiz.setProperty('--texto-sobre-dorado', textoAccesible(marca.colorAcento));
   document.title = `${marca.nombreInstitucion} — Panel`;
 }
 
