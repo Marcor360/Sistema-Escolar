@@ -3,7 +3,7 @@ import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Linking, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { api, archivosBase, mensajeDeError } from '../api/client';
-import { colores } from '../theme';
+import { colores, radio, espacio, tipografia } from '../theme';
 import { base, ErrorCarga, Sello, Tarjeta, Vacio } from './comunes';
 
 interface Materia {
@@ -123,8 +123,8 @@ export default function MateriasScreen() {
 
 const estilos = StyleSheet.create({
   materiales: {
-    marginTop: 10,
-    paddingTop: 10,
+    marginTop: espacio.md,
+    paddingTop: espacio.md,
     borderTopWidth: 1,
     borderTopColor: colores.linea,
   },
@@ -135,7 +135,7 @@ const estilos = StyleSheet.create({
     color: colores.gris,
     marginBottom: 6,
   },
-  material: { minHeight: 44, justifyContent: 'center', paddingVertical: 7 },
-  materialTitulo: { fontSize: 13.5, color: colores.pizarra, fontWeight: '600' },
+  material: { minHeight: 48, justifyContent: 'center', paddingVertical: espacio.md, borderRadius: radio.sm },
+  materialTitulo: { fontSize: tipografia.cuerpo, color: colores.pizarra, fontWeight: '600' },
   indicador: { marginTop: 10, fontSize: 12, color: colores.avisoTexto, fontWeight: '600' },
 });
