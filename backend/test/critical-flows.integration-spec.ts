@@ -282,6 +282,7 @@ describe('Integración de flujos críticos (base aislada)', () => {
     await instalarBaseline();
 
     app = await NestFactory.create<NestExpressApplication>(AppModule, { logger: false });
+    app.set('trust proxy', 'loopback'); // Misma política que main.ts detrás de IIS/ARR local.
     if (process.env.RUN_WEB_E2E === '1') { process.env.CORS_ORIGINS = 'http://127.0.0.1:5181,http://localhost:5173'; app.enableCors({ origin: process.env.CORS_ORIGINS.split(','), credentials: true }); }
     app.setGlobalPrefix('api', { exclude: [{ path: 'uploads/:filename', method: RequestMethod.GET }] });
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));

@@ -1,10 +1,11 @@
 import { activarPush, desactivarPush } from '../push';
 import { useCallback, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity } from 'react-native';
+import { Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
+import { Text } from '../components/Texto';
 import { useFocusEffect } from '@react-navigation/native';
 import { api, mensajeDeError } from '../api/client';
 import { useSesion } from '../sesion';
-import { colores } from '../theme';
+import { colores, radio, espacio, tipografia } from '../theme';
 import { base, ErrorCarga, Tarjeta } from './comunes';
 
 interface Perfil {
@@ -70,7 +71,7 @@ export default function PerfilScreen() {
         )}
       </Tarjeta>
       <Tarjeta>
-        <Text style={base.tituloTarjeta}>Cambiar contraseña</Text>
+        <Text style={base.tituloTarjeta} accessibilityRole="header">Cambiar contraseña</Text>
         <Text style={estilos.etiqueta}>Contraseña actual</Text>
         <TextInput
           style={estilos.input} secureTextEntry value={actual} onChangeText={setActual}
@@ -109,16 +110,16 @@ const estilos = StyleSheet.create({
   },
   input: {
     borderWidth: 1, borderColor: '#B9C0BA', backgroundColor: '#fff',
-    minHeight: 44, paddingHorizontal: 10, paddingVertical: 8, color: colores.tinta,
+    minHeight: 48, paddingHorizontal: espacio.md, paddingVertical: espacio.md, color: colores.tinta, borderRadius: radio.sm,
   },
   botonPrimario: {
     marginTop: 12, alignSelf: 'flex-start', backgroundColor: colores.pizarra,
-    minHeight: 44, justifyContent: 'center', paddingHorizontal: 14, paddingVertical: 9,
+    minHeight: 48, justifyContent: 'center', paddingHorizontal: espacio.lg, paddingVertical: espacio.md, borderRadius: radio.sm,
   },
-  botonPrimarioTexto: { color: '#fff', fontSize: 13 },
+  botonPrimarioTexto: { color: '#fff', fontSize: tipografia.cuerpo, fontWeight: '700' },
   boton: {
     marginTop: 8, alignSelf: 'flex-start', borderWidth: 1, borderColor: colores.peligro,
     minHeight: 44, justifyContent: 'center', paddingHorizontal: 14, paddingVertical: 9,
   },
-  botonTexto: { color: colores.peligro, fontSize: 13 },
+  botonTexto: { color: colores.peligro, fontSize: tipografia.cuerpo },
 });

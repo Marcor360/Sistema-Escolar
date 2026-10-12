@@ -1,14 +1,16 @@
 import * as Notifications from 'expo-notifications';
 import { activarPush } from './src/push';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { NavigationContainer, DefaultTheme, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, TextInput, TouchableOpacity, View } from 'react-native';
+import { Text, FuenteContext } from './src/components/Texto';
+import { useFonts } from 'expo-font';
 import * as SecureStore from 'expo-secure-store';
 import { api, mensajeDeError, registrarSesionExpirada, TOKEN_KEY, REFRESH_KEY } from './src/api/client';
 import { Sesion, SesionContext } from './src/sesion';
-import { colores } from './src/theme';
+import { colores, textoSobreFondo } from './src/theme';
 import LoginScreen from './src/screens/Login';
 import InicioScreen from './src/screens/Inicio';
 import MateriasScreen from './src/screens/Materias';
@@ -25,7 +27,8 @@ const iconos: Record<string, string> = {
   Inicio: '🏠', Materias: '📚', Tareas: '📝', Calificaciones: '🎓', Pagos: '💳', Perfil: '👤',
 };
 
-export default function App() {
+function AppInterna() {
+  const fuenteLista = useContext(FuenteContext);
   const [sesion, setSesion] = useState<Sesion | null>(null);
   const [listo, setListo] = useState(false);
   const [marca, setMarca] = useState<Marca>(MARCA_POR_DEFECTO);
@@ -163,7 +166,7 @@ export default function App() {
           onPress={() => { void restaurarSesion(); }} accessibilityRole="button" accessibilityLabel="Reintentar sesión"
           style={{ backgroundColor: marca.colorPrimario, padding: 14 }}
         >
-          <Text style={{ color: '#fff' }}>Reintentar</Text>
+          <Text style={{ color: textoSobreFondo(marca.colorPrimario) }}>Reintentar</Text>
         </TouchableOpacity>
       </View>
     );
@@ -173,15 +176,19 @@ export default function App() {
     <MarcaContext.Provider value={{ marca }}>
       <SesionContext.Provider value={{ sesion, iniciar, cerrar }}>
         <NavigationContainer ref={navegacion} theme={tema} onReady={() => { if (sesion && Notifications.getLastNotificationResponse()) navegacion.navigate('Inicio'); }}>
-        <StatusBar style="light" />
+        <StatusBar style={textoSobreFondo(marca.colorPrimario) === '#ffffff' ? 'light' : 'dark'} />
         {sesion ? (
           <Tab.Navigator
             screenOptions={({ route }) => ({
-              headerStyle: { backgroundColor: colores.pizarra },
-              headerTintColor: '#fff',
-              tabBarActiveTintColor: colores.dorado,
-              tabBarInactiveTintColor: '#9FB0A9',
-              tabBarStyle: { backgroundColor: colores.pizarra, borderTopColor: colores.pizarraOscuro },
+              headerStyle: { backgroundColor: marca.colorPrimario },
+              headerTintColor: textoSobreFondo(marca.colorPrimario),
+              headerTitleStyle: { fontFamily: fuenteLista ? 'Onest' : undefined, fontWeight: '700' },
+              tabBarActiveTintColor: textoSobreFondo(colores.papel),
+              tabBarInactiveTintColor: colores.gris,
+              tabBarHideOnKeyboard: true,
+              tabBarLabelStyle: { fontFamily: fuenteLista ? 'Onest' : undefined, fontSize: 11, fontWeight: '600' },
+              tabBarItemStyle: { minHeight: 48 },
+              tabBarStyle: { backgroundColor: colores.papel, borderTopColor: colores.linea, minHeight: 68, paddingTop: 6 },
               tabBarIcon: () => <Text>{iconos[route.name] ?? '•'}</Text>,
             })}
           >
@@ -199,4 +206,19 @@ export default function App() {
       </SesionContext.Provider>
     </MarcaContext.Provider>
   );
+}
+
+/** Se empaqueta la fuente OFL en el APK/IPA: sin peticiones de red para renderizar Onest. */
+export default function App() {
+  const [fuenteLista, errorFuente] = useFonts({
+    Onest: require('./src/assets/fonts/OnestVariable.ttf'),
+  });
+  if (!fuenteLista && !errorFuente) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colores.papel }}>
+        <ActivityIndicator accessibilityLabel="Preparando tipografía" color={colores.pizarra} />
+      </View>
+    );
+  }
+  return <FuenteContext.Provider value={fuenteLista}><AppInterna /></FuenteContext.Provider>;
 }

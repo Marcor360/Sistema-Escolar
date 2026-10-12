@@ -1,6 +1,7 @@
 import { crearControlLectura } from '../api/lectura-vigente';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, View } from 'react-native';
+import { Text } from '../components/Texto';
 import { useFocusEffect } from '@react-navigation/native';
 import { api, mensajeDeError } from '../api/client';
 import { base, ErrorCarga, Tarjeta, Vacio } from './comunes';
@@ -58,7 +59,7 @@ export default function CalificacionesScreen() {
           const promedio = materia.parciales[0]?.promedioOficial;
           return (
             <Tarjeta>
-              <Text style={base.tituloTarjeta}>{materia.nombre}</Text>
+              <Text style={base.tituloTarjeta} accessibilityRole="header">{materia.nombre}</Text>
               {materia.parciales
                 .sort((a, b) => a.parcial - b.parcial)
                 .map((p) => (

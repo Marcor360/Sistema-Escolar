@@ -1,9 +1,10 @@
 import { crearControlLectura } from '../api/lectura-vigente';
 import { useCallback, useRef, useState } from 'react';
-import { Alert, Linking, ScrollView, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Linking, ScrollView, RefreshControl, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Text } from '../components/Texto';
 import { useFocusEffect } from '@react-navigation/native';
 import { api, mensajeDeError } from '../api/client';
-import { colores } from '../theme';
+import { colores, radio, espacio, tipografia } from '../theme';
 import { pesos } from '../formato';
 import { base, ErrorCarga, Sello, Tarjeta, Vacio } from './comunes';
 
@@ -116,15 +117,15 @@ export default function EstadoCuentaScreen() {
 
 const estilos = StyleSheet.create({
   resumen: {
-    backgroundColor: colores.pizarra, padding: 18, marginBottom: 14,
+    backgroundColor: colores.pizarra, padding: espacio.xl, marginBottom: espacio.lg, borderRadius: radio.md,
     borderLeftWidth: 4, borderLeftColor: colores.dorado,
   },
   resumenEtiqueta: { color: '#C8D2CD', fontSize: 11, letterSpacing: 0.8, textTransform: 'uppercase' },
-  resumenValor: { color: '#fff', fontSize: 28, fontVariant: ['tabular-nums'] },
+  resumenValor: { color: '#fff', fontSize: tipografia.dato, fontVariant: ['tabular-nums'] },
   subtitulo: { fontSize: 13, color: colores.gris, textTransform: 'uppercase', letterSpacing: 0.6, marginVertical: 10 },
   boton: {
     marginTop: 10, alignSelf: 'flex-start', backgroundColor: colores.dorado,
-    minHeight: 44, justifyContent: 'center', paddingHorizontal: 14, paddingVertical: 8,
+    minHeight: 48, justifyContent: 'center', paddingHorizontal: espacio.lg, paddingVertical: espacio.md, borderRadius: radio.sm,
   },
-  botonTexto: { color: colores.pizarraOscuro, fontSize: 13, fontWeight: '600' },
+  botonTexto: { color: colores.pizarraOscuro, fontSize: tipografia.cuerpo, fontWeight: '600' },
 });

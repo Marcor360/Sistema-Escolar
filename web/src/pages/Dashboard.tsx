@@ -27,6 +27,16 @@ interface Plantel { id: number; nombre: string }
 export default function DashboardPage() {
   const { sesion, tieneRol } = useAuth();
   const [plantelId, setPlantelId] = useState('');
+  const rolPrincipal = sesion?.roles.includes('SUPERADMIN') ? 'SUPERADMIN'
+    : sesion?.roles.includes('ADMINISTRATIVO') ? 'ADMINISTRATIVO'
+    : sesion?.roles.includes('FINANZAS') ? 'FINANZAS' : 'MAESTRO';
+  const contextoRol = {
+    SUPERADMIN: { titulo: 'Supervisión institucional', detalle: 'Configuración, indicadores y seguimiento de la institución.' },
+    ADMINISTRATIVO: { titulo: 'Control escolar', detalle: 'Consulta alumnos, docentes, grupos y próximas actividades.' },
+    FINANZAS: { titulo: 'Gestión financiera', detalle: 'Revisa cobranza, saldos pendientes y operaciones financieras.' },
+    MAESTRO: { titulo: 'Espacio docente', detalle: 'Accede a tus clases, evaluaciones y actividades del calendario.' },
+  }[rolPrincipal];
+  const tieneVariosRoles = (sesion?.roles.length ?? 0) > 1 && !sesion?.roles.includes('SUPERADMIN');
   const puedeVerResumen = tieneRol('SUPERADMIN', 'ADMINISTRATIVO', 'FINANZAS');
   const { datos: planteles } = useDatos<Plantel[]>(
     () => api.get('/planteles/mios').then((r) => r.data),
@@ -61,32 +71,39 @@ export default function DashboardPage() {
     { etiqueta: 'Cargos con adeudo', valor: resumen.cargosConAdeudo, nota: 'Requieren seguimiento', tono: 'dorado' },
   ] : [];
 
+  const metricasVisibles = metricas.filter((metrica) =>
+    tieneRol('SUPERADMIN') ||
+    (['Cobrado este mes', 'Saldo pendiente', 'Cargos con adeudo'].includes(metrica.etiqueta)
+      ? tieneRol('FINANZAS') : tieneRol('ADMINISTRATIVO')),
+  );
+
   const accesos = [
-    ...(tieneRol('ADMINISTRATIVO') ? [
+    ...(sesion?.roles.includes('ADMINISTRATIVO') ? [
+      { ruta: '/operaciones', titulo: 'Importar alumnos', detalle: 'Carga masiva y revisión previa de registros' },
       { ruta: '/alumnos', titulo: 'Alumnos', detalle: 'Consulta y administra la matrícula' },
       { ruta: '/grupos', titulo: 'Grupos', detalle: 'Organiza grupos y ciclos escolares' },
       { ruta: '/calendario', titulo: 'Calendario', detalle: 'Revisa fechas y actividades' },
     ] : []),
-    ...(tieneRol('FINANZAS') ? [
+    ...(sesion?.roles.includes('FINANZAS') ? [
       { ruta: '/finanzas', titulo: 'Finanzas', detalle: 'Da seguimiento a cargos y pagos' },
       { ruta: '/alumnos', titulo: 'Alumnos', detalle: 'Consulta datos de familias' },
     ] : []),
-    ...(tieneRol('MAESTRO') ? [
+    ...(sesion?.roles.includes('MAESTRO') ? [
       { ruta: '/maestro', titulo: 'Mis clases', detalle: 'Consulta tus grupos y materias' },
       { ruta: '/calificaciones', titulo: 'Calificaciones', detalle: 'Captura y revisa evaluaciones' },
       { ruta: '/calendario', titulo: 'Calendario', detalle: 'Revisa fechas y actividades' },
     ] : []),
-    ...(tieneRol('SUPERADMIN') ? [
+    ...(sesion?.roles.includes('SUPERADMIN') ? [
       { ruta: '/configuracion', titulo: 'Configuración', detalle: 'Administra la identidad institucional' },
     ] : []),
-  ].slice(0, 3);
+  ];
 
   return (
     <>
       <div className="panel-bienvenida">
         <div>
-          <p className="sobrelinea">PANEL DE CONTROL</p>
-          <Encabezado titulo={`Hola${sesion?.nombre ? `, ${sesion.nombre.split(' ')[0]}` : ''}`} detalle="Aquí tienes el resumen de actividad de tu comunidad escolar." />
+          <p className="sobrelinea">{tieneVariosRoles ? 'ESPACIO DE TRABAJO' : contextoRol.titulo.toUpperCase()}</p>
+          <Encabezado titulo={`Hola${sesion?.nombre ? `, ${sesion.nombre.split(' ')[0]}` : ''}`} detalle={tieneVariosRoles ? 'Indicadores y accesos de tus funciones asignadas.' : contextoRol.detalle} />
         </div>
         {puedeVerResumen && planteles.length > 1 && (
           <div className="campo filtro-plantel">
@@ -102,8 +119,8 @@ export default function DashboardPage() {
       {puedeVerResumen && <section className="seccion-dashboard" aria-labelledby="titulo-resumen">
         <div className="titulo-seccion">
           <div>
-            <h2 id="titulo-resumen">Resumen general</h2>
-            <p>Indicadores de tu plantel</p>
+            <h2 id="titulo-resumen">{rolPrincipal === 'FINANZAS' ? 'Resumen financiero' : 'Resumen general'}</h2>
+            <p>{rolPrincipal === 'FINANZAS' ? 'Cobranza y saldos de tus planteles' : 'Indicadores de tu plantel'}</p>
           </div>
         </div>
         {cargando && <p className="estado-dashboard" role="status">Cargando indicadores…</p>}
@@ -114,7 +131,7 @@ export default function DashboardPage() {
         )}
         {resumen && (
           <div className="kpis kpis-dashboard">
-            {metricas.map((metrica) => (
+            {metricasVisibles.map((metrica) => (
               <article className={`kpi kpi-${metrica.tono}`} key={metrica.etiqueta}>
                 <p className="etiqueta">{metrica.etiqueta}</p>
                 <p className={`valor${metrica.dinero ? ' monto' : ''}`}>{metrica.valor}</p>

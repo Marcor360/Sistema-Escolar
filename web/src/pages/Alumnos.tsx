@@ -27,6 +27,7 @@ export default function AlumnosPage() {
   const [plantelId, setPlantelId] = useState('');
   const [cargando, setCargando] = useState(true);
   const [buscar, setBuscar] = useState('');
+  const [busquedaAplicada, setBusquedaAplicada] = useState('');
   const [form, setForm] = useState(FORM_INICIAL);
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
@@ -81,6 +82,7 @@ export default function AlumnosPage() {
   const cargar = useCallback((pagina = 1, termino = '', filtroPlantel = '') => {
     setCargando(true);
     setError('');
+    setBusquedaAplicada(termino);
     api.get<Resultado>('/alumnos', {
       params: { pagina, ...(termino ? { buscar: termino } : {}), ...(filtroPlantel ? { plantelId: filtroPlantel } : {}) },
     })
@@ -151,7 +153,7 @@ export default function AlumnosPage() {
       {historial && <HistorialAlumno historial={historial} boleta={boleta} cargandoNotas={cargandoNotas} verNotas={verNotas} notas={notas} setHistorial={setHistorial} />}
       {transferencia && <TransferirAlumno transferencia={transferencia} transferir={transferir} destino={destino} setDestino={setDestino} planteles={planteles} enviando={enviando} setTransferencia={setTransferencia} />}
 
-      <div className="fila" style={{ marginBottom: 12 }}>
+      <section className="panel panel-filtros" aria-label="Filtros de alumnos"><div className="fila">
         <div className="campo"><label htmlFor="alumnos-campo-11">Filtrar por plantel</label>
           <select id="alumnos-campo-11" value={plantelId} onChange={(e) => setPlantelId(e.target.value)}>
             <option value="">Todos</option>
@@ -161,15 +163,21 @@ export default function AlumnosPage() {
         <div className="campo">
           <label htmlFor="alumnos-campo-12">Buscar por matrícula</label>
           <input id="alumnos-campo-12"
+            type="search"
+            placeholder="Escribe la matrícula"
             value={buscar}
             onChange={(e) => setBuscar(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && cargar(1, buscar, plantelId)}
           />
         </div>
-        <button className="boton secundario" onClick={() => cargar(1, buscar, plantelId)}>Buscar</button>
-      </div>
+        <button type="button" className="boton" disabled={cargando} onClick={() => cargar(1, buscar.trim(), plantelId)}>Buscar</button>
+        {(busquedaAplicada || plantelId) && <button type="button" className="boton secundario" onClick={() => { setBuscar(''); setPlantelId(''); cargar(1, '', ''); }}>Limpiar filtros</button>}
+      </div></section>
 
+      <div className="cabecera-listado"><h2>Expedientes de alumnos</h2><p>{resultado.total} registros encontrados</p></div>
+      <div className="tabla-contenedor" role="region" aria-label="Listado de alumnos" tabIndex={0}>
       <table className="tabla">
+        <caption className="solo-lector">Alumnos, plantel, correo y acciones disponibles</caption>
         <thead>
           <tr><th>Matrícula</th><th>Nombre</th><th>Plantel</th><th>Correo</th><th>Estatus</th><th className="derecha">Acciones</th></tr>
         </thead>
@@ -198,12 +206,12 @@ export default function AlumnosPage() {
             </tr>
           ))}
           {!cargando && resultado.datos.length === 0 && (
-            <tr><td className="vacio" colSpan={6}>Sin alumnos registrados. Usa el formulario para dar de alta al primero.</td></tr>
+            <tr><td className="vacio" colSpan={6}>{busquedaAplicada || plantelId ? 'No se encontraron alumnos con estos filtros. Prueba con otra matrícula o plantel.' : 'Todavía no hay alumnos registrados. Puedes dar de alta al primero desde el formulario.'}</td></tr>
           )}
           {cargando && <tr><td className="vacio" colSpan={6}>Cargando…</td></tr>}
         </tbody>
-      </table>
-      <Paginador total={resultado.total} pagina={resultado.pagina} porPagina={resultado.porPagina} onCambio={(pagina) => cargar(pagina, buscar, plantelId)} />
+      </table></div>
+      <Paginador deshabilitado={cargando} total={resultado.total} pagina={resultado.pagina} porPagina={resultado.porPagina} onCambio={(pagina) => cargar(pagina, buscar, plantelId)} />
     </>
   );
 }

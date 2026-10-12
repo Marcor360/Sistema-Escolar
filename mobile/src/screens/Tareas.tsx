@@ -1,10 +1,11 @@
 import { crearControlLectura } from '../api/lectura-vigente';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, TouchableOpacity, TextInput, View } from 'react-native';
+import { Text } from '../components/Texto';
 import { useFocusEffect } from '@react-navigation/native';
 import * as DocumentPicker from 'expo-document-picker';
 import { api, mensajeDeError } from '../api/client';
-import { colores } from '../theme';
+import { colores, tipografia } from '../theme';
 import { base, ErrorCarga, Sello, Tarjeta, Vacio } from './comunes';
 
 interface Tarea {
@@ -131,7 +132,7 @@ export default function TareasScreen() {
 const estilos = StyleSheet.create({
   boton: {
     marginTop: 10, alignSelf: 'flex-start', backgroundColor: colores.pizarra,
-    minHeight: 44, justifyContent: 'center', paddingHorizontal: 14, paddingVertical: 8,
+    minHeight: 48, justifyContent: 'center', paddingHorizontal: 14, paddingVertical: 8,
   },
-  botonTexto: { color: '#fff', fontSize: 13 },
+  botonTexto: { color: '#fff', fontSize: tipografia.secundaria },
 });
