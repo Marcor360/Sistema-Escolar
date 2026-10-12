@@ -12,7 +12,7 @@
 - `cd mobile && npm test && npx tsc --noEmit && npx expo export --platform android --output-dir .expo/export`
 - `cd backend && npm run lint && npm run typecheck && npm run build && npm test`
 - CI GitHub: integración MySQL, SQL Server y recorridos Chromium con API real.
-- **Regresión pendiente:** actualizar `backend/test/recorridos-web.ts` para el formulario que cambió de etiquetas: `Plantel *`, `Nombre(s) *`, `Correo institucional *`, botón `Registrar alumno`; edición `Editar expediente` y botón `Guardar cambios`. No marcar E2E como verde sin actualizarlo.
+- **Regresión adaptada:** `backend/test/recorridos-web.ts` usa las etiquetas actuales del formulario: `Plantel *`, `Nombre(s) *`, `Correo institucional *`, botón `Registrar alumno`; edición `Editar expediente` y botón `Guardar cambios`. Los resultados E2E deben comprobarse en CI.
 
 ## Matriz manual de experiencia web
 
@@ -37,3 +37,11 @@
 
 La revisión de código y los tests automáticos no sustituyen la ejecución en dispositivos físicos.
 Mantener el PR como borrador si faltan resultados de CI, evidencia de contraste completo o comprobaciones en dispositivos.
+
+## Evidencia de esta revisión
+
+- Pruebas unitarias web y móvil ejecutadas; compilación web y exportación Android verificadas mediante CI.
+- Chromium con API simulada: SUPERADMIN, ADMINISTRATIVO, FINANZAS y MAESTRO; temas claros, oscuros e intermedios; contraste del menú y estado activo.
+- Formulario/listado de alumnos a 320, 375, 768, 1024 y 1440 px, y renderizado con zoom al 200 %: validación de CURP y ausencia de desbordamiento del documento.
+- Correcciones: contraste específico del fondo activo, texto del botón móvil, fallback de fuente en navegación nativa y altura de pestañas compatible con el área segura.
+- Sin ejecución en dispositivos físicos, TalkBack o VoiceOver. La comprobación de temas institucionales reales y de todas las pantallas sigue pendiente; esta evidencia no certifica accesibilidad completa.
