@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
-  Image, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View,
-} from 'react-native';
+  Image, KeyboardAvoidingView, Platform, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { Text } from '../components/Texto';
 import { useSesion } from '../sesion';
 import { archivosBase, mensajeDeError } from '../api/client';
 import { colores, radio, espacio, tipografia } from '../theme';
