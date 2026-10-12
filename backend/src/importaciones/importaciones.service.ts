@@ -2,7 +2,7 @@ import { BadRequestException, ConflictException, ForbiddenException, Injectable,
 import { ConfigService } from '@nestjs/config';
 import { DataSource, EntityManager, In, LessThan } from 'typeorm';
 import { randomBytes, randomUUID } from 'crypto';
-import * as bcrypt from 'bcryptjs';
+import { hashPasswordNueva } from '../common/password-bcrypt';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { CrearAlumnoDto } from '../alumnos/alumnos.dto';
@@ -35,7 +35,7 @@ export class ImportacionesService {
   private preparar(tipo: TipoImportacion, fila: Fila) {
     const datos: Record<string, unknown> = Object.fromEntries(Object.entries(fila).filter(([, v]) => v !== ''));
     if (Object.keys(fila).some((k) => !CABECERAS[tipo].includes(k))) throw new BadRequestException('Hay columnas no admitidas; descarga la plantilla');
-    if (tipo !== 'INSCRIPCIONES') datos.password = randomBytes(24).toString('base64url');
+    if (tipo === 'DOCENTES' || tipo === 'PERSONAL') datos.password = randomBytes(24).toString('base64url');
     if (tipo === 'PERSONAL') datos.roles = String(datos.roles ?? '').split(';').filter(Boolean);
     if (tipo === 'DOCENTES' || tipo === 'PERSONAL') datos.plantelIds = String(datos.plantelIds ?? '').split(';').filter(Boolean).map(Number);
     return datos;
@@ -131,8 +131,15 @@ export class ImportacionesService {
     const cifradas = await this.ds.getRepository(ImportacionFila).find({ where: { previewId }, order: { posicion: 'ASC' } });
     let filas: Fila[]; try { filas = cifradas.map((f) => this.cifrado.descifrar(f.contenido,this.aad(previa,f.posicion))); } catch { throw new NotFoundException('Genera otra previsualización: clave cambiada o contenido inválido'); }
     if (!filas.length || filas.length > 500) throw new ConflictException('Previsualización inválida');
-    // El trabajo costoso de bcrypt sucede fuera de la transacción; claves aleatorias nunca entregadas.
-    const hashes: string[] = []; if (previa.tipo !== 'INSCRIPCIONES') for (let i=0;i<filas.length;i+=4) hashes.push(...await Promise.all(filas.slice(i,i+4).map(() => bcrypt.hash(randomBytes(24).toString('base64url'),10))));
+    // El hash se calcula fuera de la transacción para reducir el tiempo de bloqueo.
+    const hashes: string[] = [];
+    if (previa.tipo !== 'INSCRIPCIONES') {
+      for (let i = 0; i < filas.length; i += 4) {
+        hashes.push(...await Promise.all(filas.slice(i, i + 4).map((fila) =>
+          hashPasswordNueva(previa.tipo === 'ALUMNOS' ? fila.matricula.trim().toUpperCase() : randomBytes(24).toString('base64url')),
+        )));
+      }
+    }
     try { return await this.ds.transaction('SERIALIZABLE', async (manager) => {
       const p = await manager.getRepository(ImportacionPreview).findOne({ where: { id: previewId }, lock: { mode: 'pessimistic_write' } }); this.comprobar(p,user);
       const c = await this.catalogos(manager,p.tipo,filas,user,true), vistos = new Set<string>();
@@ -158,7 +165,7 @@ export class ImportacionesService {
         }),{ chunk: 50 });
         const usuarios = new Map(nuevos.map((u) => [u.email,u.id]));
         if (p.tipo === 'ALUMNOS') {
-          const alumnos = cuentas.map((v) => { const d = v.instancia as CrearAlumnoDto; return { usuarioId: usuarios.get(d.email)!, plantelId: d.plantelId, matricula: d.matricula, curp: d.curp ?? null, fechaNacimiento: d.fechaNacimiento ?? null, tutorNombre: d.tutorNombre ?? null, tutorTelefono: d.tutorTelefono ?? null, direccion: d.direccion ?? null }; });
+          const alumnos = cuentas.map((v) => { const d = v.instancia as CrearAlumnoDto; return { usuarioId: usuarios.get(d.email)!, plantelId: d.plantelId, matricula: d.matricula, curp: d.curp, fechaNacimiento: d.fechaNacimiento ?? null, tutorNombre: d.tutorNombre ?? null, tutorTelefono: d.tutorTelefono ?? null, direccion: d.direccion ?? null }; });
           const repo = manager.getRepository(Alumno); for (const lote of trozos(alumnos)) await repo.createQueryBuilder().insert().values(lote).updateEntity(false).execute();
           const guardados = await repo.find({ where: { usuarioId: In(nuevos.map((u) => u.id)) }, select: { id: true, plantelId: true }, loadEagerRelations: false }); guardados.forEach((a) => auditar(a.id,a.plantelId));
         } else {
@@ -174,7 +181,7 @@ export class ImportacionesService {
       if (auditoria.length !== filas.length) throw new ConflictException('El lote no está completo');
       for (const lote of trozos(auditoria)) await manager.getRepository(BitacoraAcademica).insert(lote);
       await manager.getRepository(ImportacionPreview).delete(p.id);
-      return { insertados: filas.length, activacion: p.tipo === 'INSCRIPCIONES' ? null : 'Establecer contraseña mediante recuperación por correo o reinicio temporal autorizado en la cuenta.' };
+      return { insertados: filas.length, activacion: p.tipo === 'INSCRIPCIONES' ? null : p.tipo === 'ALUMNOS' ? 'Acceso inicial con correo institucional y matrícula como contraseña temporal; cambio obligatorio en el primer ingreso.' : 'Establecer contraseña mediante recuperación por correo o reinicio temporal autorizado en la cuenta.' };
     }); } catch (e) { if (e instanceof BadRequestException || e instanceof ForbiddenException || e instanceof ConflictException || e instanceof NotFoundException) throw e; throw new ConflictException('La importación no se aplicó; revisa duplicados o cambios concurrentes y genera otra previsualización'); }
   }
 }
