@@ -179,9 +179,12 @@ export default function App() {
             screenOptions={({ route }) => ({
               headerStyle: { backgroundColor: colores.pizarra },
               headerTintColor: '#fff',
-              tabBarActiveTintColor: colores.dorado,
-              tabBarInactiveTintColor: '#9FB0A9',
-              tabBarStyle: { backgroundColor: colores.pizarra, borderTopColor: colores.pizarraOscuro },
+              tabBarActiveTintColor: marca.colorPrimario,
+              tabBarInactiveTintColor: colores.gris,
+              tabBarHideOnKeyboard: true,
+              tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+              tabBarItemStyle: { minHeight: 48 },
+              tabBarStyle: { backgroundColor: colores.papel, borderTopColor: colores.linea, height: 68, paddingTop: 6 },
               tabBarIcon: () => <Text>{iconos[route.name] ?? '•'}</Text>,
             })}
           >
