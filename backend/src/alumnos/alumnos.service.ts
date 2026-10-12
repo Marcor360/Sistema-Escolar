@@ -158,7 +158,7 @@ export class AlumnosService {
       if (!plantel) throw new ConflictException('El plantel no está activo');
       const usuario = await this.usuarios.crear({
         email: dto.email,
-        password: dto.password,
+        password: dto.matricula,
         nombre: dto.nombre,
         apellidoPaterno: dto.apellidoPaterno,
         apellidoMaterno: dto.apellidoMaterno,
@@ -170,7 +170,7 @@ export class AlumnosService {
         usuarioId: usuario.id,
         plantelId: dto.plantelId,
         matricula: dto.matricula,
-        curp: dto.curp ?? null,
+        curp: dto.curp,
         fechaNacimiento: dto.fechaNacimiento ?? null,
         tutorNombre: dto.tutorNombre ?? null,
         tutorTelefono: dto.tutorTelefono ?? null,
