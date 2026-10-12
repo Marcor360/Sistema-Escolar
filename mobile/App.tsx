@@ -181,10 +181,11 @@ function AppInterna() {
             screenOptions={({ route }) => ({
               headerStyle: { backgroundColor: marca.colorPrimario },
               headerTintColor: textoSobreFondo(marca.colorPrimario),
-              tabBarActiveTintColor: textoSobreFondo(colores.papel) === '#ffffff' ? '#ffffff' : colores.pizarraOscuro,
+              headerTitleStyle: { fontFamily: 'Onest', fontWeight: '700' },
+              tabBarActiveTintColor: textoSobreFondo(colores.papel),
               tabBarInactiveTintColor: colores.gris,
               tabBarHideOnKeyboard: true,
-              tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+              tabBarLabelStyle: { fontFamily: 'Onest', fontSize: 11, fontWeight: '600' },
               tabBarItemStyle: { minHeight: 48 },
               tabBarStyle: { backgroundColor: colores.papel, borderTopColor: colores.linea, height: 68, paddingTop: 6 },
               tabBarIcon: () => <Text>{iconos[route.name] ?? '•'}</Text>,
