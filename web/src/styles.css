@@ -944,3 +944,14 @@ textarea { min-height: 110px; resize: vertical; }
   .fila > .boton { width: 100%; }
   .panel { padding: 16px; }
 }
+
+/* 1.21.0: jerarquía de resultados académicos y financieros por rol autorizado. */
+.analitica-filtros { display: flex; align-items: end; gap: 16px; }
+.analitica-filtros .campo { min-width: min(100%, 200px); }
+.analitica-filtros .boton { align-self: end; }
+.analitica-vacia { max-width: 720px; padding-block: clamp(24px, 3vw, 42px); }
+.analitica-vacia p { color: var(--texto-secundario); line-height: 1.6; }
+.analitica-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: 12px; }
+.analitica-kpis dt { font-size: .8125rem; color: var(--texto-secundario); font-weight: 650; }
+.analitica-kpis dd { margin: 0 0 14px; font-size: clamp(1.15rem, 1.3vw, 1.625rem); font-weight: 750; font-variant-numeric: tabular-nums; }
+@media (max-width: 700px) { .analitica-filtros .campo { flex: 1 1 100%; } .analitica-filtros .boton { width: 100%; } }

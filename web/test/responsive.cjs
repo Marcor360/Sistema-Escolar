@@ -78,6 +78,35 @@ async function esperarServidor() {
           pagina: 1,
           porPagina: 20,
         };
+      if (path.endsWith('/analitica'))
+        data = {
+          modo: 'VIGENTE',
+          ciclo: { nombre: 'Ciclo QA' },
+          generadoEn: '2026-10-12T12:00:00Z',
+          financiero: { cargos: 4, facturado: 1234567.89, aplicado: 1000, saldo: 1233567.89 },
+          academico: {
+            regla: 'Clases dentro del alcance autorizado',
+            clases: [
+              {
+                grupoMateriaId: 1,
+                plantel: 'Plantel con un nombre extenso de prueba',
+                grupo: 'Primero',
+                materia: 'Matemáticas',
+                inscritos: 20,
+                participantesHistoricos: 20,
+                inscritosVigentes: 20,
+                oficialesCompletos: 0,
+                promedioOficial: null,
+                aprobados: 0,
+                bajoReferencia: 0,
+                entregasRecibidas: 0,
+                entregasEsperadas: 20,
+                entregasFaltantes: 20,
+                parciales: [{ parcial: 1, capturados: 0, faltantes: 20, promedio: null }],
+              },
+            ],
+          },
+        };
       if (path.endsWith('/reportes/resumen'))
         data = {
           alumnosActivos: 20,
@@ -139,6 +168,36 @@ async function esperarServidor() {
     });
     await expect(page.getByRole('button', { name: 'Dar de baja', exact: true })).toBeInViewport();
     console.log('PASS forms/table ' + width);
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
+  for (const width of [320, 360, 768, 1024, 1440, 2560, 3840]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(baseUrl + '/analitica');
+    await expect(page.getByText('Consulta los indicadores de tu institución')).toBeVisible();
+    await page.getByRole('button', { name: 'Consultar indicadores' }).click();
+    await expect(page.getByRole('heading', { name: 'Finanzas del ciclo' })).toBeVisible();
+    const geometry = await page.evaluate(() => ({
+      scroll: document.documentElement.scrollWidth,
+      width: innerWidth,
+      pairs: [...document.querySelectorAll('.analitica-kpis > div')].every(
+        (el) =>
+          el.querySelector('dt') &&
+          el.querySelector('dd') &&
+          Math.abs(
+            el.querySelector('dt').getBoundingClientRect().x - el.querySelector('dd').getBoundingClientRect().x,
+          ) < 1,
+      ),
+    }));
+    if (geometry.scroll > geometry.width || !geometry.pairs)
+      throw Error('Analytics layout ' + width + ': ' + JSON.stringify(geometry));
+    const table = page.getByRole('region', { name: 'Seguimiento por clase' });
+    await table.scrollIntoViewIfNeeded();
+    await table.focus();
+    if (width <= 800) {
+      await page.keyboard.press('ArrowRight');
+      await expect.poll(() => table.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
+    }
+    console.log('PASS analytics ' + width);
   }
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.evaluate(() => {
