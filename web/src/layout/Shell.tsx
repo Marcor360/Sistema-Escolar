@@ -108,7 +108,7 @@ export function Shell() {
         <button ref={botonCerrarMenu} type="button" className="menu-cerrar" onClick={() => { setMenuAbierto(false); botonMenu.current?.focus(); }}>Cerrar menú <IconoTabler nombre="x" /></button>
         {marca.logoUrl && !logoFallo
           ? <img className="logo-marca" src={archivosBase + marca.logoUrl} alt={marca.nombreInstitucion} onError={() => setLogoFallo(true)} />
-          : <div className="monograma" aria-hidden>{marca.nombreCorto}</div>
+          : <div className="monograma" aria-hidden>{marca.nombreCorto}</div>}
         <p className="lateral-titulo" title={marca.nombreInstitucion}>{marca.nombreInstitucion}</p>
         <div className="menu-panel">
           <nav id="navegacion-escolar" aria-label="Navegación principal">
