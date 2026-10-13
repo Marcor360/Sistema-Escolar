@@ -62,7 +62,14 @@ export function Shell() {
     if (!consulta.matches) return;
     const desplazamientoAnterior = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = desplazamientoAnterior; };
+    const cerrarEnEscritorio = () => {
+      if (!consulta.matches) setMenuAbierto(false);
+    };
+    consulta.addEventListener('change', cerrarEnEscritorio);
+    return () => {
+      document.body.style.overflow = desplazamientoAnterior;
+      consulta.removeEventListener('change', cerrarEnEscritorio);
+    };
   }, [menuAbierto]);
   useEffect(() => {
     const cerrarConEscape = (evento: KeyboardEvent) => {
@@ -82,40 +89,42 @@ export function Shell() {
       <a className="skip-link" href="#contenido-principal">Saltar al contenido principal</a>
       {menuAbierto && <button type="button" className="menu-fondo" aria-label="Cerrar navegación" onClick={() => { setMenuAbierto(false); botonMenu.current?.focus(); }} />}
       <aside ref={lateral} className={`lateral${menuAbierto ? ' lateral-abierto' : ''}`}>
-        <button ref={botonMenu} type="button" className="menu-movil" aria-expanded={menuAbierto} aria-controls="navegacion-escolar" onClick={() => setMenuAbierto((abierto) => !abierto)}><span>{menuAbierto ? 'Cerrar menú' : 'Abrir menú'}</span> <IconoTabler nombre="menu-2" /></button>
+        <button ref={botonMenu} type="button" className="menu-movil" aria-expanded={menuAbierto} aria-controls="navegacion-escolar" onClick={() => setMenuAbierto((abierto) => !abierto)}><span>{menuAbierto ? 'Cerrar menú' : 'Abrir menú'}</span> <IconoTabler nombre={menuAbierto ? 'x' : 'menu-2'} /></button>
         {marca.logoUrl
           ? <img className="logo-marca" src={archivosBase + marca.logoUrl} alt={marca.nombreInstitucion} />
           : <div className="monograma" aria-hidden>{marca.nombreCorto}</div>}
         <p className="lateral-titulo" title={marca.nombreInstitucion}>{marca.nombreInstitucion}</p>
-        <nav id="navegacion-escolar" aria-label="Navegación principal">
-          {secciones
-            .filter((s) => tieneRol(...s.roles))
-            .map((s) => (
-              <NavLink key={s.destino} to={s.destino} end={s.destino === '/'} onClick={() => setMenuAbierto(false)}>
-                <IconoTabler nombre={iconosPorRuta[s.destino]} />
-                <span>{s.etiqueta}</span>
-              </NavLink>
-            ))}
-        </nav>
-        <div className="lateral-pie">
-          <p>{sesion?.nombre}</p>
-          <NavLink to="/cuenta" className="pie-enlace">Mi cuenta</NavLink>
-          <p className="rol">{sesion?.roles.join(' · ')}</p>
-          {errorCierre && <p className="mensaje-error" role="alert">{errorCierre}</p>}
-          <button
-            className="boton fantasma"
-            onClick={async () => {
-              setErrorCierre('');
-              try {
-                await logout();
-                navigate('/login');
-              } catch {
-                setErrorCierre('No se pudo cerrar la sesión en el servidor. Inténtalo de nuevo.');
-              }
-            }}
-          >
-            Cerrar sesión
-          </button>
+        <div className="menu-panel">
+          <nav id="navegacion-escolar" aria-label="Navegación principal">
+            {secciones
+              .filter((s) => tieneRol(...s.roles))
+              .map((s) => (
+                <NavLink key={s.destino} to={s.destino} end={s.destino === '/'} onClick={() => setMenuAbierto(false)}>
+                  <IconoTabler nombre={iconosPorRuta[s.destino]} />
+                  <span>{s.etiqueta}</span>
+                </NavLink>
+              ))}
+          </nav>
+          <div className="lateral-pie">
+            <p>{sesion?.nombre}</p>
+            <NavLink to="/cuenta" className="pie-enlace">Mi cuenta</NavLink>
+            <p className="rol">{sesion?.roles.join(' · ')}</p>
+            {errorCierre && <p className="mensaje-error" role="alert">{errorCierre}</p>}
+            <button
+              className="boton fantasma"
+              onClick={async () => {
+                setErrorCierre('');
+                try {
+                  await logout();
+                  navigate('/login');
+                } catch {
+                  setErrorCierre('No se pudo cerrar la sesión en el servidor. Inténtalo de nuevo.');
+                }
+              }}
+            >
+              Cerrar sesión
+            </button>
+          </div>
         </div>
       </aside>
       <main className="contenido" id="contenido-principal" tabIndex={-1}>
