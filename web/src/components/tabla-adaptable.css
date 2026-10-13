@@ -1,0 +1,26 @@
+/* Una sola tabla semántica; en pantallas estrechas cada fila se presenta como ficha. */
+@media (max-width: 700px) {
+  .tabla-contenedor .tabla-adaptable { display: block; min-width: 0; border: 0; overflow: visible; background: transparent; }
+  .tabla-adaptable thead {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip: rect(0,0,0,0); clip-path: inset(50%); white-space: nowrap;
+  }
+  .tabla-adaptable tbody { display: grid; gap: 12px; }
+  .tabla-adaptable tbody tr {
+    display: block; padding: 12px; border: 1px solid var(--linea);
+    border-radius: var(--radio-md); background: #fff;
+  }
+  .tabla-adaptable tbody td {
+    display: grid; grid-template-columns: minmax(90px, 35%) minmax(0, 1fr);
+    gap: 10px; align-items: start; padding: 10px 4px; text-align: left;
+    border-bottom: 1px solid var(--linea); white-space: normal; overflow-wrap: anywhere;
+  }
+  .tabla-adaptable tbody td::before { content: attr(data-etiqueta); color: var(--texto-secundario); font-weight: 700; }
+  .tabla-adaptable tbody td:last-child { border: 0; }
+  .tabla-adaptable tbody td[data-etiqueta="Acciones"], .tabla-adaptable tbody td.vacio { display: block; }
+  .tabla-adaptable tbody td[data-etiqueta="Acciones"]::before { display: block; margin-bottom: 10px; }
+  .tabla-adaptable tbody td.vacio::before { content: none; }
+  .tabla-adaptable .acciones-fila { display: flex; flex-wrap: wrap; justify-content: flex-start; }
+  .tabla-adaptable .acciones-fila .boton { flex: 1 1 auto; min-height: 44px; }
+  .tabla-adaptable tr:hover td { background: transparent; }
+}
