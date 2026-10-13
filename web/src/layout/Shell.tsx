@@ -52,7 +52,9 @@ export function Shell() {
   const { marca } = useMarca();
   const [errorCierre, setErrorCierre] = useState('');
   const [menuAbierto, setMenuAbierto] = useState(false);
+  const [logoFallo, setLogoFallo] = useState(false);
   const botonMenu = useRef<HTMLButtonElement>(null);
+  const botonCerrarMenu = useRef<HTMLButtonElement>(null);
   const lateral = useRef<HTMLElement>(null);
 
   useEffect(() => { setMenuAbierto(false); }, [location.pathname]);
@@ -71,35 +73,49 @@ export function Shell() {
       consulta.removeEventListener('change', cerrarEnEscritorio);
     };
   }, [menuAbierto]);
+  useEffect(() => { setLogoFallo(false); }, [marca.logoUrl]);
   useEffect(() => {
-    const cerrarConEscape = (evento: KeyboardEvent) => {
+    if (!menuAbierto) return;
+    botonCerrarMenu.current?.focus();
+    const manejarTeclado = (evento: KeyboardEvent) => {
       if (evento.key === 'Escape') {
-        if (botonMenu.current?.getAttribute('aria-expanded') === 'true' && lateral.current?.contains(document.activeElement)) {
-          botonMenu.current.focus();
-        }
         setMenuAbierto(false);
+        botonMenu.current?.focus();
+        return;
+      }
+      if (evento.key !== 'Tab' || !window.matchMedia('(max-width: 800px)').matches) return;
+      const elementos = Array.from(lateral.current?.querySelectorAll<HTMLElement>('a[href], button:not([disabled])') ?? []);
+      if (!elementos.length) return;
+      const primero = elementos[0];
+      const ultimo = elementos[elementos.length - 1];
+      if (evento.shiftKey && document.activeElement === primero) {
+        evento.preventDefault();
+        ultimo.focus();
+      } else if (!evento.shiftKey && document.activeElement === ultimo) {
+        evento.preventDefault();
+        primero.focus();
       }
     };
-    window.addEventListener('keydown', cerrarConEscape);
-    return () => window.removeEventListener('keydown', cerrarConEscape);
-  }, []);
+    window.addEventListener('keydown', manejarTeclado);
+    return () => window.removeEventListener('keydown', manejarTeclado);
+  }, [menuAbierto]);
 
   return (
     <div className="shell">
       <a className="skip-link" href="#contenido-principal">Saltar al contenido principal</a>
       {menuAbierto && <button type="button" className="menu-fondo" aria-label="Cerrar navegación" onClick={() => { setMenuAbierto(false); botonMenu.current?.focus(); }} />}
-      <aside ref={lateral} className={`lateral${menuAbierto ? ' lateral-abierto' : ''}`}>
-        <button ref={botonMenu} type="button" className="menu-movil" aria-expanded={menuAbierto} aria-controls="navegacion-escolar" onClick={() => setMenuAbierto((abierto) => !abierto)}><span>{menuAbierto ? 'Cerrar menú' : 'Abrir menú'}</span> <IconoTabler nombre={menuAbierto ? 'x' : 'menu-2'} /></button>
-        {marca.logoUrl
-          ? <img className="logo-marca" src={archivosBase + marca.logoUrl} alt={marca.nombreInstitucion} />
-          : <div className="monograma" aria-hidden>{marca.nombreCorto}</div>}
+      <aside ref={lateral} className={`lateral${menuAbierto ? ' lateral-abierto' : ''}`} role={menuAbierto ? 'dialog' : undefined} aria-modal={menuAbierto ? true : undefined} aria-label="Menú principal">
+        <button ref={botonCerrarMenu} type="button" className="menu-cerrar" onClick={() => { setMenuAbierto(false); botonMenu.current?.focus(); }}>Cerrar menú <IconoTabler nombre="x" /></button>
+        {marca.logoUrl && !logoFallo
+          ? <img className="logo-marca" src={archivosBase + marca.logoUrl} alt={marca.nombreInstitucion} onError={() => setLogoFallo(true)} />
+          : <div className="monograma" aria-hidden>{marca.nombreCorto}</div>
         <p className="lateral-titulo" title={marca.nombreInstitucion}>{marca.nombreInstitucion}</p>
         <div className="menu-panel">
           <nav id="navegacion-escolar" aria-label="Navegación principal">
             {secciones
               .filter((s) => tieneRol(...s.roles))
               .map((s) => (
-                <NavLink key={s.destino} to={s.destino} end={s.destino === '/'} onClick={() => setMenuAbierto(false)}>
+                <NavLink key={s.destino} to={s.destino} end={s.destino === '/'} onClick={() => { setMenuAbierto(false); document.getElementById('contenido-principal')?.focus(); }}>
                   <IconoTabler nombre={iconosPorRuta[s.destino]} />
                   <span>{s.etiqueta}</span>
                 </NavLink>
@@ -129,6 +145,7 @@ export function Shell() {
       </aside>
       <main className="contenido" id="contenido-principal" tabIndex={-1}>
         <div className="barra-superior">
+          <button ref={botonMenu} type="button" className="menu-movil" aria-label="Abrir menú" aria-expanded={menuAbierto} aria-controls="navegacion-escolar" onClick={() => setMenuAbierto((abierto) => !abierto)}><IconoTabler nombre="menu-2" /> <span>Menú</span></button>
           <span className="barra-contexto">Espacio de trabajo <strong>{sesion?.roles.join(' · ')}</strong></span>
           <Campana />
         </div>
