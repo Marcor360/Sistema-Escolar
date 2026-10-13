@@ -87,6 +87,11 @@ async function esperarServidor() {
             planteles: ['Plantel de Prueba con un Nombre Extenso'],
           }], total: 1, pagina: 1, porPagina: 20,
         };
+      if (path.endsWith('/academico/grupos'))
+        data = { datos: [{ id: 1, nombre: 'GR-QA-001', grado: 'Primero', turno: 'MATUTINO',
+          ciclo: { id: 1, clave: '2026-2027', activo: true, estado: 'VIGENTE' },
+          plantel: { id: 1, nombre: 'Plantel de Grupos con un Nombre Extenso de Prueba' } }],
+          total: 1, pagina: 1, porPagina: 20 };
       if (path.endsWith('/planteles'))
         data = [{ id: 1, clave: 'PL-QA-001', nombre: 'Plantel con un Nombre Extenso de Prueba',
           municipio: 'Municipio con un Nombre Extenso de Prueba', activo: true }];
@@ -134,6 +139,7 @@ async function esperarServidor() {
           cargosConAdeudo: 5,
           cobradoMes: 1000,
         };
+      if (/\/academico\/grupos\/\d+\/(materias|alumnos)$/.test(path)) data = [];
       await route.fulfill({ json: data });
     },
   );
@@ -266,6 +272,26 @@ async function esperarServidor() {
     await personal.evaluate((el) => { el.scrollLeft = el.scrollWidth; });
     await expect(personal.getByRole('button', { name: 'Quitar', exact: true })).toBeInViewport();
     console.log('PASS planteles/personal ' + width);
+  }
+  for (const width of [320, 360, 700, 768, 1440, 3840]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(baseUrl + '/grupos');
+    const listado = page.getByRole('region', { name: 'Listado de grupos' });
+    await expect(listado.getByText('GR-QA-001', { exact: true })).toBeVisible();
+    const geometry = await listado.evaluate((el) => ({
+      scroll: document.documentElement.scrollWidth, width: innerWidth,
+      desbordamiento: el.scrollWidth > el.clientWidth + 1,
+      ficha: getComputedStyle(el.querySelector('tbody tr')).display === 'block',
+    }));
+    if (geometry.scroll > geometry.width || (width <= 700 && (geometry.desbordamiento || !geometry.ficha)))
+      throw Error('Grupos layout ' + width + ': ' + JSON.stringify(geometry));
+    await listado.scrollIntoViewIfNeeded();
+    await listado.evaluate((el) => { el.scrollLeft = el.scrollWidth; });
+    await expect(listado.getByRole('button', { name: 'Desactivar grupo', exact: true })).toBeInViewport();
+    await listado.getByRole('button', { name: 'Administrar' }).click();
+    await expect(page.getByRole('heading', { name: /Materias del grupo GR-QA-001/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Reintentar detalle del grupo' })).toHaveCount(0);
+    console.log('PASS grupos ' + width);
   }
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.evaluate(() => {
