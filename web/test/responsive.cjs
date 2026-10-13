@@ -78,6 +78,24 @@ async function esperarServidor() {
           pagina: 1,
           porPagina: 20,
         };
+      if (path.endsWith('/docentes'))
+        data = {
+          datos: [{ id: 1, numEmpleado: 'DOC-QA-001', estatus: 'ACTIVO',
+            especialidad: 'Matemáticas y ciencias con especialidad extensa',
+            usuario: { nombre: 'Docente con nombre extenso', apellidoPaterno: 'Prueba',
+              email: 'docente.con.correo.extenso@example.test' },
+            planteles: ['Plantel de Prueba con un Nombre Extenso'],
+          }], total: 1, pagina: 1, porPagina: 20,
+        };
+      if (path.endsWith('/planteles'))
+        data = [{ id: 1, clave: 'PL-QA-001', nombre: 'Plantel con un Nombre Extenso de Prueba',
+          municipio: 'Municipio con un Nombre Extenso de Prueba', activo: true }];
+      if (path.endsWith('/planteles/1'))
+        data = { id: 1, clave: 'PL-QA-001', nombre: 'Plantel con un Nombre Extenso de Prueba',
+          conteos: { alumnos: 1, grupos: 1 }, director: null,
+          personal: [{ id: 1, nombre: 'Personal con un Nombre Extenso de Prueba',
+            email: 'personal.con.correo.extenso@example.test', roles: ['ADMINISTRATIVO', 'FINANZAS'] }],
+        };
       if (path.endsWith('/analitica'))
         data = {
           modo: 'VIGENTE',
@@ -133,12 +151,21 @@ async function esperarServidor() {
     if (width <= 800) {
       await page.getByRole('button', { name: /Abrir menú/ }).click();
       await expect(page.locator('body')).toHaveCSS('overflow', 'hidden');
+      await expect(page.getByRole('button', { name: 'Cerrar menú', exact: true })).toBeFocused();
+      await page.locator('#contenido-principal').evaluate((el) => el.focus());
+      await expect(page.getByRole('button', { name: 'Cerrar menú', exact: true })).toBeFocused();
+      await page.locator('.skip-link').evaluate((el) => el.focus());
+      await expect(page.getByRole('button', { name: 'Cerrar menú', exact: true })).toBeFocused();
+      await expect.poll(async () => {
+        const cajon = await page.locator('.lateral').boundingBox();
+        return !!cajon && Math.abs(cajon.width - width / 2) <= 1 && Math.abs(cajon.x - width / 2) <= 1;
+      }).toBe(true);
       await page.getByRole('link', { name: 'Alumnos', exact: true }).focus();
       await page.keyboard.press('Escape');
       await expect(page.getByRole('button', { name: /Abrir menú/ })).toBeFocused();
       await expect(page.locator('body')).not.toHaveCSS('overflow', 'hidden');
       await page.getByRole('button', { name: /Abrir menú/ }).click();
-      await page.locator('.menu-fondo').click({ position: { x: width - 10, y: 850 } });
+      await page.locator('.menu-fondo').click({ position: { x: 10, y: 850 } });
       await expect(page.getByRole('button', { name: /Abrir menú/ })).toBeFocused();
     }
     console.log('PASS responsive ' + width);
@@ -198,6 +225,47 @@ async function esperarServidor() {
       await expect.poll(() => table.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
     }
     console.log('PASS analytics ' + width);
+  }
+  for (const width of [320, 360, 700, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(baseUrl + '/docentes');
+    await expect(page.getByText('DOC-QA-001', { exact: true })).toBeVisible();
+    const listado = page.getByRole('region', { name: 'Listado de docentes' });
+    const geometry = await listado.evaluate((el) => ({
+      scroll: document.documentElement.scrollWidth, width: innerWidth,
+      desbordamiento: el.scrollWidth > el.clientWidth + 1,
+      ficha: getComputedStyle(el.querySelector('tbody tr')).display === 'block',
+    }));
+    if (geometry.scroll > geometry.width || (width <= 700 && (geometry.desbordamiento || !geometry.ficha)))
+      throw Error('Docentes layout ' + width + ': ' + JSON.stringify(geometry));
+    await listado.scrollIntoViewIfNeeded();
+    await listado.evaluate((el) => { el.scrollLeft = el.scrollWidth; });
+    await expect(listado.getByRole('button', { name: 'Dar de baja', exact: true })).toBeInViewport();
+    await expect(listado.getByRole('table')).toHaveCount(1);
+    console.log('PASS docentes ' + width);
+  }
+  for (const width of [320, 360, 700, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(baseUrl + '/planteles');
+    const listado = page.getByRole('region', { name: 'Listado de planteles' });
+    await expect(listado.getByText('PL-QA-001', { exact: true })).toBeVisible();
+    await listado.getByRole('button', { name: 'Ver detalle' }).click();
+    const personal = page.getByRole('region', { name: 'Personal del plantel' });
+    await expect(personal.getByText('personal.con.correo.extenso@example.test')).toBeVisible();
+    for (const region of [listado, personal]) {
+      const geometry = await region.evaluate((el) => ({
+        scroll: document.documentElement.scrollWidth, width: innerWidth,
+        desbordamiento: el.scrollWidth > el.clientWidth + 1,
+        ficha: getComputedStyle(el.querySelector('tbody tr')).display === 'block',
+      }));
+      if (geometry.scroll > geometry.width || (width <= 700 && (geometry.desbordamiento || !geometry.ficha)))
+        throw Error('Planteles layout ' + width + ': ' + JSON.stringify(geometry));
+      await expect(region.getByRole('table')).toHaveCount(1);
+    }
+    await personal.scrollIntoViewIfNeeded();
+    await personal.evaluate((el) => { el.scrollLeft = el.scrollWidth; });
+    await expect(personal.getByRole('button', { name: 'Quitar', exact: true })).toBeInViewport();
+    console.log('PASS planteles/personal ' + width);
   }
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.evaluate(() => {
