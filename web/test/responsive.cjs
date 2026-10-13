@@ -206,6 +206,46 @@ async function esperarServidor() {
   const zoom = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, width: innerWidth }));
   if (zoom.scroll > zoom.width) throw Error('Text zoom overflow ' + JSON.stringify(zoom));
   console.log('PASS text size 200% at desktop');
+  for (const [width, reducedMotion, forcedColors] of [
+    [320, 'reduce', 'none'],
+    [1440, 'no-preference', 'none'],
+    [360, 'no-preference', 'active'],
+  ]) {
+    let liberarModulo;
+    let moduloSolicitado = false;
+    const moduloPendiente = new Promise((resolve) => {
+      liberarModulo = resolve;
+    });
+    const rutaModulo = '**/src/pages/Analitica.tsx*';
+    await page.route(rutaModulo, async (route) => {
+      moduloSolicitado = true;
+      await moduloPendiente;
+      await route.continue();
+    });
+    try {
+      await page.setViewportSize({ width, height: 900 });
+      await page.emulateMedia({ reducedMotion, forcedColors });
+      await page.goto(baseUrl + '/analitica', { waitUntil: 'domcontentloaded' });
+      await expect.poll(() => moduloSolicitado).toBe(true);
+      const estado = page.getByRole('status', { name: 'Cargando contenido' });
+      await expect(estado).toBeVisible();
+      const geometria = await page.evaluate(() => ({
+        scroll: document.documentElement.scrollWidth,
+        width: innerWidth,
+      }));
+      if (geometria.scroll > geometria.width) throw Error('Skeleton overflow at ' + width);
+      if (reducedMotion === 'reduce' || forcedColors === 'active') {
+        await expect(estado.locator('.esqueleto-linea').first()).toHaveCSS('animation-name', 'none');
+      }
+      liberarModulo();
+      await expect(page.getByRole('heading', { name: 'Analítica académica y financiera' })).toBeVisible();
+      await expect(estado).toHaveCount(0);
+      console.log('PASS skeleton ' + width + ' motion=' + reducedMotion + ' colors=' + forcedColors);
+    } finally {
+      liberarModulo();
+      await page.unroute(rutaModulo);
+    }
+  }
   if (errors.length) throw Error(errors.join('\n'));
 })()
   .catch((error) => {
