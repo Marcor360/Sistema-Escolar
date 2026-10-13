@@ -2,7 +2,13 @@
 
 > Portal web administrativo/docente, app móvil del alumno y API para gestión académica y financiera. El código cubre los flujos principales del MVP; todavía no hay certificación de piloto institucional ni despliegue productivo.
 
-**Versión candidata: `1.19.0` · PR de modernización de navegación · 12 de octubre de 2026.** Backend, web, móvil y Expo declaran la misma versión. La CI del SHA publicado debe comprobarse en [GitHub Actions](https://github.com/Marcor360/Sistema-Escolar/actions/workflows/ci.yml). El piloto requiere todavía certificación sobre el servidor y dispositivos reales.
+**Versión candidata: `1.20.0` · Modernización visual por fases · 12 de octubre de 2026.** Backend, web, móvil y Expo declaran la misma versión. La CI del SHA publicado debe comprobarse en [GitHub Actions](https://github.com/Marcor360/Sistema-Escolar/actions/workflows/ci.yml). El piloto requiere todavía certificación sobre el servidor y dispositivos reales.
+
+## Modernización UX/UI 1.20.0 (PR 2 de 5)
+
+- Tipografía de interfaz fluida, espaciados estandarizados y controles con tamaños táctiles de 44 px.
+- Formularios flexibles por ancho, tarjetas adaptables y contenedores de tablas con desplazamiento horizontal explícito.
+- Sin cambios de lógica de negocio, permisos ni migraciones. Validación CI y visual pendiente.
 
 ## Modernización UX/UI 1.19.0 (PR 1 de 5)
 
