@@ -976,3 +976,57 @@ textarea { min-height: 110px; resize: vertical; }
 .lateral nav a span { min-width: 0; overflow-wrap: anywhere; }
 .menu-movil { gap: 10px; }
 .menu-movil span { font-size: inherit; line-height: inherit; }
+
+/* Cajón móvil desde la derecha, a media pantalla. */
+.menu-cerrar { display: none; }
+@media (max-width: 800px) {
+  .barra-superior .menu-movil {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 44px; min-height: 44px; gap: 8px; padding: 8px 12px;
+    color: var(--tinta); background: #fff; border: 1px solid var(--linea);
+    border-radius: var(--radio-sm); cursor: pointer;
+  }
+  .lateral {
+    position: fixed; inset: 0 0 0 auto; z-index: 50;
+    width: 50vw; height: 100dvh; padding: 16px 12px;
+    display: flex; flex-direction: column; align-items: stretch; gap: 8px;
+    overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
+    visibility: hidden; pointer-events: none;
+    transform: translateX(100%);
+    transition: transform .2s ease, visibility .2s ease;
+  }
+  .lateral.lateral-abierto { visibility: visible; pointer-events: auto; transform: translateX(0); }
+  .lateral .menu-cerrar {
+    display: inline-flex; align-items: center; justify-content: space-between;
+    align-self: stretch; gap: 4px; min-height: 44px; padding: 8px;
+    background: transparent; border: 1px solid rgba(255,255,255,.35);
+    border-radius: var(--radio-sm); color: var(--texto-sobre-pizarra);
+    font: inherit; cursor: pointer;
+  }
+  .lateral .menu-cerrar svg { width: 20px; height: 20px; flex: 0 0 20px; }
+  .lateral .logo-marca, .lateral .monograma {
+    display: block; max-width: 100%; max-height: 48px; margin: 8px auto 0;
+  }
+  .lateral .monograma { display: grid; place-items: center; }
+  .lateral .lateral-titulo {
+    width: 100%; max-width: none; margin: 4px 0 10px;
+    padding: 0 0 12px; border-bottom: 1px solid rgba(255,255,255,.2);
+    text-align: center;
+  }
+  .lateral .menu-panel, .lateral-abierto .menu-panel {
+    display: flex; position: static; flex-direction: column; flex: 1;
+    gap: 14px; min-height: 0; max-height: none; overflow: visible;
+    padding: 0; background: transparent;
+  }
+  .lateral .menu-panel nav, .lateral-abierto nav {
+    display: flex; flex-direction: column; gap: 4px; margin: 0;
+    width: 100%; max-height: none; overflow: visible;
+  }
+  .lateral nav a { padding: 12px 6px; gap: 8px; width: 100%; line-height: 1.35; }
+  .lateral nav a svg { flex-basis: 18px; width: 18px; height: 18px; }
+  .lateral .lateral-pie { display: block; width: 100%; padding: 14px 0 0; margin-top: auto; }
+  .lateral .lateral-pie p { display: block; }
+  .menu-fondo { display: block; }
+}
+@media (max-width: 420px) { .barra-superior .menu-movil span { display: none; } }
+@media (max-width: 800px) and (prefers-reduced-motion: reduce) { .lateral { transition: none; } }
