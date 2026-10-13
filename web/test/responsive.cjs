@@ -87,6 +87,15 @@ async function esperarServidor() {
             planteles: ['Plantel de Prueba con un Nombre Extenso'],
           }], total: 1, pagina: 1, porPagina: 20,
         };
+      if (path.endsWith('/planteles'))
+        data = [{ id: 1, clave: 'PL-QA-001', nombre: 'Plantel con un Nombre Extenso de Prueba',
+          municipio: 'Municipio con un Nombre Extenso de Prueba', activo: true }];
+      if (path.endsWith('/planteles/1'))
+        data = { id: 1, clave: 'PL-QA-001', nombre: 'Plantel con un Nombre Extenso de Prueba',
+          conteos: { alumnos: 1, grupos: 1 }, director: null,
+          personal: [{ id: 1, nombre: 'Personal con un Nombre Extenso de Prueba',
+            email: 'personal.con.correo.extenso@example.test', roles: ['ADMINISTRATIVO', 'FINANZAS'] }],
+        };
       if (path.endsWith('/analitica'))
         data = {
           modo: 'VIGENTE',
@@ -234,6 +243,29 @@ async function esperarServidor() {
     await expect(listado.getByRole('button', { name: 'Dar de baja', exact: true })).toBeInViewport();
     await expect(listado.getByRole('table')).toHaveCount(1);
     console.log('PASS docentes ' + width);
+  }
+  for (const width of [320, 360, 700, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(baseUrl + '/planteles');
+    const listado = page.getByRole('region', { name: 'Listado de planteles' });
+    await expect(listado.getByText('PL-QA-001', { exact: true })).toBeVisible();
+    await listado.getByRole('button', { name: 'Ver detalle' }).click();
+    const personal = page.getByRole('region', { name: 'Personal del plantel' });
+    await expect(personal.getByText('personal.con.correo.extenso@example.test')).toBeVisible();
+    for (const region of [listado, personal]) {
+      const geometry = await region.evaluate((el) => ({
+        scroll: document.documentElement.scrollWidth, width: innerWidth,
+        desbordamiento: el.scrollWidth > el.clientWidth + 1,
+        ficha: getComputedStyle(el.querySelector('tbody tr')).display === 'block',
+      }));
+      if (geometry.scroll > geometry.width || (width <= 700 && (geometry.desbordamiento || !geometry.ficha)))
+        throw Error('Planteles layout ' + width + ': ' + JSON.stringify(geometry));
+      await expect(region.getByRole('table')).toHaveCount(1);
+    }
+    await personal.scrollIntoViewIfNeeded();
+    await personal.evaluate((el) => { el.scrollLeft = el.scrollWidth; });
+    await expect(personal.getByRole('button', { name: 'Quitar', exact: true })).toBeInViewport();
+    console.log('PASS planteles/personal ' + width);
   }
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.evaluate(() => {
