@@ -14,7 +14,7 @@
 
 - Tipografía de interfaz fluida, espaciados estandarizados y controles con tamaños táctiles de 44 px.
 - Formularios flexibles por ancho, tarjetas adaptables y contenedores de tablas con desplazamiento horizontal explícito.
-- Sin cambios de lógica de negocio, permisos ni migraciones. Validación CI y visual pendiente.
+- Sin cambios de lógica de negocio, permisos ni migraciones. Validación local de web y smoke responsive completada; la CI del SHA publicado y la revisión integral de accesibilidad/dispositivos siguen siendo necesarias.
 
 ## Modernización UX/UI 1.19.0 (PR 1 de 5)
 
