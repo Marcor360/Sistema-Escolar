@@ -15,6 +15,16 @@ foreach ($assertion in @(
 )) {
   if (-not $assertion[0].Contains($assertion[1])) { throw "Falta marcador de estructura: $($assertion[1])" }
 }
+foreach ($marker in @(
+  'npm ci --include=dev',
+  'Wait-ApiHealth',
+  'Remove-OnlyJunction',
+  'rollback a'
+)) {
+  if (-not $deploy.Contains($marker)) {
+    throw "Falta proteccion de deploy: $marker"
+  }
+}
 if ($deploy -match '\$env:MYSQL_PWD\s*=\s*\$env:DB_PASS') { throw 'El respaldo no debe usar la contraseña de la aplicación.' }
 if ($restore -match '\$env:MYSQL_PWD\s*=\s*\$settings.BACKUP_DB_PASS') { throw 'La restauración no debe usar la contraseña de respaldo.' }
 if ($service -match 'ObjectName\s+LocalSystem') { throw 'El servicio no debe correr como LocalSystem.' }
@@ -22,5 +32,6 @@ $interop = [regex]::Match($service, "Add-Type -TypeDefinition @'\r?\n([\s\S]*?)\
 if (-not $interop.Success) { throw 'Falta el helper WinAPI para identidad del servicio.' }
 if (-not ('ServiceLogonConfig' -as [type])) { Add-Type -TypeDefinition $interop.Groups[1].Value }
 if (-not (Test-Path -LiteralPath (Join-Path $root 'web\public\web.config'))) { throw 'Falta configuración SPA de IIS.' }
+& (Join-Path $PSScriptRoot 'Test-DeployStaging.ps1')
 & (Join-Path $PSScriptRoot 'Test-PruneStaging.ps1')
 Write-Host 'Estructura de scripts Windows válida.'
