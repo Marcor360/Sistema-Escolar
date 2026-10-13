@@ -105,7 +105,7 @@ export function Shell() {
       <a className="skip-link" href="#contenido-principal">Saltar al contenido principal</a>
       {menuAbierto && <button type="button" className="menu-fondo" aria-label="Cerrar navegación" onClick={() => { setMenuAbierto(false); botonMenu.current?.focus(); }} />}
       <aside ref={lateral} className={`lateral${menuAbierto ? ' lateral-abierto' : ''}`} role={menuAbierto ? 'dialog' : undefined} aria-modal={menuAbierto ? true : undefined} aria-label="Menú principal">
-        <button ref={botonCerrarMenu} type="button" className="menu-cerrar" onClick={() => { setMenuAbierto(false); botonMenu.current?.focus(); }}>Cerrar menú <IconoTabler nombre="x" /></button>
+        <button ref={botonCerrarMenu} type="button" className="menu-cerrar" onClick={() => { setMenuAbierto(false); botonMenu.current?.focus(); }}><span>Cerrar menú</span> <IconoTabler nombre="x" /></button>
         {marca.logoUrl && !logoFallo
           ? <img className="logo-marca" src={archivosBase + marca.logoUrl} alt={marca.nombreInstitucion} onError={() => setLogoFallo(true)} />
           : <div className="monograma" aria-hidden>{marca.nombreCorto}</div>}
