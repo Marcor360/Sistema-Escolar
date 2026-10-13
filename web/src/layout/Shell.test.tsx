@@ -89,3 +89,46 @@ it('mantiene las rutas académicas y financieras en una cuenta de varios roles',
   expect(within(navegacion).getByRole('link', { name: 'Finanzas' })).toBeTruthy();
   expect(within(navegacion).queryByRole('link', { name: 'Docentes' })).toBeNull();
 });
+
+it('abre el menú como diálogo lateral y devuelve el foco al botón exterior', () => {
+  abrirMenu();
+  expect(screen.getByRole('dialog', { name: 'Menú principal' }).getAttribute('aria-modal')).toBe('true');
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cerrar menú' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Cerrar menú' }));
+  expect(screen.queryByRole('dialog', { name: 'Menú principal' })).toBeNull();
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Abrir menú' }));
+});
+
+it('mantiene el foco dentro del cajón con Tab y Shift+Tab', () => {
+  abrirMenu();
+  const cerrar = screen.getByRole('button', { name: 'Cerrar menú' });
+  const enlaces = within(screen.getByRole('navigation', { name: 'Navegación principal' })).getAllByRole('link');
+  const ultimo = screen.getByRole('button', { name: 'Cerrar sesión' });
+  cerrar.focus();
+  fireEvent.keyDown(window, { key: 'Tab', shiftKey: true });
+  expect(document.activeElement).toBe(ultimo);
+  ultimo.focus();
+  fireEvent.keyDown(window, { key: 'Tab' });
+  expect(document.activeElement).toBe(cerrar);
+  expect(enlaces.length).toBeGreaterThan(0);
+});
+
+it('inactiva el contenido de fondo mientras el diálogo está abierto', () => {
+  abrirMenu();
+  const contenido = document.getElementById('contenido-principal')!;
+  const salto = screen.getByText('Saltar al contenido principal');
+  expect(contenido.inert).toBe(true);
+  expect(salto.inert).toBe(true);
+  fireEvent.click(screen.getByRole('button', { name: 'Cerrar menú' }));
+  expect(contenido.inert).toBe(false);
+  expect(salto.inert).toBe(false);
+});
+
+it('cierra Mi cuenta aun cuando ya está en esa ruta y enfoca el contenido', () => {
+  render(<MemoryRouter initialEntries={['/cuenta']}><Shell /></MemoryRouter>);
+  fireEvent.click(screen.getByRole('button', { name: 'Abrir menú' }));
+  fireEvent.click(screen.getByRole('link', { name: 'Mi cuenta' }));
+  expect(screen.queryByRole('dialog')).toBeNull();
+  expect(document.activeElement).toBe(document.getElementById('contenido-principal'));
+  expect(document.body.style.overflow).toBe('auto');
+});
