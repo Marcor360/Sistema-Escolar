@@ -133,10 +133,10 @@ async function esperarServidor() {
     if (width <= 800) {
       await page.getByRole('button', { name: /Abrir menú/ }).click();
       await expect(page.locator('body')).toHaveCSS('overflow', 'hidden');
-      const cajon = await page.locator('.lateral').boundingBox();
-      if (!cajon || Math.abs(cajon.width - width / 2) > 1 || Math.abs(cajon.x - width / 2) > 1) {
-        throw Error('Cajón fuera del lateral derecho en ' + width + ': ' + JSON.stringify(cajon));
-      }
+      await expect.poll(async () => {
+        const cajon = await page.locator('.lateral').boundingBox();
+        return !!cajon && Math.abs(cajon.width - width / 2) <= 1 && Math.abs(cajon.x - width / 2) <= 1;
+      }).toBe(true);
       await page.getByRole('link', { name: 'Alumnos', exact: true }).focus();
       await page.keyboard.press('Escape');
       await expect(page.getByRole('button', { name: /Abrir menú/ })).toBeFocused();
