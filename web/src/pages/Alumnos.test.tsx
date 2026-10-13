@@ -3,8 +3,9 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { api } from '../api/client';
 import AlumnosPage from './Alumnos';
 
-vi.mock('../auth/AuthContext', () => ({ useAuth: () => ({ tieneRol: () => false }) }));
-afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+const contexto = vi.hoisted(() => ({ gestionar: false }));
+vi.mock('../auth/AuthContext', () => ({ useAuth: () => ({ tieneRol: () => contexto.gestionar }) }));
+afterEach(() => { cleanup(); vi.restoreAllMocks(); contexto.gestionar = false; });
 function pendiente() {
   let resolver!: (value: { data: ReturnType<typeof resultado> }) => void;
   let rechazar!: (reason: Error) => void;
@@ -80,4 +81,59 @@ it('al volver a la página usa una solicitud nueva aunque la anterior siga pendi
   await act(async () => { anterior.resolver({ data: resultado('ANTIGUO') }); });
   expect(screen.queryByText('ANTIGUO')).toBeNull();
   expect(screen.getByText('NUEVO')).toBeTruthy();
+});
+
+
+it('la página siguiente conserva los filtros aplicados aunque haya cambios sin buscar', async () => {
+  const get = vi.spyOn(api, 'get').mockImplementation(async (url, config) => {
+    if (url === '/planteles/mios') return { data: [
+      { id: 1, nombre: 'Plantel Uno' },
+      { id: 2, nombre: 'Plantel Dos' },
+    ] };
+    const params = (config?.params ?? {}) as { pagina?: number; buscar?: string; plantelId?: string };
+    return { data: { ...resultado(params.buscar || 'INICIAL'), total: 45, pagina: params.pagina ?? 1 } };
+  });
+  render(<AlumnosPage />);
+  await screen.findByText('INICIAL');
+
+  fireEvent.change(screen.getByLabelText('Filtrar por plantel'), { target: { value: '1' } });
+  buscar('APLICADO');
+  await screen.findByText('APLICADO');
+
+  fireEvent.change(screen.getByLabelText('Buscar por matrícula'), { target: { value: 'BORRADOR' } });
+  fireEvent.change(screen.getByLabelText('Filtrar por plantel'), { target: { value: '2' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Ir a la página siguiente' }));
+
+  await waitFor(() => expect(get).toHaveBeenLastCalledWith('/alumnos', {
+    params: { pagina: 2, buscar: 'APLICADO', plantelId: '1' },
+  }));
+  expect(screen.getByText('APLICADO')).toBeTruthy();
+});
+
+it('una mutación pendiente refresca los filtros vigentes, sin restaurar la búsqueda anterior', async () => {
+  contexto.gestionar = true;
+  const get = vi.spyOn(api, 'get').mockImplementation(async (url, config) => ({ data: url === '/alumnos'
+    ? resultado((config?.params as { buscar?: string })?.buscar || 'INICIAL') : [] }));
+  const guardado = pendiente();
+  vi.spyOn(api, 'post').mockReturnValue(guardado.promesa);
+  render(<AlumnosPage />); await screen.findByText('INICIAL');
+  buscar('ANTERIOR'); await screen.findByText('ANTERIOR');
+  fireEvent.submit(screen.getByLabelText('Matrícula *').closest('form')!);
+  buscar('VIGENTE'); await screen.findByText('VIGENTE');
+  await act(async () => { guardado.resolver({ data: resultado('CREADO') }); });
+  await waitFor(() => expect(get).toHaveBeenLastCalledWith('/alumnos', { params: { pagina: 1, buscar: 'VIGENTE' } }));
+  expect(screen.getByText('VIGENTE')).toBeTruthy();
+});
+
+it('limpiar descarta el filtro aplicado y los cambios que todavía no se buscaron', async () => {
+  const get = vi.spyOn(api, 'get').mockImplementation(async (url, config) => ({ data: url === '/alumnos'
+    ? resultado((config?.params as { buscar?: string })?.buscar || 'TODOS') : [] }));
+  render(<AlumnosPage />); await screen.findByText('TODOS');
+  buscar('APLICADO'); await screen.findByText('APLICADO');
+  fireEvent.change(screen.getByLabelText('Buscar por matrícula'), { target: { value: 'BORRADOR' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }));
+  await screen.findByText('TODOS');
+  expect(get).toHaveBeenLastCalledWith('/alumnos', { params: { pagina: 1 } });
+  expect((screen.getByLabelText('Buscar por matrícula') as HTMLInputElement).value).toBe('');
+  expect(screen.queryByRole('button', { name: 'Limpiar filtros' })).toBeNull();
 });
