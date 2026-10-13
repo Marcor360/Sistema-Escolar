@@ -37,3 +37,23 @@ it('el maestro solo ve Eliminar en los eventos que creó', async () => {
   expect(screen.getAllByRole('button', { name: 'Eliminar' })).toHaveLength(1);
   expect(screen.getByText('Solo lectura')).toBeTruthy();
 });
+
+it.each([
+  { roles: ['ADMINISTRATIVO'], autorizados: 1 },
+  { roles: ['ADMINISTRATIVO', 'MAESTRO'], autorizados: 1 },
+  { roles: ['MAESTRO', 'FINANZAS'], autorizados: 1 },
+  { roles: ['SUPERADMIN'], autorizados: 3 },
+  { roles: ['FINANZAS'], autorizados: 0 },
+])('respeta autorización para $roles', async ({ roles, autorizados }) => {
+  contexto.roles = roles; contexto.sub = 7;
+  const eventos = [
+    { id: 1, titulo: 'Evento global institucional', creadoPorId: 99, plantel: null },
+    { id: 2, titulo: 'Sede propia', creadoPorId: 7, plantel: { id: 1, nombre: 'Centro' } },
+    { id: 3, titulo: 'Otra sede', creadoPorId: 99, plantel: { id: 2, nombre: 'Otro' } },
+  ].map((evento) => ({ ...evento, fechaInicio: '2026-10-20T10:00:00Z', fechaFin: null, descripcion: null, tipo: 'GENERAL' }));
+  vi.spyOn(api, 'get').mockImplementation(async (url) => ({ data: url === '/calendario'
+    ? eventos : url === '/planteles/mios' ? [{ id: 1, nombre: 'Centro' }] : [] }));
+  render(<CalendarioPage />); await screen.findByText('Evento global institucional');
+  await waitFor(() => expect(screen.queryAllByRole('button', { name: 'Eliminar' })).toHaveLength(autorizados));
+  expect(screen.queryAllByText('Solo lectura')).toHaveLength(3 - autorizados);
+});

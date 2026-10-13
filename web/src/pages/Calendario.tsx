@@ -41,7 +41,7 @@ export default function CalendarioPage() {
   const puedeEliminar = (evento: Evento) => {
     if (esSuperadmin) return true;
     if (maestroPuro) return evento.creadoPorId === sesion?.sub;
-    return evento.plantel !== null && planteles.some((plantel) => plantel.id === evento.plantel?.id);
+    return !!sesion?.roles.includes('ADMINISTRATIVO') && evento.plantel !== null && planteles.some((plantel) => plantel.id === evento.plantel?.id);
   };
   const [form, setForm] = useState(FORM_INICIAL);
   const [filtroPlantel, setFiltroPlantel] = useState('');
