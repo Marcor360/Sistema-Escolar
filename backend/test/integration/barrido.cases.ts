@@ -1,4 +1,4 @@
-import { inflateSync } from 'zlib';
+import { extraerStreamsPdf } from './pdf-streams';
 import { ArchivoLimpieza, Inscripcion } from '../../src/entities';
 import { ContextoIntegracion } from './contexto';
 import { expect,it } from '@jest/globals';
@@ -40,9 +40,9 @@ export function registrarBarrido(ctx: ContextoIntegracion) {
       const clase = await ctx.dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: ctx.grupoMateriaIdMaestro });
       const inscripcion = await ctx.dataSource.getRepository(Inscripcion).findOneByOrFail({ alumnoId: ctx.alumnoId,grupoId: clase.grupoId });
       const response = await fetch(`${ctx.baseUrl}/reportes/boleta/${ctx.alumnoId}?cicloId=${clase.grupo.cicloId}&inscripcionId=${inscripcion.id}`,{ headers: { authorization: `Bearer ${root}` } }); expect(response.status).toBe(200);
-      const documento = Buffer.from(await response.arrayBuffer()).toString('latin1');
-      const textos = [...documento.matchAll(/stream\r?\n([\s\S]*?)\r?\nendstream/g)].flatMap((m) => {
-        const contenido = inflateSync(Buffer.from(m[1],'latin1')).toString('latin1');
+      const documento = Buffer.from(await response.arrayBuffer());
+      const textos = extraerStreamsPdf(documento).flatMap((stream) => {
+        const contenido = stream.toString('latin1');
         return [...contenido.matchAll(/<([0-9a-f]+)>/gi)].map((h) => Buffer.from(h[1],'hex').toString('latin1'));
       }).join('');
       expect(textos).toContain(nombreInstitucion);
