@@ -67,7 +67,7 @@ it('bloquea doble envío mientras espera la API y conserva los datos si falla', 
   fireEvent.click(screen.getByRole('button', { name: 'Actualizar contraseña' }));
   expect((screen.getByRole('button', { name: 'Actualizando…' }) as HTMLButtonElement).disabled).toBe(true);
   expect(post).toHaveBeenCalledOnce();
-  rechazar(new Error('Servicio no disponible'));
+  rechazar(Object.assign(new Error('Falló la solicitud'), { response: { data: { message: 'Servicio no disponible' } } }));
   await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('Servicio no disponible'));
   expect((screen.getByLabelText('Contraseña actual') as HTMLInputElement).value).toBe('anterior123');
   expect((screen.getByRole('button', { name: 'Actualizar contraseña' }) as HTMLButtonElement).disabled).toBe(false);
