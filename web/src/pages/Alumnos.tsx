@@ -5,11 +5,12 @@ import { TransferirAlumno } from '../features/alumnos/TransferirAlumno';
 import type { Alumno, Historial, Nota, Plantel, Resultado } from '../features/alumnos/tipos';
 import { useConfirmacion } from '../components/useConfirmacion';
 import { useDialogoMotivo } from '../components/useDialogoMotivo';
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { Encabezado } from '../components/Encabezado';
 import { Paginador } from '../components/Paginador';
+import '../components/tabla-adaptable.css';
 
 
 
@@ -26,6 +27,7 @@ export default function AlumnosPage() {
   const [planteles, setPlanteles] = useState<Plantel[]>([]);
   const [plantelId, setPlantelId] = useState('');
   const [cargando, setCargando] = useState(true);
+  const consulta = useRef(0);
   const [buscar, setBuscar] = useState('');
   const [busquedaAplicada, setBusquedaAplicada] = useState('');
   const [form, setForm] = useState(FORM_INICIAL);
@@ -80,20 +82,22 @@ export default function AlumnosPage() {
   };
 
   const cargar = useCallback((pagina = 1, termino = '', filtroPlantel = '') => {
+    const actual = ++consulta.current;
     setCargando(true);
     setError('');
     setBusquedaAplicada(termino);
     api.get<Resultado>('/alumnos', {
       params: { pagina, ...(termino ? { buscar: termino } : {}), ...(filtroPlantel ? { plantelId: filtroPlantel } : {}) },
     })
-      .then((r) => setResultado(r.data))
-      .catch((err) => setError(mensajeDeError(err)))
-      .finally(() => setCargando(false));
+      .then((r) => { if (actual === consulta.current) setResultado(r.data); })
+      .catch((err) => { if (actual === consulta.current) setError(mensajeDeError(err)); })
+      .finally(() => { if (actual === consulta.current) setCargando(false); });
   }, []);
 
   useEffect(() => {
     api.get<Plantel[]>('/planteles/mios').then((r) => setPlanteles(r.data)).catch((err) => setError(mensajeDeError(err)));
     cargar(1, '');
+    return () => { consulta.current += 1; };
   }, [cargar]);
 
   const crear = async (e: FormEvent) => {
@@ -176,20 +180,20 @@ export default function AlumnosPage() {
 
       <div className="cabecera-listado"><h2>Expedientes de alumnos</h2><p>{resultado.total} registros encontrados</p></div>
       <div className="tabla-contenedor" role="region" aria-label="Listado de alumnos" tabIndex={0}>
-      <table className="tabla">
+      <table className="tabla tabla-adaptable" aria-busy={cargando}>
         <caption className="solo-lector">Alumnos, plantel, correo y acciones disponibles</caption>
         <thead>
-          <tr><th>Matrícula</th><th>Nombre</th><th>Plantel</th><th>Correo</th><th>Estatus</th><th className="derecha">Acciones</th></tr>
+          <tr><th scope="col">Matrícula</th><th scope="col">Nombre</th><th scope="col">Plantel</th><th scope="col">Correo</th><th scope="col">Estatus</th><th scope="col" className="derecha">Acciones</th></tr>
         </thead>
         <tbody>
           {resultado.datos.map((a) => (
             <tr key={a.id}>
-              <td>{a.matricula}</td>
-              <td>{a.usuario.nombre} {a.usuario.apellidoPaterno} {a.usuario.apellidoMaterno ?? ''}</td>
-              <td>{a.plantel?.nombre ?? <span className="sello neutro">Sin plantel</span>}</td>
-              <td>{a.usuario.email}</td>
-              <td><span className={`sello ${a.estatus === 'ACTIVO' ? 'ok' : 'neutro'}`}>{a.estatus}</span></td>
-              <td className="derecha">
+              <td data-etiqueta="Matrícula">{a.matricula}</td>
+              <td data-etiqueta="Nombre">{a.usuario.nombre} {a.usuario.apellidoPaterno} {a.usuario.apellidoMaterno ?? ''}</td>
+              <td data-etiqueta="Plantel">{a.plantel?.nombre ?? <span className="sello neutro">Sin plantel</span>}</td>
+              <td data-etiqueta="Correo">{a.usuario.email}</td>
+              <td data-etiqueta="Estatus"><span className={`sello ${a.estatus === 'ACTIVO' ? 'ok' : 'neutro'}`}>{a.estatus}</span></td>
+              <td data-etiqueta="Acciones" className="derecha">
                 <span className="acciones-fila">
                   {puedeGestionar && <button className="boton secundario chico" onClick={() => verHistorial(a)}>Historial y boleta</button>}
                   {puedeGestionar && <>
