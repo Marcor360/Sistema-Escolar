@@ -725,6 +725,8 @@ Para versiones posteriores, usa [Deploy-Staging.ps1](scripts/windows/Deploy-Stag
 
 ## 📚 Documentación Adicional
 
+- [Biblioteca institucional, calendario, móvil y recuperación](docs/REQUERIMIENTO_ARCHIVOS_CALENDARIO_MOBILE.md) — estado actual y requisitos de próximas entregas; sin funciones nuevas.
+
 - [Edición integral segura de expedientes y catálogos](docs/REQUERIMIENTO_EDICION_INTEGRAL.md) — inventario actual, diferencias y criterios de entregas futuras; especificación sin nuevas funciones.
 
 - **`docs/API.md`** — Endpoints detallados con roles requeridos
