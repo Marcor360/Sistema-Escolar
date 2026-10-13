@@ -30,6 +30,7 @@ export default function AlumnosPage() {
   const consulta = useRef(0);
   const [buscar, setBuscar] = useState('');
   const [busquedaAplicada, setBusquedaAplicada] = useState('');
+  const [plantelAplicado, setPlantelAplicado] = useState('');
   const [form, setForm] = useState(FORM_INICIAL);
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
@@ -68,7 +69,7 @@ export default function AlumnosPage() {
   const egresar = async (alumno: Alumno) => {
     if (!await confirmacion.solicitar('¿Egresar al alumno? Se terminarán sus inscripciones y su acceso; conservará el expediente.')) return;
     setEnviando(true); setError('');
-    try { await api.post(`/alumnos/${alumno.id}/egreso`); setMensaje('Alumno egresado'); cargar(1, buscar, plantelId); }
+    try { await api.post(`/alumnos/${alumno.id}/egreso`); setMensaje('Alumno egresado'); cargar(1, busquedaAplicada, plantelAplicado); }
     catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
   const transferir = async (e: FormEvent) => {
@@ -77,7 +78,7 @@ export default function AlumnosPage() {
     setEnviando(true); setError('');
     try {
       await api.post(`/alumnos/${transferencia.id}/transferencia`, { plantelId: Number(destino) });
-      setTransferencia(null); setMensaje('Transferencia completada. Inscribe al alumno en el grupo de destino.'); cargar(1, buscar, plantelId);
+      setTransferencia(null); setMensaje('Transferencia completada. Inscribe al alumno en el grupo de destino.'); cargar(1, busquedaAplicada, plantelAplicado);
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
@@ -86,6 +87,7 @@ export default function AlumnosPage() {
     setCargando(true);
     setError('');
     setBusquedaAplicada(termino);
+    setPlantelAplicado(filtroPlantel);
     api.get<Resultado>('/alumnos', {
       params: { pagina, ...(termino ? { buscar: termino } : {}), ...(filtroPlantel ? { plantelId: filtroPlantel } : {}) },
     })
@@ -121,7 +123,7 @@ export default function AlumnosPage() {
       setMensaje(`Alumno ${form.matricula} ${editando ? 'actualizado' : 'registrado'}`);
       setEditando(null);
       setForm(FORM_INICIAL);
-      cargar(1, buscar, plantelId);
+      cargar(1, busquedaAplicada, plantelAplicado);
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
@@ -133,7 +135,7 @@ export default function AlumnosPage() {
   const baja = async (alumno: Alumno) => {
     if (!await confirmacion.solicitar(`¿Dar de baja a ${alumno.usuario.nombre} ${alumno.usuario.apellidoPaterno}?`)) return;
     setEnviando(true); setError('');
-    try { await api.post(`/alumnos/${alumno.id}/baja`); setMensaje('Alumno dado de baja'); cargar(1, buscar, plantelId); }
+    try { await api.post(`/alumnos/${alumno.id}/baja`); setMensaje('Alumno dado de baja'); cargar(1, busquedaAplicada, plantelAplicado); }
     catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
@@ -171,11 +173,11 @@ export default function AlumnosPage() {
             placeholder="Escribe la matrícula"
             value={buscar}
             onChange={(e) => setBuscar(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && cargar(1, buscar, plantelId)}
+            onKeyDown={(e) => e.key === 'Enter' && cargar(1, busquedaAplicada, plantelAplicado)}
           />
         </div>
         <button type="button" className="boton" disabled={cargando} onClick={() => cargar(1, buscar.trim(), plantelId)}>Buscar</button>
-        {(busquedaAplicada || plantelId) && <button type="button" className="boton secundario" onClick={() => { setBuscar(''); setPlantelId(''); cargar(1, '', ''); }}>Limpiar filtros</button>}
+        {(busquedaAplicada || plantelAplicado || buscar || plantelId) && <button type="button" className="boton secundario" onClick={() => { setBuscar(''); setPlantelId(''); cargar(1, '', ''); }}>Limpiar filtros</button>}
       </div></section>
 
       <div className="cabecera-listado"><h2>Expedientes de alumnos</h2><p>{resultado.total} registros encontrados</p></div>
@@ -198,7 +200,7 @@ export default function AlumnosPage() {
                   {puedeGestionar && <button className="boton secundario chico" onClick={() => verHistorial(a)}>Historial y boleta</button>}
                   {puedeGestionar && <>
                     <button disabled={enviando} className="boton secundario chico" onClick={() => editar(a)}>Editar</button>
-                    {a.estatus === 'BAJA' && <button disabled={enviando} onClick={() => dialogoMotivo.abrir({ titulo: 'Reactivar alumno', advertencia: 'No se restauran inscripciones; deberá inscribirse explícitamente.', ejecutar: async (motivo) => { await api.post(`/alumnos/${a.id}/reactivacion`, { motivo }); setMensaje('Alumno reactivado; inscribe desde Grupos'); await cargar(1, buscar, plantelId); } })}>Reactivar expediente</button>}
+                    {a.estatus === 'BAJA' && <button disabled={enviando} onClick={() => dialogoMotivo.abrir({ titulo: 'Reactivar alumno', advertencia: 'No se restauran inscripciones; deberá inscribirse explícitamente.', ejecutar: async (motivo) => { await api.post(`/alumnos/${a.id}/reactivacion`, { motivo }); setMensaje('Alumno reactivado; inscribe desde Grupos'); await cargar(1, busquedaAplicada, plantelAplicado); } })}>Reactivar expediente</button>}
                     {a.estatus === 'ACTIVO' && <>
                       <button disabled={enviando} className="boton secundario chico" onClick={() => { setTransferencia(a); setDestino(''); }}>Transferir</button>
                       <button disabled={enviando} className="boton secundario chico" onClick={() => egresar(a)}>Egresar</button>
@@ -210,12 +212,12 @@ export default function AlumnosPage() {
             </tr>
           ))}
           {!cargando && resultado.datos.length === 0 && (
-            <tr><td className="vacio" colSpan={6}>{busquedaAplicada || plantelId ? 'No se encontraron alumnos con estos filtros. Prueba con otra matrícula o plantel.' : 'Todavía no hay alumnos registrados. Puedes dar de alta al primero desde el formulario.'}</td></tr>
+            <tr><td className="vacio" colSpan={6}>{busquedaAplicada || plantelAplicado ? 'No se encontraron alumnos con estos filtros. Prueba con otra matrícula o plantel.' : 'Todavía no hay alumnos registrados. Puedes dar de alta al primero desde el formulario.'}</td></tr>
           )}
           {cargando && <tr><td className="vacio" colSpan={6}>Cargando…</td></tr>}
         </tbody>
       </table></div>
-      <Paginador deshabilitado={cargando} total={resultado.total} pagina={resultado.pagina} porPagina={resultado.porPagina} onCambio={(pagina) => cargar(pagina, buscar, plantelId)} />
+      <Paginador deshabilitado={cargando} total={resultado.total} pagina={resultado.pagina} porPagina={resultado.porPagina} onCambio={(pagina) => cargar(pagina, busquedaAplicada, plantelAplicado)} />
     </>
   );
 }
