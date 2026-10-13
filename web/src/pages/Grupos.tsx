@@ -25,6 +25,7 @@ export default function GruposPage() {
   const [planteles, setPlanteles] = useState<Plantel[]>([]);
   const [filtroCiclo, setFiltroCiclo] = useState('');
   const [filtroPlantel, setFiltroPlantel] = useState('');
+  const [plantelAplicado, setPlantelAplicado] = useState('');
   const [resultado, setResultado] = useState<ResultadoGrupos>({ datos: [], total: 0, pagina: 1, porPagina: 20 });
   const [materias, setMaterias] = useState<Materia[]>([]);
   const [seleccionado, setSeleccionado] = useState<Grupo | null>(null);
@@ -40,6 +41,11 @@ export default function GruposPage() {
   const [cargandoListado, setCargandoListado] = useState(false);
   const consultaListado = useRef(0);
   const consultaGrupo = useRef(0);
+  const consultaCatalogos = useRef(0);
+  const [errorCatalogos, setErrorCatalogos] = useState('');
+  const [cargandoCatalogos, setCargandoCatalogos] = useState(true);
+  const [cargandoGrupo, setCargandoGrupo] = useState(false);
+  const [detalleGrupoCompleto, setDetalleGrupoCompleto] = useState(false);
   const [editando, setEditando] = useState<Grupo | null>(null);
   const [reasignando, setReasignando] = useState<number | null>(null);
   const [nuevoDocente, setNuevoDocente] = useState('');
@@ -47,7 +53,7 @@ export default function GruposPage() {
     if (enviando || !await confirmacion.solicitar('¿Confirmar esta corrección? El historial académico se conserva.')) return;
     setEnviando(true); setError('');
     try { await api.request({ url: ruta, method: metodo, data: datos }); setMensaje('Corrección completada');
-      await cargar(1, filtroPlantel); if (seleccionado) await abrirGrupo(seleccionado);
+      await cargar(1, plantelAplicado); if (seleccionado) await abrirGrupo(seleccionado);
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
   const editar = (g: Grupo) => {
@@ -71,27 +77,43 @@ export default function GruposPage() {
       if (actual === consultaListado.current) setCargandoListado(false);
     }
   }, [filtroCiclo]);
-  useEffect(() => {
-    void Promise.all([
+  const cargarCatalogos = useCallback(async () => {
+    const actual = ++consultaCatalogos.current;
+    setCargandoCatalogos(true); setErrorCatalogos('');
+    try {
+      const [ciclosR, plantelesR, materiasR] = await Promise.all([
       api.get<Ciclo[]>('/academico/ciclos'),
       api.get<Plantel[]>('/planteles/mios'),
       api.get<Materia[]>('/academico/materias'),
-    ]).then(([ciclosR, plantelesR, materiasR]) => {
+      ]);
+      if (actual !== consultaCatalogos.current) return;
       setCiclos(ciclosR.data);
       setPlanteles(plantelesR.data);
       setMaterias(materiasR.data);
-    }).catch((err) => setError(mensajeDeError(err)));
+    } catch (err) {
+      if (actual === consultaCatalogos.current) setErrorCatalogos(mensajeDeError(err));
+    } finally {
+      if (actual === consultaCatalogos.current) setCargandoCatalogos(false);
+    }
   }, []);
   useEffect(() => {
-    void cargar(1, filtroPlantel);
+    void cargarCatalogos();
+    return () => { consultaCatalogos.current += 1; consultaGrupo.current += 1; };
+  }, [cargarCatalogos]);
+  useEffect(() => {
+    void cargar(1, plantelAplicado);
     return () => { consultaListado.current += 1; };
-  }, [cargar]);
+  }, [cargar, plantelAplicado]);
 
   const abrirGrupo = async (grupo: Grupo) => {
     const actual = ++consultaGrupo.current;
     setSeleccionado(grupo);
     setAsignaciones([]);
     setInscritos([]);
+    setReasignando(null); setNuevoDocente('');
+    setMateriaId(''); setDocenteId(''); setAlumnoId('');
+    setCargandoGrupo(true);
+    setDetalleGrupoCompleto(false);
     setError('');
     try {
       const [gms, insc] = await Promise.all([
@@ -101,9 +123,12 @@ export default function GruposPage() {
       if (actual === consultaGrupo.current) {
         setAsignaciones(gms.data);
         setInscritos(insc.data);
+        setDetalleGrupoCompleto(true);
       }
     } catch (err) {
       if (actual === consultaGrupo.current) setError(mensajeDeError(err));
+    } finally {
+      if (actual === consultaGrupo.current) setCargandoGrupo(false);
     }
   };
 
@@ -121,7 +146,7 @@ export default function GruposPage() {
       });
       setEditando(null); setMensaje('Grupo guardado');
       setFormGrupo({ cicloId: '', plantelId: '', nombre: '', grado: '', turno: 'MATUTINO' });
-      cargar(1, filtroPlantel);
+      cargar(1, plantelAplicado);
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
@@ -135,7 +160,7 @@ export default function GruposPage() {
         docenteId: docenteId ? Number(docenteId) : undefined,
       });
       setMateriaId(''); setDocenteId('');
-      abrirGrupo(seleccionado);
+      await abrirGrupo(seleccionado);
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
@@ -146,7 +171,7 @@ export default function GruposPage() {
     try {
       await api.post(`/academico/grupos/${seleccionado.id}/alumnos`, { alumnoId: Number(alumnoId) });
       setAlumnoId('');
-      abrirGrupo(seleccionado);
+      await abrirGrupo(seleccionado);
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
@@ -154,6 +179,8 @@ export default function GruposPage() {
     <>{confirmacion.elemento}
       <Encabezado titulo="Grupos" detalle="Grupos por ciclo, materias asignadas e inscripciones" />
       {error && <p role="alert" className="mensaje-error">{error}</p>}{mensaje && <p role="status" className="mensaje-ok">{mensaje}</p>}
+      {cargandoCatalogos && <p role="status">Cargando catálogos…</p>}
+      {errorCatalogos && <div role="alert"><p>{errorCatalogos}</p><button className="boton secundario" onClick={() => { void cargarCatalogos(); }}>Reintentar catálogos</button></div>}
 
       <section className="panel">
         <h2 id="form-grupo">{editando ? 'Editar grupo' : 'Nuevo grupo'}</h2>
@@ -193,7 +220,10 @@ export default function GruposPage() {
             {planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
           </select>
         </div>
-        <button className="boton secundario" disabled={cargandoListado} onClick={() => cargar(1, filtroPlantel)}>Aplicar</button>
+        <button className="boton secundario" disabled={cargandoListado} onClick={() => {
+          if (filtroPlantel === plantelAplicado) void cargar(1, plantelAplicado);
+          else setPlantelAplicado(filtroPlantel);
+        }}>Aplicar</button>
       </div>
 
       <div className="cabecera-listado"><h2>Directorio de grupos</h2><p>{resultado.total} grupos</p></div>
@@ -223,9 +253,11 @@ export default function GruposPage() {
           {cargandoListado && resultado.datos.length === 0 && <tr><td className="vacio" colSpan={6}>Consultando grupos…</td></tr>}
         </tbody>
       </table></div>
-      <Paginador total={resultado.total} pagina={resultado.pagina} porPagina={resultado.porPagina} deshabilitado={cargandoListado} onCambio={(pagina) => cargar(pagina, filtroPlantel)} />
+      <Paginador total={resultado.total} pagina={resultado.pagina} porPagina={resultado.porPagina} deshabilitado={cargandoListado} onCambio={(pagina) => cargar(pagina, plantelAplicado)} />
 
-      {seleccionado && (
+      {cargandoGrupo && <p role="status">Cargando detalle del grupo…</p>}
+      {seleccionado && !cargandoGrupo && !detalleGrupoCompleto && <button className="boton secundario" onClick={() => { void abrirGrupo(seleccionado); }}>Reintentar detalle del grupo</button>}
+      {seleccionado && !cargandoGrupo && detalleGrupoCompleto && (
         <>
           <MateriasGrupo seleccionado={seleccionado} reasignando={reasignando} nuevoDocente={nuevoDocente} setNuevoDocente={setNuevoDocente} enviando={enviando} operar={operar} setReasignando={setReasignando} asignarMateria={asignarMateria} materiaId={materiaId} setMateriaId={setMateriaId} materias={materias} docenteId={docenteId} setDocenteId={setDocenteId} asignaciones={asignaciones} />
 
