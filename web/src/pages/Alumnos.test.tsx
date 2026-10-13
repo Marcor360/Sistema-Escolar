@@ -81,3 +81,30 @@ it('al volver a la página usa una solicitud nueva aunque la anterior siga pendi
   expect(screen.queryByText('ANTIGUO')).toBeNull();
   expect(screen.getByText('NUEVO')).toBeTruthy();
 });
+
+
+it('la página siguiente conserva los filtros aplicados aunque haya cambios sin buscar', async () => {
+  const get = vi.spyOn(api, 'get').mockImplementation(async (url, config) => {
+    if (url === '/planteles/mios') return { data: [
+      { id: 1, nombre: 'Plantel Uno' },
+      { id: 2, nombre: 'Plantel Dos' },
+    ] };
+    const params = (config?.params ?? {}) as { pagina?: number; buscar?: string; plantelId?: string };
+    return { data: { ...resultado(params.buscar || 'INICIAL'), total: 45, pagina: params.pagina ?? 1 } };
+  });
+  render(<AlumnosPage />);
+  await screen.findByText('INICIAL');
+
+  fireEvent.change(screen.getByLabelText('Filtrar por plantel'), { target: { value: '1' } });
+  buscar('APLICADO');
+  await screen.findByText('APLICADO');
+
+  fireEvent.change(screen.getByLabelText('Buscar por matrícula'), { target: { value: 'BORRADOR' } });
+  fireEvent.change(screen.getByLabelText('Filtrar por plantel'), { target: { value: '2' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Ir a la página siguiente' }));
+
+  await waitFor(() => expect(get).toHaveBeenLastCalledWith('/alumnos', {
+    params: { pagina: 2, buscar: 'APLICADO', plantelId: '1' },
+  }));
+  expect(screen.getByText('APLICADO')).toBeTruthy();
+});
