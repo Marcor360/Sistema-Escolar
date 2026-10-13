@@ -904,3 +904,33 @@ input:disabled, select:disabled { background: #f2f5f6; }
   .lateral nav { max-height: min(65dvh, 620px); overscroll-behavior: contain; }
   .contenido { padding-inline: clamp(12px, 3.5vw, 24px); }
 }
+
+/* 1.20.0: escala fluida y controles responsive coherentes. */
+:root {
+  --espacio-1: 4px;
+  --espacio-2: 8px;
+  --espacio-3: 12px;
+  --espacio-4: 16px;
+  --espacio-6: 24px;
+  --espacio-8: 32px;
+  --tamano-texto: clamp(.875rem, .84rem + .15vw, 1rem);
+}
+body { font-size: var(--tamano-texto); }
+.encabezado h1 { font-size: clamp(1.625rem, 1.15rem + 1.8vw, 2.375rem); }
+.panel, .grupo-formulario, .tabla-contenedor { min-width: 0; }
+.panel { padding: clamp(16px, 2vw, 30px); }
+.fila { flex-wrap: wrap; max-width: 100%; }
+.fila > .campo { flex: 1 1 200px; min-width: min(100%, 200px); }
+.fila > .campo :is(input, select, textarea) { width: 100%; max-width: 100%; }
+.panel :is(input, select, textarea) { max-width: 100%; }
+textarea { min-height: 110px; resize: vertical; }
+.boton, button.boton { min-height: 44px; }
+.tabla-contenedor { max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; }
+.tabla-contenedor .tabla { min-width: 640px; }
+@media (max-width: 700px) {
+  .rejilla-formulario { grid-template-columns: minmax(0, 1fr); }
+  .fila { gap: 12px; }
+  .fila > .campo { flex-basis: 100%; min-width: 0; }
+  .fila > .boton { width: 100%; }
+  .panel { padding: 16px; }
+}
