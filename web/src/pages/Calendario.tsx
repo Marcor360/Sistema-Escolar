@@ -8,6 +8,7 @@ import { useAuth } from '../auth/AuthContext';
 
 interface Evento {
   id: number;
+  creadoPorId: number | null;
   titulo: string;
   descripcion: string | null;
   tipo: 'GENERAL' | 'EXAMEN' | 'ENTREGA' | 'FESTIVO' | 'PAGO' | 'JUNTA';
@@ -37,6 +38,11 @@ export default function CalendarioPage() {
   const { datos: clases } = useDatos<GrupoMateria[]>(
     () => api.get(maestroPuro ? '/academico/mis-grupos' : '/academico/grupo-materias').then((r) => r.data), [],
   );
+  const puedeEliminar = (evento: Evento) => {
+    if (esSuperadmin) return true;
+    if (maestroPuro) return evento.creadoPorId === sesion?.sub;
+    return !!sesion?.roles.includes('ADMINISTRATIVO') && evento.plantel !== null && planteles.some((plantel) => plantel.id === evento.plantel?.id);
+  };
   const [form, setForm] = useState(FORM_INICIAL);
   const [filtroPlantel, setFiltroPlantel] = useState('');
   const [error, setError] = useState(''); const [guardando, setGuardando] = useState(false); const mutando = useRef(false);
@@ -124,7 +130,9 @@ export default function CalendarioPage() {
               <td><span className={`sello ${TONO[ev.tipo]}`}>{ev.tipo}</span></td>
               <td>{ev.descripcion ?? '—'}</td>
               <td className="derecha">
-                <button className="boton peligro chico" disabled={guardando} onClick={() => eliminar(ev)}>Eliminar</button>
+                {puedeEliminar(ev)
+                  ? <button className="boton peligro chico" disabled={guardando} onClick={() => eliminar(ev)}>Eliminar</button>
+                  : <span className="detalle">Solo lectura</span>}
               </td>
             </tr>
           ))}
