@@ -725,6 +725,8 @@ Para versiones posteriores, usa [Deploy-Staging.ps1](scripts/windows/Deploy-Stag
 
 ## 📚 Documentación Adicional
 
+- [Edición integral segura de expedientes y catálogos](docs/REQUERIMIENTO_EDICION_INTEGRAL.md) — inventario actual, diferencias y criterios de entregas futuras; especificación sin nuevas funciones.
+
 - **`docs/API.md`** — Endpoints detallados con roles requeridos
 - **`docs/ARQUITECTURA.md`** — Decisiones técnicas y modelo de datos
 - **`docs/ETAPAS_CONTRATO.md`** — Mapeo contra etapas del Anexo A
