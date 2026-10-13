@@ -1,9 +1,10 @@
 import { crearControlLectura } from '../api/lectura-vigente';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Linking, RefreshControl, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Text } from '../components/Texto';
 import { useFocusEffect } from '@react-navigation/native';
 import { api, archivosBase, mensajeDeError } from '../api/client';
+import { useSesion } from '../sesion';
 import { colores, radio, espacio, tipografia } from '../theme';
 import { base, ErrorCarga, Sello, Tarjeta, Vacio } from './comunes';
 
@@ -22,15 +23,30 @@ interface Material {
 }
 
 export default function MateriasScreen() {
+  const { sesion } = useSesion();
   const [materias, setMaterias] = useState<Materia[]>([]);
   const [cargando, setCargando] = useState(false);
   const [cargaInicialCompleta, setCargaInicialCompleta] = useState(false);
   const [abierta, setAbierta] = useState<number | null>(null);
   const [materialesPor, setMaterialesPor] = useState<Record<number, Material[]>>({});
+  const [cargandoMateriales, setCargandoMateriales] = useState<number | null>(null);
+  const [erroresMateriales, setErroresMateriales] = useState<Record<number, string>>({});
   const [error, setError] = useState('');
   const [ultimaActualizacion, setUltimaActualizacion] = useState<string | null>(null);
 
   const lectura = useRef(crearControlLectura());
+  const consultaMateriales = useRef(0);
+  useEffect(() => {
+    consultaMateriales.current += 1;
+    lectura.current.invalidar();
+    setMaterias([]);
+    setAbierta(null);
+    setMaterialesPor({});
+    setErroresMateriales({});
+    setCargandoMateriales(null);
+    setCargaInicialCompleta(false);
+    setUltimaActualizacion(null);
+  }, [sesion?.sub]);
   const cargar = useCallback(() => {
     setError('');
     setCargando(true);
@@ -40,18 +56,37 @@ export default function MateriasScreen() {
       () => setCargando(false));
   }, []);
 
-  useFocusEffect(useCallback(() => { cargar(); return () => lectura.current.invalidar(); }, [cargar]));
+  useFocusEffect(useCallback(() => {
+    cargar();
+    return () => {
+      lectura.current.invalidar();
+      consultaMateriales.current += 1;
+      setCargandoMateriales(null);
+    };
+  }, [cargar]));
 
-  /** Despliega la materia y carga sus materiales la primera vez. */
-  const alternar = async (materia: Materia) => {
+  const cargarMateriales = async (materiaId: number) => {
+    const actual = ++consultaMateriales.current;
+    setCargandoMateriales(materiaId);
+    setErroresMateriales((previos) => ({ ...previos, [materiaId]: '' }));
+    try {
+      const { data } = await api.get<Material[]>(`/grupo-materias/${materiaId}/materiales`);
+      if (actual === consultaMateriales.current) {
+        setMaterialesPor((previos) => ({ ...previos, [materiaId]: data }));
+      }
+    } catch (fallo) {
+      if (actual === consultaMateriales.current) {
+        setErroresMateriales((previos) => ({ ...previos, [materiaId]: mensajeDeError(fallo) }));
+      }
+    } finally {
+      if (actual === consultaMateriales.current) setCargandoMateriales(null);
+    }
+  };
+
+  const alternar = (materia: Materia) => {
     if (abierta === materia.id) { setAbierta(null); return; }
     setAbierta(materia.id);
-    if (!materialesPor[materia.id]) {
-      try {
-        const { data } = await api.get<Material[]>(`/grupo-materias/${materia.id}/materiales`);
-        setMaterialesPor((previos) => ({ ...previos, [materia.id]: data }));
-      } catch (fallo) { setError(mensajeDeError(fallo)); }
-    }
+    if (!materialesPor[materia.id]) void cargarMateriales(materia.id);
   };
 
   /** Pide un enlace firmado de corta vida y lo abre (los materiales ya no son públicos). */
@@ -94,7 +129,10 @@ export default function MateriasScreen() {
                 {desplegada && (
                   <View style={estilos.materiales}>
                     <Text style={estilos.subtitulo}>Materiales de clase</Text>
-                    {!materiales && <Text style={base.secundario}>Cargando…</Text>}
+                    {!materiales && cargandoMateriales === item.id && <ActivityIndicator accessibilityLabel="Cargando materiales de clase" />}
+                    {!!erroresMateriales[item.id] && (
+                      <ErrorCarga mensaje={erroresMateriales[item.id]} reintentar={() => { void cargarMateriales(item.id); }} />
+                    )}
                     {materiales && materiales.length === 0 && (
                       <Text style={base.secundario}>El maestro aún no sube materiales.</Text>
                     )}
