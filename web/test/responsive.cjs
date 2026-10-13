@@ -133,6 +133,11 @@ async function esperarServidor() {
     if (width <= 800) {
       await page.getByRole('button', { name: /Abrir menú/ }).click();
       await expect(page.locator('body')).toHaveCSS('overflow', 'hidden');
+      await expect(page.getByRole('button', { name: 'Cerrar menú', exact: true })).toBeFocused();
+      await page.locator('#contenido-principal').evaluate((el) => el.focus());
+      await expect(page.getByRole('button', { name: 'Cerrar menú', exact: true })).toBeFocused();
+      await page.locator('.skip-link').evaluate((el) => el.focus());
+      await expect(page.getByRole('button', { name: 'Cerrar menú', exact: true })).toBeFocused();
       await expect.poll(async () => {
         const cajon = await page.locator('.lateral').boundingBox();
         return !!cajon && Math.abs(cajon.width - width / 2) <= 1 && Math.abs(cajon.x - width / 2) <= 1;

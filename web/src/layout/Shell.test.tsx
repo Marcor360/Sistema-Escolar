@@ -112,3 +112,23 @@ it('mantiene el foco dentro del cajón con Tab y Shift+Tab', () => {
   expect(document.activeElement).toBe(cerrar);
   expect(enlaces.length).toBeGreaterThan(0);
 });
+
+it('inactiva el contenido de fondo mientras el diálogo está abierto', () => {
+  abrirMenu();
+  const contenido = document.getElementById('contenido-principal')!;
+  const salto = screen.getByText('Saltar al contenido principal');
+  expect(contenido.inert).toBe(true);
+  expect(salto.inert).toBe(true);
+  fireEvent.click(screen.getByRole('button', { name: 'Cerrar menú' }));
+  expect(contenido.inert).toBe(false);
+  expect(salto.inert).toBe(false);
+});
+
+it('cierra Mi cuenta aun cuando ya está en esa ruta y enfoca el contenido', () => {
+  render(<MemoryRouter initialEntries={['/cuenta']}><Shell /></MemoryRouter>);
+  fireEvent.click(screen.getByRole('button', { name: 'Abrir menú' }));
+  fireEvent.click(screen.getByRole('link', { name: 'Mi cuenta' }));
+  expect(screen.queryByRole('dialog')).toBeNull();
+  expect(document.activeElement).toBe(document.getElementById('contenido-principal'));
+  expect(document.body.style.overflow).toBe('auto');
+});

@@ -56,6 +56,29 @@ export function Shell() {
   const botonMenu = useRef<HTMLButtonElement>(null);
   const botonCerrarMenu = useRef<HTMLButtonElement>(null);
   const lateral = useRef<HTMLElement>(null);
+  const contenido = useRef<HTMLElement>(null);
+  const saltoContenido = useRef<HTMLAnchorElement>(null);
+  const enfocarContenido = useRef(false);
+  const menuAnterior = useRef(false);
+
+  const navegarDesdeMenu = () => {
+    if (!menuAbierto) return;
+    enfocarContenido.current = true;
+    setMenuAbierto(false);
+  };
+
+  useEffect(() => {
+    if (contenido.current) contenido.current.inert = menuAbierto;
+    if (saltoContenido.current) saltoContenido.current.inert = menuAbierto;
+    if (!menuAbierto && enfocarContenido.current) {
+      enfocarContenido.current = false;
+      contenido.current?.focus();
+    } else if (!menuAbierto && menuAnterior.current) {
+      if (window.matchMedia('(max-width: 800px)').matches) botonMenu.current?.focus();
+      else lateral.current?.querySelector<HTMLElement>('a.active, a[href]')?.focus();
+    }
+    menuAnterior.current = menuAbierto;
+  }, [menuAbierto]);
 
   useEffect(() => { setMenuAbierto(false); }, [location.pathname]);
   useEffect(() => {
@@ -80,7 +103,6 @@ export function Shell() {
     const manejarTeclado = (evento: KeyboardEvent) => {
       if (evento.key === 'Escape') {
         setMenuAbierto(false);
-        botonMenu.current?.focus();
         return;
       }
       if (evento.key !== 'Tab' || !window.matchMedia('(max-width: 800px)').matches) return;
@@ -102,10 +124,10 @@ export function Shell() {
 
   return (
     <div className="shell">
-      <a className="skip-link" href="#contenido-principal">Saltar al contenido principal</a>
-      {menuAbierto && <button type="button" className="menu-fondo" aria-label="Cerrar navegación" onClick={() => { setMenuAbierto(false); botonMenu.current?.focus(); }} />}
+      <a ref={saltoContenido} className="skip-link" href="#contenido-principal">Saltar al contenido principal</a>
+      {menuAbierto && <button type="button" tabIndex={-1} className="menu-fondo" aria-label="Cerrar navegación" onClick={() => { setMenuAbierto(false); }} />}
       <aside ref={lateral} className={`lateral${menuAbierto ? ' lateral-abierto' : ''}`} role={menuAbierto ? 'dialog' : undefined} aria-modal={menuAbierto ? true : undefined} aria-label="Menú principal">
-        <button ref={botonCerrarMenu} type="button" className="menu-cerrar" onClick={() => { setMenuAbierto(false); botonMenu.current?.focus(); }}><span>Cerrar menú</span> <IconoTabler nombre="x" /></button>
+        <button ref={botonCerrarMenu} type="button" className="menu-cerrar" onClick={() => setMenuAbierto(false)}><span>Cerrar menú</span> <IconoTabler nombre="x" /></button>
         {marca.logoUrl && !logoFallo
           ? <img className="logo-marca" src={archivosBase + marca.logoUrl} alt={marca.nombreInstitucion} onError={() => setLogoFallo(true)} />
           : <div className="monograma" aria-hidden>{marca.nombreCorto}</div>}
@@ -115,7 +137,7 @@ export function Shell() {
             {secciones
               .filter((s) => tieneRol(...s.roles))
               .map((s) => (
-                <NavLink key={s.destino} to={s.destino} end={s.destino === '/'} onClick={() => { setMenuAbierto(false); document.getElementById('contenido-principal')?.focus(); }}>
+                <NavLink key={s.destino} to={s.destino} end={s.destino === '/'} onClick={navegarDesdeMenu}>
                   <IconoTabler nombre={iconosPorRuta[s.destino]} />
                   <span>{s.etiqueta}</span>
                 </NavLink>
@@ -123,7 +145,7 @@ export function Shell() {
           </nav>
           <div className="lateral-pie">
             <p>{sesion?.nombre}</p>
-            <NavLink to="/cuenta" className="pie-enlace">Mi cuenta</NavLink>
+            <NavLink to="/cuenta" className="pie-enlace" onClick={navegarDesdeMenu}>Mi cuenta</NavLink>
             <p className="rol">{sesion?.roles.join(' · ')}</p>
             {errorCierre && <p className="mensaje-error" role="alert">{errorCierre}</p>}
             <button
@@ -143,7 +165,7 @@ export function Shell() {
           </div>
         </div>
       </aside>
-      <main className="contenido" id="contenido-principal" tabIndex={-1}>
+      <main ref={contenido} className="contenido" id="contenido-principal" tabIndex={-1}>
         <div className="barra-superior">
           <button ref={botonMenu} type="button" className="menu-movil" aria-label="Abrir menú" aria-expanded={menuAbierto} aria-controls="navegacion-escolar" onClick={() => setMenuAbierto((abierto) => !abierto)}><IconoTabler nombre="menu-2" /> <span>Menú</span></button>
           <span className="barra-contexto">Espacio de trabajo <strong>{sesion?.roles.join(' · ')}</strong></span>
