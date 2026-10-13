@@ -2,7 +2,7 @@
 export function Cargando() {
   return (
     <section className="esqueleto-pagina" role="status" aria-live="polite" aria-label="Cargando contenido">
-      <span className="solo-lectores">Cargando contenido…</span>
+      <span className="solo-lector">Cargando contenido…</span>
       <div className="esqueleto-linea esqueleto-titulo" aria-hidden="true" />
       <div className="esqueleto-linea esqueleto-subtitulo" aria-hidden="true" />
       <div className="esqueleto-panel" aria-hidden="true">
