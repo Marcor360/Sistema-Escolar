@@ -47,6 +47,8 @@ Las etiquetas cortas de pestañas Notas y Cuenta mantienen títulos completos de
 
 ## Validación
 
+Cambios y resultados automatizados: [PR 28 y sus ocho controles de CI](https://github.com/Marcor360/Sistema-Escolar/pull/28/checks). La aprobación se exige sobre el último SHA, incluyendo ambos motores y navegador.
+
 - Backend: 191 pruebas en 39 suites; typecheck correcto; lint sin errores y 527 advertencias históricas.
 - Web: 80 pruebas en 23 archivos; lint y compilación. Responsive Chromium entre 320 y 3840 px, con API simulada; los recorridos con API/base real se ejecutan aparte en CI.
 - Móvil: 58 pruebas en diez archivos y 11 pruebas Node de configuración/auditoría; TypeScript y exportación Android Expo.

@@ -101,7 +101,7 @@ npx tsc --noEmit
 python -m unittest discover -s tests
 ```
 
-Las integraciones requieren bases aisladas configuradas para pruebas. Los ocho jobs de la [CI del código integrado](https://github.com/Marcor360/Sistema-Escolar/actions/runs/38442392681) aprobaron; revisar también la CI del commit que se vaya a desplegar.
+Las integraciones requieren bases aisladas configuradas para pruebas. Los ocho jobs de la [CI de esta candidata](https://github.com/Marcor360/Sistema-Escolar/pull/28/checks) deben aprobar antes de integrar. Revisar también la CI del commit que se vaya a desplegar.
 
 Antes del piloto:
 
