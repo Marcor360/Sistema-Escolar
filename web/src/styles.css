@@ -959,3 +959,9 @@ textarea { min-height: 110px; resize: vertical; }
 .esqueleto-tabla .esqueleto-linea:nth-child(3) { width: 70%; }
 @keyframes esqueleto-pulso { to { background-position-x: -200%; } }
 @media (prefers-reduced-motion: reduce) { .esqueleto-linea { animation: none; background: #e9eeef; } }
+
+/* 1.23.0: iconos decorativos con etiquetas visibles y tamaños coherentes. */
+.lateral nav a { gap: 12px; }
+.lateral nav a svg, .menu-movil svg { flex: 0 0 20px; width: 20px; height: 20px; }
+.lateral nav a span { min-width: 0; overflow-wrap: anywhere; }
+.menu-movil { gap: 10px; }
