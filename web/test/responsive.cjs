@@ -206,6 +206,37 @@ async function esperarServidor() {
   const zoom = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, width: innerWidth }));
   if (zoom.scroll > zoom.width) throw Error('Text zoom overflow ' + JSON.stringify(zoom));
   console.log('PASS text size 200% at desktop');
+  for (const width of [320, 1440, 3840]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(baseUrl);
+    await expect(page.locator('.panel-bienvenida')).toBeVisible();
+    if (width <= 800) await page.getByRole('button', { name: /Abrir menú/ }).click();
+    await expect(page.getByRole('navigation', { name: 'Navegación principal' })).toHaveCount(1);
+    const iconos = await page.evaluate(() =>
+      [...document.querySelectorAll('.lateral nav svg')].map((svg) => ({
+        hidden: svg.getAttribute('aria-hidden'),
+        focusable: svg.getAttribute('focusable'),
+        path: svg.querySelector('path')?.getBBox().width,
+        width: svg.getBoundingClientRect().width,
+        label: svg.parentElement.textContent.trim(),
+      })),
+    );
+    if (
+      iconos.length !== 16 ||
+      iconos.some(
+        (svg) => svg.hidden !== 'true' || svg.focusable !== 'false' || !svg.path || svg.width !== 20 || !svg.label,
+      )
+    )
+      throw Error('Invalid navigation icon at ' + width);
+    if (width <= 800) {
+      const boton = page.getByRole('button', { name: /Cerrar menú/ });
+      await expect(boton.locator('svg')).toBeVisible();
+      const textSize = await boton.locator('span').evaluate((el) => Number.parseFloat(getComputedStyle(el).fontSize));
+      if (textSize > 16) throw Error('Menu label inherits icon font size');
+      await page.keyboard.press('Escape');
+    }
+    console.log('PASS navigation icons ' + width);
+  }
   for (const [width, reducedMotion, forcedColors] of [
     [320, 'reduce', 'none'],
     [1440, 'no-preference', 'none'],
