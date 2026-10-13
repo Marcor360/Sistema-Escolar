@@ -27,6 +27,7 @@ export default function PlantelesPage() {
   const [mensaje, setMensaje] = useState('');
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
+  const [cargandoDetalle, setCargandoDetalle] = useState(false);
   const consultaDetalle = useRef(0);
 
   const cargar = useCallback(async () => {
@@ -37,13 +38,18 @@ export default function PlantelesPage() {
   }, []);
   const seleccionar = async (id: number) => {
     const actual = ++consultaDetalle.current;
-    setError('');
+    setError(''); setDetalle(null); setCargandoDetalle(true);
+    setDirectorEmail(''); setPersonalEmail('');
     try {
       const { data } = await api.get<Detalle>(`/planteles/${id}`);
       if (actual === consultaDetalle.current) setDetalle(data);
     } catch (err) { if (actual === consultaDetalle.current) setError(mensajeDeError(err)); }
+    finally { if (actual === consultaDetalle.current) setCargandoDetalle(false); }
   };
-  useEffect(() => { void cargar(); }, [cargar]);
+  useEffect(() => {
+    void cargar();
+    return () => { consultaDetalle.current += 1; };
+  }, [cargar]);
 
   const crear = async (e: FormEvent) => {
     e.preventDefault();
@@ -100,7 +106,7 @@ export default function PlantelesPage() {
               <td data-etiqueta="Nombre">{p.nombre}</td>
               <td data-etiqueta="Municipio">{p.municipio ?? '—'}</td>
               <td data-etiqueta="Estatus"><span className={`sello ${p.activo ? 'ok' : 'neutro'}`}>{p.activo ? 'Activo' : 'Inactivo'}</span></td>
-              <td data-etiqueta="Acciones" className="derecha"><span className="acciones-fila"><button className="boton secundario chico" onClick={() => seleccionar(p.id)}>Ver detalle</button></span></td>
+              <td data-etiqueta="Acciones" className="derecha"><span className="acciones-fila"><button className="boton secundario chico" disabled={guardando} onClick={() => seleccionar(p.id)}>Ver detalle</button></span></td>
             </tr>)}
             {!cargando && planteles.length === 0 && <tr><td colSpan={5} className="vacio">No hay planteles disponibles para tu cuenta.</td></tr>}
           </tbody>
@@ -108,6 +114,7 @@ export default function PlantelesPage() {
       </div>
     </section>
 
+    {cargandoDetalle && <p role="status">Cargando detalle del plantel…</p>}
     {detalle && <section className="panel">
       <h2>{detalle.nombre}</h2>
       <p className="detalle">{detalle.direccion || 'Sin dirección'} · {detalle.municipio || 'Sin municipio'} · {detalle.telefono || 'Sin teléfono'}</p>
