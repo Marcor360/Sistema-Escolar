@@ -1,4 +1,5 @@
 import { crearControlLectura } from '../api/lectura-vigente';
+import { obtenerResumenInicio, type AvisoInicio, type EventoInicio } from './inicio-resumen';
 import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Text } from '../components/Texto';
@@ -9,17 +10,12 @@ import { colores, radio, espacio, tipografia } from '../theme';
 import { pesos } from '../formato';
 import { base, Tarjeta } from './comunes';
 
-interface Tarea { id: number; entrega: { estatus: string } | null }
-interface Estado { saldoTotal: number }
-interface Aviso { id: number; titulo: string; mensaje: string; leida: boolean; createdAt: string }
-interface Evento { id: number; titulo: string; tipo: string; fechaInicio: string }
-
 export default function InicioScreen() {
   const { sesion } = useSesion();
-  const [pendientes, setPendientes] = useState(0);
-  const [saldo, setSaldo] = useState(0);
-  const [avisos, setAvisos] = useState<Aviso[]>([]);
-  const [eventos, setEventos] = useState<Evento[]>([]);
+  const [pendientes, setPendientes] = useState<number | null>(null);
+  const [saldo, setSaldo] = useState<number | null>(null);
+  const [avisos, setAvisos] = useState<AvisoInicio[] | null>(null);
+  const [eventos, setEventos] = useState<EventoInicio[] | null>(null);
   const [cargando, setCargando] = useState(false);
   const [cargaInicialCompleta, setCargaInicialCompleta] = useState(false);
   const [error, setError] = useState('');
@@ -30,17 +26,15 @@ export default function InicioScreen() {
     setCargando(true);
     const hoy = new Date().toISOString();
     const en30 = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-    void lectura.current.cargar(() => Promise.all([
-      api.get<Tarea[]>('/alumnos/me/tareas'),
-      api.get<Estado>('/finanzas/me/estado-cuenta'),
-      api.get<Aviso[]>('/notificaciones/mias'),
-      api.get<Evento[]>('/calendario', { params: { desde: hoy, hasta: en30 } }),
-    ]),
-      ([tareas, estado, notifs, cal]) => {
-        setPendientes(tareas.data.filter((t) => !t.entrega).length);
-        setSaldo(estado.data.saldoTotal);
-        setAvisos(notifs.data);
-        setEventos(cal.data);
+    void lectura.current.cargar(() => obtenerResumenInicio(hoy, en30),
+      (datos) => {
+        setPendientes(datos.pendientes);
+        setSaldo(datos.saldo);
+        setAvisos(datos.avisos);
+        setEventos(datos.eventos);
+        setError(datos.errores.length > 0
+          ? `No se pudo actualizar: ${datos.errores.join(', ')}. Desliza para reintentar.`
+          : '');
         setCargaInicialCompleta(true);
       },
       (fallo) => setError(mensajeDeError(fallo)),
@@ -49,11 +43,11 @@ export default function InicioScreen() {
 
   useFocusEffect(useCallback(() => { cargar(); return () => lectura.current.invalidar(); }, [cargar]));
 
-  const leerAviso = async (aviso: Aviso) => {
+  const leerAviso = async (aviso: AvisoInicio) => {
     if (aviso.leida) return;
     try {
       await api.patch(`/notificaciones/${aviso.id}/leer`);
-      setAvisos((previos) => previos.map((a) => (a.id === aviso.id ? { ...a, leida: true } : a)));
+      setAvisos((previos) => previos?.map((a) => (a.id === aviso.id ? { ...a, leida: true } : a)) ?? null);
       cargar();
     } catch (fallo) {
       setError(mensajeDeError(fallo));
@@ -82,25 +76,28 @@ export default function InicioScreen() {
       {cargaInicialCompleta && (
         <View style={estilos.resumen}>
           <View style={estilos.kpi}>
-            <Text style={estilos.kpiValor}>{pendientes}</Text>
+            <Text style={estilos.kpiValor}>{pendientes ?? '—'}</Text>
             <Text style={estilos.kpiEtiqueta}>Tareas por entregar</Text>
           </View>
           <View style={estilos.kpi}>
-            <Text style={estilos.kpiValor}>{pesos(saldo)}</Text>
+            <Text style={estilos.kpiValor}>{saldo === null ? '—' : pesos(saldo)}</Text>
             <Text style={estilos.kpiEtiqueta}>Saldo pendiente</Text>
           </View>
         </View>
       )}
 
       {cargaInicialCompleta && <Text style={estilos.subtitulo}>Avisos</Text>}
-      {cargaInicialCompleta && avisos.length === 0 && <Text style={base.secundario}>Sin avisos por ahora.</Text>}
-      {cargaInicialCompleta && avisos.slice(0, 5).map((aviso) => (
+      {cargaInicialCompleta && avisos === null && <Text style={base.secundario}>Avisos no disponibles. Intenta actualizar.</Text>}
+      {cargaInicialCompleta && avisos?.length === 0 && <Text style={base.secundario}>Sin avisos por ahora.</Text>}
+      {cargaInicialCompleta && avisos?.slice(0, 5).map((aviso) => (
         <TouchableOpacity
           key={aviso.id}
           onPress={() => leerAviso(aviso)}
           activeOpacity={0.7}
           accessibilityRole="button"
-          accessibilityLabel={`Aviso: ${aviso.titulo}. Marcar como leído`}
+          accessibilityLabel={`Aviso: ${aviso.titulo}. ${aviso.leida ? 'Ya leído' : 'Marcar como leído'}`}
+          accessibilityState={{ disabled: aviso.leida }}
+          disabled={aviso.leida}
         >
           <View style={[estilos.aviso, !aviso.leida && estilos.avisoSinLeer]}>
             <Text style={base.tituloTarjeta}>{aviso.titulo}</Text>
@@ -113,8 +110,9 @@ export default function InicioScreen() {
       ))}
 
       {cargaInicialCompleta && <Text style={estilos.subtitulo}>Próximos eventos</Text>}
-      {cargaInicialCompleta && eventos.length === 0 && <Text style={[base.secundario, { marginBottom: 24 }]}>Sin eventos en los próximos 30 días.</Text>}
-      {cargaInicialCompleta && eventos.slice(0, 5).map((ev) => (
+      {cargaInicialCompleta && eventos === null && <Text style={base.secundario}>Calendario no disponible. Intenta actualizar.</Text>}
+      {cargaInicialCompleta && eventos?.length === 0 && <Text style={[base.secundario, { marginBottom: 24 }]}>Sin eventos en los próximos 30 días.</Text>}
+      {cargaInicialCompleta && eventos?.slice(0, 5).map((ev) => (
         <Tarjeta key={ev.id}>
           <Text style={base.tituloTarjeta}>{ev.titulo}</Text>
           <Text style={base.secundario}>
