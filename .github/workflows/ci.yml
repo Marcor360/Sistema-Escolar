@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: [main, 'feat/**']
 
 jobs:
   backend:
@@ -210,6 +210,9 @@ jobs:
       - run: node ../scripts/ci-install.cjs
         working-directory: web
       - run: npx playwright install --with-deps chromium
+        working-directory: web
+      - name: Navegación, formularios y tablas responsive (API simulada)
+        run: npm run test:responsive
         working-directory: web
       - name: Recorridos web con API y base reales
         run: npm run test:integration

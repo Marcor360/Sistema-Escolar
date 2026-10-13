@@ -12,6 +12,11 @@ for (const area of ['backend', 'web', 'mobile']) {
   exigir(json(`${area}/package.json`).version === version, `${area}: versión divergente`);
   const lock = json(`${area}/package-lock.json`);
   exigir(lock.version === version && lock.packages[''].version === version, `${area}: lockfile divergente`);
+  for (const [nombre, paquete] of Object.entries(lock.packages)) {
+    if (!paquete.resolved?.startsWith('https://registry.npmjs.org/')) continue;
+    const archivoVersion = paquete.resolved.match(/-(\d+\.\d+\.\d+[^/]*)\.tgz$/)?.[1];
+    if (archivoVersion) exigir(paquete.version === archivoVersion, `${area}: ${nombre} declara ${paquete.version} pero descarga ${archivoVersion}`);
+  }
 }
 exigir(json('mobile/app.json').expo.version === version, 'Expo: versión divergente');
 exigir(leer('README.md').includes(`Versión candidata: \`${version}\``), 'README: versión candidata divergente');
