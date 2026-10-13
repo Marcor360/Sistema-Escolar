@@ -931,7 +931,7 @@ body { font-size: var(--tamano-texto); }
 .panel { padding: clamp(16px, 2vw, 30px); }
 .fila { flex-wrap: wrap; max-width: 100%; }
 .fila > .campo { flex: 1 1 200px; min-width: min(100%, 200px); }
-.fila > .campo :is(input, select, textarea) { width: 100%; max-width: 100%; }
+.fila > .campo :is(input:not([type='checkbox'], [type='radio']), select, textarea) { width: 100%; max-width: 100%; }
 .panel :is(input, select, textarea) { max-width: 100%; }
 textarea { min-height: 110px; resize: vertical; }
 .boton, button.boton { min-height: 44px; }
