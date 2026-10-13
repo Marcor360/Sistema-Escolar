@@ -82,6 +82,25 @@ try {
   if ($LASTEXITCODE -ne 0) { throw 'Build web falló.' }
 } finally { Pop-Location }
 
+# Validar la recuperacion antes de detener la API o aplicar migraciones.
+$previous = Join-Path $Root 'previous'
+if (Test-Path -LiteralPath $previous) {
+  $previousEntry = Get-Item -LiteralPath $previous -Force -ErrorAction Stop
+  if ($previousEntry.LinkType -ne 'Junction') { throw 'previous no es una Junction; no se cambiara la release.' }
+}
+$port = if ($env:PORT) { [int]$env:PORT } else { 3000 }
+$localBase = "http://127.0.0.1:$port/api/health"
+$oldEntry = Get-Item -LiteralPath $current -Force -ErrorAction Stop
+if ($oldEntry.LinkType -ne 'Junction') { throw 'current no es una Junction; no se cambiara la release.' }
+$oldTarget = @($oldEntry.Target)[0]
+if (-not (Test-Path -LiteralPath $oldTarget)) { throw 'El destino anterior no existe.' }
+$oldVersion = (Get-Content -LiteralPath (Join-Path $oldTarget 'backend\package.json') -Raw | ConvertFrom-Json).version
+
+if (-not $oldVersion) { throw 'Falta la version de la release anterior.' }
+if ($ApiBaseUrl -notmatch '^https://[^/]+/api$' -or $HealthUrl -ne "$ApiBaseUrl/health/ready") {
+  throw 'HealthUrl debe apuntar a /api/health/ready en ApiBaseUrl HTTPS.'
+}
+
 # Pausa escrituras antes de generar copias consistentes y migrar.
 $service = Get-Service -Name $ServiceName -ErrorAction Stop
 if ($service.Status -eq 'Running') { Stop-Service -Name $ServiceName -Force; $service.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(30)) }
@@ -125,8 +144,6 @@ try {
   throw
 } finally { Pop-Location }
 
-$previous = Join-Path $Root 'previous'
-
 # cmd /c rmdir, sin /s, elimina exclusivamente el enlace de tipo Junction.
 # Nunca eliminar directorios reales ni utilizar Remove-Item -Recurse sobre current.
 function Remove-OnlyJunction([string]$Path) {
@@ -157,14 +174,6 @@ function Wait-ApiHealth([string]$Uri, [string]$ExpectedVersion, [int]$MaxSeconds
   throw "Health sin confirmar tras ${MaxSeconds}s: $Uri. Ultimo estado: $lastDetail"
 }
 
-$port = if ($env:PORT) { [int]$env:PORT } else { 3000 }
-$localBase = "http://127.0.0.1:$port/api/health"
-$oldEntry = Get-Item -LiteralPath $current -Force -ErrorAction Stop
-if ($oldEntry.LinkType -ne 'Junction') { throw 'current no es una Junction; no se cambiara la release.' }
-$oldTarget = @($oldEntry.Target)[0]
-if (-not (Test-Path -LiteralPath $oldTarget)) { throw 'El destino anterior no existe.' }
-$oldVersion = (Get-Content -LiteralPath (Join-Path $oldTarget 'backend\package.json') -Raw | ConvertFrom-Json).version
-
 $switched = $false
 try {
   if (Test-Path -LiteralPath $previous) { Remove-OnlyJunction -Path $previous }
@@ -179,16 +188,17 @@ try {
   Write-Host "Release $Version activa. Health local y publico OK. Respaldos: $timestamp"
 } catch {
   $deployFailure = $_.Exception.Message
-  if ($switched) {
-    Stop-Service -Name $ServiceName -Force -ErrorAction SilentlyContinue
-    $currentEntry = Get-Item -LiteralPath $current -Force -ErrorAction SilentlyContinue
-    if ($currentEntry) { Remove-OnlyJunction -Path $current }
-    if (-not (Test-Path -LiteralPath $previous)) { throw "Rollback incompleto: falta previous. Fallo inicial: $deployFailure" }
-    Move-Item -LiteralPath $previous -Destination $current -ErrorAction Stop
-  }
-  $serviceState = Get-Service -Name $ServiceName -ErrorAction Stop
-  if ($serviceState.Status -ne 'Running') { Start-Service -Name $ServiceName -ErrorAction Stop }
   try {
+    if ($switched) {
+      Stop-Service -Name $ServiceName -Force -ErrorAction Stop
+      (Get-Service -Name $ServiceName -ErrorAction Stop).WaitForStatus('Stopped', [TimeSpan]::FromSeconds(30))
+      $currentEntry = Get-Item -LiteralPath $current -Force -ErrorAction SilentlyContinue
+      if ($currentEntry) { Remove-OnlyJunction -Path $current }
+      if (-not (Test-Path -LiteralPath $previous)) { throw 'Rollback incompleto: falta previous.' }
+      Move-Item -LiteralPath $previous -Destination $current -ErrorAction Stop
+    }
+    $serviceState = Get-Service -Name $ServiceName -ErrorAction Stop
+    if ($serviceState.Status -ne 'Running') { Start-Service -Name $ServiceName -ErrorAction Stop }
     (Get-Service -Name $ServiceName).WaitForStatus('Running', [TimeSpan]::FromSeconds(30))
     Wait-ApiHealth -Uri "$localBase/ready" -ExpectedVersion $oldVersion
     Wait-ApiHealth -Uri $HealthUrl -ExpectedVersion $oldVersion

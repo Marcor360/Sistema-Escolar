@@ -112,3 +112,5 @@ Después del bootstrap y la auditoría del VPS, puede habilitarse el workflow ma
 - En caso de error, restaurar la junction anterior y verificar el rollback.
 - Las migraciones de base de datos no se revierten automaticamente.
 - Conservar las releases fallidas hasta terminar el diagnostico.
+- Validar `current`, `previous`, el puerto, la versión anterior y la URL de readiness antes de detener la API.
+- Durante el rollback, confirmar que el servicio está detenido antes de restaurar la junction; cualquier fallo de recuperación se reporta como crítico.
