@@ -142,12 +142,21 @@ async function esperarServidor() {
     if (width <= 800) {
       await page.getByRole('button', { name: /Abrir menú/ }).click();
       await expect(page.locator('body')).toHaveCSS('overflow', 'hidden');
+      await expect(page.getByRole('button', { name: 'Cerrar menú', exact: true })).toBeFocused();
+      await page.locator('#contenido-principal').evaluate((el) => el.focus());
+      await expect(page.getByRole('button', { name: 'Cerrar menú', exact: true })).toBeFocused();
+      await page.locator('.skip-link').evaluate((el) => el.focus());
+      await expect(page.getByRole('button', { name: 'Cerrar menú', exact: true })).toBeFocused();
+      await expect.poll(async () => {
+        const cajon = await page.locator('.lateral').boundingBox();
+        return !!cajon && Math.abs(cajon.width - width / 2) <= 1 && Math.abs(cajon.x - width / 2) <= 1;
+      }).toBe(true);
       await page.getByRole('link', { name: 'Alumnos', exact: true }).focus();
       await page.keyboard.press('Escape');
       await expect(page.getByRole('button', { name: /Abrir menú/ })).toBeFocused();
       await expect(page.locator('body')).not.toHaveCSS('overflow', 'hidden');
       await page.getByRole('button', { name: /Abrir menú/ }).click();
-      await page.locator('.menu-fondo').click({ position: { x: width - 10, y: 850 } });
+      await page.locator('.menu-fondo').click({ position: { x: 10, y: 850 } });
       await expect(page.getByRole('button', { name: /Abrir menú/ })).toBeFocused();
     }
     console.log('PASS responsive ' + width);
