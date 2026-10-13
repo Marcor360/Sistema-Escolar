@@ -1,6 +1,7 @@
 import { activarPush, desactivarPush } from '../push';
-import { useCallback, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
+import { crearControlLectura } from '../api/lectura-vigente';
+import { useCallback, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 import { Text } from '../components/Texto';
 import { useFocusEffect } from '@react-navigation/native';
 import { api, mensajeDeError } from '../api/client';
@@ -17,11 +18,15 @@ interface Perfil {
 }
 
 export default function PerfilScreen() {
-  const { sesion, cerrar } = useSesion();
+  const { sesion, cerrar, finalizarSesionLocal } = useSesion();
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [actual, setActual] = useState('');
   const [nueva, setNueva] = useState('');
   const [errorPerfil, setErrorPerfil] = useState('');
+  const [cargandoPerfil, setCargandoPerfil] = useState(false);
+  const [cambiandoPassword, setCambiandoPassword] = useState(false);
+  const cambioEnCurso = useRef(false);
+  const lectura = useRef(crearControlLectura());
   const [configurandoPush, setConfigurandoPush] = useState(false);
   const configurarPush = async (activar: boolean) => {
     if (!sesion || configurandoPush) return;
@@ -33,31 +38,40 @@ export default function PerfilScreen() {
 
   const cargarPerfil = useCallback(() => {
     setErrorPerfil('');
-    api.get<Perfil>('/alumnos/me/perfil')
-      .then((r) => setPerfil(r.data))
-      .catch((fallo) => { setPerfil(null); setErrorPerfil(mensajeDeError(fallo)); });
+    setCargandoPerfil(true);
+    void lectura.current.cargar(() => api.get<Perfil>('/alumnos/me/perfil'),
+      (respuesta) => setPerfil(respuesta.data),
+      (fallo) => { setPerfil(null); setErrorPerfil(mensajeDeError(fallo)); },
+      () => setCargandoPerfil(false));
   }, []);
 
   const cambiarPassword = async () => {
+    if (cambioEnCurso.current) return;
     if (nueva.length < 8) { Alert.alert('Revisa la contraseña', 'La nueva contraseña debe tener al menos 8 caracteres.'); return; }
+    cambioEnCurso.current = true;
+    setCambiandoPassword(true);
     try {
       await api.post('/auth/cambiar-password', { actual, nueva });
+      await finalizarSesionLocal();
       setActual(''); setNueva('');
-      Alert.alert('Listo', 'Tu contraseña fue actualizada.');
+      Alert.alert('Contraseña actualizada', 'Por seguridad, vuelve a iniciar sesión con tu nueva contraseña.');
     } catch (err) {
       Alert.alert('No se pudo actualizar', mensajeDeError(err));
+    } finally {
+      cambioEnCurso.current = false;
+      setCambiandoPassword(false);
     }
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      cargarPerfil();
-    }, [cargarPerfil]),
-  );
+  useFocusEffect(useCallback(() => {
+    cargarPerfil();
+    return () => lectura.current.invalidar();
+  }, [cargarPerfil]));
 
   return (
     <ScrollView style={base.pantalla}>
       {errorPerfil !== '' && <ErrorCarga mensaje={errorPerfil} reintentar={cargarPerfil} />}
+      {cargandoPerfil && !perfil && <ActivityIndicator accessibilityLabel="Cargando perfil del alumno" />}
       <Tarjeta>
         <Text style={base.tituloTarjeta}>{sesion?.nombre}</Text>
         <Text style={base.secundario}>{sesion?.email}</Text>
@@ -82,8 +96,8 @@ export default function PerfilScreen() {
           style={estilos.input} secureTextEntry value={nueva} onChangeText={setNueva}
           accessibilityLabel="Nueva contraseña, mínimo 8 caracteres"
         />
-        <TouchableOpacity style={estilos.botonPrimario} onPress={cambiarPassword} accessibilityRole="button">
-          <Text style={estilos.botonPrimarioTexto}>Actualizar contraseña</Text>
+        <TouchableOpacity style={estilos.botonPrimario} disabled={cambiandoPassword} onPress={cambiarPassword} accessibilityRole="button" accessibilityState={{ disabled: cambiandoPassword }}>
+          <Text style={estilos.botonPrimarioTexto}>{cambiandoPassword ? 'Actualizando…' : 'Actualizar contraseña'}</Text>
         </TouchableOpacity>
       </Tarjeta>
 

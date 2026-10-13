@@ -1,6 +1,6 @@
 import { crearControlLectura } from '../api/lectura-vigente';
 import { useCallback, useRef, useState } from 'react';
-import { Alert, Linking, ScrollView, RefreshControl, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, ScrollView, RefreshControl, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Text } from '../components/Texto';
 import { useFocusEffect } from '@react-navigation/native';
 import { api, mensajeDeError } from '../api/client';
@@ -64,6 +64,7 @@ export default function EstadoCuentaScreen() {
       refreshControl={<RefreshControl refreshing={cargando} onRefresh={cargar} />}
     >
       {error !== '' && <ErrorCarga mensaje={error} reintentar={cargar} />}
+      {!estado && cargando && <ActivityIndicator accessibilityLabel="Cargando estado de cuenta" />}
       {ultimaActualizacion && <Text accessibilityRole="text">Última actualización: {ultimaActualizacion}</Text>}
       {estado && (
         <>

@@ -1,5 +1,5 @@
 import { FormEvent, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { api, archivosBase, mensajeDeError } from '../api/client';
 import { useMarca } from '../marca/MarcaContext';
@@ -10,13 +10,17 @@ export default function LoginPage() {
   const { login } = useAuth();
   const { marca } = useMarca();
   const navigate = useNavigate();
+  const location = useLocation();
   const [modo, setModo] = useState<Modo>('entrar');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [token, setToken] = useState('');
   const [nueva, setNueva] = useState('');
   const [error, setError] = useState('');
-  const [aviso, setAviso] = useState('');
+  const [aviso, setAviso] = useState(() => {
+    const mensaje = (location.state as { aviso?: unknown } | null)?.aviso;
+    return typeof mensaje === 'string' ? mensaje : '';
+  });
   const [enviando, setEnviando] = useState(false);
 
   const limpiar = () => { setError(''); setAviso(''); };
