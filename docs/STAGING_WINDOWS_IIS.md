@@ -102,3 +102,13 @@ Después del bootstrap y la auditoría del VPS, puede habilitarse el workflow ma
 - [ ] Carga, descarga firmada y persistencia de archivos probadas.
 - [ ] Despliegue de prueba, health check, rollback de código y restauración de respaldos ensayados.
 - [ ] Producción mantiene base, credenciales, URL, uploads y backups completamente separados.
+
+## Verificacion tras actualizar a 1.23.1
+
+- Compilar backend y web con npm ci --include=dev.
+- Esperar la disponibilidad de NestJS antes de verificar IIS.
+- Comprobar /api/health/live y /api/health/ready.
+- Exigir la version esperada antes de confirmar el despliegue.
+- En caso de error, restaurar la junction anterior y verificar el rollback.
+- Las migraciones de base de datos no se revierten automaticamente.
+- Conservar las releases fallidas hasta terminar el diagnostico.

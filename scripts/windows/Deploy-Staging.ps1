@@ -1,4 +1,4 @@
-param(
+﻿param(
   [Parameter(Mandatory = $true)][string]$Version,
   [Parameter(Mandatory = $true)][string]$Source,
   [string]$Root = 'C:\SistemaEscolar',
@@ -68,14 +68,14 @@ foreach ($name in @('backend', 'web', 'database')) {
 }
 Push-Location (Join-Path $release 'backend')
 try {
-  npm ci
+  npm ci --include=dev
   if ($LASTEXITCODE -ne 0) { throw 'npm ci backend falló.' }
   npm run build
   if ($LASTEXITCODE -ne 0) { throw 'Build del backend falló.' }
 } finally { Pop-Location }
 Push-Location (Join-Path $release 'web')
 try {
-  npm ci
+  npm ci --include=dev
   if ($LASTEXITCODE -ne 0) { throw 'npm ci web falló.' }
   $env:VITE_API_URL = $ApiBaseUrl
   npm run build
@@ -126,19 +126,74 @@ try {
 } finally { Pop-Location }
 
 $previous = Join-Path $Root 'previous'
-if (Test-Path -LiteralPath $previous) { Remove-Item -LiteralPath $previous -Force }
-if (Test-Path -LiteralPath $current) { Move-Item -LiteralPath $current -Destination $previous }
-New-Item -ItemType Junction -Path $current -Target $release | Out-Null
+
+# cmd /c rmdir, sin /s, elimina exclusivamente el enlace de tipo Junction.
+# Nunca eliminar directorios reales ni utilizar Remove-Item -Recurse sobre current.
+function Remove-OnlyJunction([string]$Path) {
+  if ($Path -notin @($current, $previous)) { throw "Ruta de junction no permitida: $Path" }
+  $item = Get-Item -LiteralPath $Path -Force -ErrorAction Stop
+  if ($item.LinkType -ne 'Junction') { throw "Se esperaba una Junction en $Path; no se eliminara ningun directorio." }
+  & cmd.exe /d /c "rmdir `"$Path`""
+  if ($LASTEXITCODE -ne 0 -or (Test-Path -LiteralPath $Path)) { throw "No se pudo retirar la junction $Path." }
+}
+
+# Windows puede indicar Running antes de que Node y NestJS escuchen el puerto.
+function Wait-ApiHealth([string]$Uri, [string]$ExpectedVersion, [int]$MaxSeconds = 150) {
+  $timer = [Diagnostics.Stopwatch]::StartNew()
+  $lastDetail = 'Sin respuesta todavia'
+  while ($timer.Elapsed.TotalSeconds -lt $MaxSeconds) {
+    try {
+      $response = Invoke-RestMethod -Uri $Uri -TimeoutSec 8 -ErrorAction Stop
+      if ($response.status -eq 'ok' -and $response.version -eq $ExpectedVersion) {
+        Write-Host "Health OK ($([int]$timer.Elapsed.TotalSeconds)s): $Uri version=$ExpectedVersion"
+        return
+      }
+      $lastDetail = "Respuesta incompleta o version distinta: $($response.version)"
+    } catch {
+      $lastDetail = $_.Exception.Message
+    }
+    Start-Sleep -Seconds 4
+  }
+  throw "Health sin confirmar tras ${MaxSeconds}s: $Uri. Ultimo estado: $lastDetail"
+}
+
+$port = if ($env:PORT) { [int]$env:PORT } else { 3000 }
+$localBase = "http://127.0.0.1:$port/api/health"
+$oldEntry = Get-Item -LiteralPath $current -Force -ErrorAction Stop
+if ($oldEntry.LinkType -ne 'Junction') { throw 'current no es una Junction; no se cambiara la release.' }
+$oldTarget = @($oldEntry.Target)[0]
+if (-not (Test-Path -LiteralPath $oldTarget)) { throw 'El destino anterior no existe.' }
+$oldVersion = (Get-Content -LiteralPath (Join-Path $oldTarget 'backend\package.json') -Raw | ConvertFrom-Json).version
+
+$switched = $false
 try {
-  Start-Service -Name $ServiceName
+  if (Test-Path -LiteralPath $previous) { Remove-OnlyJunction -Path $previous }
+  Move-Item -LiteralPath $current -Destination $previous -ErrorAction Stop
+  $switched = $true
+  New-Item -ItemType Junction -Path $current -Target $release -ErrorAction Stop | Out-Null
+  Start-Service -Name $ServiceName -ErrorAction Stop
   (Get-Service -Name $ServiceName).WaitForStatus('Running', [TimeSpan]::FromSeconds(30))
-  $health = Invoke-WebRequest -Uri $HealthUrl -TimeoutSec 20 -UseBasicParsing
-  if ($health.StatusCode -ne 200) { throw "Health check devolvió HTTP $($health.StatusCode)." }
-  Write-Host "Release $Version activa. Health: HTTP $($health.StatusCode). Respaldos: $timestamp"
+  Wait-ApiHealth -Uri "$localBase/live" -ExpectedVersion $Version
+  Wait-ApiHealth -Uri "$localBase/ready" -ExpectedVersion $Version
+  Wait-ApiHealth -Uri $HealthUrl -ExpectedVersion $Version
+  Write-Host "Release $Version activa. Health local y publico OK. Respaldos: $timestamp"
 } catch {
-  Stop-Service -Name $ServiceName -Force -ErrorAction SilentlyContinue
-  Remove-Item -LiteralPath $current -Force -ErrorAction SilentlyContinue
-  if (Test-Path -LiteralPath $previous) { Move-Item -LiteralPath $previous -Destination $current }
-  Start-Service -Name $ServiceName -ErrorAction SilentlyContinue
-  throw "Despliegue revertido a la release anterior. La base conserva las migraciones aplicadas; revisa compatibilidad/restauración manual. Error: $_"
+  $deployFailure = $_.Exception.Message
+  if ($switched) {
+    Stop-Service -Name $ServiceName -Force -ErrorAction SilentlyContinue
+    $currentEntry = Get-Item -LiteralPath $current -Force -ErrorAction SilentlyContinue
+    if ($currentEntry) { Remove-OnlyJunction -Path $current }
+    if (-not (Test-Path -LiteralPath $previous)) { throw "Rollback incompleto: falta previous. Fallo inicial: $deployFailure" }
+    Move-Item -LiteralPath $previous -Destination $current -ErrorAction Stop
+  }
+  $serviceState = Get-Service -Name $ServiceName -ErrorAction Stop
+  if ($serviceState.Status -ne 'Running') { Start-Service -Name $ServiceName -ErrorAction Stop }
+  try {
+    (Get-Service -Name $ServiceName).WaitForStatus('Running', [TimeSpan]::FromSeconds(30))
+    Wait-ApiHealth -Uri "$localBase/ready" -ExpectedVersion $oldVersion
+    Wait-ApiHealth -Uri $HealthUrl -ExpectedVersion $oldVersion
+  } catch {
+    throw "CRITICO: rollback de $Version no verificado. Fallo inicial: $deployFailure. Fallo de recuperacion: $($_.Exception.Message)"
+  }
+  throw "Deploy $Version fallo; rollback a $oldVersion verificado (BD no revertida). Motivo: $deployFailure"
 }

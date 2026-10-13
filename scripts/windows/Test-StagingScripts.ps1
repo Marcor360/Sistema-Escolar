@@ -15,6 +15,16 @@ foreach ($assertion in @(
 )) {
   if (-not $assertion[0].Contains($assertion[1])) { throw "Falta marcador de estructura: $($assertion[1])" }
 }
+foreach ($marker in @(
+  'npm ci --include=dev',
+  'Wait-ApiHealth',
+  'Remove-OnlyJunction',
+  'rollback a'
+)) {
+  if (-not $deploy.Contains($marker)) {
+    throw "Falta proteccion de deploy: $marker"
+  }
+}
 if ($deploy -match '\$env:MYSQL_PWD\s*=\s*\$env:DB_PASS') { throw 'El respaldo no debe usar la contraseña de la aplicación.' }
 if ($restore -match '\$env:MYSQL_PWD\s*=\s*\$settings.BACKUP_DB_PASS') { throw 'La restauración no debe usar la contraseña de respaldo.' }
 if ($service -match 'ObjectName\s+LocalSystem') { throw 'El servicio no debe correr como LocalSystem.' }

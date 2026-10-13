@@ -44,7 +44,7 @@ jobs:
           if ($env:DEPLOY_ENABLED -ne 'true') { throw 'STAGING_DEPLOY_ENABLED debe ser true en el entorno staging.' }
           if ($env:VERSION -notmatch '^\d+\.\d+\.\d+([-.][A-Za-z0-9.-]+)?$') { throw 'Versión inválida.' }
           if ($env:COMMIT_SHA -notmatch '^[a-fA-F0-9]{40}$') { throw 'Usa el SHA completo del commit.' }
-          if ($env:API_BASE_URL -notmatch '^https://[^/]+/api$' -or $env:HEALTH_URL -ne "$($env:API_BASE_URL)/health") { throw 'Configura STAGING_API_BASE_URL y STAGING_HEALTH_URL HTTPS.' }
+          if ($env:API_BASE_URL -notmatch '^https://[^/]+/api$' -or $env:HEALTH_URL -ne "$($env:API_BASE_URL)/health/ready") { throw 'Configura STAGING_API_BASE_URL y STAGING_HEALTH_URL HTTPS.' }
           git fetch origin main
           git merge-base --is-ancestor $env:COMMIT_SHA origin/main
           if ($LASTEXITCODE -ne 0) { throw 'El commit no pertenece a main.' }
