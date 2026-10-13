@@ -12,6 +12,7 @@ export interface SesionContexto {
   sesion: Sesion | null;
   iniciar: (email: string, password: string) => Promise<void>;
   cerrar: () => Promise<void>;
+  finalizarSesionLocal: () => Promise<void>;
 }
 
 export const SesionContext = createContext<SesionContexto>(null as unknown as SesionContexto);
