@@ -1,796 +1,123 @@
-# Sistema Escolar Multiplataforma (MVP)
+# Sistema Escolar Multiplataforma
 
-> Portal web administrativo/docente, app móvil del alumno y API para gestión académica y financiera. El código cubre los flujos principales del MVP; todavía no hay certificación de piloto institucional ni despliegue productivo.
+**Versión candidata: `1.23.5`** · Estado revisado el 13 de octubre de 2026.
 
-**Versión candidata: `1.23.5` · Estabilidad de filtros de alumnos · 13 de octubre de 2026.** Backend, web, móvil y Expo declaran la misma versión. La CI del SHA publicado debe comprobarse en [GitHub Actions](https://github.com/Marcor360/Sistema-Escolar/actions/workflows/ci.yml). El piloto requiere todavía certificación sobre el servidor y dispositivos reales.
+API, portal administrativo/docente y app del alumno para gestión académica y financiera con alcance por plantel. Las versiones de backend, web, móvil, lockfiles y Expo están alineadas. Este README describe una única versión actual; los informes históricos permanecen en `docs/`.
 
-## Correcciones 1.23.5 — listado de alumnos
+| Componente | Estado actual |
+|---|---|
+| API y web | MVP funcional, alpha avanzada en estabilización antes del piloto |
+| App del alumno | MVP en alpha; requiere corregir un bloqueo de arranque y completar pruebas físicas |
+| Base de datos | Baseline v1 y siete migraciones incrementales espejo; MySQL 8.4 / SQL Server 2022 probados en CI |
+| ETL de legado | Prototipo parcial; no listo para migración institucional general |
 
-- La paginación mantiene filtros confirmados, sin aplicar borradores por accidente.
-- Filtro por plantel y matrícula coherente entre navegación, acciones y resultados vacíos.
-- Prueba de regresión de paginación; validación de pantalla con usuarios reales pendiente.
+Todavía no se declara beta ni primera versión estable de producción. La versión numérica no certifica despliegue, aceptación institucional ni publicación de la app. Consulte la [auditoría actual](docs/AUDITORIA_ESTADO_1.23.5_2026-10-13.md) y su [inventario de 495 archivos](docs/auditoria/INVENTARIO_1.23.5_2026-10-13.csv).
 
-## Correcciones 1.23.4 — directorio de docentes
+## Funcionalidad actual
 
-- Se ignoran respuestas tardías al consultar diferentes fichas docentes.
-- El detalle muestra estado de carga y no conserva fichas al cambiar de docente o salir.
-- Añadidas pruebas de concurrencia; validación visual en el entorno institucional pendiente.
+- Identidad, recuperación y cambio de contraseña, sesiones rotativas, roles y acceso limitado por plantel y expediente vigente.
+- Planteles, alumnos, docentes, ciclos, grupos, inscripciones, traslados y promoción; importaciones con preview cifrado y confirmación transaccional.
+- Materias, actividades, entregas, calificaciones P1–P3 y Final separado, cierre e historial de correcciones; reportes PDF/Excel y analítica con alcance autorizado.
+- Calendario, avisos y conducta interna; notificaciones push con cola persistente y contenido genérico.
+- Cargos, pagos manuales idempotentes, integración Openpay y correo de cobranza con seguimiento de resultados inciertos.
+- Archivos con descargas firmadas y validación de alcance; marca institucional mediante `/api/configuracion/marca`.
+- App del alumno para inicio, materias, tareas, calificaciones, perfil y estado de cuenta.
 
-## Correcciones 1.23.3 — autenticación web
+La interfaz incorpora modales con gestión de foco, navegación con iconos, listados adaptables y protección contra respuestas tardías. El inicio móvil conserva información cuando falla parcialmente un servicio; cambiar contraseña exige reautenticación. Materias y tareas se actualizan al cambiar usuario o recuperar foco. Grupos y docentes no conservan detalles obsoletos. Alumnos mantiene los filtros confirmados al paginar y finalizar mutaciones, incluso si cambió la consulta durante la operación. Calendario muestra la baja según creador, plantel y roles combinados, incluyendo la excepción de SUPERADMIN. Estas correcciones están integradas; la aceptación con usuarios sigue pendiente.
 
-- Cambio de contraseña con cierre local y reautenticación obligatoria.
-- Formulario de Mi cuenta accesible con bloqueo de doble envío y mensajes claros de error.
-- Pruebas de regresión de sesión y formularios; validación física institucional pendiente.
+## Arquitectura y versiones
 
-## Correcciones 1.23.2 — app móvil de alumno
+| Directorio | Responsabilidad / tecnología resuelta |
+|---|---|
+| `backend/` | NestJS 11.2.7, TypeORM 0.3.31, TypeScript 5.9.3; API y reglas de negocio |
+| `web/` | React 18.3.1, Vite 6.4.3, TypeScript 5.9.3; portal administrativo/docente |
+| `mobile/` | Expo 57.0.27, React Native 0.86.3, React 19.2.3, TypeScript 6.0.3; app del alumno |
+| `database/` | Baseline, esquema documental y migraciones MySQL / SQL Server |
+| `etl/` | Python 3.11; extracción y carga parcial del legado |
+| `scripts/` | Consistencia, parches, staging, respaldo y restauración |
+| `.github/` | CI y despliegue manual controlado |
+| `docs/` | Arquitectura, contratos, operación e informes |
 
-- El inicio conserva tareas, avisos y calendario aunque otro servicio temporalmente no responda.
-- El cambio de contraseña revoca sesión local y exige un nuevo inicio de sesión.
-- Perfil y estado de cuenta mejoran carga, accesibilidad y consistencia de las respuestas.
-- Incluye pruebas unitarias y verificaciones de CI; la validación física y el despliegue continúan pendientes.
+Node 24 es la referencia de CI. Los lockfiles fijan las dependencias JavaScript; el ETL mantiene rangos Python y necesita un lock antes de uso institucional. [Arquitectura](docs/ARQUITECTURA.md) · [API](docs/API.md) · [Matriz de acceso](docs/MATRIZ_ACCESO.md).
 
-## Mantenimiento de staging 1.23.1
+## Desarrollo y configuración
 
-- Instalacion explicita de dependencias de desarrollo para compilar NestJS y Vite.
-- Verificacion de disponibilidad y version de la API mediante reintentos.
-- Recuperacion de junctions de Windows y comprobacion posterior del rollback.
-- Sin modificaciones de reglas de negocio, entidades ni migraciones.
-- Pendiente validar el despliegue en Windows Server antes de su promocion.
-## Modernización UX/UI 1.23.0 (PR 5 de 5)
+Instalar dependencias en cada componente con `npm ci`. Crear configuración local a partir de los ejemplos versionados del componente, completar valores propios y no publicar secretos. No reutilizar credenciales de producción para pruebas. Mantener `DB_SYNC=false`.
 
-- La navegación web muestra iconografía SVG procedente de Tabler Icons (MIT), sin nuevas dependencias de runtime y conservando etiquetas textuales accesibles.
-- Estilos de espaciado y tamaño de iconos consistentes en escritorio y móvil.
-- Pendiente ejecutar revisión integral de accesibilidad y pruebas visuales en dispositivos reales; no se declara certificada.
-
-## Modernización UX/UI 1.22.0 (PR 4 de 5)
-
-- El fallback de rutas con carga diferida representa la estructura con skeletons accesibles y respeta la preferencia de movimiento reducido.
-- Esta fase no implementa caché global de datos; queda pendiente hasta certificar aislamiento por identidad, rol, plantel y ciclo.
-- Sin cambios de lógica de negocio o migraciones. Validación CI y visual pendiente.
-
-## Modernización UX/UI 1.21.0 (PR 3 de 5)
-
-- Analítica con filtros agrupados, instrucciones iniciales y mejor presentación responsive de métricas financieras y tablas académicas.
-- Conserva segregación de indicadores según roles y alcance definidos por la API.
-- Sin cambios de contratos ni cálculos de indicadores. La revisión de los demás paneles por rol sigue pendiente.
-
-## Modernización UX/UI 1.20.0 (PR 2 de 5)
-
-- Tipografía de interfaz fluida, espaciados estandarizados y controles con tamaños táctiles de 44 px.
-- Formularios flexibles por ancho, tarjetas adaptables y contenedores de tablas con desplazamiento horizontal explícito.
-- Sin cambios de lógica de negocio, permisos ni migraciones. Validación local de web y smoke responsive completada; la CI del SHA publicado y la revisión integral de accesibilidad/dispositivos siguen siendo necesarias.
-
-## Modernización UX/UI 1.19.0 (PR 1 de 5)
-
-- El portal web adapta el ancho del contenido en escritorios de alta resolución y mejora el comportamiento del menú móvil, con fondo para cerrarlo y bloqueo temporal del desplazamiento durante su apertura.
-- Los nombres institucionales extensos admiten saltos de línea en el encabezado lateral.
-- No se modifican entidades, permisos, endpoints ni reglas de negocio. La rama requiere validación de CI y comprobación visual en dispositivos antes de integrar.
-- El plan de cinco PR y los criterios están en [MODERNIZACION_UX_1.19.0.md](docs/MODERNIZACION_UX_1.19.0.md).
-
-## Segunda revisión y regresiones 1.18.4
-
-- Contraseñas nuevas limitadas a 72 bytes UTF-8 para evitar truncamiento de bcrypt, con compatibilidad de login existente.
-- Enlaces firmados ligados a sesión y versión, revocados al cerrar sesión o cambiar credenciales; materiales operativos limitados al ciclo vigente.
-- Campos opcionales se pueden limpiar con null; las ediciones de expedientes devuelven los nombres recién guardados. Corregir observaciones oficiales exige motivo e historial.
-- Edición de actividades protegida frente a baja concurrente; notas de entregas y ponderaciones rechazan precisión excesiva.
-- Recuperación de órdenes ya cobradas con aplicación idempotente; respuestas tardías no sobrescriben una confirmación de webhook.
-- Lecturas móviles protegidas frente a respuestas antiguas y salida de pantalla; bloqueo inmediato de doble toque en pagos/entregas.
-- Configuración institucional con validación de nombres, protección de doble envío, errores accesibles y datos conservados al fallar.
-
-Regresiones, verificaciones, inventario y límites: [REBARRIDO_1.18.4.md](docs/REBARRIDO_1.18.4.md). Sin cambios físicos de esquema ni migraciones nuevas.
-
-## Barrido general y conexiones 1.18.3
-
-- Validación de nulos, fechas civiles, precisión monetaria y mensajes; errores de dominio para cambios vacíos y duplicados.
-- Sesión móvil conservada ante fallos transitorios; descargas firmadas abiertas desde la acción del usuario.
-- Calendario con filtros persistentes, protección de doble envío y fechas locales; cierre de ciclos con confirmación accesible y recuperable.
-- Identidad institucional compartida con la boleta; cambios de marca serializados y limpieza persistente de logos sustituidos.
-- ETL con rol ALUMNO transaccional y rollback; metadata contrastada con los tipos físicos de ambos motores.
-- Verificación automática de versiones, baseline, migraciones espejo, enlaces y rutas de cliente incorporada a CI.
-
-Evidencia, archivos y límites: [BARRIDO_GENERAL_1.18.3.md](docs/BARRIDO_GENERAL_1.18.3.md). No cambia el DDL ni crea migraciones.
-
-## Barrido y correcciones 1.18.2
-
-- Paginación de adeudos y órdenes compatible con metadata TypeORM en ambos motores.
-- Descargas con nombres Unicode seguros y límite de subida leído después de cargar el entorno.
-- Revocación de sesiones con incremento atómico; edición de usuarios protegida frente a escrituras concurrentes.
-- Incidencias filtradas por plantel también para docentes con varias sedes; eventos de grupos rechazados en ciclos cerrados.
-- Nuevas regresiones unitarias y de integración, sin cambios de esquema ni migraciones nuevas.
-
-Evidencia, inventario y límites: [BARRIDO_1.18.2.md](docs/BARRIDO_1.18.2.md).
-
-## Estabilización operativa 1.18.1
-
-- Las capturas idénticas no modifican notas ni generan historial; las correcciones reales requieren motivo y se procesan por lote.
-- Selección de clases paginada con plantel/ciclo, validación accesible, carga visible y conservación de nota/motivo ante fallos.
-- Campos institucionales completos en altas y edición de alumnos, docentes y personal; permite limpiar datos opcionales y exige cambio de contraseña temporal.
-- Recorridos operativos de inscripción, transferencia, evaluación, cierre y promoción con histórico; cargos, pagos parciales, anulación, cancelación y conciliación con reportes coherentes.
-- Corrección del listado paginado de conciliación. No requiere cambios físicos de esquema ni migraciones nuevas.
-
-Detalle, resultados, inventario y límites: [ESTABILIZACION_1.18.1.md](docs/ESTABILIZACION_1.18.1.md).
-
-## Estabilización 1.18.0
-
-- Importaciones de hasta 500 filas con previews persistentes cifrados, expiración, consumo único y confirmación atómica; catálogos por lote y bcrypt fuera de la transacción.
-- Resumen de cierre con columnas mínimas, mapas y conjuntos; pruebas de carga y carreras de promoción, inscripción, identidad y captura/cierre.
-- Contratos Swagger de importación, promoción, conducta y analítica; inicialización estricta de propiedades habilitada.
-- Confirmaciones accesibles en toda la web, carga visible al restaurar sesión y paneles separados de Alumnos, Grupos y Maestro.
-- Migración incremental espejo `migracion_previews_importacion.sql`; baseline conservado y DB_SYNC=false.
-
-Detalle, resultados, inventario y límites: [ESTABILIZACION_1.18.0.md](docs/ESTABILIZACION_1.18.0.md).
-
-## Refactor y configuración 1.17.0
-
-- Fachada académica con servicios de ciclos, materias, grupos e inscripciones; endpoints y DTO públicos conservados.
-- Suite HTTP separada en once dominios con bootstrap común y el orden de regresiones conservado.
-- Paneles de cargos, pagos y adeudos extraídos de la página de Finanzas; idempotencia y coordinación permanecen en la página.
-- Validación central de entorno antes de construir providers, sin defaults implícitos de credenciales/base de datos.
-
-Detalle: [REFACTOR_1.17.0.md](docs/REFACTOR_1.17.0.md).
-
-## Correcciones de seguridad 1.16.1
-
-- Política central por operación: Finanzas no amplía acceso académico de maestros; la analítica entrega capacidades académicas y financieras por separado.
-- Calendario exclusivo de alumno, maestro, administrativo y superadmin; Finanzas solo no tiene acceso.
-- Promoción bloquea ciclos, plantel y grupos en orden determinista y revalida contexto antes de inscribir.
-- Pruebas de seis combinaciones de roles y promoción frente a desactivación concurrente en MySQL/SQL Server.
-
-Detalle: [CORRECCIONES_1.16.1.md](docs/CORRECCIONES_1.16.1.md).
-
-## Cambios incluidos en la versión 1.16.0
-
-- **Origen financiero:** cargos, pagos y órdenes conservan el plantel de origen después de transferir al alumno. Consultas, permisos, reportes, conciliación y selectores financieros usan ese origen.
-- **Histórico académico:** analítica de ciclos cerrados conserva materias/grupos retirados y participantes de baja; distingue participación histórica de inscripción vigente. Agregados en SQL con la regla oficial P1-P3 centralizada.
-- **Push durable:** la notificación conserva un marcador de cola pendiente; se recupera tras fallos sin duplicar envíos por dispositivo.
-- **Cobranza:** seguimiento por destinatario, deduplicación diaria del mismo saldo, reintentos limitados ante rechazo temporal, estado INCIERTO ante timeout y reintento manual con motivo/confirmación.
-- **Formularios:** motivos y títulos editables conservan datos tras errores; diálogos accesibles con foco y controles asociados a labels.
-- **Verificación ampliada:** recorridos académicos/financieros en Chromium con API/DB reales y carga controlada de 100 alumnos, 900 notas y capturas simultáneas. Nuevo job obligatorio `web-e2e`.
-- **Migración:** `migracion_integridad_operativa.sql` incremental espejo en MySQL/SQL Server. Baseline intacto y `DB_SYNC=false`.
-
-Detalle, inventario y límites: [CORRECCIONES_1.16.0.md](docs/CORRECCIONES_1.16.0.md). El ETL certweb completo requiere el esquema real sanitizado; no se inventan mapeos ni se declara el piloto listo.
-
-## Base funcional incluida desde 1.15.0
-
-- **Ampliación operativa:** ciclos en preparación con activación/cierre explícitos, promoción seleccionada, importación CSV/XLSX con validación por fila y confirmación atómica, reactivación controlada y gestión de cuentas de personal.
-- **Push móvil:** registro por dispositivo y sesión, permisos voluntarios, reintentos, recibos y aviso genérico sin datos académicos en pantalla bloqueada. Requiere configuración EAS/FCM/APNs y prueba física; queda deshabilitado por defecto en backend.
-- **Conducta e incidencias:** registro, seguimiento, cierre/anulación y bitácora exclusivamente internos; control escolar por plantel y docentes por sus grupos. No se publica al alumno ni se envía por push.
-- **Analítica:** captura y faltantes P1-P3, promedio oficial, aprobación orientativa y entregas vencidas por clase/ciclo/plantel; facturación, pagos aplicados y saldo solo para roles autorizados.
-- **Política financiera:** conceptos editables, recargos desactivados por defecto hasta configuración explícita y beca/descuento como reducción del cargo.
-- **Audit móvil:** cero vulnerabilidades y sin excepciones mediante parches locales revisables de herramientas Expo/Metro, con pruebas de regresión y política de actualización a correcciones oficiales.
-- **Baseline técnico:** metadata TypeORM compatible con MySQL/SQL Server, TypeScript estricto, `DB_SYNC=false`, paridad física y eliminación de `.pyc` trackeados.
-- **Identidad y permisos:** altas por expediente, personal con plantel, cambio inicial obligatorio, baja/egreso/transferencia explícitos y coherentes; baja docente con clases pendientes de reasignación.
-- **Sesiones:** acceso de 15 minutos y refresh rotativo por dispositivo, revocación inmediata, cookie HttpOnly en web y SecureStore en móvil. El bearer web permanece en memoria.
-- **Academia y calendario:** contexto vigente, inscripción única por ciclo bajo transacción, ciclo de grupo inmutable, validación de entidades activas y eventos aislados por grupo con intervalos de consulta.
-- **Evaluación y reportes:** actividades separadas de evaluación oficial; motivo al corregir, cierre sin faltantes, promedio backend P1-P3; boleta por ciclo/inscripción restringida a alumno/control escolar; Excel incluye inscritos sin nota.
-- **Operación web:** edición de alumnos/docentes, transferencia, egreso, historial, boleta, planteles docentes y corrección de grupos, materias e inscripciones. Selectores con búsqueda API paginada.
-- **Finanzas:** cancelación de cargo y anulación de pago manual auditables, conciliación, previews por plantel y confirmación de operaciones masivas, adeudos paginados y pagos con cargo obligatorio.
-- **Móvil y archivos:** sesión renovable, fechas de última actualización en consultas, estado real de pagos, prohibición de reentrega calificada y eliminación del archivo sustituido tras commit; validación de firmas de archivos.
-- **Operación:** proxy local confiable para IIS, request ID sin datos personales en logs, liveness/readiness con verificación de migraciones, APK interno EAS preview y herramienta de carga para consultas.
-- **Migraciones reales:** `migracion_operacion_ampliada.sql` espejo añade estados de ciclo, política de recargos, incidencias/seguimientos, bitácora académica, dispositivos/envíos push y cola de limpieza de archivos. `migracion_sesiones_rotativas.sql` espejo MySQL/SQL Server añade sesiones y cambio inicial de contraseña. El baseline v1 permanece intacto.
-
-Consulta [ampliación y verificaciones](docs/AMPLIACION_1.15.0.md), [correcciones anteriores](docs/CORRECCIONES_1.15.0.md) y [reglas del piloto](docs/REGLAS_PILOTO.md).
-
-Consulta también el [estado de implementación](docs/ESTADO_IMPLEMENTACION.md). Ya existe un servidor; la [guía de publicación](docs/PUBLICAR_SERVIDOR_EXISTENTE.md) explica los datos y pasos necesarios para configurarlo y certificarlo. Esta versión no declara el piloto listo.
-
----
-
-## 📖 ¿Qué es este proyecto?
-
-Es un **Sistema de Gestión Escolar (ERP educativo)** diseñado para manejar las operaciones diarias completas de una institución educativa. Permite gestionar desde la admisión de alumnos, gestión académica (grupos, materias, calificaciones), hasta finanzas (cobranza, pagos, adeudos) en una sola plataforma multiplataforma.
-
-### 🎯 Propósito Principal
-
-Digitalizar y automatizar los procesos educativos con:
-- **Gestión académica**: grupos, materias, docentes, alumnos, actividades, entregas, calificaciones
-- **Gestión administrativa**: planteles, usuarios, roles, personal
-- **Gestión financiera**: cargos, pagos, adeudos, cobranza, becas, descuentos
-- **Herramientas pedagógicas**: actividades, materiales didácticos, tareas con entrega de archivos
-
----
-
-## 🛠️ Tecnologías Utilizadas
-
-### Backend (API RESTful)
-| Tecnología | Versión | Función |
-|------------|---------|---------|
-| **Node.js** | 24 LTS | Runtime JavaScript |
-| **NestJS** | 11 | Framework API con arquitectura modular y dependencias inyectadas |
-| **TypeORM** | - | ORM para gestión de base de datos con soporte MySQL/SQL Server |
-| **JWT** | passport-jwt | Autenticación con tokens firmados y expiración diferenciada por portal |
-| **Multer** | - | Manejo de archivos (materiales, entregas) con validación |
-| **Helmet** | - | Seguridad en encabezados HTTP |
-| **Throttler** | @nestjs/throttler | Rate limiting (120 req/min global, 5/min en login) |
-| **Swagger** | @nestjs/swagger | Documentación API interactiva |
-
-### Frontend Web
-| Tecnología | Versión | Función |
-|------------|---------|---------|
-| **React** | 18 | Framework UI con hooks modernos |
-| **Vite** | - | Build tool optimizado para desarrollo rápido |
-| **React Router** | - | Navegación SPA con code splitting |
-| **TypeScript** | - | Tipado estático y seguridad de código |
-
-### Frontend Móvil
-| Tecnología | Versión | Función |
-|------------|---------|---------|
-| **React Native** | 0.86.3 | App móvil para alumnos |
-| **Expo** | SDK 57 | Desarrollo y exportación de bundles Android/iOS; build firmado pendiente |
-
-### Base de Datos
-| Motor | Características |
-|-------|-----------------|
-| **MySQL 8** | Motor predeterminado; integración HTTP validada en CI con MySQL 8.4 y `DB_SYNC=false` |
-| **SQL Server 2019+** | Esquema espejo; integración HTTP validada en CI con SQL Server 2022 y `DB_SYNC=false` |
-
-### ETL (Migración)
-| Tecnología | Función |
-|------------|---------|
-| **Python 3.11+** | Pipeline parcial de migración desde certweb (*strangler fig*) |
-| **pymssql / mysql-connector / pyodbc** | Lectura de certweb y carga al destino MySQL o SQL Server |
-
----
-
-## 🏗️ Visualización de la Arquitectura
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    CLIENTES (Frontend)                          │
-│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────┐    │
-│  │   Portal WEB  │  │   App MÓVIL  │  │   Openpay (Webhook)│   │
-│  │  React/Vite   │  │ React Native │  │      Openpay       │   │
-│  └──────────────┘  └──────────────┘  └────────────────────┘    │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓ HTTPS/JSON
-┌─────────────────────────────────────────────────────────────────┐
-│                    API BACKEND (NestJS)                         │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │  • Autenticación JWT (passport-jwt)                      │   │
-│  │  • Guard de roles (@Roles('FINANZAS'), etc.)             │   │
-│  │  • Rate limiting global y por endpoint                   │   │
-│  │  • Validación con class-validator                        │   │
-│  │  • Interceptor BitacoraActividad                         │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│                              ↓ TypeORM                          │
-┌─────────────────────────────────────────────────────────────────┐
-│              BASE DE DATOS (MySQL / SQL Server)                  │
-│  • Entidades TypeORM con nombres snake_case                     │
-│  • Esquema espejo MySQL ↔ SQL Server                           │
-│  • Migraciones incrementales MySQL y SQL Server                 │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                    SERVICIOS EXTERNOS                           │
-│  • Openpay (BBVA) — Pasarela de pagos                          │
-│  • SMTP — Correos (cobranza, recuperación contraseña)          │
-│  • certweb — Base legacy para migración ETL                     │
-└─────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## ⏱️ Tiempo de Desarrollo Estimado
-
-Las duraciones siguientes son la estimación original del alcance contractual; no
-representan el progreso ni el esfuerzo pendiente actual. Consulta [Estado de implementación](docs/ESTADO_IMPLEMENTACION.md).
-
-| Fase | Duración | Descripción |
-|------|----------|-------------|
-| **Fase 1: Autenticación y Roles** | 2-3 días | JWT, guard de roles, portal diferenciado WEB/MÓVIL |
-| **Fase 2: Gestión de Planteles** | 2-3 días | CRUD planteles, alcance por usuario, director |
-| **Fase 3: Gestión Académica** | 5-7 días | Ciclos, materias, grupos, inscripciones, grupo-materias |
-| **Fase 4: Docentes y Alumnos** | 3-4 días | CRUD docentes, creación alumnos con usuario asociado |
-| **Fase 5: Actividades y Entregas** | 4-5 días | Creación actividades, subida materiales, entregas archivos |
-| **Fase 6: Calificaciones** | 2-3 días | Captura masiva, promedios, reportes PDF/Excel |
-| **Fase 7: Finanzas** | 7-10 días | Conceptos, cargos, pagos, Openpay, adeudos, cobranza |
-| **Fase 8: Calendario y Notificaciones** | 2-3 días | Eventos, difusión por rol, correos |
-| **Fase 9: Archivos y Descargas** | 1-2 días | Enlaces firmados de 5 min, streaming seguro |
-| **Fase 10: Reportes** | 2-3 días | KPIs, boletas PDF, Excel calificaciones/adeudos |
-| **Fase 11: Configuración de Marca** | 1 día | Logo, colores institucionales dinámicos |
-| **Fase 12: ETL y Migración** | 5-7 días | Pipeline Python certweb → Sistema Escolar |
-| **Estimación original** | **~40-50 días** | **~8-10 semanas para el alcance inicial** |
-
----
-
-## 🔗 Integraciones Externas
-
-### 1. **Openpay**
-```typescript
-// backend/src/finanzas/openpay.service.ts
-- Crea cargos con redirección a pasarela segura
-- Webhook confirma pagos: charge.succeeded/failed/cancelled
-- Transaction.expired para pagos caducados
-- Basic Auth exigida para el webhook en producción (OPENPAY_WEBHOOK_USER/PASS)
-```
-
-### 2. **SMTP (Correos)**
-```typescript
-// backend/src/notificaciones/notificaciones.service.ts
-- Envío de correos de cobranza (plantilla configurable)
-- Recuperación de contraseña con token por email
-- Avisos de pago completado
-```
-
-### 3. **certweb (Base Legacy)**
-```python
-# etl/etl/run.py
-- Migración inicial desde sistema certweb anterior
-- Estrategia *strangler fig* (Mes 6 del contrato)
-- Upserts parciales por legacy_id de planteles y alumnos; faltan otras entidades
-- Modo --dry-run para pruebas sin escribir datos
-```
-
-### 4. **Pasarela de Pagos**
-| Proveedor | Estado | Uso |
-|-----------|--------|-----|
-| Openpay | Código integrado; sandbox pendiente de certificar | Cobranza online con redirección |
-| Stripe | ❌ No incluido | - |
-| MercadoPago | ❌ No incluido | - |
-
----
-
-## 📂 Estructura del Código
-
-### Backend (NestJS)
-
-```
-backend/
-├── src/
-│   ├── app.module.ts              # Módulo principal con imports de todos los módulos
-│   ├── main.ts                    # Punto de entrada, configuración global
-│   │
-│   ├── auth/                      # Autenticación y autorización
-│   │   ├── auth.controller.ts     # Login, forgot-password, reset, cambiar-password
-│   │   ├── auth.service.ts        # Lógica JWT, hash tokens, validación
-│   │   ├── jwt.strategy.ts        # Passport JWT strategy
-│   │   └── dto/auth.dto.ts        # DTOs de autenticación
-│   │
-│   ├── usuarios/                  # Gestión de usuarios y roles
-│   │   ├── usuarios.controller.ts # CRUD usuarios, listado paginado
-│   │   ├── usuarios.service.ts    # Lógica con ScopeService para alcance
-│   │   └── usuarios.module.ts     # Módulo con TypeORM entities
-│   │
-│   ├── planteles/                 # Gestión de planteles
-│   │   ├── planteles.controller.ts
-│   │   ├── planteles.service.ts   # CRUD + asignación personal/director
-│   │   ├── scope.service.ts       # Validación de alcance por usuario
-│   │   └── planteles.module.ts
-│   │
-│   ├── academico/                 # Gestión académica (ciclos, materias, grupos)
-│   │   ├── academico.controller.ts
-│   │   ├── academico.service.ts   # CRUD + asignación docente/materia
-│   │   └── academico.module.ts
-│   │
-│   ├── alumnos/                   # Gestión de alumnos
-│   │   ├── alumnos.controller.ts  # CRUD + perfil propio (ALUMNO)
-│   │   ├── alumnos.service.ts    # Lógica con ScopeService
-│   │   └── alumnos.module.ts
-│   │
-│   ├── docentes/                  # Gestión de docentes
-│   │   ├── docentes.controller.ts
-│   │   ├── docentes.service.ts
-│   │   └── docentes.module.ts
-│   │
-│   ├── actividades/               # Actividades y entregas
-│   │   ├── actividades.controller.ts
-│   │   ├── actividades.service.ts # CRUD + subida materiales + calificar
-│   │   └── actividades.module.ts
-│   │
-│   ├── calificaciones/            # Calificaciones
-│   │   ├── calificaciones.controller.ts
-│   │   ├── calificaciones.service.ts # Captura, cierre de periodo e historial
-│   │   └── calificaciones.module.ts
-│   │
-│   ├── calendario/                # Calendario académico
-│   │   ├── calendario.controller.ts
-│   │   ├── calendario.service.ts  # CRUD eventos + alcance por plantel
-│   │   └── calendario.module.ts
-│   │
-│   ├── notificaciones/            # Notificaciones in-app y correos
-│   │   ├── notificaciones.controller.ts
-│   │   ├── notificaciones.service.ts
-│   │   └── notificaciones.module.ts
-│   │
-│   ├── finanzas/                  # Módulo financiero (SOLID/SRP)
-│   │   ├── finanzas.controller.ts # Orquesta todos los servicios financieros
-│   │   ├── finanzas.module.ts
-│   │   ├── conceptos.service.ts   # Catálogo de conceptos pago
-│   │   ├── cargos.service.ts      # Cuentas por cobrar (cargos, saldos, adeudos)
-│   │   ├── pagos.service.ts       # Pagos manuales y de pasarela
-│   │   ├── ordenes.service.ts     # Órdenes Openpay + webhook
-│   │   ├── cobranza.service.ts    # Avisos por correo + notificación
-│   │   ├── bitacora-financiera.service.ts # Bitácora de movimientos
-│   │   └── openpay.service.ts     # Integración con pasarela BBVA
-│   │
-│   ├── archivos/                  # Manejo seguro de archivos
-│   │   ├── archivos.controller.ts # Enlaces firmados + streaming
-│   │   ├── archivos.service.ts    # Firma JWT, validación, descarga
-│   │   └── archivos.module.ts
-│   │
-│   ├── reportes/                  # Generación de reportes
-│   │   ├── reportes.controller.ts # KPIs, boletas PDF, Excel
-│   │   ├── reportes.service.ts    # PDF boleta, Excel calificaciones/adeudos
-│   │   └── reportes.module.ts
-│   │
-│   ├── configuracion/             # Configuración de marca institucional
-│   │   ├── configuracion.controller.ts
-│   │   ├── configuracion.service.ts # Logo, colores dinámicos
-│   │   └── configuracion.module.ts
-│   │
-│   ├── entities/                  # Definiciones TypeORM (28 entidades)
-│   │   ├── usuario.entity.ts      # Usuario con roles ManyToMany
-│   │   ├── alumno.entity.ts       # Alumno con inscripción y plantel
-│   │   ├── docente.entity.ts      # Docente vinculado a usuario
-│   │   ├── plantel.entity.ts      # Plantel con director y alcance
-│   │   ├── grupo.entity.ts        # Grupo con ciclo, grado, turno
-│   │   ├── materia.entity.ts      # Materia del catálogo académico
-│   │   ├── grupo-materia.entity.ts # Eje central: grupo+materia+docente
-│   │   ├── inscripcion.entity.ts  # Vinculación alumno-grupo
-│   │   ├── actividad.entity.ts    # Actividad con fecha límite
-│   │   ├── entrega.entity.ts      # Entrega de alumno a actividad
-│   │   ├── material.entity.ts     # Material didáctico
-│   │   ├── calificacion.entity.ts # Calificación (parcial 0=final)
-│   │   ├── evento-calendario.entity.ts # Evento académico
-│   │   ├── concepto-pago.entity.ts # Concepto financiero
-│   │   ├── cargo.entity.ts        # Cargo por alumno+concepto+periodo
-│   │   ├── pago.entity.ts         # Pago con referencia y monto
-│   │   ├── orden-pago.entity.ts   # Orden Openpay
-│   │   ├── notificacion.entity.ts # Notificación in-app
-│   │   ├── bitacora-financiera.entity.ts # Movimiento financiero
-│   │   ├── bitacora-actividad.entity.ts # Registro de actividad
-│   │   ├── password-reset-token.entity.ts # Token recuperación (hash)
-│   │   ├── rol.entity.ts          # Rol con clave y nombre
-│   │   ├── usuario-plantel.entity.ts # Asignación usuario-planteles
-│   │   └── configuracion-marca.entity.ts # Marca institucional
-│   │
-│   ├── config/                    # Configuración TypeORM
-│   │   └── typeorm.config.ts      # Conexión MySQL/SQL Server
-│   │
-│   ├── common/                    # Componentes globales
-│   │   ├── bitacora.interceptor.ts # Interceptor para registrar actividad
-│   │   ├── jwt-auth.guard.ts      # Guard de autenticación JWT
-│   │   ├── roles.guard.ts         # Guard de autorización por roles
-│   │   ├── current-user.decorator.ts # Decorador @CurrentUser()
-│   │   ├── paginacion.dto.ts      # DTO estándar de paginación
-│   │   └── upload.config.ts       # Configuración Multer
-│   │
-│   ├── seed/                      # Datos de demostración
-│   │   └── seed.ts                # Idempotente, exclusivo desarrollo
-│   │
-│   └── archivos/                  # Archivos estáticos (logo público)
-│       └── logo-publico.controller.ts
-│
-├── package.json                   # Dependencias y scripts
-├── tsconfig.json                  # Configuración TypeScript
-├── test/tsconfig.json             # Typecheck de integración HTTP
-├── nest-cli.json                  # Configuración NestJS
-├── jest.config.cjs                # Configuración tests
-└── .env.example                   # Plantilla variables de entorno
-```
-
-Las bases y migraciones están en `database/mysql/` y `database/sqlserver/`, fuera de `backend/`. `schema.sql` sirve solo para documentar la paridad; el runner usa baselines versionados y migraciones incrementales.
-
-### Frontend Web (React/Vite)
-
-```
-web/
-├── src/
-│   ├── api/                       # Client HTTP con TypeScript
-│   │   └── client.ts              # Funciones abrirArchivo(), mensajeDeError()
-│   │
-│   ├── auth/                      # Autenticación y protección de rutas
-│   │   ├── AuthContext.tsx        # Contexto para token JWT
-│   │   └── RutaProtegida.tsx      # Wrapper con @Roles() en servidor
-│   │
-│   ├── layout/                    # Estructura base
-│   │   └── Shell.tsx              # Layout principal con navegación
-│   │
-│   ├── components/                # Componentes reutilizables
-│   │   ├── Campana.tsx            # Notificaciones in-app
-│   │   ├── Cargando.tsx           # Spinner de carga
-│   │   ├── Encabezado.tsx         # Header con logo dinámico
-│   │   └── Paginador.tsx          # Componente paginación estándar
-│   │
-│   ├── hooks/                     # Hooks personalizados
-│   │   └── useDatos.ts            # Hook genérico: carga/error/reintento
-│   │
-│   ├── utils/                     # Utilidades
-│   │   └── formato.ts             # Formateo moneda, fecha (locale es-MX)
-│   │
-│   ├── marca/                     # Configuración de marca
-│   │   └── MarcaContext.tsx       # Contexto con colores/logo dinámicos
-│   │
-│   ├── pages/                     # Páginas por módulo
-│   │   ├── Login.tsx              # Login diferenciado WEB/MÓVIL
-│   │   ├── Dashboard.tsx          # Panel resumen con KPIs
-│   │   ├── Planteles.tsx          # Gestión de planteles
-│   │   ├── Usuarios.tsx           # CRUD usuarios (SUPERADMIN)
-│   │   ├── Docentes.tsx           # CRUD docentes (ADMINISTRATIVO)
-│   │   ├── Alumnos.tsx            # Listado y gestión alumnos
-│   │   ├── Materias.tsx           # Catálogo materias
-│   │   ├── Grupos.tsx             # Gestión grupos e inscripciones
-│   │   ├── Maestro.tsx            # Panel maestro (mis-grupos)
-│   │   ├── Calificaciones.tsx     # Tabla calificaciones + captura masiva
-│   │   ├── Calendario.tsx         # Eventos académicos
-│   │   ├── Avisos.tsx             # Difusión de avisos
-│   │   ├── Finanzas.tsx           # Cargos, pagos, estado cuenta
-│   │   ├── Cuenta.tsx             # Estado de cuenta ALUMNO
-│   │   ├── PagoCompletado.tsx     # Confirmación pago Openpay
-│   │   └── Configuracion.tsx      # Logo y colores marca
-│   │
-│   ├── styles.css                 # Estilos globales
-│   └── App.tsx                    # Componente raíz con routing
-│
-├── index.html                     # Entry point HTML
-├── package.json                   # Dependencias y scripts
-├── tsconfig.json                  # Configuración TypeScript
-├── vite.config.ts                 # Configuración Vite (code splitting)
-└── .eslintrc.cjs                  # Reglas ESLint
-```
-
-### Frontend Móvil (React Native/Expo)
-
-```
-mobile/
-├── src/
-│   ├── api/                       # Client HTTP móvil
-│   │   └── client.ts              # Similar al web con EXPO_PUBLIC_API_URL
-│   │
-│   ├── sesion.tsx                 # Gestión de sesión JWT móvil
-│   ├── marca.tsx                  # Marca dinámica (colores/logo)
-│   ├── theme.ts                   # Tema visual móvil
-│   └── formato.ts                 # Formateo moneda/fecha móvil
-│
-│   ├── screens/                   # Pantallas principales
-│   │   ├── Login.tsx              # Login ALUMNO exclusivo
-│   │   ├── Inicio.tsx             # Resumen (tareas, saldo, avisos)
-│   │   ├── Materias.tsx           # Listado materias con calificaciones
-│   │   ├── Tareas.tsx             # Actividades pendientes y entregas
-│   │   ├── Calificaciones.tsx     # Tabla de calificaciones por materia
-│   │   ├── EstadoCuenta.tsx       # Estado de cuenta propio del alumno
-│   │   ├── Perfil.tsx             # Datos personales + cambio contraseña
-│   │   └── comunes.tsx            # Componentes reutilizables
-│   │
-│
-├── App.tsx                        # Componente raíz con navegación
-│
-├── app.json                       # Configuración Expo
-├── package.json                   # Dependencias y scripts
-└── tsconfig.json                  # Configuración TypeScript
-```
-
-### ETL (Migración Python)
-
-```
-etl/
-├── etl/
-│   ├── __init__.py
-│   ├── config.py                  # Configuración de conexión DB
-│   ├── extract.py                 # Extracción desde certweb
-│   ├── load.py                    # Carga idempotente con legacy_id
-│   ├── transform.py               # Limpieza y transformación datos
-│   └── run.py                     # Orquestación (--dry-run por defecto)
-│
-├── requirements.txt               # Dependencias Python
-└── README.md                      # Documentación ETL
-```
-
----
-
-## 🧭 Navegación del Sistema
-
-### Flujo de Autenticación
-
-```
-1. Usuario ingresa a portal (WEB o MÓVIL)
-   ↓
-2. Frontend envía x-portal: WEB|MOVIL en header
-   ↓
-3. Backend valida roles permitidos por portal:
-   - WEB: SUPERADMIN, ADMINISTRATIVO, FINANZAS, MAESTRO
-   - MÓVIL: ALUMNO (excluyente)
-   ↓
-4. Se emite access token de 15 minutos y refresh rotativo por sesión (máximo 30 días).
-   ↓
-5. Web guarda access en memoria y refresh en cookie HttpOnly; móvil usa SecureStore.
-6. Ambos consultan GET /auth/me y renuevan al expirar. POST /auth/logout revoca ese dispositivo.
-7. La baja y el cambio de contraseña/roles invalidan todas las sesiones por versión.
-```
-
-La migración de sesiones requiere desplegar API, web y móvil coordinados y volver a iniciar sesión. Las reglas están en [REGLAS_PILOTO.md](docs/REGLAS_PILOTO.md).
-
-### Flujo de Gestión Académica
-
-```
-1. ADMINISTRATIVO crea Ciclo Escolar → Materia → Grupo
-2. Asigna Materia a Grupo + Docente (GrupoMateria)
-3. Inscribe Alumnos al Grupo
-4. Maestro ve "Mis Grupos" (solo sus asignaciones)
-5. Maestro crea Actividades y sube Materiales
-6. Alumno entrega trabajos con archivos ≤5MB
-7. Maestro califica entregas y captura parciales; administración puede cerrar y reabrir periodos
-8. Sistema calcula promedios automáticamente
-9. Generación de boletas PDF y reportes Excel
-```
-
-### Flujo Financiero
-
-```
-1. FINANZAS configura Conceptos (inscripción, colegiatura, etc.)
-2. Genera Cargos masivos por ciclo+periodo para alumnos inscritos
-3. Aplica recargos a cargos vencidos (una vez por cargo)
-4. Alumno crea Orden de Pago → Redirección Openpay
-5. Webhook confirma pago → Recalcula cargo → Notifica alumno
-6. FINANZAS registra pagos manuales (efectivo/transferencia) con clave de idempotencia
-7. Genera avisos de cobranza por correo
-8. Alumno ve estado de cuenta propio con historial
-```
-
-### Flujo de Archivos Seguros
-
-```
-1. Maestro sube material o alumno entrega trabajo (≤5MB)
-2. Archivo guardado en uploads/ con nombre UUID
-3. Para descarga:
-   - Cliente pide GET /archivos/materiales/:id/enlace
-   - Backend valida sesión y devuelve URL firmada (5 min)
-   - Cliente abre URL con token t=xxx
-   - Streaming valida firma, expiración y pertenencia
-4. Nunca se sirve como estático público
-```
-
----
-
-## 🔐 Seguridad Implementada
-
-| Característica | Descripción |
-|---------------|-------------|
-| **Sesiones rotativas** | Access de 15 minutos, refresh por dispositivo y detección de reutilización |
-| **Revocación** | Logout de dispositivo; baja/cambio de contraseña o roles incrementa `session_version` |
-| **Tokens firmados para archivos** | 5 minutos de vida útil, validación en streaming |
-| **Hash SHA256 para tokens de recuperación** | Solo persiste el hash, no el token en claro |
-| **Webhook Openpay autenticado en producción** | `OPENPAY_WEBHOOK_USER/PASS` obligatorios al activar producción |
-| **Rate limiting** | 120 req/min global, 5/min en login/recuperación |
-| **Encabezados Helmet** | Seguridad HTTP estándar |
-| **CORS restringible** | `CORS_ORIGINS` en producción |
-| **Swagger apagado en producción** | Exige `JWT_SECRET` real con `NODE_ENV=production` |
-| **Contraseñas bcrypt** | Hash seguro de contraseñas |
-| **Validación whitelist** | `class-validator` con `whitelist: true` |
-| **Permisos por rol** | Validación en API y rutas del portal |
-| **Portal IIS** | CSP, HSTS, protección contra iframes y Permissions Policy en `web.config` |
-
----
-
-**Endurecimiento pendiente:** resolver la excepción `strictPropertyInitialization: false` de DTO/entidades y certificar la CSP con los dominios finales. El backend ya activa `strict: true` con esa excepción; el lint rechaza `any` en código de producción y advierte sobre los dobles de prueba que aún lo usan.
-
----
-
-## 📊 Reportes Generados
-
-| Reporte | Formato | Descripción |
-|---------|---------|-------------|
-| **KPIs Dashboard** | JSON | Contadores para panel resumen |
-| **Boleta Alumno** | PDF | Parciales, final y promedios por materia |
-| **Calificaciones Clase** | Excel | Concentrado grupo-materia (parciales, final, promedio) |
-| **Adeudos** | Excel | Cargos con saldo pendiente por plantel |
-
----
-
-## 🚀 Comandos Útiles
-
-Usa **Node.js 24** para instalar dependencias, ejecutar pruebas y compilar los tres proyectos. La CI usa esa versión. Los comandos siguientes se ejecutan desde cada carpeta indicada; `npm ci` reproduce el lockfile.
-
-### Backend
-```bash
+```sh
 cd backend
-npm ci                         # Instalar dependencias del lockfile
-npm run start:dev              # Desarrollo (http://localhost:3000/api)
-ALLOW_DEV_SEED=true npm run seed  # Solo local: requiere 5 contraseñas distintas de 16+ caracteres en backend/.env
-npm run lint                   # Validar código
-npm run typecheck              # Verificar src/ y test/ (integración HTTP)
-npm test                       # Ejecutar tests Jest
-npm run build                  # Compilar API
-npm run test:integration       # Flujos HTTP sobre baseline en base escolar_integration_* aislada (DB_SYNC=false)
+npm ci
+npm run build
+npm run start:dev
 ```
 
-### Frontend Web
-```bash
+La API necesita una base previamente preparada conforme a [MIGRACIONES](docs/MIGRACIONES.md). No ejecutar el esquema completo sobre una base existente ni recrearla. Tras compilar, `npm run db:migrate:status` permite consultar su historial; cualquier adopción o aplicación requiere verificar baseline y seguir ese procedimiento.
+
+```sh
 cd web
-npm ci                         # Instalar dependencias del lockfile
-npm run dev                    # Desarrollo (http://localhost:5173)
-npm run build                  # Build de producción
-npm run lint                   # Validar código
-npm test                       # Pruebas web
+npm ci
+npm run dev
 ```
 
-### Frontend Móvil
-```bash
+Configurar la URL de API según los ejemplos del portal. Para móvil:
+
+```sh
 cd mobile
-npm ci                         # Instalar dependencias del lockfile
-npx expo start                 # Iniciar Expo
-npx tsc --noEmit               # Verificar TypeScript
-npm test                       # Pruebas móviles
-npx expo-doctor                # Compatibilidad de Expo SDK 57
-npx expo export --platform android  # Bundle JS; no es un APK firmado
+npm ci
+npm start
 ```
 
-### Base de Datos
-```bash
-# Copia .env.docker.example a .env y cambia las contraseñas de desarrollo.
-# Los puertos publicados por Compose quedan enlazados a 127.0.0.1.
-cp .env.docker.example .env
+El dispositivo debe poder alcanzar la API; `localhost` del teléfono no apunta al ordenador. Preview y producción exigen HTTPS. EAS incluye perfiles de desarrollo, preview y producción, pero hacen falta firma, proyecto Expo y credenciales FCM/APNs para distribución y push nativos. La exportación Expo no equivale a un APK/IPA instalado o aprobado.
 
-# MySQL en Docker
-docker compose up -d mysql
+## Base de datos y seguridad
 
-# SQL Server en Docker (alternativa)
-docker compose --profile mssql up -d sqlserver
+Los esquemas de ambos motores documentan 39 tablas, con baseline `v1` y siete migraciones incrementales ordenadas posteriores. Su estado en un servidor existente debe consultarse: no se certificó la base productiva. Los últimos PR de interfaz no cambian el esquema. [Procedimiento y manifiestos](docs/MIGRACIONES.md).
 
-# Compila, revisa y aplica las migraciones pendientes con DB_SYNC=false.
-# npm run build; npm run db:migrate:status; npm run db:migrate
-# Consulta docs/MIGRACIONES.md; adopta un historial existente solo tras auditarlo.
+La API aplica autorización centralizada, validación de datos, límites de solicitudes, contraseñas con hash, acceso de corta duración y refresh rotativo con revocación. El portal usa refresh en cookie HttpOnly/SameSite Strict y acceso en memoria; la app usa SecureStore. Producción exige configuración TLS y secretos adecuados. El portal dispone de CSP y cabeceras de seguridad. Uploads no se publican como carpeta estática; las descargas verifican firma, sesión y permisos. La configuración y operación siguen siendo responsabilidad del despliegue.
+
+La auditoría de dependencias no informó vulnerabilidades conocidas en npm ni en la resolución Python revisada. Esto no constituye certificación de seguridad. Los uploads no cuentan con antivirus ni cuotas agregadas; se requieren políticas de conservación y aceptación institucional. Los parches de dependencias incluidas localmente necesitan mantenimiento.
+
+## Validación y límites actuales
+
+Sobre el código combinado integrado: 191 pruebas unitarias de backend, 75 web, 27 móviles más cinco del comprobador móvil y siete del ETL satisfactorias. CI ejecutó 73 pruebas de integración en cada motor y verificaciones de navegador/responsive entre 320 y 3840 px. Tipos, builds y exportación Android Expo aprobaron. Backend lint tiene cero errores y 527 advertencias que deben reducirse. [Evidencia y alcance](docs/AUDITORIA_ESTADO_1.23.5_2026-10-13.md#evidencia-de-validación).
+
+```sh
+# Desde backend/
+npm run lint
+npm run typecheck
+npm test -- --runInBand
+node ../scripts/check-project-consistency.cjs
+
+# Desde web/
+npm run lint
+npm test
+npm run build
+
+# Desde mobile/
+npm test
+npx tsc --noEmit
+
+# Desde etl/
+python -m unittest discover -s tests
 ```
 
----
+Las integraciones requieren bases aisladas configuradas para pruebas. Los ocho jobs de la [CI del código integrado](https://github.com/Marcor360/Sistema-Escolar/actions/runs/38442392681) aprobaron; revisar también la CI del commit que se vaya a desplegar.
 
-## 🖥️ Staging en Windows Server
+Antes del piloto:
 
-El repositorio incluye scripts de staging para Windows Server 2019 con IIS, NestJS como servicio NSSM y MySQL 8.4. **El VPS, la actualización de una copia institucional y una restauración real todavía requieren validación.** La guía operativa está en [Staging en Windows e IIS](docs/STAGING_WINDOWS_IIS.md).
+- Corregir el fallo de arranque móvil: si SecureStore rechaza durante la carga de marca, puede quedar visible el indicador inicial indefinidamente. El informe incluye reproducción y criterio de corrección.
+- Antes de migrar legado, completar pipelines y mapeo del ETL y exigir TLS verificado; hoy sólo planteles/alumnos están implementados.
+- Probar builds firmados en Android/iOS físicos, push, permisos, reconexión y cambio de cuenta.
+- Certificar staging, SMTP/Openpay, permisos, cierre/promoción, copias y restauración con responsables institucionales.
 
-Antes del primer despliegue, prepara DNS y el certificado HTTPS, MySQL con TLS, una base `escolar_staging` nueva y separada, y los archivos protegidos `C:\SistemaEscolar\config\backend.env` y `C:\SistemaEscolar\config\backup.env`. Usa [la plantilla del backend](backend/.env.staging.example) y [la del respaldo](scripts/windows/backup.env.example). `BACKUP_DB_USER` debe ser distinto de `DB_USER`. Instala el baseline y adopta su historial solo en una base nueva, siguiendo [Migraciones](docs/MIGRACIONES.md); nunca ejecutes `schema.sql` completo ni habilites `DB_SYNC=true` en staging.
+La edición de eventos, una biblioteca general de archivos y una cola académica offline no forman parte de la implementación actual. No se certificaron VPS, bases reales, proveedores ni tiendas de aplicaciones durante este barrido.
 
-Desde una consola administrativa en el servidor, con Node 24, IIS, URL Rewrite, ARR, NSSM y el certificado ya instalados:
+## Documentación operativa
 
-```powershell
-$credential = Get-Credential '.\svc_escolar_api'
-.\scripts\windows\Initialize-Staging.ps1 -Version '1.15.0' -Source 'C:\Builds\sistema-escolar-mvp' -ServiceCredential $credential -ApiBaseUrl 'https://api-staging.dominio.mx/api'
-.\scripts\windows\Configure-IIS-Staging.ps1 -PortalHost 'sistema-staging.dominio.mx' -ApiHost 'api-staging.dominio.mx' -CertificateThumbprint '<huella-del-certificado>'
-Start-Service SistemaEscolarApi
-Invoke-WebRequest 'https://api-staging.dominio.mx/api/health'
-```
-
-El bootstrap crea o valida una cuenta local dedicada y le da acceso al código, al archivo de entorno y a las carpetas de uploads y logs. La API escucha en `127.0.0.1:3000`; IIS sirve React y hace proxy HTTPS hacia la API. Los uploads permanecen fuera de las releases en `C:\SistemaEscolar\data\uploads` y solo se descargan mediante enlaces firmados.
-
-Para versiones posteriores, usa [Deploy-Staging.ps1](scripts/windows/Deploy-Staging.ps1), que respalda la base y los uploads antes de migrar. [Restore-Staging.ps1](scripts/windows/Restore-Staging.ps1) exige una base de restauración `escolar_staging_restore_*` ya creada y vacía y un directorio nuevo bajo `restore-check`; consulta la guía para el comando y la comprobación del respaldo. Programa retención y copia externa cifrada por separado. El CI de Windows valida sintaxis y estructura de los scripts; la instalación del servicio, IIS, TLS, rollback y restauración se ensayan en el staging real antes de abrirlo a usuarios.
-
----
-
-## 📚 Documentación Adicional
-
-- [Biblioteca institucional, calendario, móvil y recuperación](docs/REQUERIMIENTO_ARCHIVOS_CALENDARIO_MOBILE.md) — estado actual y requisitos de próximas entregas; sin funciones nuevas.
-
-- [Edición integral segura de expedientes y catálogos](docs/REQUERIMIENTO_EDICION_INTEGRAL.md) — inventario actual, diferencias y criterios de entregas futuras; especificación sin nuevas funciones.
-
-- **`docs/API.md`** — Endpoints detallados con roles requeridos
-- **`docs/ARQUITECTURA.md`** — Decisiones técnicas y modelo de datos
-- **`docs/ETAPAS_CONTRATO.md`** — Mapeo contra etapas del Anexo A
-- **`docs/ESTADO_IMPLEMENTACION.md`** — Estado real, pendientes y dependencias externas
-- **`docs/MATRIZ_ACCESO.md`** — Alcance actual por rol para validación institucional
-- **`docs/MIGRACIONES.md`** — Procedimiento manual seguro para MySQL y SQL Server
-- **`docs/OPERACION_PRODUCCION.md`** — Variables, respaldos, archivos e insumos para publicar
-- **`docs/STAGING_WINDOWS_IIS.md`** — Bootstrap, IIS, servicio, respaldo y restauración aislada en Windows Server
-- **`etl/README.md`** — Documentación completa del ETL Python
-
----
-
-## ✅ Características Clave
-
-- Multiplataforma: Web (React), móvil (React Native) y API (NestJS).
-- Base de datos portable: MySQL y SQL Server con esquemas espejo.
-- Finanzas con Openpay y webhook.
-- Seguridad con JWT, roles, alcance por plantel y archivos firmados.
-- Reportes PDF y Excel.
-- ETL parcial: planteles y alumnos; falta confirmar el esquema certweb y completar otras entidades.
-- Configuración dinámica de logo y colores institucionales.
-
----
-
-## Próximos pasos para el piloto
-
-1. **Verificar el SHA publicado:** consultar la CI completa y aplicar migraciones en una base aislada antes de desplegar.
-2. **Ensayar datos reales sin tocar producción:** restaurar una copia institucional aislada, auditar su esquema y probar `db:migrate:status` y `db:migrate` sobre esa copia. Registrar conteos, errores y tiempos.
-3. **Preparar staging:** verificar VPS, DNS/TLS, IIS/ARR, servicio API, permisos de `uploads/`, backup externo y restauración completa de MySQL y archivos. Usar [la guía Windows](docs/STAGING_WINDOWS_IIS.md).
-4. **Certificar servicios y uso:** Openpay sandbox, webhook/reintentos/conciliación, SMTP, permisos con cuentas de dos planteles, formatos de reportes y pruebas físicas Android/iOS.
-5. **Aceptar reglas institucionales:** revisar [las reglas implementadas](docs/REGLAS_PILOTO.md), privacidad y responsables operativos. No activar pagos productivos ni usar datos de alumnos reales antes de cerrar estas verificaciones.
-
-El [plan de auditoría](docs/AUDITORIA_ACTUAL_2026-10-05.md) y su [continuación](docs/CONTINUACION_2026-10-05.md) separan el trabajo ya implementado de la aceptación pendiente.
+- [Auditoría completa y clasificación actual](docs/AUDITORIA_ESTADO_1.23.5_2026-10-13.md)
+- [Reglas del piloto](docs/REGLAS_PILOTO.md)
+- [Migraciones y protección de datos existentes](docs/MIGRACIONES.md)
+- [Operación de producción](docs/OPERACION_PRODUCCION.md)
+- [Staging Windows / IIS](docs/STAGING_WINDOWS_IIS.md)
+- [ETL](etl/README.md)
+- [Plan de UX, seguridad y piloto](docs/PLAN_UX_SEGURIDAD_PILOTO_2026-10-13.md)
