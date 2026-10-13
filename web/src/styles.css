@@ -944,3 +944,35 @@ textarea { min-height: 110px; resize: vertical; }
   .fila > .boton { width: 100%; }
   .panel { padding: 16px; }
 }
+
+/* 1.21.0: jerarquía de resultados académicos y financieros por rol autorizado. */
+.analitica-filtros { display: flex; align-items: end; gap: 16px; }
+.analitica-filtros .campo { min-width: min(100%, 200px); }
+.analitica-filtros .boton { align-self: end; }
+.analitica-vacia { max-width: 720px; padding-block: clamp(24px, 3vw, 42px); }
+.analitica-vacia p { color: var(--texto-secundario); line-height: 1.6; }
+.analitica-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: 12px; }
+.analitica-kpis dt { font-size: .8125rem; color: var(--texto-secundario); font-weight: 650; }
+.analitica-kpis dd { margin: 0 0 14px; font-size: clamp(1.15rem, 1.3vw, 1.625rem); font-weight: 750; font-variant-numeric: tabular-nums; }
+@media (max-width: 700px) { .analitica-filtros .campo { flex: 1 1 100%; } .analitica-filtros .boton { width: 100%; } }
+
+/* 1.22.0: placeholder de geometría estable para transiciones de ruta. */
+.esqueleto-pagina { display: grid; gap: 16px; max-width: 100%; }
+.esqueleto-linea { height: 16px; border-radius: var(--radio-sm); background: linear-gradient(90deg, #e9eeef 25%, #f3f6f7 50%, #e9eeef 75%); background-size: 200% 100%; animation: esqueleto-pulso 1.5s ease-in-out infinite; }
+.esqueleto-titulo { height: 36px; width: min(440px, 75%); }
+.esqueleto-subtitulo { width: min(560px, 90%); }
+.esqueleto-panel { border: 1px solid var(--linea); border-radius: var(--radio-md); padding: clamp(16px, 2vw, 28px); display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
+.esqueleto-campo { height: 48px; }
+.esqueleto-tabla { grid-template-columns: 1fr; }
+.esqueleto-tabla .esqueleto-linea:nth-child(2) { width: 90%; }
+.esqueleto-tabla .esqueleto-linea:nth-child(3) { width: 70%; }
+@keyframes esqueleto-pulso { to { background-position-x: -200%; } }
+@media (prefers-reduced-motion: reduce) { .esqueleto-linea { animation: none; background: #e9eeef; } }
+@media (forced-colors: active) { .esqueleto-linea { animation: none; background: Canvas; border: 1px solid GrayText; } }
+
+/* 1.23.0: iconos decorativos con etiquetas visibles y tamaños coherentes. */
+.lateral nav a { gap: 12px; }
+.lateral nav a svg, .menu-movil svg { flex: 0 0 20px; width: 20px; height: 20px; }
+.lateral nav a span { min-width: 0; overflow-wrap: anywhere; }
+.menu-movil { gap: 10px; }
+.menu-movil span { font-size: inherit; line-height: inherit; }

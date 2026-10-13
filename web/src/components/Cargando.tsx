@@ -1,4 +1,20 @@
-/** Indicador para las rutas con carga diferida. */
+/** Esqueleto accesible durante la carga diferida de páginas web. */
 export function Cargando() {
-  return <p role="status" aria-live="polite" style={{ padding: 24, color: '#5c6a66' }}>Cargando…</p>;
+  return (
+    <section className="esqueleto-pagina" role="status" aria-live="polite" aria-label="Cargando contenido">
+      <span className="solo-lector">Cargando contenido…</span>
+      <div className="esqueleto-linea esqueleto-titulo" aria-hidden="true" />
+      <div className="esqueleto-linea esqueleto-subtitulo" aria-hidden="true" />
+      <div className="esqueleto-panel" aria-hidden="true">
+        <div className="esqueleto-linea esqueleto-campo" />
+        <div className="esqueleto-linea esqueleto-campo" />
+        <div className="esqueleto-linea esqueleto-campo" />
+      </div>
+      <div className="esqueleto-panel esqueleto-tabla" aria-hidden="true">
+        <div className="esqueleto-linea" />
+        <div className="esqueleto-linea" />
+        <div className="esqueleto-linea" />
+      </div>
+    </section>
+  );
 }
