@@ -373,6 +373,7 @@ it("no envía archivo si el selector termina después de desmontar la pantalla",
       assets: [
         {
           uri: "file:///ensayo.pdf",
+          lastModified: 0,
           name: "ensayo.pdf",
           mimeType: "application/pdf",
         },
