@@ -39,7 +39,7 @@ it('mostrar clases del segundo docente no permite que una respuesta anterior sob
   await screen.findByText('EMP-1');
   const acciones = screen.getAllByRole('button', { name: 'Planteles y clases' });
   fireEvent.click(acciones[0]);
-  expect(screen.getByRole('status').textContent).toContain('Cargando planteles y clases');
+  expect(screen.getByText('Cargando planteles y clases del docente…')).toBeTruthy();
   fireEvent.click(acciones[1]);
   await act(async () => reciente.resolver({ data: {
     id: 2, estatus: 'ACTIVO', plantelIds: [1],
