@@ -2,11 +2,12 @@ import { MateriasGrupo } from '../features/grupos/MateriasGrupo';
 import { InscripcionesGrupo } from '../features/grupos/InscripcionesGrupo';
 import type { Ciclo, Plantel, Grupo, ResultadoGrupos, Materia, GrupoMateria, Inscripcion } from '../features/grupos/tipos';
 import { useConfirmacion } from '../components/useConfirmacion';
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 
 import { Encabezado } from '../components/Encabezado';
 import { Paginador } from '../components/Paginador';
+import '../components/tabla-adaptable.css';
 
 
 
@@ -36,6 +37,9 @@ export default function GruposPage() {
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const [cargandoListado, setCargandoListado] = useState(false);
+  const consultaListado = useRef(0);
+  const consultaGrupo = useRef(0);
   const [editando, setEditando] = useState<Grupo | null>(null);
   const [reasignando, setReasignando] = useState<number | null>(null);
   const [nuevoDocente, setNuevoDocente] = useState('');
@@ -53,33 +57,54 @@ export default function GruposPage() {
   };
 
   const cargar = useCallback(async (pagina = 1, plantelId = '') => {
+    const actual = ++consultaListado.current;
+    setCargandoListado(true);
     setError('');
     try {
-      const [ciclosR, gruposR, plantelesR, materiasR] = await Promise.all([
-        api.get<Ciclo[]>('/academico/ciclos'),
-        api.get<ResultadoGrupos>('/academico/grupos', { params: { pagina, ...(filtroCiclo ? { cicloId: filtroCiclo, inactivos: true } : {}), ...(plantelId ? { plantelId } : {}) } }),
-        api.get<Plantel[]>('/planteles/mios'),
-        api.get<Materia[]>('/academico/materias'),
-      ]);
+      const { data } = await api.get<ResultadoGrupos>('/academico/grupos', {
+        params: { pagina, ...(filtroCiclo ? { cicloId: filtroCiclo, inactivos: true } : {}), ...(plantelId ? { plantelId } : {}) },
+      });
+      if (actual === consultaListado.current) setResultado(data);
+    } catch (err) {
+      if (actual === consultaListado.current) setError(mensajeDeError(err));
+    } finally {
+      if (actual === consultaListado.current) setCargandoListado(false);
+    }
+  }, [filtroCiclo]);
+  useEffect(() => {
+    void Promise.all([
+      api.get<Ciclo[]>('/academico/ciclos'),
+      api.get<Plantel[]>('/planteles/mios'),
+      api.get<Materia[]>('/academico/materias'),
+    ]).then(([ciclosR, plantelesR, materiasR]) => {
       setCiclos(ciclosR.data);
-      setResultado(gruposR.data);
       setPlanteles(plantelesR.data);
       setMaterias(materiasR.data);
-    } catch (err) { setError(mensajeDeError(err)); }
-  }, [filtroCiclo]);
-  useEffect(() => { cargar(1, ''); }, [cargar]);
+    }).catch((err) => setError(mensajeDeError(err)));
+  }, []);
+  useEffect(() => {
+    void cargar(1, filtroPlantel);
+    return () => { consultaListado.current += 1; };
+  }, [cargar]);
 
   const abrirGrupo = async (grupo: Grupo) => {
+    const actual = ++consultaGrupo.current;
     setSeleccionado(grupo);
+    setAsignaciones([]);
+    setInscritos([]);
     setError('');
     try {
       const [gms, insc] = await Promise.all([
         api.get<GrupoMateria[]>(`/academico/grupos/${grupo.id}/materias`),
         api.get<Inscripcion[]>(`/academico/grupos/${grupo.id}/alumnos`),
       ]);
-      setAsignaciones(gms.data);
-      setInscritos(insc.data);
-    } catch (err) { setError(mensajeDeError(err)); }
+      if (actual === consultaGrupo.current) {
+        setAsignaciones(gms.data);
+        setInscritos(insc.data);
+      }
+    } catch (err) {
+      if (actual === consultaGrupo.current) setError(mensajeDeError(err));
+    }
   };
 
   const crearGrupo = async (e: FormEvent) => {
@@ -168,26 +193,37 @@ export default function GruposPage() {
             {planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
           </select>
         </div>
-        <button className="boton secundario" onClick={() => cargar(1, filtroPlantel)}>Aplicar</button>
+        <button className="boton secundario" disabled={cargandoListado} onClick={() => cargar(1, filtroPlantel)}>Aplicar</button>
       </div>
 
-      <table className="tabla" style={{ marginBottom: 24 }}>
-        <thead><tr><th>Grupo</th><th>Plantel</th><th>Ciclo</th><th>Grado</th><th>Turno</th><th /></tr></thead>
+      <div className="cabecera-listado"><h2>Directorio de grupos</h2><p>{resultado.total} grupos</p></div>
+      {cargandoListado && <p role="status">Cargando grupos…</p>}
+      <div className="tabla-contenedor" role="region" aria-label="Listado de grupos" tabIndex={0}>
+      <table className="tabla tabla-adaptable" aria-busy={cargandoListado}>
+        <caption className="solo-lector">Grupo, plantel, ciclo, grado, turno y acciones</caption>
+        <thead><tr><th scope="col">Grupo</th><th scope="col">Plantel</th><th scope="col">Ciclo</th><th scope="col">Grado</th><th scope="col">Turno</th><th scope="col">Acciones</th></tr></thead>
         <tbody>
           {resultado.datos.map((g) => (
             <tr key={g.id}>
-              <td>{g.nombre}</td><td>{g.plantel?.nombre ?? <span className="sello neutro">Sin plantel</span>}</td><td>{g.ciclo?.clave}</td><td>{g.grado ?? '—'}</td><td>{g.turno ?? '—'}</td>
-              <td className="derecha">
-                <button className="boton secundario chico" onClick={() => abrirGrupo(g)}>Administrar</button>
-                <button disabled={enviando} onClick={() => editar(g)}>Editar</button>
-                <button disabled={enviando} onClick={() => operar(`/academico/grupos/${g.id}`, 'delete')}>Desactivar grupo</button>
+              <td data-etiqueta="Grupo">{g.nombre}</td>
+              <td data-etiqueta="Plantel">{g.plantel?.nombre ?? <span className="sello neutro">Sin plantel</span>}</td>
+              <td data-etiqueta="Ciclo">{g.ciclo?.clave}</td>
+              <td data-etiqueta="Grado">{g.grado ?? '—'}</td>
+              <td data-etiqueta="Turno">{g.turno ?? '—'}</td>
+              <td data-etiqueta="Acciones" className="derecha">
+                <span className="acciones-fila">
+                  <button className="boton secundario chico" disabled={enviando} onClick={() => abrirGrupo(g)}>Administrar</button>
+                  <button className="boton secundario chico" disabled={enviando} onClick={() => editar(g)}>Editar</button>
+                  <button className="boton peligro chico" disabled={enviando} onClick={() => operar(`/academico/grupos/${g.id}`, 'delete')}>Desactivar grupo</button>
+                </span>
               </td>
             </tr>
           ))}
-          {resultado.datos.length === 0 && <tr><td className="vacio" colSpan={6}>Sin grupos. Crea el primero con el formulario.</td></tr>}
+          {!cargandoListado && resultado.datos.length === 0 && <tr><td className="vacio" colSpan={6}>No hay grupos para este ciclo y plantel.</td></tr>}
+          {cargandoListado && resultado.datos.length === 0 && <tr><td className="vacio" colSpan={6}>Consultando grupos…</td></tr>}
         </tbody>
-      </table>
-      <Paginador total={resultado.total} pagina={resultado.pagina} porPagina={resultado.porPagina} onCambio={(pagina) => cargar(pagina, filtroPlantel)} />
+      </table></div>
+      <Paginador total={resultado.total} pagina={resultado.pagina} porPagina={resultado.porPagina} deshabilitado={cargandoListado} onCambio={(pagina) => cargar(pagina, filtroPlantel)} />
 
       {seleccionado && (
         <>
