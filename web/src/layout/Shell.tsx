@@ -5,6 +5,7 @@ import { Cargando } from '../components/Cargando';
 import { Campana } from '../components/Campana';
 import { archivosBase } from '../api/client';
 import { useMarca } from '../marca/MarcaContext';
+import { IconoTabler, type NombreIcono } from '../components/IconoTabler';
 
 const secciones = [
   { destino: '/operaciones', etiqueta: 'Importar y promover', roles: ['ADMINISTRATIVO'] },
@@ -24,6 +25,25 @@ const secciones = [
   { destino: '/usuarios', etiqueta: 'Usuarios', roles: ['ADMINISTRATIVO', 'FINANZAS', 'MAESTRO'] },
   { destino: '/configuracion', etiqueta: 'Configuración', roles: ['SUPERADMIN'] },
 ];
+
+const iconosPorRuta: Record<string, NombreIcono> = {
+  '/': 'layout-dashboard',
+  '/operaciones': 'clipboard-check',
+  '/conducta': 'clipboard-check',
+  '/analitica': 'chart-bar',
+  '/alumnos': 'users',
+  '/planteles': 'building',
+  '/docentes': 'school',
+  '/materias': 'book',
+  '/grupos': 'users',
+  '/maestro': 'school',
+  '/calificaciones': 'clipboard-check',
+  '/calendario': 'calendar',
+  '/avisos': 'bell',
+  '/finanzas': 'coins',
+  '/usuarios': 'users',
+  '/configuracion': 'settings',
+};
 
 export function Shell() {
   const { sesion, logout, tieneRol } = useAuth();
@@ -62,7 +82,7 @@ export function Shell() {
       <a className="skip-link" href="#contenido-principal">Saltar al contenido principal</a>
       {menuAbierto && <button type="button" className="menu-fondo" aria-label="Cerrar navegación" onClick={() => { setMenuAbierto(false); botonMenu.current?.focus(); }} />}
       <aside ref={lateral} className={`lateral${menuAbierto ? ' lateral-abierto' : ''}`}>
-        <button ref={botonMenu} type="button" className="menu-movil" aria-expanded={menuAbierto} aria-controls="navegacion-escolar" onClick={() => setMenuAbierto((abierto) => !abierto)}>{menuAbierto ? 'Cerrar menú' : 'Abrir menú'} <span aria-hidden="true">{menuAbierto ? '×' : '☰'}</span></button>
+        <button ref={botonMenu} type="button" className="menu-movil" aria-expanded={menuAbierto} aria-controls="navegacion-escolar" onClick={() => setMenuAbierto((abierto) => !abierto)}><span>{menuAbierto ? 'Cerrar menú' : 'Abrir menú'}</span> <IconoTabler nombre="menu-2" /></button>
         {marca.logoUrl
           ? <img className="logo-marca" src={archivosBase + marca.logoUrl} alt={marca.nombreInstitucion} />
           : <div className="monograma" aria-hidden>{marca.nombreCorto}</div>}
@@ -72,7 +92,8 @@ export function Shell() {
             .filter((s) => tieneRol(...s.roles))
             .map((s) => (
               <NavLink key={s.destino} to={s.destino} end={s.destino === '/'} onClick={() => setMenuAbierto(false)}>
-                {s.etiqueta}
+                <IconoTabler nombre={iconosPorRuta[s.destino]} />
+                <span>{s.etiqueta}</span>
               </NavLink>
             ))}
         </nav>
