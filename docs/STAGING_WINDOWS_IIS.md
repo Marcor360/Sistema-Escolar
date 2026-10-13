@@ -59,18 +59,18 @@ $credential = Get-Credential '.\svc_escolar_api'
 
 El servicio `SistemaEscolarApi` queda configurado con esa cuenta local, inicio automático, reinicio ante fallas y logs rotativos. Lee el archivo externo mediante `DOTENV_CONFIG_PATH`. La plantilla fija `HOST=127.0.0.1` para que NestJS solo escuche localmente detrás de IIS. El script establece la identidad mediante la API de servicios de Windows, sin poner la contraseña en la línea de comandos.
 
-Configura IIS, inicia el servicio y valida `/api/health` antes de utilizar `Deploy-Staging.ps1` para las siguientes versiones.
+Configura IIS, inicia el servicio y valida `/api/health/live` y `/api/health/ready` antes de utilizar `Deploy-Staging.ps1` para las siguientes versiones.
 
 ## Despliegue y respaldos
 
-`scripts/windows/Deploy-Staging.ps1` prepara una release desde un checkout con `backend/`, `web/` y `database/`, compila, detiene la API, respalda MySQL y uploads, consulta/aplica migraciones, cambia la junction y valida health. Para una actualización posterior a 1.10.0, define `$SiguienteVersion` con un semver nuevo y ejecuta desde la raíz del checkout:
+`scripts/windows/Deploy-Staging.ps1` prepara una release desde un checkout con `backend/`, `web/` y `database/`, compila, detiene la API, respalda MySQL y uploads, consulta/aplica migraciones, cambia la junction y valida health. Para una actualización, define `$SiguienteVersion` con un semver nuevo que coincida exactamente con el `version` de `backend/package.json`, `web/package.json` y `mobile/package.json` del SHA aprobado y ejecuta desde la raíz del checkout:
 
 ```powershell
 .\scripts\windows\Deploy-Staging.ps1 `
   -Version $SiguienteVersion `
   -Source 'C:\Builds\sistema-escolar-mvp' `
   -ApiBaseUrl 'https://api-staging.dominio.mx/api' `
-  -HealthUrl 'https://api-staging.dominio.mx/api/health'
+  -HealthUrl 'https://api-staging.dominio.mx/api/health/ready'
 ```
 
 El usuario que ejecuta el script necesita acceso a MySQL, `mysqldump`, NSSM/servicios, y escritura en `C:\SistemaEscolar`. `config\backup.env` contiene `BACKUP_DB_USER`, `BACKUP_DB_PASS`, `RESTORE_DB_USER`, `RESTORE_DB_PASS` y opcionalmente `BACKUP_DB_HOST`, `BACKUP_DB_PORT`, `BACKUP_DB_SSL_CA_PATH`. La cuenta de respaldo debe ser distinta de `DB_USER` y tener solo los permisos necesarios para dump; la cuenta de restauración debe poder leer el catálogo e importar únicamente en bases aisladas `escolar_staging_restore_*`. Prueba ambos permisos con la concesión mínima efectiva en MySQL 8.4. El usuario del servicio solo lee `config\backend.env`. Protege y cifra los respaldos según la política institucional; programa una copia diaria y una réplica cifrada fuera del VPS.
@@ -87,7 +87,7 @@ Ejecuta `Prune-Staging.ps1` primero sin argumentos para revisar la lista de elim
 
 Antes de instalar software en el VPS, ejecuta `Audit-StagingHost.ps1 -OutputPath C:\staging-host-audit.json` desde una consola administrativa. Recoge RAM, procesos, discos, pagefile, servicios de inicio automático, puertos TCP, sitios IIS y programas instalados sin modificar el servidor, salvo la creación del reporte. Revisa rutas y nombres internos del JSON antes de compartirlo. A partir de ese reporte decide si la RAM y el disco disponibles admiten MySQL, Node y la aplicación.
 
-El health check es `GET /api/health`: espera HTTP 200 y `{ "status": "ok", "database": "ok" }`. Si no pasa, el script restaura la junction de código anterior y reinicia el servicio. Las migraciones de base no se revierten automáticamente; una versión anterior solo es segura si la migración es compatible hacia atrás. De otro modo, detén el servicio y restaura la base desde el respaldo siguiendo el procedimiento DBA. El runner puede dejar DDL parcial en MySQL: inspecciona el esquema antes de reintentar.
+El despliegue consulta `GET /api/health/live` y `GET /api/health/ready` de forma local, además de `/api/health/ready` por HTTPS público. Las tres respuestas deben incluir `status: ok` y la versión esperada; la comprobación `ready` valida adicionalmente base, migraciones aplicadas y directorio de archivos. `GET /api/health` es una comprobación básica y **no** sustituye `ready`. Si falla cualquiera de las tres, el script intenta restaurar la junction anterior y reiniciar el servicio, y verifica también la versión anterior. No se garantiza revertir una migración ya aplicada. Las migraciones de base no se revierten automáticamente; una versión anterior solo es segura si la migración es compatible hacia atrás. De otro modo, detén el servicio y restaura la base desde el respaldo siguiendo el procedimiento DBA. El runner puede dejar DDL parcial en MySQL: inspecciona el esquema antes de reintentar.
 
 Después del bootstrap y la auditoría del VPS, puede habilitarse el workflow manual `Deploy staging`. Requiere un runner Windows etiquetado `staging` con acceso administrativo controlado al servidor, un entorno GitHub `staging` con revisores requeridos y las variables `STAGING_DEPLOY_ENABLED=true`, `STAGING_API_BASE_URL` y `STAGING_HEALTH_URL`. El operador introduce una versión nueva y el SHA completo de un commit de `main`; el workflow exige CI verde para ese commit antes de llamar a `Deploy-Staging.ps1`. Deja `STAGING_DEPLOY_ENABLED` sin definir hasta terminar la instalación y la prueba de restore. No registres secretos del VPS en las variables de GitHub: los archivos de entorno permanecen protegidos en el servidor.
 
