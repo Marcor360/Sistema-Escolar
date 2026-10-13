@@ -31,6 +31,7 @@ export default function AlumnosPage() {
   const [buscar, setBuscar] = useState('');
   const [busquedaAplicada, setBusquedaAplicada] = useState('');
   const [plantelAplicado, setPlantelAplicado] = useState('');
+  const filtrosAplicados = useRef({ buscar: '', plantelId: '' });
   const [form, setForm] = useState(FORM_INICIAL);
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
@@ -69,7 +70,7 @@ export default function AlumnosPage() {
   const egresar = async (alumno: Alumno) => {
     if (!await confirmacion.solicitar('¿Egresar al alumno? Se terminarán sus inscripciones y su acceso; conservará el expediente.')) return;
     setEnviando(true); setError('');
-    try { await api.post(`/alumnos/${alumno.id}/egreso`); setMensaje('Alumno egresado'); cargar(1, busquedaAplicada, plantelAplicado); }
+    try { await api.post(`/alumnos/${alumno.id}/egreso`); setMensaje('Alumno egresado'); recargarListado(); }
     catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
   const transferir = async (e: FormEvent) => {
@@ -78,7 +79,7 @@ export default function AlumnosPage() {
     setEnviando(true); setError('');
     try {
       await api.post(`/alumnos/${transferencia.id}/transferencia`, { plantelId: Number(destino) });
-      setTransferencia(null); setMensaje('Transferencia completada. Inscribe al alumno en el grupo de destino.'); cargar(1, busquedaAplicada, plantelAplicado);
+      setTransferencia(null); setMensaje('Transferencia completada. Inscribe al alumno en el grupo de destino.'); recargarListado();
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
@@ -88,6 +89,7 @@ export default function AlumnosPage() {
     setError('');
     setBusquedaAplicada(termino);
     setPlantelAplicado(filtroPlantel);
+    filtrosAplicados.current = { buscar: termino, plantelId: filtroPlantel };
     api.get<Resultado>('/alumnos', {
       params: { pagina, ...(termino ? { buscar: termino } : {}), ...(filtroPlantel ? { plantelId: filtroPlantel } : {}) },
     })
@@ -95,6 +97,10 @@ export default function AlumnosPage() {
       .catch((err) => { if (actual === consulta.current) setError(mensajeDeError(err)); })
       .finally(() => { if (actual === consulta.current) setCargando(false); });
   }, []);
+  const recargarListado = () => {
+    const filtros = filtrosAplicados.current;
+    cargar(1, filtros.buscar, filtros.plantelId);
+  };
 
   useEffect(() => {
     api.get<Plantel[]>('/planteles/mios').then((r) => setPlanteles(r.data)).catch((err) => setError(mensajeDeError(err)));
@@ -123,7 +129,7 @@ export default function AlumnosPage() {
       setMensaje(`Alumno ${form.matricula} ${editando ? 'actualizado' : 'registrado'}`);
       setEditando(null);
       setForm(FORM_INICIAL);
-      cargar(1, busquedaAplicada, plantelAplicado);
+      recargarListado();
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
@@ -135,7 +141,7 @@ export default function AlumnosPage() {
   const baja = async (alumno: Alumno) => {
     if (!await confirmacion.solicitar(`¿Dar de baja a ${alumno.usuario.nombre} ${alumno.usuario.apellidoPaterno}?`)) return;
     setEnviando(true); setError('');
-    try { await api.post(`/alumnos/${alumno.id}/baja`); setMensaje('Alumno dado de baja'); cargar(1, busquedaAplicada, plantelAplicado); }
+    try { await api.post(`/alumnos/${alumno.id}/baja`); setMensaje('Alumno dado de baja'); recargarListado(); }
     catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
@@ -200,7 +206,7 @@ export default function AlumnosPage() {
                   {puedeGestionar && <button className="boton secundario chico" onClick={() => verHistorial(a)}>Historial y boleta</button>}
                   {puedeGestionar && <>
                     <button disabled={enviando} className="boton secundario chico" onClick={() => editar(a)}>Editar</button>
-                    {a.estatus === 'BAJA' && <button disabled={enviando} onClick={() => dialogoMotivo.abrir({ titulo: 'Reactivar alumno', advertencia: 'No se restauran inscripciones; deberá inscribirse explícitamente.', ejecutar: async (motivo) => { await api.post(`/alumnos/${a.id}/reactivacion`, { motivo }); setMensaje('Alumno reactivado; inscribe desde Grupos'); await cargar(1, busquedaAplicada, plantelAplicado); } })}>Reactivar expediente</button>}
+                    {a.estatus === 'BAJA' && <button disabled={enviando} onClick={() => dialogoMotivo.abrir({ titulo: 'Reactivar alumno', advertencia: 'No se restauran inscripciones; deberá inscribirse explícitamente.', ejecutar: async (motivo) => { await api.post(`/alumnos/${a.id}/reactivacion`, { motivo }); setMensaje('Alumno reactivado; inscribe desde Grupos'); recargarListado(); } })}>Reactivar expediente</button>}
                     {a.estatus === 'ACTIVO' && <>
                       <button disabled={enviando} className="boton secundario chico" onClick={() => { setTransferencia(a); setDestino(''); }}>Transferir</button>
                       <button disabled={enviando} className="boton secundario chico" onClick={() => egresar(a)}>Egresar</button>
