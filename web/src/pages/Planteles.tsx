@@ -1,7 +1,8 @@
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { Encabezado } from '../components/Encabezado';
+import '../components/tabla-adaptable.css';
 
 interface Plantel {
   id: number; clave: string; nombre: string; direccion?: string; municipio?: string;
@@ -16,6 +17,7 @@ interface Detalle extends Plantel {
 export default function PlantelesPage() {
   const { sesion } = useAuth();
   const esSuperadmin = sesion?.roles.includes('SUPERADMIN') ?? false;
+  const puedeAdministrar = esSuperadmin || (sesion?.roles.includes('ADMINISTRATIVO') ?? false);
   const [planteles, setPlanteles] = useState<Plantel[]>([]);
   const [detalle, setDetalle] = useState<Detalle | null>(null);
   const [alta, setAlta] = useState({ clave: '', nombre: '', direccion: '', municipio: '', telefono: '' });
@@ -23,19 +25,30 @@ export default function PlantelesPage() {
   const [personalEmail, setPersonalEmail] = useState('');
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
+  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const consultaDetalle = useRef(0);
 
   const cargar = useCallback(async () => {
+    setCargando(true);
     try { const { data } = await api.get<Plantel[]>('/planteles'); setPlanteles(data); }
     catch (err) { setError(mensajeDeError(err)); }
+    finally { setCargando(false); }
   }, []);
   const seleccionar = async (id: number) => {
-    try { const { data } = await api.get<Detalle>(`/planteles/${id}`); setDetalle(data); }
-    catch (err) { setError(mensajeDeError(err)); }
+    const actual = ++consultaDetalle.current;
+    setError('');
+    try {
+      const { data } = await api.get<Detalle>(`/planteles/${id}`);
+      if (actual === consultaDetalle.current) setDetalle(data);
+    } catch (err) { if (actual === consultaDetalle.current) setError(mensajeDeError(err)); }
   };
   useEffect(() => { void cargar(); }, [cargar]);
 
   const crear = async (e: FormEvent) => {
-    e.preventDefault(); setError(''); setMensaje('');
+    e.preventDefault();
+    if (guardando) return;
+    setGuardando(true); setError(''); setMensaje('');
     try {
       const { data } = await api.post<Plantel>('/planteles', {
         ...alta,
@@ -46,37 +59,53 @@ export default function PlantelesPage() {
       setAlta({ clave: '', nombre: '', direccion: '', municipio: '', telefono: '' });
       setMensaje('Plantel creado'); await cargar(); await seleccionar(data.id);
     } catch (err) { setError(mensajeDeError(err)); }
+    finally { setGuardando(false); }
   };
 
   const operar = async (accion: () => Promise<unknown>, texto: string) => {
-    if (!detalle) return;
-    setError(''); setMensaje('');
+    if (!detalle || guardando) return;
+    setGuardando(true); setError(''); setMensaje('');
     try { await accion(); setMensaje(texto); await seleccionar(detalle.id); }
     catch (err) { setError(mensajeDeError(err)); }
+    finally { setGuardando(false); }
   };
 
   return <>
     <Encabezado titulo="Planteles" detalle="Datos, dirección y personal asignado por sede" />
-    {error && <p className="mensaje-error">{error}</p>}
-    {mensaje && <p className="mensaje-ok">{mensaje}</p>}
+    {error && <p role="alert" className="mensaje-error">{error}</p>}
+    {mensaje && <p role="status" className="mensaje-ok">{mensaje}</p>}
 
     {esSuperadmin && <section className="panel">
       <h2>Nuevo plantel</h2>
-      <form className="fila" onSubmit={crear}>
-        <div className="campo"><label>Clave</label><input required minLength={2} maxLength={10} value={alta.clave} onChange={(e) => setAlta({ ...alta, clave: e.target.value.toUpperCase() })} /></div>
-        <div className="campo"><label>Nombre</label><input required minLength={3} value={alta.nombre} onChange={(e) => setAlta({ ...alta, nombre: e.target.value })} /></div>
-        <div className="campo"><label>Municipio</label><input value={alta.municipio} onChange={(e) => setAlta({ ...alta, municipio: e.target.value })} /></div>
-        <div className="campo"><label>Dirección</label><input value={alta.direccion} onChange={(e) => setAlta({ ...alta, direccion: e.target.value })} /></div>
-        <div className="campo"><label>Teléfono</label><input value={alta.telefono} onChange={(e) => setAlta({ ...alta, telefono: e.target.value })} /></div>
-        <button className="boton">Crear</button>
+      <form className="fila" onSubmit={crear} aria-busy={guardando}>
+        <div className="campo"><label htmlFor="nuevo-plantel-clave">Clave</label><input id="nuevo-plantel-clave" required minLength={2} maxLength={10} value={alta.clave} onChange={(e) => setAlta({ ...alta, clave: e.target.value.toUpperCase() })} /></div>
+        <div className="campo"><label htmlFor="nuevo-plantel-nombre">Nombre</label><input id="nuevo-plantel-nombre" required minLength={3} value={alta.nombre} onChange={(e) => setAlta({ ...alta, nombre: e.target.value })} /></div>
+        <div className="campo"><label htmlFor="nuevo-plantel-municipio">Municipio</label><input id="nuevo-plantel-municipio" value={alta.municipio} onChange={(e) => setAlta({ ...alta, municipio: e.target.value })} /></div>
+        <div className="campo"><label htmlFor="nuevo-plantel-direccion">Dirección</label><input id="nuevo-plantel-direccion" value={alta.direccion} onChange={(e) => setAlta({ ...alta, direccion: e.target.value })} /></div>
+        <div className="campo"><label htmlFor="nuevo-plantel-telefono">Teléfono</label><input id="nuevo-plantel-telefono" value={alta.telefono} onChange={(e) => setAlta({ ...alta, telefono: e.target.value })} /></div>
+        <button className="boton" disabled={guardando}>{guardando ? 'Guardando…' : 'Crear'}</button>
       </form>
     </section>}
 
     <section className="panel">
-      <h2>Planteles</h2>
-      <table className="tabla"><thead><tr><th>Clave</th><th>Nombre</th><th>Municipio</th><th>Estatus</th><th /></tr></thead>
-        <tbody>{planteles.map((p) => <tr key={p.id}><td>{p.clave}</td><td>{p.nombre}</td><td>{p.municipio ?? '—'}</td><td><span className={`sello ${p.activo ? 'ok' : 'neutro'}`}>{p.activo ? 'Activo' : 'Inactivo'}</span></td><td className="derecha"><button className="boton secundario chico" onClick={() => seleccionar(p.id)}>Seleccionar</button></td></tr>)}</tbody>
-      </table>
+      <div className="cabecera-listado"><h2>Directorio de planteles</h2><p>{planteles.length} planteles</p></div>
+      {cargando && <p role="status">Cargando planteles…</p>}
+      <div className="tabla-contenedor" role="region" aria-label="Listado de planteles" tabIndex={0}>
+        <table className="tabla tabla-adaptable" aria-busy={cargando}>
+          <caption className="solo-lector">Clave, nombre, municipio, estatus y acciones por plantel</caption>
+          <thead><tr><th scope="col">Clave</th><th scope="col">Nombre</th><th scope="col">Municipio</th><th scope="col">Estatus</th><th scope="col">Acciones</th></tr></thead>
+          <tbody>
+            {planteles.map((p) => <tr key={p.id}>
+              <td data-etiqueta="Clave">{p.clave}</td>
+              <td data-etiqueta="Nombre">{p.nombre}</td>
+              <td data-etiqueta="Municipio">{p.municipio ?? '—'}</td>
+              <td data-etiqueta="Estatus"><span className={`sello ${p.activo ? 'ok' : 'neutro'}`}>{p.activo ? 'Activo' : 'Inactivo'}</span></td>
+              <td data-etiqueta="Acciones" className="derecha"><span className="acciones-fila"><button className="boton secundario chico" onClick={() => seleccionar(p.id)}>Ver detalle</button></span></td>
+            </tr>)}
+            {!cargando && planteles.length === 0 && <tr><td colSpan={5} className="vacio">No hay planteles disponibles para tu cuenta.</td></tr>}
+          </tbody>
+        </table>
+      </div>
     </section>
 
     {detalle && <section className="panel">
@@ -85,12 +114,24 @@ export default function PlantelesPage() {
       <div className="fila"><span className="sello neutro">{detalle.conteos.alumnos} alumnos</span><span className="sello neutro">{detalle.conteos.grupos} grupos</span></div>
       <h3>Director</h3>
       <p>{detalle.director ? `${detalle.director.nombre} ${detalle.director.apellidoPaterno} · ${detalle.director.email}` : 'Sin director asignado'}</p>
-      <div className="fila"><div className="campo"><label>Correo del director</label><input type="email" value={directorEmail} onChange={(e) => setDirectorEmail(e.target.value)} /></div><button className="boton" onClick={() => operar(() => api.put(`/planteles/${detalle.id}/director`, { email: directorEmail }), 'Director actualizado')}>Asignar director</button></div>
+      {puedeAdministrar && <div className="fila"><div className="campo"><label htmlFor="correo-director-plantel">Correo del director</label><input id="correo-director-plantel" type="email" value={directorEmail} onChange={(e) => setDirectorEmail(e.target.value)} /></div><button className="boton" disabled={guardando || !directorEmail.trim()} onClick={() => operar(() => api.put(`/planteles/${detalle.id}/director`, { email: directorEmail }), 'Director actualizado')}>Asignar director</button></div>}
       <h3>Personal asignado</h3>
-      <div className="fila"><div className="campo"><label>Correo del personal</label><input type="email" value={personalEmail} onChange={(e) => setPersonalEmail(e.target.value)} /></div><button className="boton" onClick={() => operar(() => api.post(`/planteles/${detalle.id}/personal`, { email: personalEmail }), 'Personal agregado')}>Agregar</button></div>
-      <table className="tabla"><thead><tr><th>Nombre</th><th>Correo</th><th>Roles</th><th /></tr></thead><tbody>
-        {detalle.personal.map((p) => <tr key={p.id}><td>{p.nombre}</td><td>{p.email}</td><td>{p.roles.join(', ')}</td><td className="derecha"><button className="boton peligro chico" onClick={() => operar(() => api.delete(`/planteles/${detalle.id}/personal/${p.id}`), 'Personal retirado')}>Quitar</button></td></tr>)}
-      </tbody></table>
+      {puedeAdministrar && <div className="fila"><div className="campo"><label htmlFor="correo-personal-plantel">Correo del personal</label><input id="correo-personal-plantel" type="email" value={personalEmail} onChange={(e) => setPersonalEmail(e.target.value)} /></div><button className="boton" disabled={guardando || !personalEmail.trim()} onClick={() => operar(() => api.post(`/planteles/${detalle.id}/personal`, { email: personalEmail }), 'Personal agregado')}>Agregar</button></div>}
+      <div className="tabla-contenedor" role="region" aria-label="Personal del plantel" tabIndex={0}>
+        <table className="tabla tabla-adaptable">
+          <caption className="solo-lector">Personal asignado al plantel, correo, roles y opciones</caption>
+          <thead><tr><th scope="col">Nombre</th><th scope="col">Correo</th><th scope="col">Roles</th><th scope="col">Acciones</th></tr></thead>
+          <tbody>
+            {detalle.personal.map((p) => <tr key={p.id}>
+              <td data-etiqueta="Nombre">{p.nombre}</td>
+              <td data-etiqueta="Correo">{p.email}</td>
+              <td data-etiqueta="Roles">{p.roles.join(', ')}</td>
+              <td data-etiqueta="Acciones" className="derecha">{puedeAdministrar && <span className="acciones-fila"><button className="boton peligro chico" disabled={guardando} onClick={() => operar(() => api.delete(`/planteles/${detalle.id}/personal/${p.id}`), 'Personal retirado')}>Quitar</button></span>}</td>
+            </tr>)}
+            {detalle.personal.length === 0 && <tr><td className="vacio" colSpan={4}>No hay personal asignado a este plantel.</td></tr>}
+          </tbody>
+        </table>
+      </div>
     </section>}
   </>;
 }
