@@ -1,17 +1,17 @@
 # Sistema Escolar Multiplataforma
 
-**Versión candidata: `1.23.5`** · Estado revisado el 13 de octubre de 2026.
+**Versión candidata: `1.24.0-beta.1`** · Estado revisado el 13 de octubre de 2026.
 
 API, portal administrativo/docente y app del alumno para gestión académica y financiera con alcance por plantel. Las versiones de backend, web, móvil, lockfiles y Expo están alineadas. Este README describe una única versión actual; los informes históricos permanecen en `docs/`.
 
 | Componente | Estado actual |
 |---|---|
-| API y web | MVP funcional, alpha avanzada en estabilización antes del piloto |
-| App del alumno | MVP en alpha; requiere corregir un bloqueo de arranque y completar pruebas físicas |
+| API y web | Candidata técnica a primera beta funcional; aceptación del piloto pendiente |
+| App del alumno | Candidata a beta del alumno; arranque corregido, pruebas físicas pendientes |
 | Base de datos | Baseline v1 y siete migraciones incrementales espejo; MySQL 8.4 / SQL Server 2022 probados en CI |
 | ETL de legado | Prototipo parcial; no listo para migración institucional general |
 
-Todavía no se declara beta ni primera versión estable de producción. La versión numérica no certifica despliegue, aceptación institucional ni publicación de la app. Consulte la [auditoría actual](docs/AUDITORIA_ESTADO_1.23.5_2026-10-13.md) y su [inventario de 495 archivos](docs/auditoria/INVENTARIO_1.23.5_2026-10-13.csv).
+Esta candidata incorpora 30 mejoras de UX, conexión, seguridad y fiabilidad. La aceptación de beta requiere un piloto controlado; todavía no se declara primera versión estable de producción. La versión numérica no certifica despliegue, aceptación institucional ni publicación de la app. Consulte las [30 mejoras y condiciones de beta](docs/PREPARACION_BETA_1.24.0-beta.1.md), la [auditoría base](docs/AUDITORIA_ESTADO_1.23.5_2026-10-13.md) y su [inventario de 495 archivos](docs/auditoria/INVENTARIO_1.23.5_2026-10-13.csv).
 
 ## Funcionalidad actual
 
@@ -23,7 +23,7 @@ Todavía no se declara beta ni primera versión estable de producción. La versi
 - Archivos con descargas firmadas y validación de alcance; marca institucional mediante `/api/configuracion/marca`.
 - App del alumno para inicio, materias, tareas, calificaciones, perfil y estado de cuenta.
 
-La interfaz incorpora modales con gestión de foco, navegación con iconos, listados adaptables y protección contra respuestas tardías. El inicio móvil conserva información cuando falla parcialmente un servicio; cambiar contraseña exige reautenticación. Materias y tareas se actualizan al cambiar usuario o recuperar foco. Grupos y docentes no conservan detalles obsoletos. Alumnos mantiene los filtros confirmados al paginar y finalizar mutaciones, incluso si cambió la consulta durante la operación. Calendario muestra la baja según creador, plantel y roles combinados, incluyendo la excepción de SUPERADMIN. Estas correcciones están integradas; la aceptación con usuarios sigue pendiente.
+La interfaz incorpora modales con gestión de foco, navegación con iconos, listados adaptables y protección contra respuestas tardías. El inicio móvil conserva información cuando falla parcialmente un servicio; cambiar contraseña exige reautenticación. Materias y tareas se actualizan al cambiar usuario o recuperar foco. Grupos y docentes no conservan detalles obsoletos. Alumnos mantiene los filtros confirmados al paginar y finalizar mutaciones, incluso si cambió la consulta durante la operación. Calendario muestra la baja según creador, plantel y roles combinados, incluyendo la excepción de SUPERADMIN. La candidata añade guías de propósito en web y móvil, confirmaciones de entrega/pago/contraseña, contraste según la marca y bloqueo de envíos duplicados. La aceptación con usuarios sigue pendiente.
 
 ## Arquitectura y versiones
 
@@ -79,7 +79,7 @@ La auditoría de dependencias no informó vulnerabilidades conocidas en npm ni e
 
 ## Validación y límites actuales
 
-Sobre el código combinado integrado: 191 pruebas unitarias de backend, 75 web, 27 móviles más cinco del comprobador móvil y siete del ETL satisfactorias. CI ejecutó 73 pruebas de integración en cada motor y verificaciones de navegador/responsive entre 320 y 3840 px. Tipos, builds y exportación Android Expo aprobaron. Backend lint tiene cero errores y 527 advertencias que deben reducirse. [Evidencia y alcance](docs/AUDITORIA_ESTADO_1.23.5_2026-10-13.md#evidencia-de-validación).
+La candidata incorpora 191 pruebas unitarias de backend, 80 web, 58 móviles y 11 pruebas Node de configuración/auditoría. El ETL conserva sus siete pruebas. La integración y compilación se exigen en CI antes de publicar cada commit. CI ejecutó 73 pruebas de integración en cada motor y verificaciones de navegador/responsive entre 320 y 3840 px. Tipos, builds y exportación Android Expo aprobaron. Backend lint tiene cero errores y 527 advertencias que deben reducirse. [Evidencia y alcance de la candidata](docs/PREPARACION_BETA_1.24.0-beta.1.md#validación).
 
 ```sh
 # Desde backend/
@@ -105,7 +105,7 @@ Las integraciones requieren bases aisladas configuradas para pruebas. Los ocho j
 
 Antes del piloto:
 
-- Corregir el fallo de arranque móvil: si SecureStore rechaza durante la carga de marca, puede quedar visible el indicador inicial indefinidamente. El informe incluye reproducción y criterio de corrección.
+- Validar físicamente el arranque móvil ante almacenamiento fallido: el cargador ya tolera lectura, borrado, escritura y red fallidas con marca predeterminada y regresiones automatizadas.
 - Antes de migrar legado, completar pipelines y mapeo del ETL y exigir TLS verificado; hoy sólo planteles/alumnos están implementados.
 - Probar builds firmados en Android/iOS físicos, push, permisos, reconexión y cambio de cuenta.
 - Certificar staging, SMTP/Openpay, permisos, cierre/promoción, copias y restauración con responsables institucionales.
@@ -114,7 +114,8 @@ La edición de eventos, una biblioteca general de archivos y una cola académica
 
 ## Documentación operativa
 
-- [Auditoría completa y clasificación actual](docs/AUDITORIA_ESTADO_1.23.5_2026-10-13.md)
+- [Preparación de beta, guía de uso y 30 mejoras](docs/PREPARACION_BETA_1.24.0-beta.1.md)
+- [Auditoría base e inventario](docs/AUDITORIA_ESTADO_1.23.5_2026-10-13.md)
 - [Reglas del piloto](docs/REGLAS_PILOTO.md)
 - [Migraciones y protección de datos existentes](docs/MIGRACIONES.md)
 - [Operación de producción](docs/OPERACION_PRODUCCION.md)

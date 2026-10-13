@@ -52,6 +52,7 @@ export function Shell() {
   const { marca } = useMarca();
   const [errorCierre, setErrorCierre] = useState('');
   const [menuAbierto, setMenuAbierto] = useState(false);
+  const [sinConexion, setSinConexion] = useState(() => navigator.onLine === false);
   const [logoFallo, setLogoFallo] = useState(false);
   const botonMenu = useRef<HTMLButtonElement>(null);
   const botonCerrarMenu = useRef<HTMLButtonElement>(null);
@@ -60,6 +61,16 @@ export function Shell() {
   const saltoContenido = useRef<HTMLAnchorElement>(null);
   const enfocarContenido = useRef(false);
   const menuAnterior = useRef(false);
+
+  useEffect(() => {
+    const actualizar = () => setSinConexion(navigator.onLine === false);
+    window.addEventListener('online', actualizar);
+    window.addEventListener('offline', actualizar);
+    return () => {
+      window.removeEventListener('online', actualizar);
+      window.removeEventListener('offline', actualizar);
+    };
+  }, []);
 
   const navegarDesdeMenu = () => {
     if (!menuAbierto) return;
@@ -80,7 +91,9 @@ export function Shell() {
     menuAnterior.current = menuAbierto;
   }, [menuAbierto]);
 
-  useEffect(() => { setMenuAbierto(false); }, [location.pathname]);
+  useEffect(() => {
+    setMenuAbierto(false);
+  }, [location.pathname]);
   useEffect(() => {
     if (!menuAbierto) return;
     const consulta = window.matchMedia('(max-width: 800px)');
@@ -96,7 +109,9 @@ export function Shell() {
       consulta.removeEventListener('change', cerrarEnEscritorio);
     };
   }, [menuAbierto]);
-  useEffect(() => { setLogoFallo(false); }, [marca.logoUrl]);
+  useEffect(() => {
+    setLogoFallo(false);
+  }, [marca.logoUrl]);
   useEffect(() => {
     if (!menuAbierto) return;
     botonCerrarMenu.current?.focus();
@@ -106,7 +121,9 @@ export function Shell() {
         return;
       }
       if (evento.key !== 'Tab' || !window.matchMedia('(max-width: 800px)').matches) return;
-      const elementos = Array.from(lateral.current?.querySelectorAll<HTMLElement>('a[href], button:not([disabled])') ?? []);
+      const elementos = Array.from(
+        lateral.current?.querySelectorAll<HTMLElement>('a[href], button:not([disabled])') ?? [],
+      );
       if (!elementos.length) return;
       const primero = elementos[0];
       const ultimo = elementos[elementos.length - 1];
@@ -124,14 +141,45 @@ export function Shell() {
 
   return (
     <div className="shell">
-      <a ref={saltoContenido} className="skip-link" href="#contenido-principal">Saltar al contenido principal</a>
-      {menuAbierto && <button type="button" tabIndex={-1} className="menu-fondo" aria-label="Cerrar navegación" onClick={() => { setMenuAbierto(false); }} />}
-      <aside ref={lateral} className={`lateral${menuAbierto ? ' lateral-abierto' : ''}`} role={menuAbierto ? 'dialog' : undefined} aria-modal={menuAbierto ? true : undefined} aria-label="Menú principal">
-        <button ref={botonCerrarMenu} type="button" className="menu-cerrar" onClick={() => setMenuAbierto(false)}><span>Cerrar menú</span> <IconoTabler nombre="x" /></button>
-        {marca.logoUrl && !logoFallo
-          ? <img className="logo-marca" src={archivosBase + marca.logoUrl} alt={marca.nombreInstitucion} onError={() => setLogoFallo(true)} />
-          : <div className="monograma" aria-hidden>{marca.nombreCorto}</div>}
-        <p className="lateral-titulo" title={marca.nombreInstitucion}>{marca.nombreInstitucion}</p>
+      <a ref={saltoContenido} className="skip-link" href="#contenido-principal">
+        Saltar al contenido principal
+      </a>
+      {menuAbierto && (
+        <button
+          type="button"
+          tabIndex={-1}
+          className="menu-fondo"
+          aria-label="Cerrar navegación"
+          onClick={() => {
+            setMenuAbierto(false);
+          }}
+        />
+      )}
+      <aside
+        ref={lateral}
+        className={`lateral${menuAbierto ? ' lateral-abierto' : ''}`}
+        role={menuAbierto ? 'dialog' : undefined}
+        aria-modal={menuAbierto ? true : undefined}
+        aria-label="Menú principal"
+      >
+        <button ref={botonCerrarMenu} type="button" className="menu-cerrar" onClick={() => setMenuAbierto(false)}>
+          <span>Cerrar menú</span> <IconoTabler nombre="x" />
+        </button>
+        {marca.logoUrl && !logoFallo ? (
+          <img
+            className="logo-marca"
+            src={archivosBase + marca.logoUrl}
+            alt={marca.nombreInstitucion}
+            onError={() => setLogoFallo(true)}
+          />
+        ) : (
+          <div className="monograma" aria-hidden>
+            {marca.nombreCorto}
+          </div>
+        )}
+        <p className="lateral-titulo" title={marca.nombreInstitucion}>
+          {marca.nombreInstitucion}
+        </p>
         <div className="menu-panel">
           <nav id="navegacion-escolar" aria-label="Navegación principal">
             {secciones
@@ -145,9 +193,15 @@ export function Shell() {
           </nav>
           <div className="lateral-pie">
             <p>{sesion?.nombre}</p>
-            <NavLink to="/cuenta" className="pie-enlace" onClick={navegarDesdeMenu}>Mi cuenta</NavLink>
+            <NavLink to="/cuenta" className="pie-enlace" onClick={navegarDesdeMenu}>
+              Mi cuenta
+            </NavLink>
             <p className="rol">{sesion?.roles.join(' · ')}</p>
-            {errorCierre && <p className="mensaje-error" role="alert">{errorCierre}</p>}
+            {errorCierre && (
+              <p className="mensaje-error" role="alert">
+                {errorCierre}
+              </p>
+            )}
             <button
               className="boton fantasma"
               onClick={async () => {
@@ -167,14 +221,70 @@ export function Shell() {
       </aside>
       <main ref={contenido} className="contenido" id="contenido-principal" tabIndex={-1}>
         <div className="barra-superior">
-          <button ref={botonMenu} type="button" className="menu-movil" aria-label="Abrir menú" aria-expanded={menuAbierto} aria-controls="navegacion-escolar" onClick={() => setMenuAbierto((abierto) => !abierto)}><IconoTabler nombre="menu-2" /> <span>Menú</span></button>
-          <span className="barra-contexto">Espacio de trabajo <strong>{sesion?.roles.join(' · ')}</strong></span>
+          <button
+            ref={botonMenu}
+            type="button"
+            className="menu-movil"
+            aria-label="Abrir menú"
+            aria-expanded={menuAbierto}
+            aria-controls="navegacion-escolar"
+            onClick={() => setMenuAbierto((abierto) => !abierto)}
+          >
+            <IconoTabler nombre="menu-2" /> <span>Menú</span>
+          </button>
+          <span className="barra-contexto">
+            Espacio de trabajo <strong>{sesion?.roles.join(' · ')}</strong>
+          </span>
           <Campana />
         </div>
+        {sinConexion && (
+          <p className="mensaje-error" role="alert">
+            Tu dispositivo está sin conexión. Los datos visibles pueden estar desactualizados. Conéctate y vuelve a
+            cargar la sección antes de guardar cambios.
+          </p>
+        )}
+        <GuiaSeccion ruta={location.pathname} />
         <Suspense fallback={<Cargando />}>
           <Outlet />
         </Suspense>
       </main>
     </div>
+  );
+}
+
+const guias: Record<string, string> = {
+  '/': 'Consulta indicadores y accesos de tus funciones. Selecciona un plantel para acotar el resumen.',
+  '/operaciones':
+    'Revisa una importación antes de confirmarla. La promoción mueve inscripciones entre ciclos y debe verificarse antes de ejecutarse.',
+  '/conducta':
+    'Registra y consulta incidencias internas. Esta información sólo está disponible para personal autorizado.',
+  '/analitica':
+    'Compara indicadores dentro de tus permisos. Revisa el periodo y plantel seleccionados antes de interpretar los resultados.',
+  '/alumnos':
+    'Busca expedientes por matrícula o plantel. Aplica los filtros para actualizar la lista; las acciones afectan al alumno seleccionado.',
+  '/planteles': 'Consulta las sedes a las que tienes acceso y sus datos de contacto.',
+  '/docentes': 'Consulta el directorio docente y abre una ficha para revisar sus datos.',
+  '/materias': 'Administra el catálogo de materias. La asignación de docentes y grupos se realiza desde Grupos.',
+  '/grupos': 'Organiza los grupos por plantel y ciclo, sus inscripciones y las materias impartidas.',
+  '/maestro': 'Abre una de tus clases para publicar actividades, materiales y revisar entregas.',
+  '/calificaciones':
+    'Captura parciales y revisa el promedio oficial. Las correcciones requieren motivo y quedan en el historial.',
+  '/calendario': 'Consulta y publica eventos. Puedes eliminar los eventos permitidos por tu rol, plantel y autoría.',
+  '/avisos': 'Publica comunicaciones para los destinatarios permitidos por tus funciones.',
+  '/finanzas': 'Revisa cargos, pagos y adeudos. Verifica alumno, monto y referencia antes de registrar una operación.',
+  '/usuarios':
+    'Gestiona o consulta cuentas dentro de tus permisos. Los roles determinan qué información y acciones puede usar cada persona.',
+  '/configuracion':
+    'Configura nombre, colores y logo institucionales. Los cambios también se muestran en la app del alumno.',
+  '/cuenta': 'Revisa tu cuenta y cambia la contraseña. Al actualizarla tendrás que volver a iniciar sesión.',
+};
+function GuiaSeccion({ ruta }: { ruta: string }) {
+  if (!guias[ruta]) return null;
+  return (
+    <details className="panel" style={{ padding: 12, marginBottom: 16 }}>
+      <summary style={{ cursor: 'pointer', minHeight: 32 }}>¿Para qué sirve esta sección?</summary>
+      <p>{guias[ruta]}</p>
+      <p>Las opciones dependen de tus permisos. No compartas tu contraseña y cierra sesión en equipos compartidos.</p>
+    </details>
   );
 }
