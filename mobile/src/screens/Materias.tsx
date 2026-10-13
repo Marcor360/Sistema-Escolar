@@ -46,15 +46,18 @@ export default function MateriasScreen() {
     setCargandoMateriales(null);
     setCargaInicialCompleta(false);
     setUltimaActualizacion(null);
+    setError('');
+    setCargando(false);
   }, [sesion?.sub]);
   const cargar = useCallback(() => {
+    if (!sesion?.sub) return;
     setError('');
     setCargando(true);
     void lectura.current.cargar(() => api.get<Materia[]>('/alumnos/me/materias'),
       (r) => { setMaterias(r.data); setUltimaActualizacion(new Date().toLocaleString()); setCargaInicialCompleta(true); },
       (fallo) => setError(mensajeDeError(fallo)),
       () => setCargando(false));
-  }, []);
+  }, [sesion?.sub]);
 
   useFocusEffect(useCallback(() => {
     cargar();
@@ -62,6 +65,7 @@ export default function MateriasScreen() {
       lectura.current.invalidar();
       consultaMateriales.current += 1;
       setCargandoMateriales(null);
+      setAbierta(null);
     };
   }, [cargar]));
 
@@ -84,6 +88,8 @@ export default function MateriasScreen() {
   };
 
   const alternar = (materia: Materia) => {
+    consultaMateriales.current += 1;
+    setCargandoMateriales(null);
     if (abierta === materia.id) { setAbierta(null); return; }
     setAbierta(materia.id);
     if (!materialesPor[materia.id]) void cargarMateriales(materia.id);
@@ -91,10 +97,11 @@ export default function MateriasScreen() {
 
   /** Pide un enlace firmado de corta vida y lo abre (los materiales ya no son públicos). */
   const abrirMaterial = async (materialId: number) => {
+    const actual = consultaMateriales.current;
     try {
       const { data } = await api.get<{ url: string }>(`/archivos/materiales/${materialId}/enlace`);
-      await Linking.openURL(`${archivosBase}${data.url}`);
-    } catch (fallo) { setError(mensajeDeError(fallo)); }
+      if (actual === consultaMateriales.current) await Linking.openURL(`${archivosBase}${data.url}`);
+    } catch (fallo) { if (actual === consultaMateriales.current) setError(mensajeDeError(fallo)); }
   };
 
   return (
