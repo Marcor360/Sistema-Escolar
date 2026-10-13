@@ -126,12 +126,16 @@ function AppInterna() {
     return () => sub.remove();
   }, [sesion]);
 
-  const cerrar = async () => {
-    await api.post('/auth/logout');
+  const finalizarSesionLocal = async () => {
     await Notifications.dismissAllNotificationsAsync().catch(() => undefined);
     await SecureStore.deleteItemAsync(TOKEN_KEY);
     await SecureStore.deleteItemAsync(REFRESH_KEY);
     setSesion(null);
+  };
+
+  const cerrar = async () => {
+    await api.post('/auth/logout');
+    await finalizarSesionLocal();
   };
 
   if (!listo || !marcaLista) {
@@ -174,7 +178,7 @@ function AppInterna() {
 
   return (
     <MarcaContext.Provider value={{ marca }}>
-      <SesionContext.Provider value={{ sesion, iniciar, cerrar }}>
+      <SesionContext.Provider value={{ sesion, iniciar, cerrar, finalizarSesionLocal }}>
         <NavigationContainer ref={navegacion} theme={tema} onReady={() => { if (sesion && Notifications.getLastNotificationResponse()) navegacion.navigate('Inicio'); }}>
         <StatusBar style={textoSobreFondo(marca.colorPrimario) === '#ffffff' ? 'light' : 'dark'} />
         {sesion ? (

@@ -15,6 +15,7 @@ interface AuthValue {
   errorInicio: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  finalizarSesionLocal: () => void;
   tieneRol: (...roles: string[]) => boolean;
 }
 
@@ -59,9 +60,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSesion(data.usuario);
   };
 
+  const finalizarSesionLocal = () => {
+    establecerToken(null);
+    setSesion(null);
+  };
+
   const logout = async () => {
     await api.post('/auth/logout');
-    establecerToken(null); setSesion(null);
+    finalizarSesionLocal();
   };
 
   const tieneRol = (...roles: string[]) =>
@@ -69,8 +75,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     (sesion.roles.includes('SUPERADMIN') || roles.some((r) => sesion.roles.includes(r)));
 
   return (
-    <AuthContext.Provider value={{ sesion, cargando, errorInicio, login, logout, tieneRol }}>
-      {sesion?.passwordChangeRequired ? <CambiarTemporal alCambiar={() => { establecerToken(null); setSesion(null); }} /> : children}
+    <AuthContext.Provider value={{ sesion, cargando, errorInicio, login, logout, finalizarSesionLocal, tieneRol }}>
+      {sesion?.passwordChangeRequired ? <CambiarTemporal alCambiar={finalizarSesionLocal} /> : children}
     </AuthContext.Provider>
   );
 }

@@ -2,7 +2,32 @@
 
 > Portal web administrativo/docente, app móvil del alumno y API para gestión académica y financiera. El código cubre los flujos principales del MVP; todavía no hay certificación de piloto institucional ni despliegue productivo.
 
-**Versión candidata: `1.23.1` · Modernización visual por fases · 12 de octubre de 2026.** Backend, web, móvil y Expo declaran la misma versión. La CI del SHA publicado debe comprobarse en [GitHub Actions](https://github.com/Marcor360/Sistema-Escolar/actions/workflows/ci.yml). El piloto requiere todavía certificación sobre el servidor y dispositivos reales.
+**Versión candidata: `1.23.5` · Estabilidad de filtros de alumnos · 13 de octubre de 2026.** Backend, web, móvil y Expo declaran la misma versión. La CI del SHA publicado debe comprobarse en [GitHub Actions](https://github.com/Marcor360/Sistema-Escolar/actions/workflows/ci.yml). El piloto requiere todavía certificación sobre el servidor y dispositivos reales.
+
+## Correcciones 1.23.5 — listado de alumnos
+
+- La paginación mantiene filtros confirmados, sin aplicar borradores por accidente.
+- Filtro por plantel y matrícula coherente entre navegación, acciones y resultados vacíos.
+- Prueba de regresión de paginación; validación de pantalla con usuarios reales pendiente.
+
+## Correcciones 1.23.4 — directorio de docentes
+
+- Se ignoran respuestas tardías al consultar diferentes fichas docentes.
+- El detalle muestra estado de carga y no conserva fichas al cambiar de docente o salir.
+- Añadidas pruebas de concurrencia; validación visual en el entorno institucional pendiente.
+
+## Correcciones 1.23.3 — autenticación web
+
+- Cambio de contraseña con cierre local y reautenticación obligatoria.
+- Formulario de Mi cuenta accesible con bloqueo de doble envío y mensajes claros de error.
+- Pruebas de regresión de sesión y formularios; validación física institucional pendiente.
+
+## Correcciones 1.23.2 — app móvil de alumno
+
+- El inicio conserva tareas, avisos y calendario aunque otro servicio temporalmente no responda.
+- El cambio de contraseña revoca sesión local y exige un nuevo inicio de sesión.
+- Perfil y estado de cuenta mejoran carga, accesibilidad y consistencia de las respuestas.
+- Incluye pruebas unitarias y verificaciones de CI; la validación física y el despliegue continúan pendientes.
 
 ## Mantenimiento de staging 1.23.1
 

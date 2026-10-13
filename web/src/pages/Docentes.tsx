@@ -34,10 +34,22 @@ export default function DocentesPage() {
   const [editando, setEditando] = useState<number | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [cargando, setCargando] = useState(false); const consulta = useRef(0);
+  const consultaDetalle = useRef(0);
+  const [cargandoDetalle, setCargandoDetalle] = useState(false);
   const [detalle, setDetalle] = useState<{ id: number; estatus: string; plantelIds: number[]; clases: { id: number; grupo: string; materia: string; ciclo: string; plantel: string; vigente: boolean }[] } | null>(null);
   const verClases = async (d: Docente) => {
-    try { const { data } = await api.get(`/docentes/${d.id}`); setDetalle(data); }
-    catch (err) { setError(mensajeDeError(err)); }
+    const actual = ++consultaDetalle.current;
+    setDetalle(null);
+    setError('');
+    setCargandoDetalle(true);
+    try {
+      const { data } = await api.get<NonNullable<typeof detalle>>(`/docentes/${d.id}`);
+      if (actual === consultaDetalle.current) setDetalle(data);
+    } catch (err) {
+      if (actual === consultaDetalle.current) setError(mensajeDeError(err));
+    } finally {
+      if (actual === consultaDetalle.current) setCargandoDetalle(false);
+    }
   };
   const guardarPlanteles = async () => {
     if (!detalle || enviando || !await confirmacion.solicitar('¿Confirmar los planteles del docente? Las clases deben reasignarse antes de retirar un plantel.')) return;
@@ -50,6 +62,9 @@ export default function DocentesPage() {
   };
 
   const editar = (d: Docente) => {
+    consultaDetalle.current += 1;
+    setCargandoDetalle(false);
+    setDetalle(null);
     setEditando(d.id); setForm({ ...FORM_INICIAL, numEmpleado: d.numEmpleado,
       nombre: d.usuario.nombre, apellidoPaterno: d.usuario.apellidoPaterno,
       apellidoMaterno: d.usuario.apellidoMaterno ?? '', telefono: d.usuario.telefono ?? '', cedulaProfesional: d.cedulaProfesional ?? '', email: d.usuario.email, especialidad: d.especialidad ?? '' });
@@ -65,7 +80,15 @@ export default function DocentesPage() {
   }, []);
   useEffect(() => {
     cargar(1, '');
-    api.get<Plantel[]>('/planteles/mios').then((r) => setPlanteles(r.data)).catch((err) => setError(mensajeDeError(err)));
+    let activo = true;
+    api.get<Plantel[]>('/planteles/mios')
+      .then((r) => { if (activo) setPlanteles(r.data); })
+      .catch((err) => { if (activo) setError(mensajeDeError(err)); });
+    return () => {
+      activo = false;
+      consulta.current += 1;
+      consultaDetalle.current += 1;
+    };
   }, [cargar]);
 
   const crear = async (e: FormEvent) => {
@@ -125,10 +148,11 @@ export default function DocentesPage() {
 
       <div className="fila" style={{ marginBottom: 12 }}><div className="campo"><label htmlFor="docentes-campo-7">Filtrar por plantel</label><select id="docentes-campo-7" value={filtroPlantel} onChange={(e) => setFiltroPlantel(e.target.value)}><option value="">Todos</option>{planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div><button className="boton secundario" disabled={cargando} onClick={() => cargar(1, filtroPlantel)}>Aplicar</button></div>
 
+      {cargandoDetalle && <p role="status">Cargando planteles y clases del docente…</p>}
       {detalle && <section className="panel"><h2>Planteles y clases</h2><fieldset><legend>Planteles del docente</legend>
         {planteles.map((p) => <label key={p.id} className="casilla"><input type="checkbox" checked={detalle.plantelIds.includes(p.id)} onChange={() => setDetalle({ ...detalle,
           plantelIds: detalle.plantelIds.includes(p.id) ? detalle.plantelIds.filter((id) => id !== p.id) : [...detalle.plantelIds, p.id] })} />{p.nombre}</label>)}
-      </fieldset><button disabled={enviando} onClick={guardarPlanteles}>{detalle.estatus === 'BAJA' ? 'Reactivar con estos planteles' : 'Guardar planteles'}</button><button onClick={() => setDetalle(null)}>Cerrar</button>
+      </fieldset><button disabled={enviando} onClick={guardarPlanteles}>{detalle.estatus === 'BAJA' ? 'Reactivar con estos planteles' : 'Guardar planteles'}</button><button type="button" onClick={() => { consultaDetalle.current += 1; setDetalle(null); setCargandoDetalle(false); }}>Cerrar</button>
         {detalle.clases.map((c) => <p key={c.id}>{c.ciclo} · {c.plantel} · {c.grupo} · {c.materia} · {c.vigente ? 'Vigente' : 'Histórico'}</p>)}
         <a href="/grupos">Reasignar clases desde Grupos</a>
       </section>}
