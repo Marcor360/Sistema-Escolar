@@ -78,6 +78,15 @@ async function esperarServidor() {
           pagina: 1,
           porPagina: 20,
         };
+      if (path.endsWith('/docentes'))
+        data = {
+          datos: [{ id: 1, numEmpleado: 'DOC-QA-001', estatus: 'ACTIVO',
+            especialidad: 'Matemáticas y ciencias con especialidad extensa',
+            usuario: { nombre: 'Docente con nombre extenso', apellidoPaterno: 'Prueba',
+              email: 'docente.con.correo.extenso@example.test' },
+            planteles: ['Plantel de Prueba con un Nombre Extenso'],
+          }], total: 1, pagina: 1, porPagina: 20,
+        };
       if (path.endsWith('/analitica'))
         data = {
           modo: 'VIGENTE',
@@ -207,6 +216,24 @@ async function esperarServidor() {
       await expect.poll(() => table.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
     }
     console.log('PASS analytics ' + width);
+  }
+  for (const width of [320, 360, 700, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(baseUrl + '/docentes');
+    await expect(page.getByText('DOC-QA-001', { exact: true })).toBeVisible();
+    const listado = page.getByRole('region', { name: 'Listado de docentes' });
+    const geometry = await listado.evaluate((el) => ({
+      scroll: document.documentElement.scrollWidth, width: innerWidth,
+      desbordamiento: el.scrollWidth > el.clientWidth + 1,
+      ficha: getComputedStyle(el.querySelector('tbody tr')).display === 'block',
+    }));
+    if (geometry.scroll > geometry.width || (width <= 700 && (geometry.desbordamiento || !geometry.ficha)))
+      throw Error('Docentes layout ' + width + ': ' + JSON.stringify(geometry));
+    await listado.scrollIntoViewIfNeeded();
+    await listado.evaluate((el) => { el.scrollLeft = el.scrollWidth; });
+    await expect(listado.getByRole('button', { name: 'Dar de baja', exact: true })).toBeInViewport();
+    await expect(listado.getByRole('table')).toHaveCount(1);
+    console.log('PASS docentes ' + width);
   }
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.evaluate(() => {

@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { Encabezado } from '../components/Encabezado';
 import { Paginador } from '../components/Paginador';
+import '../components/tabla-adaptable.css';
 
 interface Docente {
   id: number;
@@ -122,7 +123,7 @@ export default function DocentesPage() {
         {mensaje && <p role="status" className="mensaje-ok">{mensaje}</p>}
       </section>
 
-      <div className="fila" style={{ marginBottom: 12 }}><div className="campo"><label htmlFor="docentes-campo-7">Filtrar por plantel</label><select id="docentes-campo-7" value={filtroPlantel} onChange={(e) => setFiltroPlantel(e.target.value)}><option value="">Todos</option>{planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div><button className="boton secundario" onClick={() => cargar(1, filtroPlantel)}>Aplicar</button></div>
+      <div className="fila" style={{ marginBottom: 12 }}><div className="campo"><label htmlFor="docentes-campo-7">Filtrar por plantel</label><select id="docentes-campo-7" value={filtroPlantel} onChange={(e) => setFiltroPlantel(e.target.value)}><option value="">Todos</option>{planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div><button className="boton secundario" disabled={cargando} onClick={() => cargar(1, filtroPlantel)}>Aplicar</button></div>
 
       {detalle && <section className="panel"><h2>Planteles y clases</h2><fieldset><legend>Planteles del docente</legend>
         {planteles.map((p) => <label key={p.id} className="casilla"><input type="checkbox" checked={detalle.plantelIds.includes(p.id)} onChange={() => setDetalle({ ...detalle,
@@ -131,26 +132,29 @@ export default function DocentesPage() {
         {detalle.clases.map((c) => <p key={c.id}>{c.ciclo} · {c.plantel} · {c.grupo} · {c.materia} · {c.vigente ? 'Vigente' : 'Histórico'}</p>)}
         <a href="/grupos">Reasignar clases desde Grupos</a>
       </section>}
+      <div className="cabecera-listado"><h2>Directorio de docentes</h2><p>{resultado.total} registros</p></div>
       {cargando && <p role="status">Cargando docentes…</p>}
-      <table className="tabla" aria-busy={cargando}>
+      <div className="tabla-contenedor" role="region" aria-label="Listado de docentes" tabIndex={0}>
+      <table className="tabla tabla-adaptable" aria-busy={cargando}>
+        <caption className="solo-lector">Número de empleado, docente, planteles, especialidad, correo, estatus y acciones</caption>
         <thead>
-          <tr><th>Empleado</th><th>Nombre</th><th>Planteles</th><th>Especialidad</th><th>Correo</th><th>Estatus</th><th /></tr>
+          <tr><th scope="col">Empleado</th><th scope="col">Nombre</th><th scope="col">Planteles</th><th scope="col">Especialidad</th><th scope="col">Correo</th><th scope="col">Estatus</th><th scope="col">Acciones</th></tr>
         </thead>
         <tbody>
           {resultado.datos.map((d) => (
             <tr key={d.id}>
-              <td>{d.numEmpleado}</td>
-              <td>{d.usuario.nombre} {d.usuario.apellidoPaterno}</td>
-              <td>{d.planteles.join(', ') || '—'}</td>
-              <td>{d.especialidad ?? '—'}</td>
-              <td>{d.usuario.email}</td>
-              <td><span className={`sello ${d.estatus === 'ACTIVO' ? 'ok' : 'neutro'}`}>{d.estatus}</span></td>
-              <td className="derecha"><button disabled={enviando} className="boton secundario chico" onClick={() => editar(d)}>Editar</button> <button onClick={() => verClases(d)}>Planteles y clases</button> {d.estatus === 'ACTIVO' && <button disabled={enviando} className="boton peligro chico" onClick={() => baja(d)}>Dar de baja</button>}</td>
+              <td data-etiqueta="Empleado">{d.numEmpleado}</td>
+              <td data-etiqueta="Nombre">{d.usuario.nombre} {d.usuario.apellidoPaterno}</td>
+              <td data-etiqueta="Planteles">{d.planteles.join(', ') || '—'}</td>
+              <td data-etiqueta="Especialidad">{d.especialidad ?? '—'}</td>
+              <td data-etiqueta="Correo">{d.usuario.email}</td>
+              <td data-etiqueta="Estatus"><span className={`sello ${d.estatus === 'ACTIVO' ? 'ok' : 'neutro'}`}>{d.estatus}</span></td>
+              <td data-etiqueta="Acciones" className="derecha"><span className="acciones-fila"><button disabled={enviando} className="boton secundario chico" onClick={() => editar(d)}>Editar</button> <button disabled={enviando} className="boton secundario chico" onClick={() => verClases(d)}>Planteles y clases</button> {d.estatus === 'ACTIVO' && <button disabled={enviando} className="boton peligro chico" onClick={() => baja(d)}>Dar de baja</button>}</span></td>
             </tr>
           ))}
           {!cargando && resultado.datos.length === 0 && <tr><td className="vacio" colSpan={7}>Sin docentes registrados.</td></tr>}
         </tbody>
-      </table>
+      </table></div>
       <Paginador total={resultado.total} pagina={resultado.pagina} porPagina={resultado.porPagina} deshabilitado={cargando} onCambio={(pagina) => cargar(pagina, filtroPlantel)} />
     </>
   );
