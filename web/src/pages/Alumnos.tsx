@@ -173,7 +173,7 @@ export default function AlumnosPage() {
             placeholder="Escribe la matrícula"
             value={buscar}
             onChange={(e) => setBuscar(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && cargar(1, busquedaAplicada, plantelAplicado)}
+            onKeyDown={(e) => e.key === 'Enter' && cargar(1, buscar.trim(), plantelId)}
           />
         </div>
         <button type="button" className="boton" disabled={cargando} onClick={() => cargar(1, buscar.trim(), plantelId)}>Buscar</button>
