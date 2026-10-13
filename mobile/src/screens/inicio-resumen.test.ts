@@ -63,7 +63,11 @@ it('distingue un valor vacío válido de un fallo de conexión', async () => {
 });
 
 it('si ninguna fuente responde no muestra ceros ni estados vacíos falsos', async () => {
-  vi.mocked(api.get).mockRejectedValue(new Error('Sin conexión'));
+  vi.mocked(api.get)
+    .mockRejectedValueOnce(new Error('Sin conexión: tareas'))
+    .mockRejectedValueOnce(new Error('Sin conexión: finanzas'))
+    .mockRejectedValueOnce(new Error('Sin conexión: avisos'))
+    .mockRejectedValueOnce(new Error('Sin conexión: calendario'));
 
   expect(await obtenerResumenInicio('inicio', 'fin')).toEqual({
     pendientes: null,
