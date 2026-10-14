@@ -32,7 +32,7 @@ export function FormularioAlumno({
         <div>
           <p className="sobrelinea">CONTROL ESCOLAR</p>
           <h2 id="titulo-form-alumno">{nuevo ? 'Registrar alumno' : 'Editar expediente'}</h2>
-          <p className="texto-ayuda">Completa los datos de identidad y contacto. Los campos marcados con * son obligatorios.</p>
+          <p className="texto-ayuda">Paso 1: crea el expediente. Después inscribe al alumno en un grupo del plantel y ciclo desde Grupos. Completa los datos de identidad y contacto. Los campos marcados con * son obligatorios.</p>
         </div>
         <span className="sello neutro">{nuevo ? 'Alta individual' : 'Edición'}</span>
       </div>
@@ -90,7 +90,7 @@ export function FormularioAlumno({
             </div>
             {nuevo && <div className="aviso-credenciales" role="note">
               <strong>Primer acceso del alumno</strong>
-              <p>Ingresará con su correo institucional y su matrícula como contraseña temporal. Deberá crear una contraseña nueva al iniciar sesión.</p>
+              <p>Ingresará con su correo institucional y su matrícula como contraseña temporal. Deberá crear una contraseña nueva al iniciar sesión.</p><p>Al registrar el expediente todavía no se asigna un grupo ni materias. Después inscríbelo desde Grupos en el plantel y ciclo que correspondan.</p>
             </div>}
           </div>
         </fieldset>

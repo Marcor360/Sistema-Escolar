@@ -126,7 +126,7 @@ export default function AlumnosPage() {
         tutorNombre: form.tutorNombre || undefined,
         tutorTelefono: form.tutorTelefono || undefined,
       });
-      setMensaje(`Alumno ${form.matricula} ${editando ? 'actualizado' : 'registrado'}`);
+      setMensaje(editando ? `Expediente de ${form.matricula} actualizado.` : `Expediente de ${form.matricula} registrado. Ahora inscríbelo en un grupo desde Grupos.`);
       setEditando(null);
       setForm(FORM_INICIAL);
       recargarListado();
@@ -159,6 +159,7 @@ export default function AlumnosPage() {
   return (
     <>{confirmacion.elemento}{dialogoMotivo.elemento}
       <Encabezado titulo="Alumnos" detalle="Alta, consulta, boletas y baja de expedientes" />
+      {puedeGestionar && <p className="texto-ayuda">Recorrido recomendado: registra el expediente, después abre Grupos, elige el grupo del ciclo correspondiente e inscribe al alumno. La matrícula por sí sola no habilita materias ni calificaciones.</p>}
 
       {puedeGestionar && <FormularioAlumno editando={editando} crear={crear} enviando={enviando} form={form} setForm={setForm} planteles={planteles} dar={dar} setEditando={setEditando} error={error} mensaje={mensaje} />}
       {!puedeGestionar && error && <p role="alert" className="mensaje-error">{error}</p>}
@@ -186,6 +187,7 @@ export default function AlumnosPage() {
         {(busquedaAplicada || plantelAplicado || buscar || plantelId) && <button type="button" className="boton secundario" onClick={() => { setBuscar(''); setPlantelId(''); cargar(1, '', ''); }}>Limpiar filtros</button>}
       </div></section>
 
+      {puedeGestionar && mensaje.includes('registrado') && <p><a className="boton secundario" href="/grupos">Ir a Grupos para inscribir al alumno</a></p>}
       <div className="cabecera-listado"><h2>Expedientes de alumnos</h2><p>{resultado.total} registros encontrados</p></div>
       <div className="tabla-contenedor" role="region" aria-label="Listado de alumnos" tabIndex={0}>
       <table className="tabla tabla-adaptable" aria-busy={cargando}>

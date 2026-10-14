@@ -1,3 +1,4 @@
+import { BibliotecaArchivo } from '../entities/biblioteca.entity';
 import { contentDisposition } from '../common/content-disposition';
 import { ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -17,7 +18,7 @@ import { grupoVigente } from '../common/contexto-academico';
 import { ScopeService } from '../planteles/scope.service';
 import { JwtUser } from '../common/current-user.decorator';
 
-type RecursoArchivo = 'material' | 'entrega';
+type RecursoArchivo = 'material' | 'entrega' | 'biblioteca' | 'boleta';
 
 interface EnlacePayload {
   sub: number;
@@ -26,6 +27,8 @@ interface EnlacePayload {
   sid: string;
   ver: number;
   kind: 'FILE';
+  cicloId?: number;
+  inscripcionId?: number;
 }
 
 /** Deducción de Content-Type para entregas (los materiales ya guardan su `mime`). */
@@ -90,6 +93,35 @@ export class ArchivosService {
     await this.validarAccesoEntrega(entrega, user);
     const mime = MIME_POR_EXTENSION[extname(entrega.archivoNombre ?? '').toLowerCase()] ?? 'application/octet-stream';
     this.enviarArchivo(res, entrega.archivoRuta as string, entrega.archivoNombre as string, mime);
+  }
+
+  async enlaceBiblioteca(id: number, user: JwtUser) {
+    if (!user.roles.some((r) => ['SUPERADMIN', 'ADMINISTRATIVO'].includes(r))) throw new ForbiddenException('La biblioteca corresponde al personal administrativo');
+    const archivo = await this.usuarios.manager.getRepository(BibliotecaArchivo).findOneBy({ id });
+    if (!archivo) throw new NotFoundException('Archivo no encontrado');
+    await this.scope.validarGestion(user, archivo.plantelId);
+    return { url: `/api/archivos/biblioteca/${id}?t=${this.firmar({ sub: user.sub, rec: 'biblioteca', id }, user)}` };
+  }
+  async descargarBiblioteca(id: number, token: string, res: Response) {
+    const payload = this.verificarToken(token, 'biblioteca', id), user = await this.usuarioDesdeToken(payload);
+    if (!user.roles.some((r) => ['SUPERADMIN', 'ADMINISTRATIVO'].includes(r))) throw new ForbiddenException('La biblioteca corresponde al personal administrativo');
+    const archivo = await this.usuarios.manager.getRepository(BibliotecaArchivo).findOneBy({ id });
+    if (!archivo) throw new NotFoundException('Archivo no encontrado');
+    await this.scope.validarGestion(user, archivo.plantelId);
+    res.setHeader('Cache-Control', 'private, no-store'); res.setHeader('X-Content-Type-Options', 'nosniff');
+    this.enviarArchivo(res, archivo.archivoRuta, archivo.archivoNombre, archivo.mime, 'attachment');
+  }
+
+  enlaceBoleta(alumnoId: number, cicloId: number | undefined, inscripcionId: number | undefined, user: JwtUser) {
+    if (!user.sid || !Number.isInteger(user.ver)) throw new UnauthorizedException('Sesión no válida');
+    const token = this.jwt.sign({ sub: user.sub, rec: 'boleta', id: alumnoId, cicloId, inscripcionId, sid: user.sid, ver: user.ver, kind: 'FILE' }, { expiresIn: '2m' });
+    return { url: `/api/reportes/boleta-descarga/${alumnoId}?t=${token}`, expiraEn: 120 };
+  }
+  async usuarioBoleta(alumnoId: number, token: string) {
+    const payload = this.verificarToken(token, 'boleta', alumnoId);
+    const user = await this.usuarioDesdeToken(payload);
+    if (!user.roles.includes('ALUMNO')) throw new ForbiddenException('Boleta reservada al alumno');
+    return { user, cicloId: payload.cicloId, inscripcionId: payload.inscripcionId };
   }
 
   // ---- Carga y validación ----
@@ -180,12 +212,12 @@ export class ArchivosService {
     return payload;
   }
 
-  private enviarArchivo(res: Response, archivoRuta: string, archivoNombre: string, mime = 'application/octet-stream') {
+  private enviarArchivo(res: Response, archivoRuta: string, archivoNombre: string, mime = 'application/octet-stream', disposicion: 'inline' | 'attachment' = 'inline') {
     const uploadsDir = uploadsPath(this.config.get<string>('UPLOADS_DIR') || 'uploads');
     const ruta = join(uploadsDir, basename(archivoRuta));
     if (!existsSync(ruta)) throw new NotFoundException('Archivo no encontrado');
     res.setHeader('Content-Type', mime);
-    res.setHeader('Content-Disposition', contentDisposition(archivoNombre, 'inline'));
+    res.setHeader('Content-Disposition', contentDisposition(archivoNombre, disposicion));
     createReadStream(ruta).on('error', () => {
       if (!res.headersSent) res.status(404).end();
       else res.destroy();

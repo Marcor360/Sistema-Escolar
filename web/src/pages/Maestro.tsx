@@ -1,10 +1,12 @@
+import '../components/tabla-adaptable.css';
+import { Link } from 'react-router-dom';
 import { ActividadesClase } from '../features/maestro/ActividadesClase';
 import { MaterialesClase } from '../features/maestro/MaterialesClase';
 import { EntregasClase } from '../features/maestro/EntregasClase';
 import type { GrupoMateria, Actividad, Material, Entrega } from '../features/maestro/tipos';
 import { useConfirmacion } from '../components/useConfirmacion';
 import { useDialogoMotivo } from '../components/useDialogoMotivo';
-import { FormEvent, useRef, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { Encabezado } from '../components/Encabezado';
 import { useDatos } from '../hooks/useDatos';
@@ -20,7 +22,7 @@ const FORM_INICIAL = { titulo: '', descripcion: '', tipo: 'TAREA', parcial: '1',
 export default function MaestroPage() {
   const confirmacion = useConfirmacion();
   const dialogoMotivo = useDialogoMotivo();
-  const { datos: clases, cargando } = useDatos<GrupoMateria[]>(
+  const { datos: clases, cargando, error: errorClases, recargar } = useDatos<GrupoMateria[]>(
     () => api.get('/academico/mis-grupos').then((r) => r.data),
     [],
   );
@@ -39,7 +41,12 @@ export default function MaestroPage() {
   const [enviando, setEnviando] = useState(false);
   const [comentarios, setComentarios] = useState<Record<number, string>>({});
 
+  const consultaClase = useRef(0);
+  const consultaEntregas = useRef(0);
+  useEffect(() => () => { consultaClase.current++; consultaEntregas.current++; }, []);
   const abrirClase = async (clase: GrupoMateria) => {
+    const actual = ++consultaClase.current;
+    consultaEntregas.current++;
     setClaseActiva(clase);
     setEntregas(null);
     setActividadActiva(null);
@@ -51,9 +58,10 @@ export default function MaestroPage() {
         api.get<Actividad[]>(`/grupo-materias/${clase.id}/actividades`),
         api.get<Material[]>(`/grupo-materias/${clase.id}/materiales`),
       ]);
+      if (actual !== consultaClase.current) return;
       setActividades(acts.data);
       setMateriales(mats.data);
-    } catch (err) { setError(mensajeDeError(err)); }
+    } catch (err) { if (actual === consultaClase.current) setError(mensajeDeError(err)); }
   };
 
   /** Sube material de apoyo (PDF, documentos, imágenes) para la clase activa. */
@@ -98,12 +106,17 @@ export default function MaestroPage() {
   };
 
   const verEntregas = async (actividad: Actividad) => {
+    const actual = ++consultaEntregas.current;
+    setEntregas(null); setError('');
     setActividadActiva(actividad);
+    try {
     const { data } = await api.get<Entrega[]>(`/actividades/${actividad.id}/entregas`);
+    if (actual !== consultaEntregas.current) return;
     setEntregas(data);
     setNotas(Object.fromEntries(data.map((e) => [e.id, e.calificacion?.toString() ?? ''])));
     setGuardadas(new Set());
     setComentarios(Object.fromEntries(data.map((e) => [e.id, e.comentarioDocente ?? ''])));
+    } catch (e) { if (actual === consultaEntregas.current) setError(mensajeDeError(e)); }
   };
 
   /** Guarda la calificación capturada en la propia fila. */
@@ -126,16 +139,18 @@ export default function MaestroPage() {
   return (
     <>{confirmacion.elemento}{dialogoMotivo.elemento}
       <Encabezado titulo="Mis clases" detalle="Actividades, entregas y calificación por grupo-materia" />
-      {error && <p className="mensaje-error">{error}</p>}
+      <p className="texto-ayuda">Abre una clase asignada para crear actividades y materiales y revisar entregas. Las notas oficiales y sus correcciones se capturan en <Link to="/calificaciones">Calificaciones</Link>. El cierre de periodos corresponde a Control escolar.</p>
+      {error && <p role="alert" className="mensaje-error">{error}</p>}
 
-      <table className="tabla" style={{ marginBottom: 24 }}>
-        <thead><tr><th>Ciclo</th><th>Grupo</th><th>Materia</th><th /></tr></thead>
+      {errorClases && <p role="alert">{errorClases}<button type="button" onClick={recargar}>Reintentar clases</button></p>}
+      <div className="tabla-contenedor" role="region" aria-label="Maestro" tabIndex={0}><table className="tabla tabla-adaptable" style={{ marginBottom: 24 }}>
+        <thead><tr><th scope="col">Ciclo</th><th scope="col">Grupo</th><th scope="col">Materia</th><th scope="col" /></tr></thead>
         <tbody>
           {clases.map((c) => (
             <tr key={c.id}>
-              <td>{c.grupo.ciclo.clave}</td><td>{c.grupo.nombre}</td>
-              <td>{c.materia.clave} — {c.materia.nombre}</td>
-              <td className="derecha">
+              <td data-etiqueta="Ciclo">{c.grupo.ciclo.clave}</td><td data-etiqueta="Grupo">{c.grupo.nombre}</td>
+              <td data-etiqueta="Materia">{c.materia.clave} — {c.materia.nombre}</td>
+              <td data-etiqueta="Acciones" className="derecha">
                 <button className="boton secundario chico" onClick={() => abrirClase(c)}>Abrir</button>
               </td>
             </tr>
@@ -144,7 +159,7 @@ export default function MaestroPage() {
             <tr><td className="vacio" colSpan={4}>Aún no tienes materias asignadas. Solicítalo a control escolar.</td></tr>
           )}
         </tbody>
-      </table>
+      </table></div>
 
       {claseActiva && (
         <ActividadesClase claseActiva={claseActiva} crearActividad={crearActividad} form={form} setForm={setForm} enviando={enviando} editandoActividad={editandoActividad} actividades={actividades} verEntregas={verEntregas} setEditandoActividad={setEditandoActividad} confirmacion={confirmacion} setEnviando={setEnviando} abrirClase={abrirClase} setError={setError} />

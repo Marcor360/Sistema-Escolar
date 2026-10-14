@@ -57,3 +57,38 @@ it.each([
   await waitFor(() => expect(screen.queryAllByRole('button', { name: 'Eliminar' })).toHaveLength(autorizados));
   expect(screen.queryAllByText('Solo lectura')).toHaveLength(3 - autorizados);
 });
+
+it('envía una edición con revisión y conserva datos ante conflicto', async () => {
+  const evento = { id: 1, revision: 'a'.repeat(64), grupoId: null, creadoPorId: 1, titulo: 'Examen', descripcion: '', tipo: 'EXAMEN', fechaInicio: '2026-10-20T10:00:00Z', fechaFin: null, plantel: { id: 1, nombre: 'Centro' } };
+  vi.spyOn(api, 'get').mockImplementation(async (url) => ({ data: url === '/calendario' ? [evento] : url === '/planteles/mios' ? [{ id: 1, nombre: 'Centro' }] : [] }));
+  const patch = vi.spyOn(api, 'patch').mockRejectedValue(new Error('Conflicto'));
+  render(<CalendarioPage />); await screen.findByText('Examen');
+  fireEvent.click(screen.getByRole('button', { name: 'Editar' }));
+  fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Examen corregido' } });
+  fireEvent.submit(screen.getByLabelText('Título').closest('form')!);
+  await screen.findByRole('alert');
+  expect(patch).toHaveBeenCalledWith('/calendario/1', expect.objectContaining({ revision: evento.revision, titulo: 'Examen corregido' }));
+  expect((screen.getByLabelText('Título') as HTMLInputElement).value).toBe('Examen corregido');
+});
+
+it('preserva ámbito, enfoca edición y permite borrar descripción', async () => {
+  const evento = { id: 10, revision: 'b'.repeat(64), grupoId: 7, creadoPorId: 1, titulo: 'Junta', descripcion: 'Anterior', tipo: 'JUNTA', fechaInicio: '2026-10-20T10:00:00Z', fechaFin: null, plantel: { id: 1, nombre: 'Centro' } };
+  vi.spyOn(api, 'get').mockImplementation(async (url) => ({ data: url === '/calendario' ? [evento] : url === '/planteles/mios' ? [evento.plantel] : [{ grupo: { id: 7, nombre: 'A' } }] }));
+  const patch = vi.spyOn(api, 'patch').mockResolvedValue({ data: {} });
+  render(<CalendarioPage />); await screen.findByText('Junta');
+  fireEvent.click(screen.getByRole('button', { name: 'Editar' }));
+  expect(document.activeElement).toBe(screen.getByLabelText('Título'));
+  expect((screen.getByLabelText('Plantel') as HTMLSelectElement).disabled).toBe(true);
+  expect((screen.getByLabelText('Grupo (opcional)') as HTMLSelectElement).disabled).toBe(true);
+  fireEvent.change(screen.getByLabelText('Fin (opcional)'), { target: { value: '2020-01-01T10:00' } });
+  fireEvent.submit(screen.getByLabelText('Título').closest('form')!);
+  await screen.findByRole('alert'); expect(patch).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByText('Cancelar edición')); expect(screen.queryByRole('alert')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Editar' }));
+  fireEvent.change(screen.getByLabelText('Descripción'), { target: { value: '' } });
+  fireEvent.submit(screen.getByLabelText('Título').closest('form')!);
+  await waitFor(() => expect(patch).toHaveBeenCalled());
+  const datos = patch.mock.calls[0][1]; expect(datos).toMatchObject({ revision: evento.revision, descripcion: null });
+  expect(datos).not.toHaveProperty('plantelId'); expect(datos).not.toHaveProperty('grupoId');
+  await screen.findByRole('heading', { name: 'Nuevo evento' });
+});

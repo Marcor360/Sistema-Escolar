@@ -1,16 +1,36 @@
-/** La configuración Expo se incorpora al bundle; nunca usar localhost en preview/producción. */
+/** Configuración incorporada al bundle; HTTP y localhost sólo en desarrollo. */
 export function resolverApiUrl(appEnv: string, apiUrl?: string): string {
-  apiUrl = apiUrl?.trim().replace(/\/+$/, '');
-  if (appEnv === 'development') return apiUrl || 'http://localhost:3000/api';
-  if (!apiUrl) throw new Error(`Falta la URL de la API para ${appEnv}`);
+  if (!["development", "preview", "production"].includes(appEnv))
+    throw new Error("Entorno móvil no reconocido");
+  const valor =
+    apiUrl?.trim().replace(/\/+$/, "") ||
+    (appEnv === "development" ? "http://localhost:3000/api" : "");
+  if (!valor) throw new Error(`Falta la URL de la API para ${appEnv}`);
   let url: URL;
   try {
-    url = new URL(apiUrl);
+    url = new URL(valor);
   } catch {
     throw new Error(`La URL de la API para ${appEnv} no es válida`);
   }
-  if (url.protocol !== 'https:' || /^(localhost|127\.0\.0\.1|\[::1\])$/i.test(url.hostname)) {
+  if (!["http:", "https:"].includes(url.protocol))
+    throw new Error("La URL de API debe usar HTTP o HTTPS");
+  if (
+    appEnv !== "development" &&
+    (url.protocol !== "https:" ||
+      /^(localhost|127\.0\.0\.1|\[::1\])$/i.test(url.hostname))
+  ) {
     throw new Error(`La URL de la API para ${appEnv} debe usar HTTPS público`);
   }
-  return apiUrl;
+  if (
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash ||
+    url.pathname !== "/api"
+  ) {
+    throw new Error(
+      "La URL de API debe terminar en /api y no incluir credenciales, parámetros ni fragmentos",
+    );
+  }
+  return valor;
 }

@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { esMaestroRestringido, exigirConsultaAcademica } from '../common/politica-acceso';
 import { CicloEscolar } from '../entities/ciclo-escolar.entity';
 import { PaginacionDto } from '../common/paginacion.dto';
@@ -5,7 +6,7 @@ import { exigirGrupoVigente, inscripcionVigente } from '../common/contexto-acade
 import { promedioOficial } from '../common/promedio-oficial';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, In, Repository } from 'typeorm';
+import { DataSource, EntityManager, In, Repository } from 'typeorm';
 import { Calificacion } from '../entities/calificacion.entity';
 import { PeriodoCalificacion, EstadoPeriodoCalificacion } from '../entities/periodo-calificacion.entity';
 import { HistorialCalificacion } from '../entities/historial-calificacion.entity';
@@ -50,10 +51,15 @@ export class CalificacionesService {
 
   /** Captura masiva por grupo-materia y parcial (upsert por alumno). */
   async capturar(dto: CapturaCalificacionesDto, user: JwtUser) {
-    const gm = await this.validarGrupoMateria(dto.grupoMateriaId, user);
+    const { capturadas, sinCambios } = await this.dataSource.transaction((manager) => this.capturarEnTransaccion(dto, user, manager));
+    return { capturadas, sinCambios };
+  }
 
+  /** Comparte validación, bloqueos y auditoría con la importación; el llamador controla la transacción. */
+  async capturarEnTransaccion(dto: CapturaCalificacionesDto, user: JwtUser, manager: EntityManager, soloValidar = false, esperadas?: Map<number, string>) {
+    const gm = await this.validarGrupoMateria(dto.grupoMateriaId, user);
     const ids = [...new Set(dto.items.map((item) => item.alumnoId))];
-    return this.dataSource.transaction(async (manager) => {
+    {
       const cicloActual = await manager.getRepository(CicloEscolar).findOne({ where: { id: gm.grupo.cicloId }, lock: { mode: 'pessimistic_write' } });
       if (!cicloActual?.activo) throw new ConflictException('El ciclo ya fue cerrado');
       const grupoMateria = await manager.getRepository(GrupoMateria).findOne({
@@ -86,6 +92,8 @@ export class CalificacionesService {
         order: { alumnoId: 'ASC' }, lock: { mode: 'pessimistic_write' }, loadEagerRelations: false,
       });
       const porAlumno = new Map(existentes.map((c) => [c.alumnoId,c]));
+      const revisiones = ids.map((alumnoId) => { const c = porAlumno.get(alumnoId); return { alumnoId, revision: createHash('sha256').update(JSON.stringify(c ? [c.id, Number(c.calificacion), c.observaciones, c.capturadaPorId, c.updatedAt] : null)).digest('hex') }; });
+      if (esperadas && revisiones.some((r) => esperadas.get(r.alumnoId) !== r.revision)) throw new ConflictException('Las notas cambiaron después del preview; genera otra previsualización');
       const cambios = dto.items.flatMap((item) => {
         const existente = porAlumno.get(item.alumnoId);
         const observaciones = item.observaciones === undefined ? existente?.observaciones ?? null : item.observaciones;
@@ -96,7 +104,7 @@ export class CalificacionesService {
         registro.calificacion = item.calificacion; registro.observaciones = observaciones; registro.capturadaPorId = user.sub;
         return [{ registro,valorAnterior,observacionAnterior }];
       });
-      if (cambios.length) {
+      if (cambios.length && !soloValidar) {
         await calificaciones.save(cambios.map((c) => c.registro),{ chunk: 100 });
         const entradas = cambios.map(({ registro,valorAnterior,observacionAnterior }) => ({
           calificacionId: registro.id, alumnoId: registro.alumnoId, grupoMateriaId: dto.grupoMateriaId, parcial: dto.parcial,
@@ -105,8 +113,8 @@ export class CalificacionesService {
         }));
         for (let i = 0; i < entradas.length; i += 100) await historial.insert(entradas.slice(i,i+100));
       }
-      return { capturadas: cambios.length, sinCambios: dto.items.length - cambios.length };
-    });
+      return { capturadas: cambios.length, sinCambios: dto.items.length - cambios.length, revisiones, diferencias: cambios.map((c) => ({ alumnoId: c.registro.alumnoId, anterior: c.valorAnterior, nueva: c.registro.calificacion })) };
+    }
   }
 
   private validarParcial(parcial: number): void {

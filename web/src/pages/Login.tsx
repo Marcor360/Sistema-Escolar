@@ -102,7 +102,7 @@ export default function LoginPage() {
         {modo === 'solicitar' && (
           <form onSubmit={solicitar}>
             <p className="detalle" style={{ marginTop: 0 }}>
-              Te enviaremos un código de recuperación al correo registrado (vence en 1 hora).
+              Si la cuenta existe y el servicio de correo está disponible, recibirás un código que vence en 1 hora. Si no llega, contacta a Control escolar.
             </p>
             <div className="campo">
               <label htmlFor="email-rec">Correo institucional</label>

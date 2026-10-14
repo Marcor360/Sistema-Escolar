@@ -1,12 +1,28 @@
-import { crearControlLectura } from '../api/lectura-vigente';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Linking, RefreshControl, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { Text } from '../components/Texto';
-import { useFocusEffect } from '@react-navigation/native';
-import { api, archivosBase, mensajeDeError } from '../api/client';
-import { useSesion } from '../sesion';
-import { colores, radio, espacio, tipografia } from '../theme';
-import { base, ErrorCarga, Sello, Tarjeta, Vacio } from './comunes';
+import { leerConCache } from "../api/cache-academica";
+import { crearControlLectura } from "../api/lectura-vigente";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  Linking,
+  RefreshControl,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Text } from "../components/Texto";
+import { useFocusEffect } from "@react-navigation/native";
+import { api, archivosBase, mensajeDeError } from "../api/client";
+import { useSesion } from "../sesion";
+import { colores, radio, espacio, tipografia } from "../theme";
+import {
+  GuiaPantalla,
+  base,
+  ErrorCarga,
+  Sello,
+  Tarjeta,
+  Vacio,
+} from "./comunes";
 
 interface Materia {
   id: number;
@@ -28,12 +44,35 @@ export default function MateriasScreen() {
   const [cargando, setCargando] = useState(false);
   const [cargaInicialCompleta, setCargaInicialCompleta] = useState(false);
   const [abierta, setAbierta] = useState<number | null>(null);
-  const [materialesPor, setMaterialesPor] = useState<Record<number, Material[]>>({});
-  const [cargandoMateriales, setCargandoMateriales] = useState<number | null>(null);
-  const [erroresMateriales, setErroresMateriales] = useState<Record<number, string>>({});
-  const [error, setError] = useState('');
-  const [ultimaActualizacion, setUltimaActualizacion] = useState<string | null>(null);
+  const [materialesPor, setMaterialesPor] = useState<
+    Record<number, Material[]>
+  >({});
+  const [cargandoMateriales, setCargandoMateriales] = useState<number | null>(
+    null,
+  );
+  const [erroresMateriales, setErroresMateriales] = useState<
+    Record<number, string>
+  >({});
+  const [error, setError] = useState("");
+  const [ultimaActualizacion, setUltimaActualizacion] = useState<string | null>(
+    null,
+  );
 
+  const [offline, setOffline] = useState(false);
+  const [cacheExpira, setCacheExpira] = useState(0);
+  useEffect(() => {
+    if (!offline || !cacheExpira) return;
+    const timer = setTimeout(
+      () => {
+        setMaterias([]);
+        setOffline(false);
+        setUltimaActualizacion(null);
+        setError("La copia de lectura venció. Conéctate y actualiza.");
+      },
+      Math.max(0, cacheExpira - Date.now()),
+    );
+    return () => clearTimeout(timer);
+  }, [offline, cacheExpira]);
   const lectura = useRef(crearControlLectura());
   const consultaMateriales = useRef(0);
   useEffect(() => {
@@ -46,41 +85,59 @@ export default function MateriasScreen() {
     setCargandoMateriales(null);
     setCargaInicialCompleta(false);
     setUltimaActualizacion(null);
-    setError('');
+    setError("");
     setCargando(false);
   }, [sesion?.sub]);
   const cargar = useCallback(() => {
     if (!sesion?.sub) return;
-    setError('');
+    setError("");
     setCargando(true);
-    void lectura.current.cargar(() => api.get<Materia[]>('/alumnos/me/materias'),
-      (r) => { setMaterias(r.data); setUltimaActualizacion(new Date().toLocaleString()); setCargaInicialCompleta(true); },
+    void lectura.current.cargar(
+      () =>
+        leerConCache("/alumnos/me/materias", () =>
+          api.get<Materia[]>("/alumnos/me/materias"),
+        ),
+      (r) => {
+        setMaterias(r.data);
+        setOffline(r.offline);
+        setCacheExpira(r.fecha + 5 * 60000);
+        setUltimaActualizacion(new Date(r.fecha).toLocaleString());
+        setCargaInicialCompleta(true);
+      },
       (fallo) => setError(mensajeDeError(fallo)),
-      () => setCargando(false));
+      () => setCargando(false),
+    );
   }, [sesion?.sub]);
 
-  useFocusEffect(useCallback(() => {
-    cargar();
-    return () => {
-      lectura.current.invalidar();
-      consultaMateriales.current += 1;
-      setCargandoMateriales(null);
-      setAbierta(null);
-    };
-  }, [cargar]));
+  useFocusEffect(
+    useCallback(() => {
+      cargar();
+      return () => {
+        lectura.current.invalidar();
+        consultaMateriales.current += 1;
+        setCargandoMateriales(null);
+        setAbierta(null);
+      };
+    }, [cargar]),
+  );
 
   const cargarMateriales = async (materiaId: number) => {
     const actual = ++consultaMateriales.current;
     setCargandoMateriales(materiaId);
-    setErroresMateriales((previos) => ({ ...previos, [materiaId]: '' }));
+    setErroresMateriales((previos) => ({ ...previos, [materiaId]: "" }));
     try {
-      const { data } = await api.get<Material[]>(`/grupo-materias/${materiaId}/materiales`);
+      const { data } = await api.get<Material[]>(
+        `/grupo-materias/${materiaId}/materiales`,
+      );
       if (actual === consultaMateriales.current) {
         setMaterialesPor((previos) => ({ ...previos, [materiaId]: data }));
       }
     } catch (fallo) {
       if (actual === consultaMateriales.current) {
-        setErroresMateriales((previos) => ({ ...previos, [materiaId]: mensajeDeError(fallo) }));
+        setErroresMateriales((previos) => ({
+          ...previos,
+          [materiaId]: mensajeDeError(fallo),
+        }));
       }
     } finally {
       if (actual === consultaMateriales.current) setCargandoMateriales(null);
@@ -90,7 +147,10 @@ export default function MateriasScreen() {
   const alternar = (materia: Materia) => {
     consultaMateriales.current += 1;
     setCargandoMateriales(null);
-    if (abierta === materia.id) { setAbierta(null); return; }
+    if (abierta === materia.id) {
+      setAbierta(null);
+      return;
+    }
     setAbierta(materia.id);
     if (!materialesPor[materia.id]) void cargarMateriales(materia.id);
   };
@@ -99,22 +159,50 @@ export default function MateriasScreen() {
   const abrirMaterial = async (materialId: number) => {
     const actual = consultaMateriales.current;
     try {
-      const { data } = await api.get<{ url: string }>(`/archivos/materiales/${materialId}/enlace`);
-      if (actual === consultaMateriales.current) await Linking.openURL(`${archivosBase}${data.url}`);
-    } catch (fallo) { if (actual === consultaMateriales.current) setError(mensajeDeError(fallo)); }
+      const { data } = await api.get<{ url: string }>(
+        `/archivos/materiales/${materialId}/enlace`,
+      );
+      if (actual === consultaMateriales.current)
+        await Linking.openURL(`${archivosBase}${data.url}`);
+    } catch (fallo) {
+      if (actual === consultaMateriales.current)
+        setError(mensajeDeError(fallo));
+    }
   };
 
   return (
     <View style={base.pantalla}>
-      {error !== '' && <ErrorCarga mensaje={error} reintentar={cargar} />}
-      {ultimaActualizacion && <Text accessibilityRole="text">Última actualización: {ultimaActualizacion}</Text>}
+      {error !== "" && <ErrorCarga mensaje={error} reintentar={cargar} />}
+      {ultimaActualizacion && (
+        <Text accessibilityRole="text">
+          Última actualización: {ultimaActualizacion}
+        </Text>
+      )}
+      {offline && (
+        <Text accessibilityRole="alert">
+          Sin conexión: copia de materias de esta sesión, hasta 5 minutos. Los
+          archivos requieren conexión.
+        </Text>
+      )}
       <FlatList
+        ListHeaderComponent={
+          <GuiaPantalla
+            titulo="Mis materias"
+            detalle="Toca una materia para ver al docente y abrir sus materiales de clase."
+          />
+        }
         data={materias}
         keyExtractor={(m) => String(m.id)}
-        refreshControl={<RefreshControl refreshing={cargando} onRefresh={cargar} />}
-        ListEmptyComponent={cargaInicialCompleta && !error
-          ? <Vacio mensaje="Aún no tienes materias: control escolar te inscribirá a un grupo." />
-          : !cargaInicialCompleta && !error ? <ActivityIndicator accessibilityLabel="Cargando materias" /> : null}
+        refreshControl={
+          <RefreshControl refreshing={cargando} onRefresh={cargar} />
+        }
+        ListEmptyComponent={
+          cargaInicialCompleta && !error ? (
+            <Vacio mensaje="Aún no tienes materias: control escolar te inscribirá a un grupo." />
+          ) : !cargaInicialCompleta && !error ? (
+            <ActivityIndicator accessibilityLabel="Cargando materias" />
+          ) : null
+        }
         renderItem={({ item }) => {
           const desplegada = abierta === item.id;
           const materiales = materialesPor[item.id];
@@ -123,25 +211,43 @@ export default function MateriasScreen() {
               onPress={() => alternar(item)}
               activeOpacity={0.7}
               accessibilityRole="button"
-              accessibilityLabel={`${item.materia.clave}: ${item.materia.nombre}. ${desplegada ? 'Ocultar' : 'Ver'} materiales`}
+              accessibilityLabel={`${item.materia.clave}: ${item.materia.nombre}. ${desplegada ? "Ocultar" : "Ver"} materiales`}
               accessibilityState={{ expanded: desplegada }}
             >
               <Tarjeta>
-                <Text style={base.tituloTarjeta}>{item.materia.clave} — {item.materia.nombre}</Text>
-                <Text style={base.secundario}>Grupo {item.grupo.nombre} · Ciclo {item.grupo.ciclo.clave}</Text>
-                {item.docente
-                  ? <Text style={base.secundario}>Imparte: {item.docente.usuario.nombre} {item.docente.usuario.apellidoPaterno}</Text>
-                  : <Sello texto="Sin docente asignado" tono="aviso" />}
+                <Text style={base.tituloTarjeta}>
+                  {item.materia.clave} — {item.materia.nombre}
+                </Text>
+                <Text style={base.secundario}>
+                  Grupo {item.grupo.nombre} · Ciclo {item.grupo.ciclo.clave}
+                </Text>
+                {item.docente ? (
+                  <Text style={base.secundario}>
+                    Imparte: {item.docente.usuario.nombre}{" "}
+                    {item.docente.usuario.apellidoPaterno}
+                  </Text>
+                ) : (
+                  <Sello texto="Sin docente asignado" tono="aviso" />
+                )}
 
                 {desplegada && (
                   <View style={estilos.materiales}>
                     <Text style={estilos.subtitulo}>Materiales de clase</Text>
-                    {!materiales && cargandoMateriales === item.id && <ActivityIndicator accessibilityLabel="Cargando materiales de clase" />}
+                    {!materiales && cargandoMateriales === item.id && (
+                      <ActivityIndicator accessibilityLabel="Cargando materiales de clase" />
+                    )}
                     {!!erroresMateriales[item.id] && (
-                      <ErrorCarga mensaje={erroresMateriales[item.id]} reintentar={() => { void cargarMateriales(item.id); }} />
+                      <ErrorCarga
+                        mensaje={erroresMateriales[item.id]}
+                        reintentar={() => {
+                          void cargarMateriales(item.id);
+                        }}
+                      />
                     )}
                     {materiales && materiales.length === 0 && (
-                      <Text style={base.secundario}>El maestro aún no sube materiales.</Text>
+                      <Text style={base.secundario}>
+                        El maestro aún no sube materiales.
+                      </Text>
                     )}
                     {materiales?.map((m) => (
                       <TouchableOpacity
@@ -151,13 +257,19 @@ export default function MateriasScreen() {
                         accessibilityRole="button"
                         accessibilityLabel={`Abrir material: ${m.titulo}, ${m.archivoNombre}`}
                       >
-                        <Text style={estilos.materialTitulo}>📄 {m.titulo}</Text>
-                        <Text style={base.secundario}>{m.archivoNombre} · {m.tamanoKb} KB</Text>
+                        <Text style={estilos.materialTitulo}>
+                          📄 {m.titulo}
+                        </Text>
+                        <Text style={base.secundario}>
+                          {m.archivoNombre} · {m.tamanoKb} KB
+                        </Text>
                       </TouchableOpacity>
                     ))}
                   </View>
                 )}
-                <Text style={estilos.indicador}>{desplegada ? 'Ocultar materiales ▲' : 'Ver materiales ▼'}</Text>
+                <Text style={estilos.indicador}>
+                  {desplegada ? "Ocultar materiales ▲" : "Ver materiales ▼"}
+                </Text>
               </Tarjeta>
             </TouchableOpacity>
           );
@@ -177,11 +289,25 @@ const estilos = StyleSheet.create({
   subtitulo: {
     fontSize: 11,
     letterSpacing: 0.6,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     color: colores.gris,
     marginBottom: 6,
   },
-  material: { minHeight: 48, justifyContent: 'center', paddingVertical: espacio.md, borderRadius: radio.sm },
-  materialTitulo: { fontSize: tipografia.cuerpo, color: colores.pizarra, fontWeight: '600' },
-  indicador: { marginTop: 10, fontSize: 12, color: colores.avisoTexto, fontWeight: '600' },
+  material: {
+    minHeight: 48,
+    justifyContent: "center",
+    paddingVertical: espacio.md,
+    borderRadius: radio.sm,
+  },
+  materialTitulo: {
+    fontSize: tipografia.cuerpo,
+    color: colores.pizarra,
+    fontWeight: "600",
+  },
+  indicador: {
+    marginTop: 10,
+    fontSize: 12,
+    color: colores.avisoTexto,
+    fontWeight: "600",
+  },
 });

@@ -1,13 +1,13 @@
 {
   "name": "escolar-mobile",
-  "version": "1.23.5",
+  "version": "1.24.0-beta.2",
   "private": true,
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "test": "vitest run && node --test ../scripts/check-mobile-audit.test.cjs",
+    "test": "vitest run && node --test ../scripts/check-mobile-audit.test.cjs ../scripts/check-mobile-config.test.cjs",
     "pretest": "node ../scripts/verificar-parches-mobile.cjs"
   },
   "dependencies": {

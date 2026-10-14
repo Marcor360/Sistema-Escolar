@@ -103,3 +103,9 @@ it('un error de detalle no se presenta como grupo vacío y ofrece reintento', as
   await screen.findByText('Sin materias asignadas.');
   expect(screen.queryByRole('alert')).toBeNull();
 });
+
+it('explica el orden de preparación académica antes de crear grupos', async () => {
+  render(<GruposPage />);
+  expect(screen.getByText(/Orden recomendado: prepara el ciclo y las materias/)).toBeTruthy();
+  await screen.findByRole('heading', { name: 'Nuevo grupo' });
+});

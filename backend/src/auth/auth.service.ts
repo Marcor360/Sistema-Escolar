@@ -152,7 +152,7 @@ export class AuthService {
   async forgotPassword(email: string) {
     const usuario = await this.usuarios.findOne({ where: { email, activo: true } });
     // Respuesta idéntica exista o no el correo (no revelar cuentas)
-    if (!usuario) return { mensaje: 'Si el correo existe, se enviaron instrucciones' };
+    if (!usuario) return { mensaje: 'Solicitud recibida. Si la cuenta existe y el correo está disponible, recibirás instrucciones. Si no llegan, contacta a Control escolar.' };
 
     await this.tokens.update({ usuarioId: usuario.id, usado: false }, { usado: true });
 
@@ -171,7 +171,7 @@ export class AuthService {
     ).catch(() => {
       this.logger.error('No se pudo entregar el correo de recuperacion de contrasena');
     });
-    return { mensaje: 'Si el correo existe, se enviaron instrucciones' };
+    return { mensaje: 'Solicitud recibida. Si la cuenta existe y el correo está disponible, recibirás instrucciones. Si no llegan, contacta a Control escolar.' };
   }
 
   async resetPassword(token: string, password: string) {

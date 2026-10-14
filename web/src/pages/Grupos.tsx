@@ -144,7 +144,7 @@ export default function GruposPage() {
         grado: formGrupo.grado || undefined,
         turno: formGrupo.turno,
       });
-      setEditando(null); setMensaje('Grupo guardado');
+      setEditando(null); setMensaje(editando ? 'Grupo actualizado.' : 'Grupo creado. Ahora selecciona Administrar para asignar materias, docente e inscribir alumnos.');
       setFormGrupo({ cicloId: '', plantelId: '', nombre: '', grado: '', turno: 'MATUTINO' });
       cargar(1, plantelAplicado);
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
@@ -161,6 +161,7 @@ export default function GruposPage() {
       });
       setMateriaId(''); setDocenteId('');
       await abrirGrupo(seleccionado);
+      setMensaje('Materia vinculada. Revisa que tenga docente asignado antes de la captura.');
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
@@ -172,18 +173,20 @@ export default function GruposPage() {
       await api.post(`/academico/grupos/${seleccionado.id}/alumnos`, { alumnoId: Number(alumnoId) });
       setAlumnoId('');
       await abrirGrupo(seleccionado);
+      setMensaje('Inscripción registrada. El alumno podrá consultar las materias y actividades vigentes que le correspondan.');
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
   return (
     <>{confirmacion.elemento}
       <Encabezado titulo="Grupos" detalle="Grupos por ciclo, materias asignadas e inscripciones" />
+      <p className="texto-ayuda">Orden recomendado: prepara el ciclo y las materias, registra docentes y alumnos, crea el grupo, asígnale materias con docente e inscribe a los alumnos. Cada paso es independiente y conserva las reglas de autorización del servidor.</p>
       {error && <p role="alert" className="mensaje-error">{error}</p>}{mensaje && <p role="status" className="mensaje-ok">{mensaje}</p>}
       {cargandoCatalogos && <p role="status">Cargando catálogos…</p>}
       {errorCatalogos && <div role="alert"><p>{errorCatalogos}</p><button className="boton secundario" onClick={() => { void cargarCatalogos(); }}>Reintentar catálogos</button></div>}
 
       <section className="panel">
-        <h2 id="form-grupo">{editando ? 'Editar grupo' : 'Nuevo grupo'}</h2>
+        <p className="texto-ayuda">Paso 1: selecciona un plantel y un ciclo en preparación o activo. Después abre Administrar para asignar materias y docentes e inscribir alumnos.</p><h2 id="form-grupo">{editando ? 'Editar grupo' : 'Nuevo grupo'}</h2>
         <form onSubmit={crearGrupo} className="fila">
           <div className="campo"><label htmlFor="grupos-campo-1">Plantel</label>
             <select id="grupos-campo-1" required disabled={editando !== null || enviando} value={formGrupo.plantelId} onChange={(e) => setFormGrupo({ ...formGrupo, plantelId: e.target.value })}>
@@ -259,6 +262,7 @@ export default function GruposPage() {
       {seleccionado && !cargandoGrupo && !detalleGrupoCompleto && <button className="boton secundario" onClick={() => { void abrirGrupo(seleccionado); }}>Reintentar detalle del grupo</button>}
       {seleccionado && !cargandoGrupo && detalleGrupoCompleto && (
         <>
+          <section className="panel" aria-label="Preparación del grupo"><h2>{seleccionado.nombre}: siguientes pasos</h2><ol><li>Grupo registrado en {seleccionado.ciclo.clave}.</li><li>{asignaciones.length} materias asignadas; {asignaciones.filter((a) => !a.docente).length} pendientes de docente.</li><li>{inscritos.length} alumnos inscritos. El expediente se registra por separado.</li></ol></section>
           <MateriasGrupo seleccionado={seleccionado} reasignando={reasignando} nuevoDocente={nuevoDocente} setNuevoDocente={setNuevoDocente} enviando={enviando} operar={operar} setReasignando={setReasignando} asignarMateria={asignarMateria} materiaId={materiaId} setMateriaId={setMateriaId} materias={materias} docenteId={docenteId} setDocenteId={setDocenteId} asignaciones={asignaciones} />
 
           <InscripcionesGrupo seleccionado={seleccionado} inscribir={inscribir} alumnoId={alumnoId} setAlumnoId={setAlumnoId} enviando={enviando} inscritos={inscritos} operar={operar} />

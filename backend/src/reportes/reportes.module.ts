@@ -1,3 +1,6 @@
+import { CalificacionesModule } from '../calificaciones/calificaciones.module';
+import { BoletaMovilController } from './boleta-movil.controller';
+import { ArchivosModule } from '../archivos/archivos.module';
 import { Module } from '@nestjs/common';
 import { ConfiguracionModule } from '../configuracion/configuracion.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -16,6 +19,8 @@ import { PlantelesModule } from '../planteles/planteles.module';
 
 @Module({
   imports: [
+    CalificacionesModule,
+    ArchivosModule,
     TypeOrmModule.forFeature([Alumno, Docente, Grupo, GrupoMateria, Calificacion, Pago]),
     FinanzasModule,
     DocentesModule,
@@ -24,6 +29,6 @@ import { PlantelesModule } from '../planteles/planteles.module';
     ConfiguracionModule,
   ],
   providers: [ReportesService],
-  controllers: [ReportesController],
+  controllers: [ReportesController, BoletaMovilController],
 })
 export class ReportesModule {}

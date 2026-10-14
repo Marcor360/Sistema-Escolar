@@ -1,3 +1,4 @@
+import { registrarBeta } from './integration/beta.cases';
 import { registrarRebarrido } from './integration/rebarrido.cases';
 import { registrarBarrido } from './integration/barrido.cases';
 import { registrarCicloOperativo } from './integration/recorrido-academico';
@@ -412,6 +413,7 @@ get emitirFinanzasB() { return emitirFinanzasB; },
 const casos = { ...casos_baseline, ...casos_identidad, ...casos_academico, ...casos_calificaciones, ...casos_finanzas, ...casos_archivos, ...casos_calendario, ...casos_conducta, ...casos_analitica, ...casos_importaciones, ...casos_roles };
 Object.keys(casos).map(Number).sort((a,b) => a-b).forEach((id) => casos[id](contexto));
 
+  registrarBeta(contexto);
   registrarCapturaSinCambios(contexto);
   registrarAltasInstitucionales(contexto);
   registrarRecorridoFinanciero(contexto);

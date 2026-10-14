@@ -160,6 +160,12 @@ export class ReportesService {
     res.end();
   }
 
+  async misBoletas(user: JwtUser) {
+    const alumno = await this.alumnosService.obtenerPorUsuario(user.sub);
+    const inscripciones = await this.grupos.manager.getRepository(Inscripcion).find({ where: { alumnoId: alumno.id }, order: { id: 'DESC' } });
+    return inscripciones.map((i) => ({ inscripcionId: i.id, cicloId: i.grupo.cicloId, ciclo: i.grupo.ciclo.nombre, grupo: i.grupo.nombre, plantel: i.grupo.plantel.nombre }));
+  }
+
   /** Boleta PDF básica: calificaciones por materia y parcial + promedios. */
   async boletaPdf(alumnoId: number, user: JwtUser, res: Response, cicloId?: number, inscripcionId?: number) {
     const alumno = await this.alumnos.findOne({ where: { id: alumnoId } });

@@ -140,10 +140,21 @@ async function esperarServidor() {
           cobradoMes: 1000,
         };
       if (/\/academico\/grupos\/\d+\/(materias|alumnos)$/.test(path)) data = [];
+      const claseBeta = { id: 1, grupo: { id: 1, nombre: 'Grupo Beta', ciclo: { id: 1, nombre: '2026–2027', clave: '2026' }, plantel: { nombre: 'Plantel Beta' } }, materia: { clave: 'MAT', nombre: 'Matemáticas' } };
+      if (path.endsWith('/planteles/mios')) data = [{ id: 1, nombre: 'Plantel Beta' }];
+      if (path.endsWith('/usuarios/listado')) data = { datos: [{ id: 1, matricula: 'US-QA-001', nombre: 'Usuario con nombre largo de prueba', correo: 'correo.extenso.de.prueba@example.invalid', plantel: 'Plantel Beta', estatus: 'ACTIVO' }], total: 1, pagina: 1, porPagina: 20 };
+      if (path.endsWith('/academico/mis-grupos') || path.endsWith('/academico/grupo-materias')) data = [claseBeta];
+      if (path.endsWith('/academico/clases-seleccion')) data = { datos: [claseBeta], total: 1 };
+      if (path.endsWith('/academico/grupos/1/alumnos')) data = [{ id: 1, alumno: { id: 1, matricula: 'NO-QA-001', usuario: { nombre: 'Alumno Beta', apellidoPaterno: 'Prueba' } } }];
+      if (path.endsWith('/calificaciones/periodos/1/1')) data = { estatus: 'ABIERTO', inscritos: 1, capturados: 0, faltantes: 1 };
+      if (path.endsWith('/calificaciones/periodos/1/1/historial')) data = { datos: [{ id: 1, alumnoId: 1, fecha: '2026-10-13T12:00:00Z', valorAnterior: 80, valorNuevo: 90, usuarioId: 1, motivo: 'Corrección autorizada de prueba' }], total: 1, pagina: 1, porPagina: 20 };
+      if (path.endsWith('/biblioteca')) data = { carpetas: [{ id: 1, nombre: 'Documentos Beta', padreId: null }], archivos: [{ id: 1, titulo: 'Calendario institucional de prueba para familias y docentes', archivoNombre: 'calendario-con-nombre-extenso.pdf', categoria: 'CALENDARIO', bytes: 512 }], total: 1, pagina: 1, porPagina: 20, bytes: 512, cuota: 104857600 };
+      if (path.endsWith('/academico/bitacora')) data = { datos: [], total: 0, pagina: 1 };
+      if (path.endsWith('/importaciones/preview')) data = { previewId: 'qa-preview', registros: 1, errores: [], regla: 'Confirmación atómica del lote', identificadores: [{ fila: 2, identificador: 'ALUMNO-QA-001' }] };
       await route.fulfill({ json: data });
     },
   );
-  for (const width of [320, 360, 768, 1024, 1440, 2560, 3840]) {
+  for (const width of [320, 375, 360, 768, 1024, 1440, 2560, 3840]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('http://127.0.0.1:5182/');
     try {
@@ -181,7 +192,7 @@ async function esperarServidor() {
   await page.setViewportSize({ width: 1440, height: 900 });
   await expect(page.locator('body')).not.toHaveCSS('overflow', 'hidden');
   console.log('PASS resize mobile to desktop');
-  for (const width of [320, 360, 768, 1024, 1440, 2560, 3840]) {
+  for (const width of [320, 375, 360, 768, 1024, 1440, 2560, 3840]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('http://127.0.0.1:5182/alumnos');
     await expect(page.getByRole('heading', { name: 'Registrar alumno' })).toBeVisible();
@@ -203,7 +214,7 @@ async function esperarServidor() {
     console.log('PASS forms/table ' + width);
   }
   await page.setViewportSize({ width: 1440, height: 900 });
-  for (const width of [320, 360, 768, 1024, 1440, 2560, 3840]) {
+  for (const width of [320, 375, 360, 768, 1024, 1440, 2560, 3840]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto(baseUrl + '/analitica');
     await expect(page.getByText('Consulta los indicadores de tu institución')).toBeVisible();
@@ -293,6 +304,35 @@ async function esperarServidor() {
     await expect(page.getByRole('button', { name: 'Reintentar detalle del grupo' })).toHaveCount(0);
     console.log('PASS grupos ' + width);
   }
+  for (const width of [320, 375, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const ruta of ['/usuarios', '/materias', '/maestro', '/calificaciones', '/biblioteca', '/operaciones']) {
+      await page.goto(baseUrl + ruta);
+      await expect(page.locator('h1')).toBeVisible();
+      if (ruta === '/operaciones') {
+        await page.getByLabel('Archivo', { exact: true }).setInputFiles({ name: 'lote.csv', mimeType: 'text/csv', buffer: Buffer.from('matricula,grupoId\nALUMNO-QA-001,1') });
+        await page.getByRole('button', { name: 'Previsualizar archivo' }).click();
+        await expect(page.getByRole('region', { name: 'Filas de previsualización' })).toBeVisible();
+      }
+      if (ruta === '/usuarios') await expect(page.getByText('US-QA-001')).toBeVisible();
+      if (ruta === '/calificaciones') {
+        await expect(page.getByLabel('Clase').locator('option[value="1"]')).toBeAttached();
+        await page.getByLabel('Clase', { exact: true }).selectOption('1');
+        await page.getByRole('button', { name: 'Cargar lista', exact: true }).click();
+        await expect(page.getByLabel('Calificación de NO-QA-001')).toBeVisible();
+      }
+      if (ruta === '/biblioteca') { await page.getByLabel('Plantel', { exact: true }).selectOption('1'); await expect(page.getByText('calendario-con-nombre-extenso.pdf')).toBeVisible(); }
+      const geometry = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, width: innerWidth }));
+      if (geometry.scroll > geometry.width) throw Error('Beta overflow ' + ruta + ' ' + width + ': ' + JSON.stringify(geometry));
+      const tabla = page.getByRole('table').first();
+      if (await tabla.count()) {
+        await tabla.scrollIntoViewIfNeeded();
+        const region = tabla.locator('..'); await region.focus();
+        await expect(region).toBeFocused();
+      }
+      console.log('PASS beta ' + ruta + ' ' + width);
+    }
+  }
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.evaluate(() => {
     document.documentElement.style.fontSize = '200%';
@@ -316,7 +356,7 @@ async function esperarServidor() {
       })),
     );
     if (
-      iconos.length !== 16 ||
+      iconos.length !== 17 ||
       iconos.some(
         (svg) => svg.hidden !== 'true' || svg.focusable !== 'false' || !svg.path || svg.width !== 20 || !svg.label,
       )

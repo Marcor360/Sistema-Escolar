@@ -24,6 +24,11 @@ export class ArchivosController {
     return this.service.enlaceEntrega(id, user);
   }
 
+  @Get('biblioteca/:id/enlace') @UseGuards(JwtAuthGuard)
+  enlaceBiblioteca(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) { return this.service.enlaceBiblioteca(id, user); }
+  @Get('biblioteca/:id')
+  descargarBiblioteca(@Param('id', ParseIntPipe) id: number, @Query('t') token: string, @Res() res: Response) { return this.service.descargarBiblioteca(id, token, res); }
+
   // Sin guard de clase: estos dos abren archivos con <a>/Linking.openURL (sin encabezado
   // Authorization); la autorización viaja y se revalida con el token firmado `t`.
   @Get('materiales/:id')

@@ -1,44 +1,160 @@
-import { crearControlLectura } from '../api/lectura-vigente';
-import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, View } from 'react-native';
-import { Text } from '../components/Texto';
-import { useFocusEffect } from '@react-navigation/native';
-import { api, mensajeDeError } from '../api/client';
-import { base, ErrorCarga, Tarjeta, Vacio } from './comunes';
+import { ordenarPeriodos } from "../utils/orden-calificaciones";
+import { useSesion } from "../sesion";
+import { leerConCache } from "../api/cache-academica";
+import { crearControlLectura } from "../api/lectura-vigente";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Linking,
+  TouchableOpacity,
+  FlatList,
+  RefreshControl,
+  View,
+} from "react-native";
+import { Text } from "../components/Texto";
+import { useFocusEffect } from "@react-navigation/native";
+import { api, archivosBase, mensajeDeError } from "../api/client";
+import { GuiaPantalla, base, ErrorCarga, Tarjeta, Vacio } from "./comunes";
 
+interface Boleta {
+  inscripcionId: number;
+  cicloId: number;
+  ciclo: string;
+  grupo: string;
+  plantel: string;
+}
 interface Calificacion {
   id: number;
   parcial: number;
   calificacion: number;
   promedioOficial: number | null;
   grupoMateriaId: number;
-  grupoMateria: { grupo: { nombre: string; ciclo: { id: number; nombre: string } }; materia: { clave: string; nombre: string } };
+  grupoMateria: {
+    grupo: { nombre: string; ciclo: { id: number; nombre: string } };
+    materia: { clave: string; nombre: string };
+  };
 }
 
 export default function CalificacionesScreen() {
+  const { sesion } = useSesion();
+  const [boletas, setBoletas] = useState<Boleta[]>([]);
+  const [errorBoletas, setErrorBoletas] = useState("");
+  const lecturaBoletas = useRef(crearControlLectura());
+  const cargarBoletas = useCallback(() => {
+    if (!sesion?.sub) return;
+    setErrorBoletas("");
+    void lecturaBoletas.current.cargar(
+      () => api.get<Boleta[]>("/reportes/mis-boletas"),
+      (r) => setBoletas(r.data),
+      (e) => setErrorBoletas(mensajeDeError(e)),
+      () => undefined,
+    );
+  }, [sesion?.sub]);
   const [registros, setRegistros] = useState<Calificacion[]>([]);
   const [cargando, setCargando] = useState(false);
   const [cargaInicialCompleta, setCargaInicialCompleta] = useState(false);
-  const [error, setError] = useState('');
-  const [ultimaActualizacion, setUltimaActualizacion] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const [ultimaActualizacion, setUltimaActualizacion] = useState<string | null>(
+    null,
+  );
+
+  const [offline, setOffline] = useState(false);
+  const [cacheExpira, setCacheExpira] = useState(0);
+  useEffect(() => {
+    if (!offline || !cacheExpira) return;
+    const timer = setTimeout(
+      () => {
+        setRegistros([]);
+        setOffline(false);
+        setUltimaActualizacion(null);
+        setError("La copia de lectura venció. Conéctate y actualiza.");
+      },
+      Math.max(0, cacheExpira - Date.now()),
+    );
+    return () => clearTimeout(timer);
+  }, [offline, cacheExpira]);
+  const descargaVigente = useRef(0);
+  const [descargando, setDescargando] = useState(false);
+  const descargar = async (cicloId?: number, inscripcionId?: number) => {
+    if (descargando) return;
+    const actual = ++descargaVigente.current;
+    setDescargando(true);
+    setError("");
+    try {
+      const { data } = await api.get<{ url: string }>(
+        "/reportes/mi-boleta/enlace",
+        { params: { cicloId, inscripcionId } },
+      );
+      if (actual === descargaVigente.current)
+        await Linking.openURL(`${archivosBase}${data.url}`);
+    } catch (e) {
+      if (actual === descargaVigente.current) setError(mensajeDeError(e));
+    } finally {
+      if (actual === descargaVigente.current) setDescargando(false);
+    }
+  };
 
   const lectura = useRef(crearControlLectura());
+  useEffect(() => {
+    lectura.current.invalidar();
+    descargaVigente.current++;
+    setRegistros([]);
+    setBoletas([]);
+    setErrorBoletas("");
+    lecturaBoletas.current.invalidar();
+    setError("");
+    setOffline(false);
+    setCacheExpira(0);
+    setCargando(false);
+    setDescargando(false);
+    setUltimaActualizacion(null);
+    setCargaInicialCompleta(false);
+  }, [sesion?.sub]);
   const cargar = useCallback(() => {
-    setError('');
+    if (!sesion?.sub) return;
+    setError("");
     setCargando(true);
-    void lectura.current.cargar(() => api.get<Calificacion[]>('/calificaciones/mias'),
-      (r) => { setRegistros(r.data); setUltimaActualizacion(new Date().toLocaleString()); setCargaInicialCompleta(true); },
+    void lectura.current.cargar(
+      () =>
+        leerConCache("/calificaciones/mias", () =>
+          api.get<Calificacion[]>("/calificaciones/mias"),
+        ),
+      (r) => {
+        setRegistros(r.data);
+        setOffline(r.offline);
+        setCacheExpira(r.fecha + 5 * 60000);
+        setUltimaActualizacion(new Date(r.fecha).toLocaleString());
+        setCargaInicialCompleta(true);
+      },
       (fallo) => setError(mensajeDeError(fallo)),
-      () => setCargando(false));
-  }, []);
+      () => setCargando(false),
+    );
+  }, [sesion?.sub]);
 
-  useFocusEffect(useCallback(() => { cargar(); return () => lectura.current.invalidar(); }, [cargar]));
+  useFocusEffect(
+    useCallback(() => {
+      cargar();
+      cargarBoletas();
+      return () => {
+        lecturaBoletas.current.invalidar();
+        lectura.current.invalidar();
+        descargaVigente.current++;
+        setDescargando(false);
+      };
+    }, [cargar, cargarBoletas]),
+  );
 
   // Agrupar por materia para lectura tipo boleta
-  const materias = new Map<string, { nombre: string; parciales: Calificacion[] }>();
+  const materias = new Map<
+    string,
+    { nombre: string; parciales: Calificacion[] }
+  >();
   for (const r of registros) {
     const clave = String(r.grupoMateriaId);
-    const grupo = materias.get(clave) ?? { nombre: `${r.grupoMateria.materia.clave} — ${r.grupoMateria.materia.nombre} · ${r.grupoMateria.grupo.nombre} · ${r.grupoMateria.grupo.ciclo.nombre}`, parciales: [] };
+    const grupo = materias.get(clave) ?? {
+      nombre: `${r.grupoMateria.materia.clave} — ${r.grupoMateria.materia.nombre} · ${r.grupoMateria.grupo.nombre} · ${r.grupoMateria.grupo.ciclo.nombre}`,
+      parciales: [],
+    };
     grupo.parciales.push(r);
     materias.set(clave, grupo);
   }
@@ -46,29 +162,88 @@ export default function CalificacionesScreen() {
 
   return (
     <View style={base.pantalla}>
-      {error !== '' && <ErrorCarga mensaje={error} reintentar={cargar} />}
-      {ultimaActualizacion && <Text accessibilityRole="text">Última actualización: {ultimaActualizacion}</Text>}
+      {error !== "" && <ErrorCarga mensaje={error} reintentar={cargar} />}
+      {ultimaActualizacion && (
+        <Text accessibilityRole="text">
+          Última actualización: {ultimaActualizacion}
+        </Text>
+      )}
+      {offline && (
+        <Text accessibilityRole="alert">
+          Sin conexión: copia de lectura de esta sesión, hasta 5 minutos. No
+          confirma cambios.
+        </Text>
+      )}
+      {errorBoletas && !offline && (
+        <ErrorCarga mensaje={errorBoletas} reintentar={cargarBoletas} />
+      )}
+      {!boletas.length && (
+        <TouchableOpacity
+          accessibilityRole="button"
+          disabled={descargando || offline}
+          onPress={() => descargar()}
+          style={base.tarjeta}
+        >
+          <Text>Descargar boleta del ciclo vigente</Text>
+        </TouchableOpacity>
+      )}
       <FlatList
+        ListHeaderComponent={
+          <>
+            <GuiaPantalla
+              titulo="Mis calificaciones"
+              detalle="El promedio oficial usa los parciales 1, 2 y 3. La evaluación Final se muestra por separado; un parcial pendiente no equivale a cero."
+            />
+            {boletas.map((b) => (
+              <TouchableOpacity
+                key={b.inscripcionId}
+                accessibilityRole="button"
+                accessibilityLabel={`Descargar boleta de ${b.ciclo}, ${b.grupo}`}
+                disabled={descargando || offline}
+                onPress={() => descargar(b.cicloId, b.inscripcionId)}
+                style={base.tarjeta}
+              >
+                <Text>
+                  {descargando
+                    ? "Abriendo boleta…"
+                    : `Boleta PDF · ${b.ciclo} · ${b.grupo} · ${b.plantel}`}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </>
+        }
         data={filas}
         keyExtractor={([clave]) => clave}
-        refreshControl={<RefreshControl refreshing={cargando} onRefresh={cargar} />}
-        ListEmptyComponent={cargaInicialCompleta && !error
-          ? <Vacio mensaje="Aún no hay calificaciones capturadas." />
-          : !cargaInicialCompleta && !error ? <ActivityIndicator accessibilityLabel="Cargando calificaciones" /> : null}
+        refreshControl={
+          <RefreshControl refreshing={cargando} onRefresh={cargar} />
+        }
+        ListEmptyComponent={
+          cargaInicialCompleta && !error ? (
+            <Vacio mensaje="Aún no hay calificaciones capturadas." />
+          ) : !cargaInicialCompleta && !error ? (
+            <ActivityIndicator accessibilityLabel="Cargando calificaciones" />
+          ) : null
+        }
         renderItem={({ item: [, materia] }) => {
           const promedio = materia.parciales[0]?.promedioOficial;
           return (
             <Tarjeta>
-              <Text style={base.tituloTarjeta} accessibilityRole="header">{materia.nombre}</Text>
-              {materia.parciales
-                .sort((a, b) => a.parcial - b.parcial)
-                .map((p) => (
+              <Text style={base.tituloTarjeta} accessibilityRole="header">
+                {materia.nombre}
+              </Text>
+              {ordenarPeriodos(materia.parciales).map((p) => (
                   <Text key={p.id} style={base.secundario}>
-                    {p.parcial === 0 ? 'Final' : `Parcial ${p.parcial}`}: <Text style={base.monto}>{p.calificacion.toFixed(1)}</Text>
+                    {p.parcial === 0 ? "Final" : `Parcial ${p.parcial}`}:{" "}
+                    <Text style={base.monto}>{p.calificacion.toFixed(1)}</Text>
                   </Text>
                 ))}
               <Text style={[base.secundario, { marginTop: 4 }]}>
-                Promedio: <Text style={base.monto}>{promedio == null ? 'Pendiente de P1-P3' : promedio.toFixed(1)}</Text>
+                Promedio oficial (P1–P3):{" "}
+                <Text style={base.monto}>
+                  {promedio == null
+                    ? "Pendiente de P1-P3"
+                    : promedio.toFixed(1)}
+                </Text>
               </Text>
             </Tarjeta>
           );

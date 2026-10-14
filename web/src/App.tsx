@@ -6,6 +6,7 @@ import { RutaProtegida } from './auth/RutaProtegida';
 import { Shell } from './layout/Shell';
 
 // Cada página se descarga solo cuando se visita (code splitting)
+const BibliotecaPage = lazy(() => import('./pages/Biblioteca'));
 const OperacionesPage = lazy(() => import('./pages/Operaciones'));
 const ConductaPage = lazy(() => import('./pages/Conducta'));
 const AnaliticaPage = lazy(() => import('./pages/Analitica'));
@@ -58,6 +59,7 @@ export default function App() {
           </Route>
 
           <Route element={<RutaProtegida roles={['ADMINISTRATIVO']} />}>
+            <Route path="/biblioteca" element={<BibliotecaPage />} />
             <Route path="/operaciones" element={<OperacionesPage />} />
             <Route path="/docentes" element={<DocentesPage />} />
             <Route path="/materias" element={<MateriasPage />} />

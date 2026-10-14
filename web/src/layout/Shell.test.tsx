@@ -4,21 +4,29 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { Shell } from './Shell';
 
 const contexto = vi.hoisted(() => ({ roles: ['SUPERADMIN'] }));
-vi.mock('../auth/AuthContext', () => ({ useAuth: () => ({
-  sesion: { nombre: 'Usuario', roles: contexto.roles },
-  tieneRol: (...roles: string[]) => contexto.roles.includes('SUPERADMIN') || contexto.roles.some(rol => roles.includes(rol)),
-  logout: vi.fn(),
-}) }));
-vi.mock('../marca/MarcaContext', () => ({ useMarca: () => ({
-  marca: { nombreInstitucion: 'Escuela', nombreCorto: 'E', logoUrl: null },
-}) }));
+vi.mock('../auth/AuthContext', () => ({
+  useAuth: () => ({
+    sesion: { nombre: 'Usuario', roles: contexto.roles },
+    tieneRol: (...roles: string[]) =>
+      contexto.roles.includes('SUPERADMIN') || contexto.roles.some((rol) => roles.includes(rol)),
+    logout: vi.fn(),
+  }),
+}));
+vi.mock('../marca/MarcaContext', () => ({
+  useMarca: () => ({
+    marca: { nombreInstitucion: 'Escuela', nombreCorto: 'E', logoUrl: null },
+  }),
+}));
 vi.mock('../components/Campana', () => ({ Campana: () => null }));
 
 let consulta: EventTarget & { matches: boolean };
 beforeEach(() => {
   contexto.roles = ['SUPERADMIN'];
   consulta = Object.assign(new EventTarget(), { matches: true });
-  vi.stubGlobal('matchMedia', vi.fn(() => consulta));
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn(() => consulta),
+  );
   document.body.style.overflow = 'auto';
 });
 afterEach(() => {
@@ -28,7 +36,11 @@ afterEach(() => {
 });
 
 function abrirMenu() {
-  const vista = render(<MemoryRouter><Shell /></MemoryRouter>);
+  const vista = render(
+    <MemoryRouter>
+      <Shell />
+    </MemoryRouter>,
+  );
   fireEvent.click(screen.getByRole('button', { name: /Abrir menú/ }));
   return vista;
 }
@@ -49,11 +61,15 @@ it('restaura el scroll y el foco al cerrar con el fondo o Escape', () => {
 it('cierra el menú y libera el scroll al pasar a escritorio', () => {
   abrirMenu();
   consulta.matches = false;
-  act(() => { consulta.dispatchEvent(new Event('change')); });
+  act(() => {
+    consulta.dispatchEvent(new Event('change'));
+  });
   expect(document.body.style.overflow).toBe('auto');
   expect(screen.queryByRole('button', { name: 'Cerrar navegación' })).toBeNull();
   consulta.matches = true;
-  act(() => { consulta.dispatchEvent(new Event('change')); });
+  act(() => {
+    consulta.dispatchEvent(new Event('change'));
+  });
   expect(document.body.style.overflow).toBe('auto');
 });
 
@@ -125,10 +141,37 @@ it('inactiva el contenido de fondo mientras el diálogo está abierto', () => {
 });
 
 it('cierra Mi cuenta aun cuando ya está en esa ruta y enfoca el contenido', () => {
-  render(<MemoryRouter initialEntries={['/cuenta']}><Shell /></MemoryRouter>);
+  render(
+    <MemoryRouter initialEntries={['/cuenta']}>
+      <Shell />
+    </MemoryRouter>,
+  );
   fireEvent.click(screen.getByRole('button', { name: 'Abrir menú' }));
   fireEvent.click(screen.getByRole('link', { name: 'Mi cuenta' }));
   expect(screen.queryByRole('dialog')).toBeNull();
   expect(document.activeElement).toBe(document.getElementById('contenido-principal'));
   expect(document.body.style.overflow).toBe('auto');
+});
+it('muestra propósito de la sección', () => {
+  render(
+    <MemoryRouter initialEntries={['/finanzas']}>
+      <Shell />
+    </MemoryRouter>,
+  );
+  expect(screen.getByText('¿Para qué sirve esta sección?')).toBeTruthy();
+  expect(screen.getByText(/Verifica alumno, monto y referencia/)).toBeTruthy();
+});
+it('avisa de desconexión y retira aviso al reconectar', () => {
+  render(
+    <MemoryRouter>
+      <Shell />
+    </MemoryRouter>,
+  );
+  const estado = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+  act(() => window.dispatchEvent(new Event('offline')));
+  expect(screen.getByRole('alert').textContent).toContain('sin conexión');
+  estado.mockReturnValue(true);
+  act(() => window.dispatchEvent(new Event('online')));
+  expect(screen.queryByText(/Tu dispositivo está sin conexión/)).toBeNull();
+  estado.mockRestore();
 });

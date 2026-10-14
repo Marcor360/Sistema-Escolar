@@ -1,11 +1,11 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { CurrentUser, JwtUser } from '../common/current-user.decorator';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { Roles } from '../common/roles.decorator';
 import { RolesGuard } from '../common/roles.guard';
 import { CalendarioService } from './calendario.service';
-import { EventoDto } from './calendario.dto';
+import { EventoDto, EditarEventoDto } from './calendario.dto';
 
 @ApiTags('calendario')
 @ApiBearerAuth()
@@ -26,6 +26,11 @@ export class CalendarioController {
   @Post()
   @Roles('ADMINISTRATIVO', 'MAESTRO')
   crear(@Body() dto: EventoDto, @CurrentUser() user: JwtUser) { return this.service.crear(dto, user); }
+
+  @ApiOperation({ summary: 'Editar evento con revisión optimista y permisos de origen y destino' })
+  @Patch(':id')
+  @Roles('ADMINISTRATIVO', 'MAESTRO')
+  editar(@Param('id', ParseIntPipe) id: number, @Body() dto: EditarEventoDto, @CurrentUser() user: JwtUser) { return this.service.editar(id, dto, user); }
 
   @Delete(':id')
   @Roles('ADMINISTRATIVO', 'MAESTRO')

@@ -36,3 +36,5 @@ export * from './push-envio.entity';
 export * from './archivo-limpieza.entity';
 export { CobranzaEnvio } from './cobranza-envio.entity';
 export * from './importacion-preview.entity';
+
+export * from './biblioteca.entity';
