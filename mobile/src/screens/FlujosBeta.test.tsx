@@ -8,7 +8,7 @@ import Tareas from "./Tareas";
 import EstadoCuenta from "./EstadoCuenta";
 import Perfil from "./Perfil";
 import { api } from "../api/client";
-import { Alert, Linking, TouchableOpacity } from "react-native";
+import { Alert, Linking, ScrollView, Text, TouchableOpacity } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 const sesion = vi.hoisted(() => ({
   sub: 1 as number | null,
@@ -477,9 +477,9 @@ it("bloquea nuevas órdenes cuando la consulta del saldo falla", async () => {
   expect(vista.root.findAllByType(TouchableOpacity).length).toBeGreaterThan(0);
   vi.mocked(api.get).mockRejectedValueOnce(new Error("Sin conexión"));
   await act(async () => {
-    vista.root.findByType("ScrollView").props.refreshControl.props.onRefresh();
+    vista.root.findByType(ScrollView).props.refreshControl.props.onRefresh();
   });
-  expect(vista.root.findAllByType("Text").some((n) =>
+  expect(vista.root.findAllByType(Text).some((n) =>
     String(n.props.children).includes("saldos mostrados pueden estar desactualizados"))).toBe(true);
   const boton = vista.root.findAllByType(TouchableOpacity)[0];
   expect(boton.props.disabled).toBe(true);
