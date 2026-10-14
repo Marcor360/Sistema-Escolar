@@ -129,11 +129,13 @@ export class ReportesService {
         calificacion: '',
       });
     }
-    hoja.dataValidations.add(`E2:E${Math.max(inscritos.length + 1, 2)}`, {
-      type: 'decimal', operator: 'between', formulae: [0, 100],
-      allowBlank: true, showErrorMessage: true,
-      errorTitle: 'Calificación inválida', error: 'Usa un número entre 0 y 100.',
-    });
+    for (let fila = 2; fila <= Math.max(inscritos.length + 1, 2); fila++) {
+      hoja.getCell(`E${fila}`).dataValidation = {
+        type: 'decimal', operator: 'between', formulae: [0, 100],
+        allowBlank: true, showErrorMessage: true,
+        errorTitle: 'Calificación inválida', error: 'Usa un número entre 0 y 100.',
+      };
+    }
     const ayuda = libro.addWorksheet('Instrucciones');
     ayuda.addRow(['Plantilla de captura oficial']);
     ayuda.addRow(['Solo captura números de 0 a 100 con hasta dos decimales en calificacion.']);
