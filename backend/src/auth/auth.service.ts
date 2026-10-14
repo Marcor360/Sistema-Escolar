@@ -6,7 +6,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { createHash, randomUUID } from 'crypto';
 import { Sesion } from '../entities/sesion.entity';
-import { LIMITE_INACTIVIDAD_MS, sesionInactiva } from './sesion-inactividad';
+import { LIMITE_INACTIVIDAD_MS, sesionInactiva, instanteActividad } from './sesion-inactividad';
 import { Alumno } from '../entities/alumno.entity';
 import { Docente } from '../entities/docente.entity';
 import { Usuario } from '../entities/usuario.entity';
@@ -47,7 +47,7 @@ export class AuthService {
     const sesiones = this.dataSource.getRepository(Sesion);
     const sesion = sesiones.create({ id: randomUUID(), usuarioId: usuario.id, portal,
       version: usuario.sessionVersion ?? 0, expiraEn: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      ultimaActividadEn: new Date(), revocada: false });
+      ultimaActividadEn: instanteActividad(), revocada: false });
     const resultado = this.emitir(usuario, sesion);
     await sesiones.save(sesion);
     return resultado;
@@ -103,7 +103,7 @@ export class AuthService {
   /** Esta ruta se invoca únicamente tras interacción del usuario, nunca en refresh ni polling. */
   async registrarActividad(user: JwtUser) {
     if (!user.sid) throw new UnauthorizedException('Sesión inválida');
-    const ahora = new Date();
+    const ahora = instanteActividad();
     const actualizado = await this.dataSource.getRepository(Sesion)
       .createQueryBuilder()
       .update(Sesion)
