@@ -1,5 +1,5 @@
 import { Controller, Get, Param, ParseIntPipe, Query, Res, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { ReportesService } from './reportes.service';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
@@ -34,6 +34,18 @@ export class ReportesController {
     @Res() res: Response,
   ) {
     return this.service.calificacionesExcel(id, user, res);
+  }
+
+  @Get('grupo-materias/:id/plantilla-calificaciones.xlsx')
+  @ApiOperation({ summary: 'Descargar plantilla de captura XLSX de alumnos inscritos para un parcial o Final' })
+  @Roles('MAESTRO', 'ADMINISTRATIVO')
+  plantillaCalificaciones(
+    @Param('id', ParseIntPipe) id: number,
+    @Query('parcial', ParseIntPipe) parcial: number,
+    @CurrentUser() user: JwtUser,
+    @Res() res: Response,
+  ) {
+    return this.service.plantillaCalificacionesExcel(id, parcial, user, res);
   }
 
   @Get('adeudos.xlsx')
