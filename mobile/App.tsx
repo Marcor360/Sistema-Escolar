@@ -23,6 +23,7 @@ import {
   mensajeDeError,
   registrarSesionExpirada,
   TOKEN_KEY,
+  REFRESH_KEY,
   establecerTokensSesion,
   eliminarTokensSesion,
 } from "./src/api/client";
@@ -250,13 +251,31 @@ function AppInterna() {
   };
 
   const cerrar = async (motivo: "manual" | "inactividad" = "manual") => {
-    const token = await SecureStore.getItemAsync(TOKEN_KEY).catch(() => null);
+    const [token, refresh] = await Promise.all([
+      SecureStore.getItemAsync(TOKEN_KEY).catch(() => null),
+      SecureStore.getItemAsync(REFRESH_KEY).catch(() => null),
+    ]);
     await finalizarSesionLocal(motivo);
-    // Sin conexión también se cierra la interfaz; la revocación de la API es de mejor esfuerzo.
-    if (token && typeof fetch === "function") {
-      void fetch(`${api.defaults.baseURL}/auth/logout`, {
-        method: "POST", headers: { Authorization: `Bearer ${token}`, "x-portal": "MOVIL" },
-      }).catch(() => undefined);
+    // El acceso de 15 minutos puede haber caducado; renovar SOLO para revocar el
+    // dispositivo, sin restaurar los tokens ni la interfaz después del cierre.
+    if ((token || refresh) && typeof fetch === "function") {
+      void (async () => {
+        const origen = api.defaults.baseURL;
+        const retirar = (acceso: string) => fetch(`${origen}/auth/logout`, {
+          method: "POST", headers: { Authorization: `Bearer ${acceso}`, "x-portal": "MOVIL" },
+        });
+        const respuesta = token ? await retirar(token) : null;
+        if (respuesta?.status !== 401 && respuesta !== null) return;
+        if (!refresh) return;
+        const renovacion = await fetch(`${origen}/auth/refresh`, {
+          method: "POST",
+          headers: { "x-portal": "MOVIL", "Content-Type": "application/json" },
+          body: JSON.stringify({ refreshToken: refresh }),
+        });
+        if (!renovacion.ok) return;
+        const datos: { accessToken?: string } = await renovacion.json();
+        if (datos.accessToken) await retirar(datos.accessToken);
+      })().catch(() => undefined);
     }
   };
 
