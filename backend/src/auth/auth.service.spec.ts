@@ -147,7 +147,7 @@ describe('AuthService.forgotPassword / resetPassword', () => {
     const registrarError = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
 
     await expect(service.forgotPassword('demo@escuela.mx')).resolves.toEqual({
-      mensaje: 'Si el correo existe, se enviaron instrucciones',
+      mensaje: 'Solicitud recibida. Si la cuenta existe y el correo está disponible, recibirás instrucciones. Si no llegan, contacta a Control escolar.',
     });
 
     expect(registrarError).toHaveBeenCalled();
