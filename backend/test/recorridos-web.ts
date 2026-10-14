@@ -58,7 +58,17 @@ export async function recorridoWeb(d: Datos, tipo: 'academico' | 'financiero' | 
       await page.getByRole('button',{ name: 'Cerrar periodo' }).click(); await expect(page.getByRole('button',{ name: 'Reabrir periodo' })).toBeVisible(); await expect(page.getByLabel(`Calificación de ${matricula.toUpperCase()}`)).toBeDisabled();
       await page.getByRole('button',{ name: 'Reabrir periodo' }).click(); await expect(page.getByLabel(`Calificación de ${matricula.toUpperCase()}`)).toBeEnabled();
       const xlsx = page.waitForResponse((r: { url: () => string }) => r.url().includes('/calificaciones.xlsx')); await page.getByRole('button',{ name: 'Descargar Excel' }).click(); assert.equal((await xlsx).status(),200);
-      await page.getByRole('link', { name: 'Alumnos', exact: true }).click(); fila = page.locator('tr').filter({ hasText: matricula }); await fila.getByRole('button', { name: 'Historial y boleta' }).click(); await page.getByRole('button', { name: 'Ver calificaciones', exact: true }).click(); await expect(page.getByText('90.25',{ exact: true }).first()).toBeVisible();
+      const claseImportacion = await selector.inputValue();
+      const alumnoImportacion = (await page.getByLabel(`Calificación de ${matricula.toUpperCase()}`).getAttribute('id')).replace('nota-', '');
+      const importacion = page.getByRole('region', { name: 'Importación de calificaciones', exact: true });
+      await importacion.getByLabel('Motivo si corrige notas existentes').fill('Corrección en lote desde navegador');
+      await importacion.getByLabel('Archivo de calificaciones').setInputFiles({ name: 'notas.csv', mimeType: 'text/csv', buffer: Buffer.from(`grupoMateriaId,parcial,alumnoId,matricula,grado,calificacion\n${claseImportacion},1,${alumnoImportacion},${matricula.toUpperCase()},,91.25`) });
+      await importacion.getByRole('button', { name: 'Previsualizar sin guardar' }).click();
+      await expect(importacion.getByText('1 filas; 1 cambios; 0 sin cambios.')).toBeVisible();
+      await importacion.getByRole('button', { name: 'Confirmar importación', exact: true }).click();
+      await expect(importacion.getByText('1 notas importadas; 0 sin cambios.')).toBeVisible();
+      await expect(page.getByLabel(`Calificación de ${matricula.toUpperCase()}`)).toHaveValue('91.25');
+      await page.getByRole('link', { name: 'Alumnos', exact: true }).click(); fila = page.locator('tr').filter({ hasText: matricula }); await fila.getByRole('button', { name: 'Historial y boleta' }).click(); await page.getByRole('button', { name: 'Ver calificaciones', exact: true }).click(); await expect(page.getByText('91.25',{ exact: true }).first()).toBeVisible();
       const pdf = page.waitForResponse((r: { url: () => string }) => r.url().includes('/reportes/boleta/')); await page.getByRole('button', { name: 'Boleta de esta inscripción' }).click(); const respuesta = await pdf; assert.equal(respuesta.status(), 200); assert((await respuesta.body()).subarray(0,4).toString() === '%PDF');
     } else if (tipo === 'financiero') {
       await page.getByRole('link', { name: 'Finanzas', exact: true }).click();

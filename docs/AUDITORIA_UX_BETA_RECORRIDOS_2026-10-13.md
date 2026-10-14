@@ -91,3 +91,7 @@ Cada PR funcional: lint, typecheck, build y tests afectados; integración de mot
 ## 6. Estado del informe
 
 Informe auditado contra código y documentación públicos mediante GitHub. **No ejecutados aquí:** `npm ci`, `lint`, `typecheck`, `build`, pruebas de integración ni tests visuales en dispositivo. La CI del PR #28 reporta éxito, pero está sobre un SHA distinto de main y no certifica las PR futuras. En ningún momento se accedió a datos institucionales ni se alteró servidor.
+
+## 7. Ejecución posterior a esta auditoría
+
+La rama candidata beta.2 incorpora las entregas de software y conserva separadas las pruebas locales y la aceptación institucional. Consulte [ejecución y resultados](EJECUCION_BETA_1.24.0-beta.2.md) y [puertas pendientes](BETA_ACEPTACION.json). El diagnóstico sobre main citado arriba sigue siendo histórico; no describe el estado actualizado de beta.2.

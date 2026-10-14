@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma
 
-**Versión candidata: `1.24.0-beta.1`** · Estado revisado el 13 de octubre de 2026.
+**Versión candidata: `1.24.0-beta.2`** · Estado revisado el 13 de octubre de 2026.
 
 API, portal administrativo/docente y app del alumno para gestión académica y financiera con alcance por plantel. Las versiones de backend, web, móvil, lockfiles y Expo están alineadas. Este README describe una única versión actual; los informes históricos permanecen en `docs/`.
 
@@ -8,20 +8,21 @@ API, portal administrativo/docente y app del alumno para gestión académica y f
 |---|---|
 | API y web | Candidata técnica a primera beta funcional; aceptación del piloto pendiente |
 | App del alumno | Candidata a beta del alumno; arranque corregido, pruebas físicas pendientes |
-| Base de datos | Baseline v1 y siete migraciones incrementales espejo; MySQL 8.4 / SQL Server 2022 probados en CI |
+| Base de datos | Baseline v1 y ocho migraciones incrementales espejo; MySQL 8.4 / SQL Server 2022 probados en CI |
 | ETL de legado | Prototipo parcial; no listo para migración institucional general |
 
-Esta candidata incorpora 30 mejoras de UX, conexión, seguridad y fiabilidad. La aceptación de beta requiere un piloto controlado; todavía no se declara primera versión estable de producción. La versión numérica no certifica despliegue, aceptación institucional ni publicación de la app. Consulte las [30 mejoras y condiciones de beta](docs/PREPARACION_BETA_1.24.0-beta.1.md), la [auditoría base](docs/AUDITORIA_ESTADO_1.23.5_2026-10-13.md) y su [inventario de 495 archivos](docs/auditoria/INVENTARIO_1.23.5_2026-10-13.csv).
+Esta candidata incorpora las 30 mejoras de beta.1 y las entregas de la auditoría de recorridos: guía de configuración, tablas adaptables, importación de notas, edición de eventos, biblioteca privada, boleta móvil y caché de lectura. Consulte el [estado de ejecución y las puertas de aceptación de beta.2](docs/EJECUCION_BETA_1.24.0-beta.2.md). La aceptación de beta requiere un piloto controlado; todavía no se declara primera versión estable de producción. La versión numérica no certifica despliegue, aceptación institucional ni publicación de la app. Consulte las [30 mejoras y condiciones de beta](docs/PREPARACION_BETA_1.24.0-beta.1.md), la [auditoría base](docs/AUDITORIA_ESTADO_1.23.5_2026-10-13.md) y su [inventario de 495 archivos](docs/auditoria/INVENTARIO_1.23.5_2026-10-13.csv).
 
 ## Funcionalidad actual
 
 - Identidad, recuperación y cambio de contraseña, sesiones rotativas, roles y acceso limitado por plantel y expediente vigente.
 - Planteles, alumnos, docentes, ciclos, grupos, inscripciones, traslados y promoción; importaciones con preview cifrado y confirmación transaccional.
 - Materias, actividades, entregas, calificaciones P1–P3 y Final separado, cierre e historial de correcciones; reportes PDF/Excel y analítica con alcance autorizado.
-- Calendario, avisos y conducta interna; notificaciones push con cola persistente y contenido genérico.
+- Calendario con edición y detección de conflictos, avisos y conducta interna; notificaciones push con cola persistente y contenido genérico.
 - Cargos, pagos manuales idempotentes, integración Openpay y correo de cobranza con seguimiento de resultados inciertos.
+- Biblioteca privada por plantel con carpetas lógicas, categorías de foto/logo/calendario/documento, cuota y antivirus obligatorio (`clamdscan`); PNG/JPEG/PDF hasta 10 MB. La nueva migración es aditiva y requiere el runner antes de habilitar la biblioteca.
 - Archivos con descargas firmadas y validación de alcance; marca institucional mediante `/api/configuracion/marca`.
-- App del alumno para inicio, materias, tareas, calificaciones, perfil y estado de cuenta.
+- App del alumno para inicio, materias, tareas, calificaciones, boleta propia con enlace revocable, perfil y estado de cuenta. Materias y notas ofrecen copia de lectura durante cinco minutos en memoria de la sesión; no persisten expedientes en disco.
 
 La interfaz incorpora modales con gestión de foco, navegación con iconos, listados adaptables y protección contra respuestas tardías. El inicio móvil conserva información cuando falla parcialmente un servicio; cambiar contraseña exige reautenticación. Materias y tareas se actualizan al cambiar usuario o recuperar foco. Grupos y docentes no conservan detalles obsoletos. Alumnos mantiene los filtros confirmados al paginar y finalizar mutaciones, incluso si cambió la consulta durante la operación. Calendario muestra la baja según creador, plantel y roles combinados, incluyendo la excepción de SUPERADMIN. La candidata añade guías de propósito en web y móvil, confirmaciones de entrega/pago/contraseña, contraste según la marca y bloqueo de envíos duplicados. La aceptación con usuarios sigue pendiente.
 
