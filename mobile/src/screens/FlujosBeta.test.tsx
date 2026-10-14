@@ -522,3 +522,19 @@ it("tareas conserva datos solo como referencia y bloquea entregas con informaci�
   );
   expect(vista.root.findByProps({ accessibilityLabel: "Entregar archivo: Trabajo" }).props.disabled).toBe(false);
 });
+
+
+it("bloquea el envío si la consulta vence mientras el selector está abierto", async () => {
+  const tarea = { id: 3, titulo: "Trabajo", tipo: "TAREA", parcial: 1, fechaEntrega: null, entrega: null };
+  vi.mocked(api.get).mockResolvedValue({ data: [tarea] });
+  await montar(<Tareas />);
+  let resolver!: (valor: Awaited<ReturnType<typeof DocumentPicker.getDocumentAsync>>) => void;
+  vi.mocked(DocumentPicker.getDocumentAsync).mockReturnValueOnce(new Promise(r => { resolver = r; }));
+  await act(async () => vista.root.findByProps({ accessibilityLabel: "Entregar archivo: Trabajo" }).props.onPress());
+  const reloj = vi.spyOn(Date, "now").mockReturnValue(Date.now() + 5 * 60_000 + 1);
+  try {
+    await act(async () => resolver({ canceled: false, assets: [{ uri: "file:///trabajo.pdf", name: "trabajo.pdf", size: 10, lastModified: 0 }] }));
+    expect(api.post).not.toHaveBeenCalled();
+    expect(Alert.alert).toHaveBeenCalledWith("Actualiza tus tareas", expect.any(String));
+  } finally { reloj.mockRestore(); }
+});

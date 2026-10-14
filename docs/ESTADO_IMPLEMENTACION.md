@@ -63,3 +63,7 @@ Esto amplía el cierre local descrito en #46; sus límites anteriores son histó
 Se amplían las regresiones API/base real: lectura propia de notas sin acceso a captura/listados del personal; entrega evaluada visible en tareas; PDF propio por inscripción con no-store y firma de contenido, rechazo de expediente ajeno; saldo después de pago parcial sin permiso para registrar pagos manuales.
 
 Expo comprueba URI local file/content cuando está presente, tamaño finito y nombre sin rutas ni controles, conservando Unicode. El envío real valida el asset del selector nativo; las comprobaciones del servidor siguen siendo definitivas. [Detalle de privacidad](../mobile/docs/PRIVACIDAD_SELECTOR_ARCHIVOS_2026-10-14.md). No se certifica limpieza física de la copia temporal ni pruebas en dispositivos.
+
+### Cierre IUA 11–12: navegación y recuperación de tareas
+
+Las seis pestañas de alumno incluyen etiquetas explícitas para lectores de pantalla. Tareas conserva la última consulta como referencia ante un fallo, permite reintentar y bloquea entregas mientras se actualiza o al vencer cinco minutos. La vigencia se comprueba también después de cerrar el selector de archivos, evitando enviar con una consulta vencida durante la selección. Las pruebas cubren fallo y recuperación de red y vencimiento durante el selector. Continúa pendiente la validación en dispositivos con TalkBack, VoiceOver, fuentes ampliadas y pantallas de 320 px.

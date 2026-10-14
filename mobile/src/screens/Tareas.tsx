@@ -67,14 +67,19 @@ export default function TareasScreen() {
     return () => clearTimeout(timer);
   }, [datosVigentes, fechaConsulta]);
 
+  const vigencia = useRef(0);
+  const vigente = () => vigencia.current > 0 && Date.now() - vigencia.current < 5 * 60_000;
+  const avisarDatosVencidos = () => Alert.alert("Actualiza tus tareas", "Debes actualizar tus tareas con conexión antes de entregar un archivo.");
   const lectura = useRef(crearControlLectura());
   const cargar = useCallback(() => {
     setError("");
+    vigencia.current = 0;
     setDatosVigentes(false);
     setCargando(true);
     void lectura.current.cargar(
       () => api.get<Tarea[]>("/alumnos/me/tareas"),
       (r) => {
+        vigencia.current = Date.now();
         setTareas(r.data);
         setDatosVigentes(true);
         setFechaConsulta(Date.now());
@@ -99,6 +104,7 @@ export default function TareasScreen() {
   const entregaEnCurso = useRef(false);
   const entregar = async (tarea: Tarea) => {
     if (!activa.current || entregaEnCurso.current) return;
+    if (!vigente()) { avisarDatosVencidos(); return; }
     entregaEnCurso.current = true;
     try {
       setEntregandoId(tarea.id);
@@ -106,6 +112,7 @@ export default function TareasScreen() {
         copyToCacheDirectory: true,
       });
       if (!activa.current || resultado.canceled || !resultado.assets[0]) return;
+      if (!vigente()) { avisarDatosVencidos(); return; }
       const archivo = resultado.assets[0];
       const problema = validarArchivoEntrega(archivo);
       if (problema) {
@@ -139,8 +146,8 @@ export default function TareasScreen() {
 
   const solicitarEntrega = (tarea: Tarea) => {
     if (entregandoId !== null) return;
-    if (!datosVigentes) {
-      Alert.alert("Actualiza tus tareas", "Debes actualizar tus tareas con conexión antes de entregar un archivo.");
+    if (!vigente()) {
+      avisarDatosVencidos();
       return;
     }
     if (tarea.entrega?.estatus === "CALIFICADA") {
