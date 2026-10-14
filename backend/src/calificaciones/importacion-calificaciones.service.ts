@@ -32,25 +32,67 @@ export class ImportacionCalificacionesService {
       .getRepository(Inscripcion)
       .find({ where: { ...inscripcionVigente, grupoId: gm.grupoId }, order: { alumnoId: 'ASC' } });
     if (inscripciones.length > 500) throw new BadRequestException('La plantilla supera 500 inscritos; solicita una exportación por lotes');
-    const libro = new ExcelJS.Workbook(),
-      hoja = libro.addWorksheet('CALIFICACIONES');
-    hoja.addRow(CABECERAS);
-    hoja.getRow(1).font = { bold: true };
-    for (const i of inscripciones)
-      hoja.addRow([gm.id, dto.parcial, i.alumnoId, i.alumno.matricula, gm.grupo.grado ?? '', '', '', i.alumno.usuario.nombreCompleto]);
-    for (let fila = 2; fila <= Math.max(inscripciones.length + 1, 2); fila++) hoja.getCell(`F${fila}`).dataValidation = { type: 'decimal', operator: 'between', formulae: [0, 100], allowBlank: true, showErrorMessage: true, errorTitle: 'Calificación inválida', error: 'Usa un número entre 0 y 100.' };
-    hoja.columns.forEach((c) => {
-      c.width = 22;
+    const libro = new ExcelJS.Workbook();
+    const hoja = libro.addWorksheet('CALIFICACIONES', {
+      views: [{ state: 'frozen', ySplit: 1, activeCell: 'F2' }],
     });
+    hoja.addRow(CABECERAS);
+    hoja.autoFilter = { from: 'A1', to: 'H1' };
+    hoja.getRow(1).height = 30;
+    hoja.getRow(1).eachCell((celda, indice) => {
+      celda.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      celda.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: indice === 6 ? 'FF23675E' : 'FF14343B' },
+      };
+      celda.alignment = { vertical: 'middle', wrapText: true };
+    });
+    [19, 12, 15, 22, 15, 19, 40, 38].forEach((ancho, indice) => {
+      hoja.getColumn(indice + 1).width = ancho;
+    });
+    for (const columna of [4, 5, 7, 8]) hoja.getColumn(columna).numFmt = '@';
+    hoja.getColumn(6).numFmt = '0.00';
+    for (const i of inscripciones) {
+      hoja.addRow([
+        gm.id,
+        dto.parcial,
+        i.alumnoId,
+        i.alumno.matricula,
+        gm.grupo.grado ?? '',
+        '',
+        '',
+        i.alumno.usuario.nombreCompleto,
+      ]);
+    }
+    for (let fila = 2; fila <= Math.max(inscripciones.length + 1, 2); fila++) {
+      const celda = hoja.getCell(`F${fila}`);
+      celda.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF2CB' } };
+      celda.dataValidation = {
+        type: 'decimal',
+        operator: 'between',
+        formulae: [0, 100],
+        allowBlank: true,
+        showErrorMessage: true,
+        errorTitle: 'Calificación inválida',
+        error: 'Usa un número entre 0 y 100.',
+      };
+    }
     const ayuda = libro.addWorksheet('Instrucciones');
+    ayuda.getColumn(1).width = 110;
     ayuda.addRows([
-      [
-        `Plantel: ${gm.grupo.plantel.nombre}; ciclo: ${gm.grupo.ciclo.clave}; grupo: ${gm.grupo.nombre}; materia: ${gm.materia.clave}`,
-      ],
+      [`Plantel: ${gm.grupo.plantel.nombre}; ciclo: ${gm.grupo.ciclo.clave}; grupo: ${gm.grupo.nombre}; materia: ${gm.materia.clave}`],
+      ['Edita únicamente la columna F (calificacion), marcada en amarillo. No cambies IDs, matrícula, grado ni parcial.'],
       ['Parcial 0 = Final; 1, 2 y 3 forman el promedio oficial.'],
-      ['Conserva identificadores. Elimina filas pendientes; una nota vacía no equivale a cero.'],
-      ['Captura 0–100 con hasta dos decimales. Para corregir, indica motivo en la pantalla.'],
+      ['Elimina las filas sin calificación antes de importar. Una nota vacía no equivale a cero.'],
+      ['Captura 0–100 con hasta dos decimales. Para corregir notas existentes, indica motivo en la pantalla.'],
+      ['Después de guardar el archivo, previsualiza los cambios y confirma en el portal.'],
     ]);
+    ayuda.eachRow((fila, indice) => {
+      fila.height = indice === 1 ? 44 : 30;
+      fila.getCell(1).alignment = { vertical: 'middle', wrapText: true };
+    });
+    ayuda.getRow(1).font = { bold: true, color: { argb: 'FF14343B' } };
     return Buffer.from(await libro.xlsx.writeBuffer());
   }
   async preview(dto: ContextoNotasDto, buffer: Buffer, nombre: string, user: JwtUser) {
