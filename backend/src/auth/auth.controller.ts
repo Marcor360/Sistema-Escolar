@@ -51,6 +51,16 @@ export class AuthController {
     return this.responder(await this.auth.refresh(token, portal), portal, res);
   }
 
+  @Post('actividad')
+  @ApiOperation({ summary: 'Registrar actividad explícita del usuario (no polling), límite de sesión 30 minutos' })
+  @ApiBearerAuth()
+  @ApiResponse({ status: 401, description: 'Sesión expirada o revocada' })
+  @Throttle({ default: { limit: 12, ttl: 60_000 } })
+  @UseGuards(JwtAuthGuard)
+  actividad(@CurrentUser() user: JwtUser) {
+    return this.auth.registrarActividad(user);
+  }
+
   @Get('me')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
