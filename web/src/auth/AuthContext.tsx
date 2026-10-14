@@ -78,10 +78,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Revocación de mejor esfuerzo: el cierre local no depende de que la red responda.
   const revocarDispositivo = (token: string | null) => {
     if (!token || typeof fetch !== 'function') return;
-    void fetch(`${api.defaults.baseURL}/auth/logout`, {
-      method: 'POST', credentials: 'include', keepalive: true,
-      headers: { Authorization: `Bearer ${token}`, 'x-portal': 'WEB' },
-    }).catch(() => undefined);
+    // Tras 30 minutos el access (15m) ya expiró: rotar solo para revocar la sesión.
+    void (async () => {
+      const url = api.defaults.baseURL;
+      const retirar = (acceso: string) => fetch(`${url}/auth/logout`, {
+        method: 'POST', credentials: 'include', keepalive: true,
+        headers: { Authorization: `Bearer ${acceso}`, 'x-portal': 'WEB' },
+      });
+      const intento = await retirar(token);
+      if (intento.status !== 401) return;
+      const nuevo = await fetch(`${url}/auth/refresh`, {
+        method: 'POST', credentials: 'include', keepalive: true,
+        headers: { 'x-portal': 'WEB', 'Content-Type': 'application/json' },
+        body: '{}',
+      });
+      if (!nuevo.ok) return;
+      const datos: { accessToken?: string } = await nuevo.json();
+      if (datos.accessToken) await retirar(datos.accessToken);
+    })().catch(() => undefined);
   };
 
   const logout = async () => {
