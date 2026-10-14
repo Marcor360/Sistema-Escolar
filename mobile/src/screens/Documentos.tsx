@@ -139,17 +139,17 @@ export default function DocumentosScreen() {
     };
   }, [cargar]));
 
-  const abrirCarpeta = async (id: number) => {
+  const abrirCarpeta = async (id: number, forzar = false) => {
     solicitudCarpeta.current++;
     const actual = solicitudCarpeta.current;
     setErrorCarpeta("");
-    if (carpetaAbierta === id) {
+    if (carpetaAbierta === id && !forzar) {
       setCarpetaAbierta(null);
       setCargandoCarpeta(null);
       return;
     }
     setCarpetaAbierta(id);
-    if (materiales[id]) return;
+    if (materiales[id] && !forzar) return;
     setCargandoCarpeta(id);
     try {
       const resultado: Lectura<Material[]> = await leerConCache(
@@ -234,11 +234,7 @@ export default function DocumentosScreen() {
             <View>
               {cargandoCarpeta === m.id && <ActivityIndicator accessibilityLabel="Cargando carpeta" />}
               {errorCarpeta !== "" && <ErrorCarga mensaje={errorCarpeta}
-                reintentar={() => { setMateriales((p) => {
-                  const copia = { ...p };
-                  delete copia[m.id];
-                  return copia;
-                }); void abrirCarpeta(m.id); }} />}
+                reintentar={() => { void abrirCarpeta(m.id, true); }} />}
               {materiales[m.id]?.length === 0 && <Text style={base.secundario}>Esta carpeta está vacía.</Text>}
               {materiales[m.id]?.map((archivo) => (
                 <TouchableOpacity key={archivo.id} style={estilos.documento}
