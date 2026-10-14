@@ -11,7 +11,7 @@ for (const tipo of TIPOS_IMPORTACION) {
     await libro.xlsx.load(archivo as never);
     const datos = libro.worksheets[0];
     expect(datos.name).toBe(tipo);
-    expect(datos.getRow(1).values.slice(1)).toEqual(CABECERAS[tipo]);
+    expect(CABECERAS[tipo].map((_, indice) => datos.getRow(1).getCell(indice + 1).value)).toEqual(CABECERAS[tipo]);
     expect(datos.rowCount).toBe(1);
     expect(datos.views[0]).toMatchObject({ state: 'frozen', ySplit: 1 });
     expect(datos.autoFilter).toBeTruthy();
