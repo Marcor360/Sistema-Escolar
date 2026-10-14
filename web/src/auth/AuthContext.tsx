@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { api, establecerToken, renovarSesion, mensajeDeError, registrarSesionExpirada } from '../api/client';
+import { api, establecerToken, obtenerTokenSesion, renovarSesion, mensajeDeError, registrarSesionExpirada } from '../api/client';
+import { CLAVE_ACTIVIDAD, CLAVE_CIERRE, LIMITE_INACTIVIDAD_MS, cierreLocalActivo, guardarUltimaActividad, iniciarActividadAutenticada, inactividadVencida, leerUltimaActividad, registrarCierreLocal } from './inactividad';
 
 export interface Sesion {
   sub: number;
@@ -29,10 +30,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let activo = true;
     localStorage.removeItem('token'); localStorage.removeItem('sesion');
+    const ultima = leerUltimaActividad();
+    if (cierreLocalActivo() || (ultima !== null && inactividadVencida(ultima, Date.now()))) {
+      if (!cierreLocalActivo()) registrarCierreLocal('inactividad');
+      setCargando(false);
+      return;
+    }
     renovarSesion().then(() => api.get<{
       id: number; email: string; nombreCompleto: string; roles: { clave: string }[]; passwordChangeRequired: boolean;
     }>('/auth/me')).then(({ data }) => {
-      if (!activo) return;
+      if (!activo || cierreLocalActivo()) return;
       const actual: Sesion = {
         sub: data.id, email: data.email, nombre: data.nombreCompleto,
         roles: data.roles.map((rol) => rol.clave), passwordChangeRequired: data.passwordChangeRequired,
@@ -55,20 +62,94 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     const { data } = await api.post('/auth/login', { email, password });
+    iniciarActividadAutenticada();
     establecerToken(data.accessToken);
-
     setSesion(data.usuario);
   };
 
-  const finalizarSesionLocal = () => {
+  const cerrarLocal = (motivo: 'manual' | 'inactividad') => {
+    registrarCierreLocal(motivo);
     establecerToken(null);
     setSesion(null);
   };
 
-  const logout = async () => {
-    await api.post('/auth/logout');
-    finalizarSesionLocal();
+  const finalizarSesionLocal = () => cerrarLocal('manual');
+
+  // Revocación de mejor esfuerzo: el cierre local no depende de que la red responda.
+  const revocarDispositivo = (token: string | null) => {
+    if (!token || typeof fetch !== 'function') return;
+    void fetch(`${api.defaults.baseURL}/auth/logout`, {
+      method: 'POST', credentials: 'include', keepalive: true,
+      headers: { Authorization: `Bearer ${token}`, 'x-portal': 'WEB' },
+    }).catch(() => undefined);
   };
+
+  const logout = async () => {
+    const token = obtenerTokenSesion();
+    finalizarSesionLocal();
+    revocarDispositivo(token);
+  };
+
+  useEffect(() => {
+    if (!sesion) return;
+    let cerrada = false;
+    let ultimo = leerUltimaActividad() ?? Date.now();
+    let ultimaPersistida = ultimo;
+    let temporizador: ReturnType<typeof setTimeout> | undefined;
+    if (leerUltimaActividad() === null) guardarUltimaActividad(ultimo);
+
+    const vencer = () => {
+      if (cerrada) return;
+      cerrada = true;
+      const token = obtenerTokenSesion();
+      cerrarLocal('inactividad');
+      revocarDispositivo(token);
+    };
+    const comprobar = () => {
+      if (cerrada) return;
+      const compartida = leerUltimaActividad();
+      if (compartida !== null && compartida > ultimo) ultimo = compartida;
+      if (inactividadVencida(ultimo, Date.now())) { vencer(); return; }
+      if (temporizador) clearTimeout(temporizador);
+      temporizador = setTimeout(comprobar, LIMITE_INACTIVIDAD_MS - (Date.now() - ultimo));
+    };
+    const actividad = () => {
+      if (cerrada) return;
+      const ahora = Date.now();
+      if (inactividadVencida(ultimo, ahora)) { comprobar(); return; }
+      ultimo = ahora;
+      if (ahora - ultimaPersistida >= 5000) {
+        ultimaPersistida = ahora;
+        guardarUltimaActividad(ahora);
+      }
+    };
+    const almacen = (evento: StorageEvent) => {
+      if (evento.key === CLAVE_CIERRE && evento.newValue !== null) {
+        cerrada = true;
+        if (temporizador) clearTimeout(temporizador);
+        establecerToken(null);
+        setSesion(null);
+      } else if (evento.key === CLAVE_ACTIVIDAD && evento.newValue) {
+        const fecha = Number(evento.newValue);
+        if (Number.isFinite(fecha) && fecha <= Date.now() && fecha > ultimo) ultimo = fecha;
+      }
+    };
+    const reanudar = () => { if (!document.hidden) comprobar(); };
+    const eventos = ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart'] as const;
+    for (const nombre of eventos) window.addEventListener(nombre, actividad, { passive: true });
+    window.addEventListener('storage', almacen);
+    window.addEventListener('focus', comprobar);
+    document.addEventListener('visibilitychange', reanudar);
+    comprobar();
+    return () => {
+      cerrada = true;
+      if (temporizador) clearTimeout(temporizador);
+      for (const nombre of eventos) window.removeEventListener(nombre, actividad);
+      window.removeEventListener('storage', almacen);
+      window.removeEventListener('focus', comprobar);
+      document.removeEventListener('visibilitychange', reanudar);
+    };
+  }, [sesion?.sub]);
 
   const tieneRol = (...roles: string[]) =>
     sesion !== null &&
