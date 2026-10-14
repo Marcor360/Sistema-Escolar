@@ -14,7 +14,7 @@ it('rechaza archivos vacíos y de tipo incorrecto antes de enviarlos a la API', 
   await waitFor(() => expect(screen.getByLabelText('Tipo')).toBeTruthy());
   const archivo = screen.getByLabelText('Archivo');
   fireEvent.change(archivo, { target: { files: [new File([], 'lote.csv', { type: 'text/csv' })] } });
-  fireEvent.click(screen.getByRole('button', { name: 'Previsualizar archivo' }));
+  fireEvent.submit(screen.getByRole('button', { name: 'Previsualizar archivo' }).closest('form')!);
   expect(screen.getByRole('alert').textContent).toMatch(/contener datos/);
   expect(post).not.toHaveBeenCalled();
 });
