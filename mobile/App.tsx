@@ -5,6 +5,7 @@ import {
 import * as Notifications from "expo-notifications";
 import { activarPush } from "./src/push";
 import { CLAVE_ULTIMA_ACTIVIDAD, crearControlInactividad, crearPersistenciaActividad, actividadRestaurable } from "./src/utils/inactividad";
+import { debeNotificarActividad } from "./src/utils/pulso-actividad";
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   NavigationContainer,
@@ -89,6 +90,7 @@ function AppInterna() {
   const [avisoCierre, setAvisoCierre] = useState("");
   const ultimaActividadGuardada = useRef(Date.now());
   const ultimaActividadPersistida = useRef(0);
+  const ultimoAvisoServidor = useRef(0);
   const persistenciaActividad = useRef(crearPersistenciaActividad(
     (fecha) => SecureStore.setItemAsync(CLAVE_ULTIMA_ACTIVIDAD, String(fecha)),
     () => SecureStore.deleteItemAsync(CLAVE_ULTIMA_ACTIVIDAD),
@@ -217,6 +219,7 @@ function AppInterna() {
     const ahora = Date.now();
     ultimaActividadGuardada.current = ahora;
     ultimaActividadPersistida.current = ahora;
+    ultimoAvisoServidor.current = ahora;
     guardarActividad(ahora);
     setAvisoCierre("");
     setSesion(data.usuario);
@@ -289,7 +292,7 @@ function AppInterna() {
       else guardarActividad(control.ultimaActividad());
     });
     const atras = BackHandler.addEventListener("hardwareBackPress", () => {
-      control.actividad();
+      registrarInteraccion();
       return false;
     });
     return () => {
@@ -305,6 +308,10 @@ function AppInterna() {
     if (!control) return;
     control.actividad();
     const fecha = control.ultimaActividad();
+    if (sesion?.sub && debeNotificarActividad(ultimoAvisoServidor.current, fecha)) {
+      ultimoAvisoServidor.current = fecha;
+      void api.post("/auth/actividad").catch(() => undefined);
+    }
     if (fecha - ultimaActividadPersistida.current >= 5000) {
       ultimaActividadPersistida.current = fecha;
       guardarActividad(fecha);

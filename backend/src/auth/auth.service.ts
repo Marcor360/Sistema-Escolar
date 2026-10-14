@@ -6,6 +6,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { createHash, randomUUID } from 'crypto';
 import { Sesion } from '../entities/sesion.entity';
+import { LIMITE_INACTIVIDAD_MS, sesionInactiva, instanteActividad } from './sesion-inactividad';
 import { Alumno } from '../entities/alumno.entity';
 import { Docente } from '../entities/docente.entity';
 import { Usuario } from '../entities/usuario.entity';
@@ -45,7 +46,8 @@ export class AuthService {
     await this.validarExpediente(usuario.id, roles);
     const sesiones = this.dataSource.getRepository(Sesion);
     const sesion = sesiones.create({ id: randomUUID(), usuarioId: usuario.id, portal,
-      version: usuario.sessionVersion ?? 0, expiraEn: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), revocada: false });
+      version: usuario.sessionVersion ?? 0, expiraEn: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      ultimaActividadEn: instanteActividad(), revocada: false });
     const resultado = this.emitir(usuario, sesion);
     await sesiones.save(sesion);
     return resultado;
@@ -77,6 +79,11 @@ export class AuthService {
       const sesiones = manager.getRepository(Sesion);
       const sesion = await sesiones.findOne({ where: { id: payload.sid, usuarioId: payload.sub }, lock: { mode: 'pessimistic_write' } });
       if (!sesion || sesion.revocada || sesion.expiraEn <= new Date()) return null;
+      if (sesionInactiva(sesion.ultimaActividadEn, new Date())) {
+        sesion.revocada = true;
+        await sesiones.save(sesion);
+        return null;
+      }
       if (sesion.refreshHash !== this.hashToken(token)) {
         sesion.revocada = true; await sesiones.save(sesion); return null;
       }
@@ -91,6 +98,26 @@ export class AuthService {
     });
     if (!resultado) throw new UnauthorizedException('La sesión ya no está activa');
     return resultado;
+  }
+
+  /** Esta ruta se invoca únicamente tras interacción del usuario, nunca en refresh ni polling. */
+  async registrarActividad(user: JwtUser) {
+    if (!user.sid) throw new UnauthorizedException('Sesión inválida');
+    const ahora = instanteActividad();
+    const actualizado = await this.dataSource.getRepository(Sesion)
+      .createQueryBuilder()
+      .update(Sesion)
+      .set({ ultimaActividadEn: ahora })
+      .where('id = :sid AND usuario_id = :sub AND revocada = :revocada', {
+        sid: user.sid, sub: user.sub, revocada: false,
+      })
+      .andWhere('ultima_actividad_en > :umbral AND ultima_actividad_en <= :ahora', {
+        umbral: new Date(ahora.getTime() - LIMITE_INACTIVIDAD_MS), ahora,
+      })
+      .andWhere('expira_en > :ahora AND version = :version', { ahora, version: user.ver ?? 0 })
+      .execute();
+    if (actualizado.affected !== 1) throw new UnauthorizedException('La sesión expiró por inactividad');
+    return { mensaje: 'Actividad registrada' };
   }
 
   async me(user: JwtUser) {

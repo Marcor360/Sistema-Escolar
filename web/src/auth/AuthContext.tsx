@@ -131,6 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cerrada = false;
     let ultimo = leerUltimaActividad() ?? Date.now();
     let ultimaPersistida = ultimo;
+    let ultimoEnvioActividad = 0;
     let temporizador: ReturnType<typeof setTimeout> | undefined;
     if (leerUltimaActividad() === null) guardarUltimaActividad(ultimo);
 
@@ -154,6 +155,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const ahora = Date.now();
       if (inactividadVencida(ultimo, ahora)) { comprobar(); return; }
       ultimo = ahora;
+      // Solo las interacciones de la persona actualizan la caducidad en la API.
+      // El refresh JWT, polling y cargas automáticas no renuevan este plazo.
+      if (ahora - ultimoEnvioActividad >= 60_000) {
+        ultimoEnvioActividad = ahora;
+        void api.post('/auth/actividad').catch(() => undefined);
+      }
       if (ahora - ultimaPersistida >= 5000) {
         ultimaPersistida = ahora;
         guardarUltimaActividad(ahora);

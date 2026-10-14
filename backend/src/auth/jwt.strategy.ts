@@ -6,6 +6,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { Repository } from 'typeorm';
 import { JwtUser } from '../common/current-user.decorator';
 import { Sesion } from '../entities/sesion.entity';
+import { LIMITE_INACTIVIDAD_MS, sesionInactiva } from './sesion-inactividad';
 import { Usuario } from '../entities/usuario.entity';
 import { Alumno } from '../entities/alumno.entity';
 import { Docente } from '../entities/docente.entity';
@@ -32,8 +33,21 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('La sesión fue revocada; inicia sesión de nuevo');
     }
     if (payload.kind !== 'ACCESS' || !payload.sid) throw new UnauthorizedException('Inicia sesión nuevamente');
-    const sesion = await this.usuarios.manager.getRepository(Sesion).findOne({ where: { id: payload.sid, usuarioId: usuario.id, revocada: false } });
+    let sesion = await this.usuarios.manager.getRepository(Sesion).findOne({ where: { id: payload.sid, usuarioId: usuario.id, revocada: false } });
     if (!sesion || sesion.expiraEn <= new Date() || sesion.version !== (usuario.sessionVersion ?? 0)) throw new UnauthorizedException('La sesión fue revocada');
+    if (sesionInactiva(sesion.ultimaActividadEn, new Date())) {
+      const ahora = new Date();
+      const repo = this.usuarios.manager.getRepository(Sesion);
+      const resultado = await repo.createQueryBuilder().update(Sesion).set({ revocada: true })
+        .where('id = :sid AND usuario_id = :sub AND revocada = :revocada', { sid: payload.sid, sub: usuario.id, revocada: false })
+        .andWhere('(ultima_actividad_en IS NULL OR ultima_actividad_en <= :umbral OR ultima_actividad_en > :ahora)',
+          { umbral: new Date(ahora.getTime() - LIMITE_INACTIVIDAD_MS), ahora }).execute();
+      if (resultado.affected !== 0) throw new UnauthorizedException('La sesión expiró por inactividad');
+      // Un pulso concurrente pudo renovar la fila después de la primera lectura.
+      sesion = await repo.findOne({ where: { id: payload.sid, usuarioId: usuario.id, revocada: false } });
+      if (!sesion || sesion.expiraEn <= new Date() || sesion.version !== (usuario.sessionVersion ?? 0) ||
+          sesionInactiva(sesion.ultimaActividadEn, new Date())) throw new UnauthorizedException('La sesión expiró por inactividad');
+    }
     const roles = usuario.roles.map((rol) => rol.clave);
     if (roles.includes('ALUMNO')) {
       const alumno = await this.alumnos.findOne({ where: { usuarioId: usuario.id, estatus: 'ACTIVO' } });

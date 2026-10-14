@@ -210,3 +210,9 @@ La plantilla de notas conserva IDs, parcial y matrícula; la columna F es califi
 Mis documentos en Expo reutiliza boletas y materiales; no abre la biblioteca administrativa ni crea un contrato nuevo de ficha/constancia. Los índices pueden leerse en memoria hasta cinco minutos; enlaces/PDF solo online.
 
 El alta actual de ALUMNO todavía usa contraseña inicial basada en matrícula. Su sustitución es un [requisito confirmado pendiente](REQUERIMIENTO_ACTIVACION_SEGURA.md), no una función ya disponible.
+
+## Actividad de sesión — #47–51
+
+POST /auth/actividad, autenticado, sin hora enviada por el cliente; límite 12 por minuto. Los clientes notifican como máximo una vez por minuto tras interacción. GET, polling y refresh no extienden la actividad. La API rechaza JWT/refresh y descargas firmadas sin señal vigente de los últimos 30 minutos; sesiones históricas NULL deben iniciar de nuevo.
+
+Hora y umbral del servidor; escritura atómica sobre sesión/version/expiración vigente. La señal no prueba actividad humana frente a un cliente modificado. Requiere migracion_sesiones_inactividad.sql y despliegue coordinado de API/web/Expo. [Contrato y límites](SESIONES_INACTIVIDAD_PLAN.md).

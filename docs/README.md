@@ -9,6 +9,7 @@ Entrada de lectura para main 1.24.0-beta.2. Revisión documental: 14 de octubre 
 | Estado, clasificación y pendientes | [Estado de implementación](ESTADO_IMPLEMENTACION.md) |
 | Diseño y contratos | [Arquitectura](ARQUITECTURA.md), [API](API.md), [matriz de acceso](MATRIZ_ACCESO.md) |
 | Reglas académicas/financieras | [Reglas del piloto](REGLAS_PILOTO.md) |
+| Inactividad de API y migración | [Contrato integrado de #47–51](SESIONES_INACTIVIDAD_PLAN.md) |
 | Cierre local por inactividad | [Contrato de 30 minutos y límites](CIERRE_INACTIVIDAD_30M_2026-10-14.md) |
 | Requisito de acceso inicial | [Activación segura pendiente](REQUERIMIENTO_ACTIVACION_SEGURA.md) |
 | Base nueva o actualización | [Migraciones](MIGRACIONES.md) y [manifiesto](../database/baseline-manifest.json) |
