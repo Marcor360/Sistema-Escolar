@@ -11,5 +11,6 @@ export class Sesion {
   @Column({ length: 64 }) refreshHash!: string;
   @Column({ type: 'int' }) version!: number;
   @Column({ type: Date }) expiraEn!: Date;
+  @Column({ type: Date, nullable: true }) ultimaActividadEn!: Date | null;
   @Column({ default: false }) revocada!: boolean;
 }
