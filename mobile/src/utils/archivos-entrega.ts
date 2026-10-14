@@ -4,9 +4,21 @@ const EXTENSIONES = new Set([
 ]);
 /** Comprobación previa; el servidor mantiene los límites y valida de nuevo. */
 export function validarArchivoEntrega(archivo: { name: string; size?: number; uri?: string }): string | null {
-  if (archivo.uri !== undefined && !/^(file|content):\/\//i.test(archivo.uri))
-    return "Selecciona un archivo local del dispositivo.";
-  if (/[\\/\u0000-\u001F]/.test(archivo.name))
+  if (archivo.uri !== undefined) {
+    try {
+      if (!/^(file|content):\/\//i.test(archivo.uri) ||
+          /[\\\u0000-\u001F\u007F]/.test(archivo.uri) ||
+          /%(?:0[0-9a-f]|1[0-9a-f]|7f)/i.test(archivo.uri) ||
+          archivo.uri.trim() !== archivo.uri) throw new Error('URI inválida');
+      const uri = new URL(archivo.uri);
+      if (uri.username || uri.password || uri.hash || uri.pathname.length <= 1 ||
+          (uri.protocol === 'file:' ? !!uri.hostname : uri.protocol !== 'content:' || !uri.hostname))
+        throw new Error('URI inválida');
+    } catch {
+      return "Selecciona un archivo local del dispositivo.";
+    }
+  }
+  if (/[\\/\u0000-\u001F\u007F]/.test(archivo.name))
     return "El nombre del archivo contiene caracteres no permitidos.";
   if (!archivo.name || archivo.name.length > 200)
     return "El archivo debe tener un nombre de máximo 200 caracteres.";

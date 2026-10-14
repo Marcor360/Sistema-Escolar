@@ -57,3 +57,9 @@ Esta política es del cliente: sin red la revocación remota no puede confirmars
 El conjunto añade comprobación de última señal autenticada en JWT, refresh y enlaces firmados, con revocación a los 30 minutos. Login inicializa la marca y clientes web/Expo notifican interacción limitada a un pulso por minuto. Peticiones de fondo no renuevan. La revocación es condicional frente a actividad concurrente.
 
 Esto amplía el cierre local descrito en #46; sus límites anteriores son históricos respecto de esta entrega. Access sigue 15 minutos y refresh máximo 30 días. La señal del cliente no demuestra presencia humana. Requiere la novena migración y clientes coordinados; sesiones históricas NULL exigen reingreso. [Contrato y aceptación](SESIONES_INACTIVIDAD_PLAN.md).
+
+## Recorridos y adjuntos del alumno — #52–56
+
+Se amplían las regresiones API/base real: lectura propia de notas sin acceso a captura/listados del personal; entrega evaluada visible en tareas; PDF propio por inscripción con no-store y firma de contenido, rechazo de expediente ajeno; saldo después de pago parcial sin permiso para registrar pagos manuales.
+
+Expo comprueba URI local file/content cuando está presente, tamaño finito y nombre sin rutas ni controles, conservando Unicode. El envío real valida el asset del selector nativo; las comprobaciones del servidor siguen siendo definitivas. [Detalle de privacidad](../mobile/docs/PRIVACIDAD_SELECTOR_ARCHIVOS_2026-10-14.md). No se certifica limpieza física de la copia temporal ni pruebas en dispositivos.

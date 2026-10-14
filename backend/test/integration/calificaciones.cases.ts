@@ -192,6 +192,8 @@ it('separa notas de ciclos, calcula P1-P3 sin Final y exporta inscritos sin nota
     expect(descarga.status).toBe(200);
     expect(descarga.headers.get('content-type')).toContain('application/pdf');
     expect(descarga.headers.get('cache-control')).toContain('no-store');
+    const contenidoPdf = Buffer.from(await descarga.arrayBuffer());
+    expect(contenidoPdf.subarray(0, 5).toString()).toBe('%PDF-');
     // Ni una boleta solicitada con ID explícito permite cambiar de expediente.
     expect((await ctx.api(`/reportes/boleta/${sinNota.data.id}`, { token: movil })).response.status).toBe(403);
   });

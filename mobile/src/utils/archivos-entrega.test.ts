@@ -20,3 +20,16 @@ it("acepta solo URI local del selector, sin divulgar archivos por una URL remota
   expect(validarArchivoEntrega({ name: "archivo.pdf", uri: "javascript:alert(1)" })).toContain("local");
   expect(validarArchivoEntrega({ name: "../privado.pdf", uri: "file:///cache/x" })).toContain("nombre");
 });
+
+it("rechaza URI vacía, remota, con credenciales o controles", () => {
+  for (const uri of ["file://", "file://servidor/archivo.pdf", "content://proveedor",
+    "content://usuario:clave@proveedor/archivo", "file:///cache/%00archivo.pdf", "file:///cache/x\n.pdf"]) {
+    expect(validarArchivoEntrega({ name: "archivo.pdf", uri })).toContain("local");
+  }
+});
+it("conserva nombres Unicode y rechaza controles sin confundirlos con letras", () => {
+  expect(validarArchivoEntrega({ name: "tarea-unidad_1.pdf", uri: "file:///cache/tarea.pdf" })).toBeNull();
+  expect(validarArchivoEntrega({ name: "lectura-数学.pdf", uri: "content://proveedor/123" })).toBeNull();
+  expect(validarArchivoEntrega({ name: "archivo\u007F.pdf" })).toContain("nombre");
+  expect(validarArchivoEntrega({ name: "archivo\n.pdf" })).toContain("nombre");
+});
