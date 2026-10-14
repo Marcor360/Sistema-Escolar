@@ -1,3 +1,4 @@
+import { instanteActividad } from '../../src/auth/sesion-inactividad';
 import { AuthService } from '../../src/auth/auth.service';
 import { ContextoIntegracion } from './contexto';
 import { expect, it, jest } from '@jest/globals';
@@ -29,7 +30,7 @@ export function registrarBeta(ctx: ContextoIntegracion) {
     expect((await repo.findOneByOrFail({ id: sid })).ultimaActividadEn).toEqual(antes);
     expect((await ctx.api('/auth/actividad', { method: 'POST', token: tokens.accessToken })).response.status).toBe(201);
     expect((await repo.findOneByOrFail({ id: sid })).ultimaActividadEn!.getTime()).toBeGreaterThan(antes!.getTime());
-    await repo.update({ id: sid }, { ultimaActividadEn: new Date(Date.now() - 1800001) });
+    await repo.update({ id: sid }, { ultimaActividadEn: instanteActividad(Date.now() - 1800001) });
     await expect(auth.refresh(tokens.refreshToken, 'WEB')).rejects.toThrow();
     expect((await repo.findOneByOrFail({ id: sid })).revocada).toBe(true);
     expect((await ctx.api('/auth/actividad', { method: 'POST', token: tokens.accessToken })).response.status).toBe(401);
