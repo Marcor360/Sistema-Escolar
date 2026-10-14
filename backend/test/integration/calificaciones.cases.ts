@@ -67,6 +67,13 @@ it('inscribe a un alumno, captura una calificaci??n y la muestra en su portal', 
     expect(calificaciones.data).toEqual(expect.arrayContaining([
       expect.objectContaining({ grupoMateriaId, parcial: 1, calificacion: 92 }),
     ]));
+    // El recorrido de alumno es de solo lectura; ni la captura ni el expediente ajeno son accesibles.
+    expect((await ctx.api(`/calificaciones/grupo-materia/${grupoMateriaId}`, { token: tokenAlumno })).response.status).toBe(403);
+    expect((await ctx.api(`/calificaciones/alumno/${ctx.alumnoId}`, { token: tokenAlumno })).response.status).toBe(403);
+    expect((await ctx.api('/calificaciones/captura', { method: 'POST', token: tokenAlumno,
+      body: { grupoMateriaId, parcial: 1, items: [{ alumnoId: ctx.alumnoId, calificacion: 100 }] },
+    })).response.status).toBe(403);
+    expect((await ctx.api('/calificaciones/mias', { token: tokenAdmin })).response.status).toBe(403);
     expect(await ctx.dataSource.getRepository(Inscripcion).countBy({ alumnoId: ctx.alumnoId, grupoId, estatus: 'ACTIVA' })).toBe(1);
   });
   },
