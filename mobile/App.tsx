@@ -303,6 +303,7 @@ function AppInterna() {
           />
           {sesion ? (
             <Tab.Navigator
+              key={sesion.sub}
               screenOptions={({ route }) => ({
                 headerStyle: { backgroundColor: marca.colorPrimario },
                 headerTintColor: textoSobreFondo(marca.colorPrimario),
