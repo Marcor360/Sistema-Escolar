@@ -1,5 +1,5 @@
 import { useConfirmacion } from '../components/useConfirmacion';
-import { FormEvent, useRef, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { Encabezado } from '../components/Encabezado';
 import { useDatos } from '../hooks/useDatos';
@@ -20,6 +20,10 @@ interface Plantel { id: number; nombre: string }
 interface GrupoMateria { grupo: { id: number; nombre: string } }
 
 const FORM_INICIAL = { titulo: '', tipo: 'GENERAL', fechaInicio: '', fechaFin: '', descripcion: '', plantelId: '', grupoId: '' };
+const fechaEditable = (fecha: string) => {
+  const instante = new Date(fecha);
+  return new Date(instante.getTime() - instante.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+};
 const TONO: Record<Evento['tipo'], string> = { GENERAL: 'neutro', EXAMEN: 'mal', ENTREGA: 'aviso', FESTIVO: 'ok', PAGO: 'aviso', JUNTA: 'neutro' };
 
 export default function CalendarioPage() {
@@ -44,6 +48,12 @@ export default function CalendarioPage() {
     return !!sesion?.roles.includes('ADMINISTRATIVO') && evento.plantel !== null && planteles.some((plantel) => plantel.id === evento.plantel?.id);
   };
   const [form, setForm] = useState(FORM_INICIAL);
+  const [editando, setEditando] = useState<Evento | null>(null);
+  const [formEdicion, setFormEdicion] = useState({
+    titulo: '', tipo: 'GENERAL' as Evento['tipo'], inicio: '', fin: '', descripcion: '',
+  });
+  const focoEdicion = useRef<HTMLInputElement>(null);
+  useEffect(() => { if (editando) focoEdicion.current?.focus(); }, [editando]);
   const [filtroPlantel, setFiltroPlantel] = useState('');
   const [error, setError] = useState(''); const [guardando, setGuardando] = useState(false); const mutando = useRef(false);
 
@@ -64,6 +74,37 @@ export default function CalendarioPage() {
       setForm(FORM_INICIAL);
       recargar();
     } catch (err) { setError(mensajeDeError(err)); } finally { mutando.current = false; setGuardando(false); }
+  };
+
+  const abrirEdicion = (evento: Evento) => {
+    setError(''); setEditando(evento);
+    setFormEdicion({
+      titulo: evento.titulo, tipo: evento.tipo,
+      inicio: fechaEditable(evento.fechaInicio),
+      fin: evento.fechaFin ? fechaEditable(evento.fechaFin) : '',
+      descripcion: evento.descripcion ?? '',
+    });
+  };
+
+  const guardarEdicion = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!editando || mutando.current) return;
+    if (formEdicion.fin && formEdicion.fin < formEdicion.inicio) {
+      setError('El final del evento no puede preceder al inicio.'); return;
+    }
+    mutando.current = true; setGuardando(true); setError('');
+    try {
+      await api.patch(`/calendario/${editando.id}`, {
+        fechaInicioEsperada: editando.fechaInicio,
+        titulo: formEdicion.titulo.trim(),
+        tipo: formEdicion.tipo,
+        fechaInicio: new Date(formEdicion.inicio).toISOString(),
+        fechaFin: formEdicion.fin ? new Date(formEdicion.fin).toISOString() : null,
+        descripcion: formEdicion.descripcion.trim() || null,
+      });
+      setEditando(null); recargar();
+    } catch (err) { setError(mensajeDeError(err)); }
+    finally { mutando.current = false; setGuardando(false); }
   };
 
   const eliminar = async (evento: Evento) => {
@@ -117,6 +158,32 @@ export default function CalendarioPage() {
         </form>
       </section>
 
+      {editando && <section className="panel" aria-labelledby="cal-edicion-titulo">
+        <h2 id="cal-edicion-titulo">Editar evento</h2>
+        <p className="texto-ayuda">El evento conserva su plantel y grupo. Si otra persona lo modificó, actualiza el calendario antes de volver a editar.</p>
+        <form onSubmit={guardarEdicion} className="fila" aria-busy={guardando}>
+          <div className="campo"><label htmlFor="cal-editar-nombre">Título del evento</label>
+            <input id="cal-editar-nombre" ref={focoEdicion} required maxLength={150} disabled={guardando} value={formEdicion.titulo} onChange={(e) => setFormEdicion({ ...formEdicion, titulo: e.target.value })} />
+          </div>
+          <div className="campo"><label htmlFor="cal-editar-tipo">Tipo de evento</label>
+            <select id="cal-editar-tipo" disabled={guardando} value={formEdicion.tipo} onChange={(e) => setFormEdicion({ ...formEdicion, tipo: e.target.value as Evento['tipo'] })}>
+              {Object.keys(TONO).map((tipo) => <option key={tipo} value={tipo}>{tipo}</option>)}
+            </select>
+          </div>
+          <div className="campo"><label htmlFor="cal-editar-inicio">Inicio del evento</label>
+            <input id="cal-editar-inicio" type="datetime-local" required disabled={guardando} value={formEdicion.inicio} onChange={(e) => setFormEdicion({ ...formEdicion, inicio: e.target.value })} />
+          </div>
+          <div className="campo"><label htmlFor="cal-editar-fin">Fin del evento</label>
+            <input id="cal-editar-fin" type="datetime-local" min={formEdicion.inicio} disabled={guardando} value={formEdicion.fin} onChange={(e) => setFormEdicion({ ...formEdicion, fin: e.target.value })} />
+          </div>
+          <div className="campo"><label htmlFor="cal-editar-descripcion">Descripción del evento</label>
+            <input id="cal-editar-descripcion" maxLength={400} disabled={guardando} value={formEdicion.descripcion} onChange={(e) => setFormEdicion({ ...formEdicion, descripcion: e.target.value })} />
+          </div>
+          <button className="boton" disabled={guardando}>{guardando ? 'Guardando…' : 'Guardar edición'}</button>
+          <button type="button" className="boton secundario" disabled={guardando} onClick={() => { setEditando(null); setError(''); }}>Cancelar edición</button>
+        </form>
+      </section>}
+
       <div className="fila" style={{ marginBottom: 12 }}><div className="campo"><label htmlFor="cal-filtro">Ver plantel</label><select id="cal-filtro" value={filtroPlantel} onChange={(e) => setFiltroPlantel(e.target.value)}><option value="">Todos</option>{planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div><button className="boton secundario" disabled={cargando} onClick={filtrarEventos}>Aplicar</button></div>
 
       <table className="tabla">
@@ -131,8 +198,8 @@ export default function CalendarioPage() {
               <td>{ev.descripcion ?? '—'}</td>
               <td className="derecha">
                 {puedeEliminar(ev)
-                  ? <button className="boton peligro chico" disabled={guardando} onClick={() => eliminar(ev)}>Eliminar</button>
-                  : <span className="detalle">Solo lectura</span>}
+                  ? <span className="acciones-fila"><button className="boton secundario chico" disabled={guardando} onClick={() => abrirEdicion(ev)}>Editar evento</button><button className="boton peligro chico" disabled={guardando} onClick={() => eliminar(ev)}>Eliminar</button></span>
+                  : <span className="detalle">Solo lectura</span>
               </td>
             </tr>
           ))}
