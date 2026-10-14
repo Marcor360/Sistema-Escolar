@@ -36,7 +36,7 @@ export async function recorridoWeb(d: Datos, tipo: 'academico' | 'financiero' | 
     await expect(form.getByLabel('Contraseña inicial')).toHaveCount(0);
     await form.getByLabel('CURP').fill('GODE561231HDFRRN09');
     await form.getByLabel('Correo institucional *', { exact: true }).fill(`${matricula}@example.invalid`); await form.getByRole('button', { name: 'Registrar alumno', exact: true }).click();
-    await expect(page.getByText(`Alumno ${matricula} registrado`, { exact: false })).toBeVisible();
+    await expect(page.getByText(`Expediente de ${matricula} registrado. Ahora inscríbelo en un grupo desde Grupos.`, { exact: true })).toBeVisible();
     let fila = page.locator('tr').filter({ hasText: matricula }); await expect(fila).toBeVisible();
     if (tipo === 'academico') {
       await fila.getByRole('button', { name: 'Editar', exact: true }).click(); await expect(form.getByRole('heading', { name: 'Editar expediente' })).toBeVisible(); await form.getByLabel('Nombre(s) *', { exact: true }).fill('Corregido'); await form.getByRole('button', { name: 'Guardar cambios' }).click(); await expect(fila).toContainText('Corregido');
