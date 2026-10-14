@@ -98,6 +98,54 @@ export class ReportesService {
     return gm;
   }
 
+  async plantillaCalificacionesExcel(grupoMateriaId: number, parcial: number, user: JwtUser, res: Response) {
+    if (!Number.isInteger(parcial) || parcial < 0 || parcial > 3) {
+      throw new BadRequestException('Selecciona un parcial del 1 al 3 o Final');
+    }
+    const grupoMateria = await this.validarAccesoAClase(grupoMateriaId, user);
+    const inscritos = await this.grupos.manager.getRepository(Inscripcion).find({
+      where: { grupoId: grupoMateria.grupoId, estatus: 'ACTIVA', alumno: { estatus: 'ACTIVO' } },
+      order: { alumnoId: 'ASC' },
+    });
+    if (inscritos.length > 500) {
+      throw new BadRequestException('La plantilla supera 500 inscritos; solicita una exportación por lotes');
+    }
+    const libro = new ExcelJS.Workbook();
+    const hoja = libro.addWorksheet('Calificaciones');
+    hoja.columns = [
+      { header: 'alumnoId', key: 'alumnoId', width: 14 },
+      { header: 'matricula', key: 'matricula', width: 19 },
+      { header: 'alumno', key: 'alumno', width: 38 },
+      { header: 'parcial', key: 'parcial', width: 12 },
+      { header: 'calificacion', key: 'calificacion', width: 19 },
+    ];
+    hoja.getRow(1).font = { bold: true };
+    for (const inscrito of inscritos) {
+      hoja.addRow({
+        alumnoId: inscrito.alumnoId,
+        matricula: inscrito.alumno.matricula,
+        alumno: inscrito.alumno.usuario.nombreCompleto,
+        parcial,
+        calificacion: '',
+      });
+    }
+    hoja.dataValidations.add(`E2:E${Math.max(inscritos.length + 1, 2)}`, {
+      type: 'decimal', operator: 'between', formulae: [0, 100],
+      allowBlank: true, showErrorMessage: true,
+      errorTitle: 'Calificación inválida', error: 'Usa un número entre 0 y 100.',
+    });
+    const ayuda = libro.addWorksheet('Instrucciones');
+    ayuda.addRow(['Plantilla de captura oficial']);
+    ayuda.addRow(['Solo captura números de 0 a 100 con hasta dos decimales en calificacion.']);
+    ayuda.addRow(['No cambies alumnoId, matricula, alumno ni parcial.']);
+    ayuda.addRow(['Una nota vacía significa pendiente, no borrado de calificación.']);
+    ayuda.addRow(['Este archivo no aplica cambios sin una previsualización y confirmación posterior.']);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', contentDisposition(`plantilla-calificaciones-${grupoMateriaId}-${parcial}.xlsx`, 'attachment'));
+    await libro.xlsx.write(res);
+    res.end();
+  }
+
   /** Concentrado de calificaciones de una clase (parciales, final y promedio) en Excel. */
   async calificacionesExcel(grupoMateriaId: number, user: JwtUser, res: Response) {
     const gm = await this.validarAccesoAClase(grupoMateriaId, user);
