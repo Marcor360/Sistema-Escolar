@@ -57,3 +57,22 @@ it.each([
   await waitFor(() => expect(screen.queryAllByRole('button', { name: 'Eliminar' })).toHaveLength(autorizados));
   expect(screen.queryAllByText('Solo lectura')).toHaveLength(3 - autorizados);
 });
+
+it('edita un evento conservando el ámbito y exige versión anterior', async () => {
+  const evento = { id: 10, titulo: 'Examen', tipo: 'EXAMEN', descripcion: 'Parcial',
+    fechaInicio: '2026-11-02T10:00:00.000Z', fechaFin: null, creadoPorId: 1,
+    plantel: { id: 1, nombre: 'Centro' } };
+  vi.spyOn(api, 'get').mockImplementation(async (url) => ({
+    data: url === '/calendario' ? [evento] : url === '/planteles/mios' ? [{ id: 1, nombre: 'Centro' }] : [],
+  }));
+  const patch = vi.spyOn(api, 'patch').mockResolvedValue({ data: {} });
+  render(<CalendarioPage />);
+  await screen.findByText('Examen');
+  fireEvent.click(screen.getByRole('button', { name: 'Editar evento' }));
+  expect(screen.getByRole('heading', { name: 'Editar evento' })).toBeTruthy();
+  fireEvent.change(screen.getByLabelText('Título del evento'), { target: { value: 'Examen actualizado' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Guardar edición' }));
+  await waitFor(() => expect(patch).toHaveBeenCalledWith('/calendario/10',
+    expect.objectContaining({ titulo: 'Examen actualizado', fechaInicioEsperada: evento.fechaInicio })));
+  expect(screen.queryByRole('heading', { name: 'Editar evento' })).toBeNull();
+});
