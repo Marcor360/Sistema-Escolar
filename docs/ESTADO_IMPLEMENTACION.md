@@ -43,3 +43,11 @@ Sistema de información escolar (SIS) multiplantel, con administración académi
 4. Restore aislado, monitoreo, responsables, privacidad y aceptación formal.
 
 [Puertas institucionales](BETA_ACEPTACION.json) conserva pendientes sin evidencia firmada. Su estado no se cambia por depurar documentación. [Ejecución beta.2](EJECUCION_BETA_1.24.0-beta.2.md) conserva la historia de las entregas; [índice](README.md) distingue guías vigentes e informes históricos.
+
+## Actualización de sesión y consultas — #46
+
+Web y Expo cierran localmente después de 30 minutos sin interacción humana. Consultas y refresh automáticos no reinician ese plazo; se comprueba al reanudar. Web comparte actividad/cierre entre pestañas; móvil serializa escritura y limpieza de la marca temporal para que un logout anterior no borre la actividad del login nuevo.
+
+Estado de cuenta invalida saldo anterior al recargar, después de cinco minutos o ante fallo; antes de ordenar consulta otra vez y detecta cambios. Materias retira listados de materiales al actualizar. Eventos móviles usan America/Mexico_City.
+
+Esta política es del cliente: sin red la revocación remota no puede confirmarse y el backend conserva access de 15 minutos y refresh máximo de 30 días. No equivale a inactividad absoluta en API. [Contrato, regresiones y QA física pendiente](CIERRE_INACTIVIDAD_30M_2026-10-14.md).
