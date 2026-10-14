@@ -210,14 +210,14 @@ export default function MateriasScreen() {
           const desplegada = abierta === item.id;
           const materiales = materialesPor[item.id];
           return (
-            <TouchableOpacity
+            <Tarjeta>
+              <TouchableOpacity
               onPress={() => alternar(item)}
               activeOpacity={0.7}
               accessibilityRole="button"
               accessibilityLabel={`${item.materia.clave}: ${item.materia.nombre}. ${desplegada ? "Ocultar" : "Ver"} materiales`}
               accessibilityState={{ expanded: desplegada }}
             >
-              <Tarjeta>
                 <Text style={base.tituloTarjeta}>
                   {item.materia.clave} — {item.materia.nombre}
                 </Text>
@@ -232,6 +232,10 @@ export default function MateriasScreen() {
                 ) : (
                   <Sello texto="Sin docente asignado" tono="aviso" />
                 )}
+                <Text style={estilos.indicador}>
+                  {desplegada ? "Ocultar materiales ▲" : "Ver materiales ▼"}
+                </Text>
+              </TouchableOpacity>
 
                 {desplegada && (
                   <View style={estilos.materiales}>
@@ -270,11 +274,7 @@ export default function MateriasScreen() {
                     ))}
                   </View>
                 )}
-                <Text style={estilos.indicador}>
-                  {desplegada ? "Ocultar materiales ▲" : "Ver materiales ▼"}
-                </Text>
               </Tarjeta>
-            </TouchableOpacity>
           );
         }}
       />
