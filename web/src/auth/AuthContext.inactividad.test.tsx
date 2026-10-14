@@ -5,8 +5,9 @@ import { api } from '../api/client';
 import { CLAVE_CIERRE, LIMITE_INACTIVIDAD_MS } from './inactividad';
 
 function Pantalla() {
-  const { sesion, cargando } = useAuth();
-  return <p>{cargando ? 'Cargando' : sesion ? 'Autenticado' : 'Sesión cerrada'}</p>;
+  const { sesion, cargando, logout } = useAuth();
+  return <><p>{cargando ? 'Cargando' : sesion ? 'Autenticado' : 'Sesión cerrada'}</p>
+    {sesion && <button onClick={() => { void logout(); }}>Cerrar</button>}</>;
 }
 
 beforeEach(() => {
@@ -49,4 +50,15 @@ it('una pestaña cerrada en otra ventana invalida esta sesión sin revivir la co
     window.dispatchEvent(new StorageEvent('storage', { key: CLAVE_CIERRE, newValue: 'inactividad' }));
   });
   expect(screen.getByText('Sesión cerrada')).toBeTruthy();
+});
+
+it('cierra localmente incluso si la revocación al servidor falla por pérdida de red', async () => {
+  const fetchFallido = vi.fn().mockRejectedValue(new Error('Sin conexión'));
+  vi.stubGlobal('fetch', fetchFallido);
+  await montar();
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Cerrar' })); });
+  expect(screen.getByText('Sesión cerrada')).toBeTruthy();
+  expect(localStorage.getItem(CLAVE_CIERRE)).toBe('manual');
+  expect(fetchFallido).toHaveBeenCalledOnce();
+  vi.unstubAllGlobals();
 });
