@@ -99,17 +99,18 @@ export default function PlantelesPage() {
       {cargando && <p role="status">Cargando planteles…</p>}
       <div className="tabla-contenedor" role="region" aria-label="Listado de planteles" tabIndex={0}>
         <table className="tabla tabla-adaptable" aria-busy={cargando}>
-          <caption className="solo-lector">Clave, nombre, municipio, estatus y acciones por plantel</caption>
-          <thead><tr><th scope="col">Clave</th><th scope="col">Nombre</th><th scope="col">Municipio</th><th scope="col">Estatus</th><th scope="col">Acciones</th></tr></thead>
+          <caption className="solo-lector">ID de importación, clave, nombre, municipio, estatus y acciones por plantel</caption>
+          <thead><tr><th scope="col">ID</th><th scope="col">Clave</th><th scope="col">Nombre</th><th scope="col">Municipio</th><th scope="col">Estatus</th><th scope="col">Acciones</th></tr></thead>
           <tbody>
             {planteles.map((p) => <tr key={p.id}>
+              <td data-etiqueta="ID"><code>{p.id}</code></td>
               <td data-etiqueta="Clave">{p.clave}</td>
               <td data-etiqueta="Nombre">{p.nombre}</td>
               <td data-etiqueta="Municipio">{p.municipio ?? '—'}</td>
               <td data-etiqueta="Estatus"><span className={`sello ${p.activo ? 'ok' : 'neutro'}`}>{p.activo ? 'Activo' : 'Inactivo'}</span></td>
               <td data-etiqueta="Acciones" className="derecha"><span className="acciones-fila"><button className="boton secundario chico" disabled={guardando} onClick={() => seleccionar(p.id)}>Ver detalle</button></span></td>
             </tr>)}
-            {!cargando && planteles.length === 0 && <tr><td colSpan={5} className="vacio">No hay planteles disponibles para tu cuenta. Si tienes permisos de superadministración, puedes registrar el primero.</td></tr>}
+            {!cargando && planteles.length === 0 && <tr><td colSpan={6} className="vacio">No hay planteles disponibles para tu cuenta. Si tienes permisos de superadministración, puedes registrar el primero.</td></tr>}
           </tbody>
         </table>
       </div>

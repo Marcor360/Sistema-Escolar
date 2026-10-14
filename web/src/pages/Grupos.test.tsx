@@ -109,3 +109,10 @@ it('explica el orden de preparación académica antes de crear grupos', async ()
   expect(screen.getByText(/Orden recomendado: prepara el ciclo y las materias/)).toBeTruthy();
   await screen.findByRole('heading', { name: 'Nuevo grupo' });
 });
+
+it('expone el ID numérico de grupo requerido por las inscripciones masivas', async () => {
+  render(<GruposPage />);
+  const listado = await screen.findByRole('region', { name: 'Listado de grupos' });
+  expect(within(listado).getByRole('columnheader', { name: 'ID' })).toBeTruthy();
+  expect(await within(listado).findByText('1')).toBeTruthy();
+});

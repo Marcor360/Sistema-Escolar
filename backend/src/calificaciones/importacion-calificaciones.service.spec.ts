@@ -58,4 +58,17 @@ it('genera identificadores, nombre y validación Excel sin rellenar pendientes c
   expect([null, '']).toContain(hoja.getCell('F2').value);
   expect(hoja.getCell('F2').dataValidation).toMatchObject({ type: 'decimal', operator: 'between', formulae: [0, 100] });
   expect(libro.getWorksheet('Instrucciones')).toBeDefined();
+  expect(hoja.views[0]).toMatchObject({ state: 'frozen', ySplit: 1 });
+  expect(hoja.autoFilter).toBeTruthy();
+  expect(hoja.getColumn(4).numFmt).toBe('@');
+  expect(hoja.getCell('F2').fill).toMatchObject({
+    type: 'pattern',
+    fgColor: { argb: 'FFFFF2CB' },
+  });
+  expect(String(libro.getWorksheet('Instrucciones')?.getCell('A2').value)).toContain('columna F');
+});
+
+it('no entrega una plantilla sin alumnos inscritos', async () => {
+  const { service } = crear([]);
+  await expect(service.plantilla({ grupoMateriaId: 7, parcial: 1 }, user)).rejects.toThrow('no tiene alumnos inscritos');
 });
