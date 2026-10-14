@@ -97,6 +97,18 @@ it('conserva notas de entregas calificadas y bloquea envíos a actividades desac
       method: 'PATCH', token: tokenAdmin, body: { calificacion: 80, comentario: 'Corregir' },
     });
     expect(calificada.response.status).toBe(200);
+    const tareasAlumno = await ctx.api('/alumnos/me/tareas', { token: tokenAlumno });
+    expect(tareasAlumno.response.status).toBe(200);
+    expect(tareasAlumno.data).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: actividad.data.id,
+        entrega: expect.objectContaining({ id: primera.data.id, estatus: 'CALIFICADA', calificacion: 80 }),
+      }),
+    ]));
+    // La API nunca delega al alumno endpoints reservados para el docente.
+    expect((await ctx.api(`/actividades/${actividad.data.id}/entregas`, { token: tokenAlumno })).response.status).toBe(403);
+    expect((await ctx.api(`/entregas/${primera.data.id}/calificar`, {
+      method: 'PATCH', token: tokenAlumno, body: { calificacion: 100 },
+    })).response.status).toBe(403);
     const corregida = await ctx.api(`/actividades/${actividad.data.id}/entrega`, {
       method: 'POST', token: tokenAlumno, body: { comentario: 'Segunda versión' },
     });
