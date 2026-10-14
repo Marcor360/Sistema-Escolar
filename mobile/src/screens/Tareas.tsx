@@ -184,6 +184,16 @@ export default function TareasScreen() {
           Última actualización: {ultimaActualizacion}
         </Text>
       )}
+      <TouchableOpacity
+        onPress={cargar}
+        disabled={cargando}
+        style={base.botonAccesible}
+        accessibilityLabel="Actualizar tareas"
+        accessibilityRole="button"
+        accessibilityState={{ disabled: cargando, busy: cargando }}
+      >
+        <Text style={base.secundario}>{cargando ? "Actualizando tareas…" : "Actualizar tareas"}</Text>
+      </TouchableOpacity>
       {tareas.length > 0 && !datosVigentes && (
         <Text accessibilityRole="alert" style={base.secundario}>
           Los datos de tus tareas pueden estar desactualizados. Actualiza antes de entregar.
