@@ -7,8 +7,9 @@ export function crearControlInactividad(
   ahora: () => number = Date.now,
   programar: typeof setTimeout = setTimeout,
   cancelar: typeof clearTimeout = clearTimeout,
+  ultimaInicial: number = ahora(),
 ) {
-  let ultima = ahora();
+  let ultima = ultimaInicial;
   let vencida = false;
   let temporizador: ReturnType<typeof setTimeout> | null = null;
 
