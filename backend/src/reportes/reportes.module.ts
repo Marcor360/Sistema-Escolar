@@ -1,3 +1,4 @@
+import { CalificacionesModule } from '../calificaciones/calificaciones.module';
 import { BoletaMovilController } from './boleta-movil.controller';
 import { ArchivosModule } from '../archivos/archivos.module';
 import { Module } from '@nestjs/common';
@@ -18,6 +19,7 @@ import { PlantelesModule } from '../planteles/planteles.module';
 
 @Module({
   imports: [
+    CalificacionesModule,
     ArchivosModule,
     TypeOrmModule.forFeature([Alumno, Docente, Grupo, GrupoMateria, Calificacion, Pago]),
     FinanzasModule,

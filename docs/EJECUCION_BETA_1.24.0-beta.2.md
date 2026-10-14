@@ -29,16 +29,20 @@ La candidata añade una migración de biblioteca. No se modificó ni desplegó `
 
 Los órdenes son los del plan, no números reservados de GitHub. Las entregas se implementan en commits por área con dependencias explícitas, sin crear PR vacíos. La biblioteca es administrativa: ni Finanzas, ni docentes, ni alumnos obtienen acceso por conocer el ID o la URL. Los logos almacenados en la biblioteca no cambian automáticamente la marca pública.
 
-## Correcciones encontradas en la revisión de #28–35
+## Correcciones encontradas en la revisión de #28–38
 
 - #28: una renovación tardía podía guardar tokens después del cierre local o borrar una cuenta nueva tras un 401 anterior. Las escrituras/borrados de SecureStore se serializan y las solicitudes se asocian a la generación de sesión; se cancelan respuestas antiguas. Regresiones de logout/renovación e identidad nuevas.
 - #29: se conserva como auditoría histórica, diferenciando lectura estática, implementación y aceptación externa. El estado actual es esta matriz; no se atribuyen resultados de las pruebas anteriores al SHA futuro.
+- #36: validación local de extensión/peso/archivo vacío y reinicio del archivo al cambiar tipo; preview adaptable y enlace al importador de notas ya disponible. Se conservaron y ampliaron las regresiones.
+- #37: endpoint compatible `GET /api/reportes/grupo-materias/:id/plantilla-calificaciones.xlsx?parcial=…`, generado por el mismo servicio del importador. Incluye nombre informativo de alumno, regla Excel 0–100 y límite 500. La identificación y autorización siguen basadas en IDs/matrícula/grado/clase/periodo.
+- #38: se conservaron las pruebas de evento propio/ajeno, conflicto y edición en transacción, adaptadas al contrato de #42. La revisión del registro completo sustituye la comparación de `fechaInicioEsperada`, por lo que detecta incluso cambios de título sin cambio de fecha. El contrato de #42 revalida origen/destino al cambiar grupo/plantel; no se reduce esa protección. Se rechazan peticiones sin cambios.
 - #32–35: se conservaron las guías de expediente/inscripción, los estados de éxito de grupo/materia/inscripción, los estados vacíos y regiones/captions de materias/ciclos y de captura/historial, y la revocación diferida de la descarga Excel. Se incorporaron las regresiones originales; los estados vacíos de catálogo esperan el fin de carga y no ocultan un fallo. Los cierres se realizan como sustituidos por #42.
 - #31: se conservaron el caption, región semántica y foco posterior al render al editar personal; se incorporó la prueba original y una regresión de foco. Los cambios equivalentes y estas correcciones quedan en #42.
 - #30: la guía queda asociada al alta y ofrece enlaces operables hacia personal, materias/ciclos y grupos/inscripciones, respetando roles.
 
 ## Contratos añadidos
 
+- `GET /api/reportes/grupo-materias/:id/plantilla-calificaciones.xlsx?parcial=…`: endpoint compatible de #37; mismo XLSX y autorización que el importador.
 - `GET /api/importaciones/calificaciones/plantilla?grupoMateriaId=…&parcial=…`: solo Administrativo/Superadmin y docente asignado. Parcial `0` = Final.
 - `POST /api/importaciones/calificaciones/preview`: multipart `archivo`, `grupoMateriaId`, `parcial`, `motivo` opcional; ningún cambio académico. Retorna errores y diferencias.
 - `POST /api/importaciones/calificaciones/confirmar`: `{previewId, confirmado:true}`. Preview cifrado por actor, 15 minutos, un único consumo. Rechaza notas modificadas desde el preview, periodo/ciclo cerrados o inscripción/asignación no vigente. El lote completo revierte ante fallo.
@@ -58,12 +62,13 @@ Rollback de aplicación: volver al binario anterior y mantener tablas aditivas. 
 
 ## Evidencia automatizada local
 
-- Backend: lint sin errores, typecheck, build y 194 pruebas en 41 suites; advertencias históricas de tipos `any` en pruebas existentes.
-- Web: lint, build y 87 pruebas de UI en 24 archivos.
+- Backend: lint sin errores, typecheck, build y 202 pruebas en 42 suites; advertencias históricas de tipos `any` en pruebas existentes.
+- Web: lint, build y 91 pruebas de UI en 25 archivos.
 - Expo: typecheck, 65 pruebas de flujos/caché/cliente en 11 archivos, 11 pruebas Node y exportación Android correcta. No equivale a certificación nativa.
 - MySQL 8.4: 80 casos de integración, incluidos tres recorridos con Chromium/API/DB reales; se amplió el recorrido académico para incluir preview/confirmación de CSV desde UI. La ampliación pasó, y la selección de boleta propia se comprobó además contra API/MySQL reales.
 - SQL Server 2022: 77 casos de integración, migraciones/paridad y nuevas pruebas negativas, sin simulación del motor.
 - Chromium: pantallas nuevas a 320/375/768/1440, y recorridos existentes a 320–3840; teclado/foco, menú, tamaño de texto y movimiento reducido. Esta suite visual usa API simulada; los E2E anteriores usan API/base real.
+- Comprobación adicional contra API/MySQL reales: endpoint compatible de plantilla, roster, validación Excel, rechazo de parcial inválido y petición sin sesión.
 - Carga sintética existente: 100 alumnos, tres clases, 900 notas concurrentes. MySQL p95 captura 310 ms; SQL Server 1348 ms, en ejecuciones locales. Importación existente de 500 **cuentas**: preview 94/611 ms y confirmación ~41 s (hash bcrypt). No son benchmarks de hardware institucional ni del importador nuevo de notas.
 - El simulador SMTP escucha solo en loopback, usa destinatarios `.invalid` y no entrega a proveedores externos. La prueba positiva de biblioteca simula la aprobación del scanner; valida flujo/aislamiento, no eficacia de un antivirus real.
 

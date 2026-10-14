@@ -147,6 +147,8 @@ export class CalendarioService {
   }
 
   async editar(id: number, dto: EditarEventoDto, user: JwtUser) {
+    if (!['titulo', 'descripcion', 'tipo', 'fechaInicio', 'fechaFin', 'plantelId', 'grupoId'].some((campo) => dto[campo as keyof EditarEventoDto] !== undefined)) throw new BadRequestException('No se indicaron cambios');
+    if (dto.titulo !== undefined) { if (typeof dto.titulo !== 'string' || !dto.titulo.trim()) throw new BadRequestException('El título es obligatorio'); dto = { ...dto, titulo: dto.titulo.trim() }; }
     return this.eventos.manager.transaction(async (manager) => {
       const repo = manager.getRepository(EventoCalendario);
       const evento = await repo.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });

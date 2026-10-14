@@ -22,6 +22,6 @@ import { PlantelesModule } from '../planteles/planteles.module';
   ],
   providers: [CalificacionesService, ImportacionCalificacionesService],
   controllers: [CalificacionesController, ImportacionCalificacionesController],
-  exports: [CalificacionesService],
+  exports: [CalificacionesService, ImportacionCalificacionesService],
 })
 export class CalificacionesModule {}

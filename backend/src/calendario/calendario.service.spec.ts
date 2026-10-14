@@ -85,3 +85,38 @@ describe('CalendarioService', () => {
     }, maestro)).rejects.toThrow('grupo inactivo');
   });
 });
+
+describe('Edición de calendario: regresiones de PR38', () => {
+  function crear(override: Record<string, unknown> = {}) {
+    const evento = { id: 17, creadoPorId: 20, plantelId: 2, grupoId: 7, fechaInicio: new Date('2026-11-01T10:00:00Z'), fechaFin: null, titulo: 'Examen', descripcion: null, tipo: 'EXAMEN', ...override };
+    const repo = { findOne: jest.fn().mockResolvedValue(evento), save: jest.fn(async (e: unknown) => e) };
+    const manager = { getRepository: jest.fn().mockReturnValue(repo) };
+    const qb = { leftJoinAndSelect: jest.fn().mockReturnThis(), andWhere: jest.fn().mockReturnThis(), orderBy: jest.fn().mockReturnThis(), getMany: jest.fn().mockResolvedValue([evento]) };
+    const eventos = { createQueryBuilder: jest.fn().mockReturnValue(qb), manager: { transaction: jest.fn(async (fn: (m: typeof manager) => Promise<unknown>) => fn(manager)) } };
+    const grupo = { id: 7, plantelId: 2, activo: true, ciclo: { activo: true, estado: 'ACTIVO' }, plantel: { activo: true } };
+    const service = new CalendarioService(eventos as never, { findOne: jest.fn().mockResolvedValue(grupo) } as never, { findOne: jest.fn().mockResolvedValue({ grupoId: 7, grupo }) } as never, {} as never, {} as never, { findOne: jest.fn().mockResolvedValue({ id: 5 }) } as never, { resolverFiltro: jest.fn().mockResolvedValue(null), validarGestion: jest.fn().mockResolvedValue(undefined) } as never);
+    const revision = async () => (await service.listar({ ...maestro, roles: ['SUPERADMIN'] }))[0].revision;
+    return { service, repo, revision };
+  }
+  it('rechaza un evento ajeno antes de persistir', async () => {
+    const { service, repo, revision } = crear({ creadoPorId: 99 });
+    await expect(service.editar(17, { titulo: 'Cambio', revision: await revision() }, maestro)).rejects.toBeInstanceOf(ForbiddenException);
+    expect(repo.save).not.toHaveBeenCalled();
+  });
+  it('detecta edición obsoleta incluso cuando no cambió la fecha inicial', async () => {
+    const { service, repo, revision } = crear(); const anterior = await revision();
+    await service.editar(17, { titulo: 'Otro título', revision: anterior }, maestro);
+    await expect(service.editar(17, { titulo: 'Sobrescritura', revision: anterior }, maestro)).rejects.toThrow('El evento cambió');
+    expect(repo.save).toHaveBeenCalledTimes(1);
+  });
+  it('edita contenido propio sin cambiar grupo y normaliza el título', async () => {
+    const { service, repo, revision } = crear();
+    const actualizado = await service.editar(17, { titulo: '  Examen reprogramado ', revision: await revision() }, maestro);
+    expect(actualizado.titulo).toBe('Examen reprogramado'); expect(actualizado.grupoId).toBe(7); expect(repo.save).toHaveBeenCalledTimes(1);
+  });
+  it('no persiste una petición sin cambios', async () => {
+    const { service, repo, revision } = crear();
+    await expect(service.editar(17, { revision: await revision() }, maestro)).rejects.toThrow('No se indicaron cambios');
+    expect(repo.save).not.toHaveBeenCalled();
+  });
+});

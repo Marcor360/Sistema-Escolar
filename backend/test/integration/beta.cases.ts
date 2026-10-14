@@ -63,6 +63,8 @@ export function registrarBeta(ctx: ContextoIntegracion) {
       headers: { authorization: `Bearer ${root}` },
     });
     expect(archivo.status).toBe(200);
+    const alias = await fetch(`${ctx.baseUrl}/reportes/grupo-materias/${gm.id}/plantilla-calificaciones.xlsx?parcial=1`, { headers: { authorization: `Bearer ${root}` } });
+    expect(alias.status).toBe(200); expect(alias.headers.get('content-type')).toContain('spreadsheetml');
     const libro = new ExcelJS.Workbook();
     await libro.xlsx.load(Buffer.from(await archivo.arrayBuffer()) as never);
     expect(libro.worksheets[0].rowCount).toBe(3);

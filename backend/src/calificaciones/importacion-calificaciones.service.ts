@@ -13,7 +13,7 @@ import { GrupoMateria, ImportacionPreview, ImportacionFila, Inscripcion, Usuario
 import { inscripcionVigente } from '../common/contexto-academico';
 import { leerArchivo } from '../importaciones/lectura';
 import { PreviewCifrado } from '../importaciones/preview-cifrado';
-const CABECERAS = ['grupoMateriaId', 'parcial', 'alumnoId', 'matricula', 'grado', 'calificacion', 'observaciones'];
+const CABECERAS = ['grupoMateriaId', 'parcial', 'alumnoId', 'matricula', 'grado', 'calificacion', 'observaciones', 'alumno'];
 @Injectable()
 export class ImportacionCalificacionesService {
   private readonly cifrado: PreviewCifrado;
@@ -25,17 +25,20 @@ export class ImportacionCalificacionesService {
     this.cifrado = new PreviewCifrado(config.getOrThrow<string>('JWT_SECRET'));
   }
   async plantilla(dto: ContextoNotasDto, user: JwtUser) {
+    if (!Number.isInteger(dto.parcial) || dto.parcial < 0 || dto.parcial > 3) throw new BadRequestException('Selecciona un parcial del 1 al 3 o Final');
     await this.notas.estadoPeriodo(dto.grupoMateriaId, dto.parcial, user);
     const gm = await this.ds.getRepository(GrupoMateria).findOneByOrFail({ id: dto.grupoMateriaId });
     const inscripciones = await this.ds
       .getRepository(Inscripcion)
       .find({ where: { ...inscripcionVigente, grupoId: gm.grupoId }, order: { alumnoId: 'ASC' } });
+    if (inscripciones.length > 500) throw new BadRequestException('La plantilla supera 500 inscritos; solicita una exportación por lotes');
     const libro = new ExcelJS.Workbook(),
       hoja = libro.addWorksheet('CALIFICACIONES');
     hoja.addRow(CABECERAS);
     hoja.getRow(1).font = { bold: true };
     for (const i of inscripciones)
-      hoja.addRow([gm.id, dto.parcial, i.alumnoId, i.alumno.matricula, gm.grupo.grado ?? '', '', '']);
+      hoja.addRow([gm.id, dto.parcial, i.alumnoId, i.alumno.matricula, gm.grupo.grado ?? '', '', '', i.alumno.usuario.nombreCompleto]);
+    for (let fila = 2; fila <= Math.max(inscripciones.length + 1, 2); fila++) hoja.getCell(`F${fila}`).dataValidation = { type: 'decimal', operator: 'between', formulae: [0, 100], allowBlank: true, showErrorMessage: true, errorTitle: 'Calificación inválida', error: 'Usa un número entre 0 y 100.' };
     hoja.columns.forEach((c) => {
       c.width = 22;
     });

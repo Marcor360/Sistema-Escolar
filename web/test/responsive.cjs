@@ -149,6 +149,8 @@ async function esperarServidor() {
       if (path.endsWith('/calificaciones/periodos/1/1')) data = { estatus: 'ABIERTO', inscritos: 1, capturados: 0, faltantes: 1 };
       if (path.endsWith('/calificaciones/periodos/1/1/historial')) data = { datos: [{ id: 1, alumnoId: 1, fecha: '2026-10-13T12:00:00Z', valorAnterior: 80, valorNuevo: 90, usuarioId: 1, motivo: 'Corrección autorizada de prueba' }], total: 1, pagina: 1, porPagina: 20 };
       if (path.endsWith('/biblioteca')) data = { carpetas: [{ id: 1, nombre: 'Documentos Beta', padreId: null }], archivos: [{ id: 1, titulo: 'Calendario institucional de prueba para familias y docentes', archivoNombre: 'calendario-con-nombre-extenso.pdf', categoria: 'CALENDARIO', bytes: 512 }], total: 1, pagina: 1, porPagina: 20, bytes: 512, cuota: 104857600 };
+      if (path.endsWith('/academico/bitacora')) data = { datos: [], total: 0, pagina: 1 };
+      if (path.endsWith('/importaciones/preview')) data = { previewId: 'qa-preview', registros: 1, errores: [], regla: 'Confirmación atómica del lote', identificadores: [{ fila: 2, identificador: 'ALUMNO-QA-001' }] };
       await route.fulfill({ json: data });
     },
   );
@@ -304,9 +306,14 @@ async function esperarServidor() {
   }
   for (const width of [320, 375, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
-    for (const ruta of ['/usuarios', '/materias', '/maestro', '/calificaciones', '/biblioteca']) {
+    for (const ruta of ['/usuarios', '/materias', '/maestro', '/calificaciones', '/biblioteca', '/operaciones']) {
       await page.goto(baseUrl + ruta);
       await expect(page.locator('h1')).toBeVisible();
+      if (ruta === '/operaciones') {
+        await page.getByLabel('Archivo', { exact: true }).setInputFiles({ name: 'lote.csv', mimeType: 'text/csv', buffer: Buffer.from('matricula,grupoId\nALUMNO-QA-001,1') });
+        await page.getByRole('button', { name: 'Previsualizar archivo' }).click();
+        await expect(page.getByRole('region', { name: 'Filas de previsualización' })).toBeVisible();
+      }
       if (ruta === '/usuarios') await expect(page.getByText('US-QA-001')).toBeVisible();
       if (ruta === '/calificaciones') {
         await expect(page.getByLabel('Clase').locator('option[value="1"]')).toBeAttached();

@@ -1,5 +1,6 @@
+import { ImportacionCalificacionesService } from '../calificaciones/importacion-calificaciones.service';
 import { Controller, Get, Param, ParseIntPipe, Query, Res, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { ReportesService } from './reportes.service';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
@@ -12,7 +13,7 @@ import { CurrentUser, JwtUser } from '../common/current-user.decorator';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('reportes')
 export class ReportesController {
-  constructor(private readonly service: ReportesService) {}
+  constructor(private readonly service: ReportesService, private readonly plantillas: ImportacionCalificacionesService) {}
 
   @Get('resumen')
   @Roles('ADMINISTRATIVO', 'FINANZAS')
@@ -34,6 +35,16 @@ export class ReportesController {
     @Res() res: Response,
   ) {
     return this.service.calificacionesExcel(id, user, res);
+  }
+
+  @Get('grupo-materias/:id/plantilla-calificaciones.xlsx')
+  @ApiOperation({ summary: 'Plantilla XLSX de clase y parcial o Final, compatible con el importador de notas' })
+  @Roles('MAESTRO', 'ADMINISTRATIVO')
+  async plantillaCalificaciones(@Param('id', ParseIntPipe) id: number, @Query('parcial', ParseIntPipe) parcial: number, @CurrentUser() user: JwtUser, @Res() res: Response) {
+    const archivo = await this.plantillas.plantilla({ grupoMateriaId: id, parcial }, user);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="plantilla-calificaciones-${id}-${parcial}.xlsx"`);
+    res.send(archivo);
   }
 
   @Get('adeudos.xlsx')
