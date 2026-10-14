@@ -119,3 +119,18 @@ it('no abre un enlace privado que termina después de cambiar de alumno', async 
   await act(async () => { enlace.resolver({ data: { url: '/archivo-firmado' } }); await apertura; });
   expect(Linking.openURL).not.toHaveBeenCalled();
 });
+
+it('actualizar materias invalida los materiales antiguos y vuelve a consultarlos', async () => {
+  await montar();
+  vi.mocked(api.get).mockResolvedValueOnce({ data: [material] });
+  await pulsar('MAT1: Materia 1. Ver materiales');
+  expect(textos()).toContain('guia.pdf');
+  vi.mocked(api.get).mockResolvedValueOnce({ data: materias });
+  const refrescar = vista.root.findByType('RefreshControl');
+  await act(async () => refrescar.props.onRefresh());
+  expect(textos()).not.toContain('guia.pdf');
+  vi.mocked(api.get).mockResolvedValueOnce({ data: [] });
+  await pulsar('MAT1: Materia 1. Ver materiales');
+  expect(textos()).toContain('El maestro aún no sube materiales.');
+  expect(api.get).toHaveBeenLastCalledWith('/grupo-materias/1/materiales');
+});
