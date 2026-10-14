@@ -44,6 +44,8 @@ export default function TareasScreen() {
   const [tareas, setTareas] = useState<Tarea[]>([]);
   const [cargando, setCargando] = useState(false);
   const [cargaInicialCompleta, setCargaInicialCompleta] = useState(false);
+  const [datosVigentes, setDatosVigentes] = useState(false);
+  const [fechaConsulta, setFechaConsulta] = useState(0);
   const [error, setError] = useState("");
   const [ultimaActualizacion, setUltimaActualizacion] = useState<string | null>(
     null,
@@ -59,18 +61,35 @@ export default function TareasScreen() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!datosVigentes || !fechaConsulta) return;
+    const timer = setTimeout(() => setDatosVigentes(false), Math.max(0, fechaConsulta + 5 * 60_000 - Date.now()));
+    return () => clearTimeout(timer);
+  }, [datosVigentes, fechaConsulta]);
+
+  const vigencia = useRef(0);
+  const vigente = () => vigencia.current > 0 && Date.now() - vigencia.current < 5 * 60_000;
+  const avisarDatosVencidos = () => Alert.alert("Actualiza tus tareas", "Debes actualizar tus tareas con conexión antes de entregar un archivo.");
   const lectura = useRef(crearControlLectura());
   const cargar = useCallback(() => {
     setError("");
+    vigencia.current = 0;
+    setDatosVigentes(false);
     setCargando(true);
     void lectura.current.cargar(
       () => api.get<Tarea[]>("/alumnos/me/tareas"),
       (r) => {
+        vigencia.current = Date.now();
         setTareas(r.data);
+        setDatosVigentes(true);
+        setFechaConsulta(Date.now());
         setUltimaActualizacion(new Date().toLocaleString());
         setCargaInicialCompleta(true);
       },
-      (fallo) => setError(mensajeDeError(fallo)),
+      (fallo) => {
+        setDatosVigentes(false);
+        setError(mensajeDeError(fallo));
+      },
       () => setCargando(false),
     );
   }, []);
@@ -85,6 +104,7 @@ export default function TareasScreen() {
   const entregaEnCurso = useRef(false);
   const entregar = async (tarea: Tarea) => {
     if (!activa.current || entregaEnCurso.current) return;
+    if (!vigente()) { avisarDatosVencidos(); return; }
     entregaEnCurso.current = true;
     try {
       setEntregandoId(tarea.id);
@@ -92,6 +112,7 @@ export default function TareasScreen() {
         copyToCacheDirectory: true,
       });
       if (!activa.current || resultado.canceled || !resultado.assets[0]) return;
+      if (!vigente()) { avisarDatosVencidos(); return; }
       const archivo = resultado.assets[0];
       const problema = validarArchivoEntrega(archivo);
       if (problema) {
@@ -125,6 +146,10 @@ export default function TareasScreen() {
 
   const solicitarEntrega = (tarea: Tarea) => {
     if (entregandoId !== null) return;
+    if (!vigente()) {
+      avisarDatosVencidos();
+      return;
+    }
     if (tarea.entrega?.estatus === "CALIFICADA") {
       Alert.alert(
         "Entrega calificada",
@@ -164,6 +189,21 @@ export default function TareasScreen() {
       {ultimaActualizacion && (
         <Text accessibilityRole="text">
           Última actualización: {ultimaActualizacion}
+        </Text>
+      )}
+      <TouchableOpacity
+        onPress={cargar}
+        disabled={cargando}
+        style={base.botonAccesible}
+        accessibilityLabel="Actualizar tareas"
+        accessibilityRole="button"
+        accessibilityState={{ disabled: cargando, busy: cargando }}
+      >
+        <Text style={base.secundario}>{cargando ? "Actualizando tareas…" : "Actualizar tareas"}</Text>
+      </TouchableOpacity>
+      {tareas.length > 0 && !datosVigentes && (
+        <Text accessibilityRole="alert" style={base.secundario}>
+          Los datos de tus tareas pueden estar desactualizados. Actualiza antes de entregar.
         </Text>
       )}
       <FlatList
@@ -232,12 +272,12 @@ export default function TareasScreen() {
               style={estilos.boton}
               onPress={() => solicitarEntrega(item)}
               disabled={
-                entregandoId !== null || item.entrega?.estatus === "CALIFICADA"
+                entregandoId !== null || !datosVigentes || item.entrega?.estatus === "CALIFICADA"
               }
               accessibilityRole="button"
               accessibilityState={{
                 disabled:
-                  entregandoId !== null ||
+                  entregandoId !== null || !datosVigentes ||
                   item.entrega?.estatus === "CALIFICADA",
                 busy: entregandoId === item.id,
               }}

@@ -6,6 +6,7 @@ import * as Notifications from "expo-notifications";
 import { activarPush } from "./src/push";
 import { CLAVE_ULTIMA_ACTIVIDAD, crearControlInactividad, crearPersistenciaActividad, actividadRestaurable } from "./src/utils/inactividad";
 import { debeNotificarActividad } from "./src/utils/pulso-actividad";
+import { ETIQUETAS_NAVEGACION } from "./src/utils/etiquetas-navegacion";
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   NavigationContainer,
@@ -419,17 +420,18 @@ function AppInterna() {
                 tabBarHideOnKeyboard: true,
                 tabBarLabelStyle: {
                   fontFamily: fuenteLista ? "Onest" : undefined,
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: "600",
                 },
                 tabBarItemStyle: { minHeight: 48 },
+                tabBarAccessibilityLabel: ETIQUETAS_NAVEGACION[route.name] ?? route.name,
                 tabBarStyle: {
                   backgroundColor: colores.papel,
                   borderTopColor: colores.linea,
                   minHeight: 68,
                   paddingTop: 6,
                 },
-                tabBarIcon: () => <Text>{iconos[route.name] ?? "•"}</Text>,
+                tabBarIcon: () => <Text accessible={false}>{iconos[route.name] ?? "•"}</Text>,
               })}
             >
               <Tab.Screen name="Inicio" component={InicioScreen} />
