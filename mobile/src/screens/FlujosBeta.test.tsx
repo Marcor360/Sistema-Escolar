@@ -11,13 +11,14 @@ import { api } from "../api/client";
 import { Alert, Linking, TouchableOpacity } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 const sesion = vi.hoisted(() => ({
+  sub: 1 as number | null,
   iniciar: vi.fn(),
   cerrar: vi.fn(),
   finalizarSesionLocal: vi.fn(),
 }));
 vi.mock("../sesion", () => ({
   useSesion: () => ({
-    sesion: { sub: 1, nombre: "Alumno", email: "a@e.test" },
+    sesion: { sub: sesion.sub, nombre: "Alumno", email: "a@e.test" },
     ...sesion,
   }),
 }));
@@ -88,6 +89,7 @@ let vista: ReactTestRenderer;
 beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.clearAllMocks();
+  sesion.sub = 1;
   vi.mocked(api.get).mockResolvedValue({ data: [] });
   vi.mocked(api.post).mockResolvedValue({ data: {} });
   sesion.iniciar.mockResolvedValue(undefined);
@@ -443,4 +445,23 @@ it('boleta móvil selecciona inscripción propia para distinguir traslados del m
   await act(async () => vista.root.findByProps({ accessibilityLabel: 'Descargar boleta de 2026, 1-A' }).props.onPress());
   expect(api.get).toHaveBeenCalledWith('/reportes/mi-boleta/enlace', { params: { cicloId: 2, inscripcionId: 9 } });
   expect(Linking.openURL).toHaveBeenCalledWith('https://e.test/api/reportes/boleta-descarga/1?t=firmado');
+});
+
+
+it("calificaciones descarta notas y consultas pendientes al cambiar de identidad", async () => {
+  const nota = (nombre: string) => ({ id: 1, parcial: 1, calificacion: 90, promedioOficial: null, grupoMateriaId: 1, grupoMateria: { materia: { clave: "MAT", nombre }, grupo: { nombre: "A", ciclo: { id: 1, nombre: "2026" } } } });
+  vi.mocked(api.get).mockImplementation(async (ruta) => ({ data: ruta === "/calificaciones/mias" ? [nota("Alumno anterior")] : [] }));
+  await montar(<Calificaciones />);
+  expect(texto()).toContain("Alumno anterior");
+  let resolver!: (r: { data: unknown[] }) => void;
+  vi.mocked(api.get).mockImplementation(async (ruta) => ruta === "/calificaciones/mias" ? new Promise((r) => { resolver = r; }) : { data: [] });
+  sesion.sub = 2;
+  await act(async () => vista.update(<Calificaciones />));
+  expect(texto()).not.toContain("Alumno anterior");
+  sesion.sub = null;
+  await act(async () => vista.update(<Calificaciones />));
+  const llamadas = vi.mocked(api.get).mock.calls.length;
+  await act(async () => resolver({ data: [nota("Respuesta obsoleta")] }));
+  expect(texto()).not.toContain("Respuesta obsoleta");
+  expect(api.get).toHaveBeenCalledTimes(llamadas);
 });

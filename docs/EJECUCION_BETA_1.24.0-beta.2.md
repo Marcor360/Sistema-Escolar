@@ -64,7 +64,7 @@ Rollback de aplicación: volver al binario anterior y mantener tablas aditivas. 
 
 - Backend: lint sin errores, typecheck, build y 202 pruebas en 42 suites; advertencias históricas de tipos `any` en pruebas existentes.
 - Web: lint, build y 94 pruebas de UI en 26 archivos.
-- Expo: typecheck, 65 pruebas de flujos/caché/cliente en 11 archivos, 11 pruebas Node y exportación Android correcta. No equivale a certificación nativa.
+- Expo: typecheck, 68 pruebas de flujos/caché/cliente en 12 archivos, 11 pruebas Node y exportación Android correcta. No equivale a certificación nativa.
 - MySQL 8.4: 80 casos de integración, incluidos tres recorridos con Chromium/API/DB reales; se amplió el recorrido académico para incluir preview/confirmación de CSV desde UI. La ampliación pasó, y la selección de boleta propia se comprobó además contra API/MySQL reales.
 - SQL Server 2022: 77 casos de integración, migraciones/paridad y nuevas pruebas negativas, sin simulación del motor.
 - Chromium: pantallas nuevas a 320/375/768/1440, y recorridos existentes a 320–3840; teclado/foco, menú, tamaño de texto y movimiento reducido. Esta suite visual usa API simulada; los E2E anteriores usan API/base real.
@@ -97,3 +97,10 @@ No se inventaron firmas, acceso a VPS, dispositivos físicos ni correo externo. 
 - #39: edición accesible con foco tras render, cancelación que limpia errores, validación de fechas y título, campos bloqueados al guardar y conservación de plantel/grupo. PATCH envía revisión completa del evento y permite vaciar descripción; no envía cambios implícitos de ámbito.
 - #40: una sola descarga XLSX en el panel de importación, por clase y parcial, con nombre identificable, estado/error y liberación diferida de URL. Usa el endpoint compatible de #37 y la plantilla canónica compartida. Descargar es lectura y permanece disponible con periodo cerrado; importar sigue bloqueado.
 - Regresiones web añadidas para foco/ámbito/cancelación/descripción, descarga en periodo cerrado y fallo recuperable. Sin cambios de esquema ni despliegue.
+
+
+### Finalización de PR #41 y candidata #42
+
+- #41: orden P1→P2→P3→Final sin mutar datos, periodos pendientes y fuente inmutable cubiertos por las pruebas originales. Se conserva invalidación de consultas y boletas por identidad; se reinician carga, descarga y vencimiento al cambiar de alumno y no se consulta con sesión vacía. Regresión de pantalla comprueba que una respuesta tardía no restaura notas tras logout.
+- Móvil: typecheck, 68 pruebas Vitest en 12 archivos y 11 pruebas Node aprobados.
+- #42 reúne #28–41 como candidata de software revisable. Su integración en main no constituye aprobación de release: UAT, dispositivos físicos, SMTP institucional, antivirus real y restauración mantienen sus puertas pendientes. El despliegue solo se ejecuta mediante workflow manual.

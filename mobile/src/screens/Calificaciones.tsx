@@ -1,3 +1,4 @@
+import { ordenarPeriodos } from "../utils/orden-calificaciones";
 import { useSesion } from "../sesion";
 import { leerConCache } from "../api/cache-academica";
 import { crearControlLectura } from "../api/lectura-vigente";
@@ -40,6 +41,7 @@ export default function CalificacionesScreen() {
   const [errorBoletas, setErrorBoletas] = useState("");
   const lecturaBoletas = useRef(crearControlLectura());
   const cargarBoletas = useCallback(() => {
+    if (!sesion?.sub) return;
     setErrorBoletas("");
     void lecturaBoletas.current.cargar(
       () => api.get<Boleta[]>("/reportes/mis-boletas"),
@@ -102,10 +104,14 @@ export default function CalificacionesScreen() {
     lecturaBoletas.current.invalidar();
     setError("");
     setOffline(false);
+    setCacheExpira(0);
+    setCargando(false);
+    setDescargando(false);
     setUltimaActualizacion(null);
     setCargaInicialCompleta(false);
   }, [sesion?.sub]);
   const cargar = useCallback(() => {
+    if (!sesion?.sub) return;
     setError("");
     setCargando(true);
     void lectura.current.cargar(
@@ -225,9 +231,7 @@ export default function CalificacionesScreen() {
               <Text style={base.tituloTarjeta} accessibilityRole="header">
                 {materia.nombre}
               </Text>
-              {materia.parciales
-                .sort((a, b) => a.parcial - b.parcial)
-                .map((p) => (
+              {ordenarPeriodos(materia.parciales).map((p) => (
                   <Text key={p.id} style={base.secundario}>
                     {p.parcial === 0 ? "Final" : `Parcial ${p.parcial}`}:{" "}
                     <Text style={base.monto}>{p.calificacion.toFixed(1)}</Text>
