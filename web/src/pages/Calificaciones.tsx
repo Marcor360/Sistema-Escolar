@@ -2,7 +2,6 @@ import { FormEvent, useRef, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { useConfirmacion } from '../components/useConfirmacion';
-import '../components/tabla-adaptable.css';
 import { SelectorBuscable } from '../components/SelectorBuscable';
 import { Paginador } from '../components/Paginador';
 import { Encabezado } from '../components/Encabezado';
@@ -77,7 +76,7 @@ export default function CalificacionesPage() {
   };
   const descargarExcel = async () => {
     if (!claseId || descargando) return; setDescargando(true); setError('');
-    try { const { data } = await api.get(`/reportes/grupo-materias/${claseId}/calificaciones.xlsx`,{ responseType: 'blob' }); const url = URL.createObjectURL(data), a = document.createElement('a'); a.href = url; a.download = 'calificaciones.xlsx'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 60_000); }
+    try { const { data } = await api.get(`/reportes/grupo-materias/${claseId}/calificaciones.xlsx`,{ responseType: 'blob' }); const url = URL.createObjectURL(data), a = document.createElement('a'); a.href = url; a.download = 'calificaciones.xlsx'; a.click(); URL.revokeObjectURL(url); }
     catch (err) { setError(mensajeDeError(err)); } finally { setDescargando(false); }
   };
   const descargarPlantilla = async () => {
@@ -99,7 +98,6 @@ export default function CalificacionesPage() {
   return <>{confirmacion.elemento}
     <Encabezado titulo="Captura de calificaciones" detalle="Evaluación oficial por parcial; las actividades de clase se registran por separado" />
     {error && <p role="alert" className="mensaje-error">{error}</p>}{mensaje && <p role="status" className="mensaje-ok">{mensaje}</p>}
-    <p className="texto-ayuda">Selecciona una clase y un periodo, carga la lista, captura o corrige notas y guarda. Al corregir una calificación existente es obligatorio justificar el cambio; el cierre corresponde al personal autorizado.</p>
     <section className="panel"><div className="fila">
       <SelectorBuscable<Clase> ruta="/academico/clases-seleccion" valor={claseId} cambiar={(v) => { limpiar(); setClaseId(v); }} alSeleccionar={(c) => setClase(c ?? null)} etiqueta="Clase" deshabilitado={ocupado} texto={(c) => `${c.grupo.plantel.nombre} · ${c.grupo.ciclo.nombre} · ${c.grupo.nombre} · ${c.materia.clave} ${c.materia.nombre}`} />
       <div className="campo"><label htmlFor="parcial-calificacion">Parcial</label><select id="parcial-calificacion" disabled={ocupado} value={parcial} onChange={(e) => { limpiar(); setParcial(e.target.value); }}><option value="1">Parcial 1</option><option value="2">Parcial 2</option><option value="3">Parcial 3</option><option value="0">Final</option></select></div>
@@ -113,16 +111,16 @@ export default function CalificacionesPage() {
     </section>}
     {!!alumnos.length && <form onSubmit={guardar} noValidate aria-busy={enviando}><fieldset disabled={ocupado || periodo?.estatus === 'CERRADO'} style={{ border: 0,padding: 0 }}><legend>Calificaciones oficiales del parcial seleccionado</legend>
       <p>Deja vacía una nota pendiente. Solo se guardan cambios; los valores vacíos no eliminan notas ya capturadas.</p>
-      <div className="tabla-contenedor" role="region" aria-label="Captura de notas por alumno" tabIndex={0}><table className="tabla tabla-adaptable"><caption className="solo-lector">Matrícula, nombre y calificación editable para el periodo seleccionado</caption><thead><tr><th scope="col">Matrícula</th><th scope="col">Alumno</th><th scope="col">Calificación</th></tr></thead><tbody>{alumnos.map(({ alumno: a }) => {
+      <table className="tabla"><thead><tr><th>Matrícula</th><th>Alumno</th><th>Calificación</th></tr></thead><tbody>{alumnos.map(({ alumno: a }) => {
         const invalida = !!valores[a.id] && !valida(valores[a.id]);
-        return <tr key={a.id}><td data-etiqueta="Matrícula">{a.matricula}</td><td data-etiqueta="Alumno">{a.usuario.nombre} {a.usuario.apellidoPaterno}</td><td data-etiqueta="Calificación"><label className="solo-lector" htmlFor={`nota-${a.id}`}>Calificación de {a.matricula}</label><input id={`nota-${a.id}`} type="number" min={0} max={100} step={0.01} value={valores[a.id] ?? ''} aria-invalid={invalida} aria-describedby={invalida ? `error-nota-${a.id}` : undefined} onChange={(e) => setValores({ ...valores,[a.id]: e.target.value })} />{invalida && <span id={`error-nota-${a.id}`} className="mensaje-error">De 0 a 100, hasta dos decimales.</span>}</td></tr>;
-      })}</tbody></table></div>
+        return <tr key={a.id}><td>{a.matricula}</td><td>{a.usuario.nombre} {a.usuario.apellidoPaterno}</td><td><label className="solo-lector" htmlFor={`nota-${a.id}`}>Calificación de {a.matricula}</label><input id={`nota-${a.id}`} type="number" min={0} max={100} step={0.01} value={valores[a.id] ?? ''} aria-invalid={invalida} aria-describedby={invalida ? `error-nota-${a.id}` : undefined} onChange={(e) => setValores({ ...valores,[a.id]: e.target.value })} />{invalida && <span id={`error-nota-${a.id}`} className="mensaje-error">De 0 a 100, hasta dos decimales.</span>}</td></tr>;
+      })}</tbody></table>
       <div className="campo"><label htmlFor="motivo-calificacion">Motivo obligatorio al corregir una nota existente</label><input id="motivo-calificacion" required={corrige} maxLength={300} aria-invalid={corrige && !motivo.trim()} value={motivo} onChange={(e) => setMotivo(e.target.value)} /></div>
       <p role="status">{cambios.length} calificaciones con cambios</p><button className="boton">{enviando ? 'Guardando…' : 'Guardar calificaciones'}</button>
     </fieldset></form>}
     {periodo && <section className="panel" aria-busy={cargandoHistorial}><h2>Historial del periodo</h2>{cargandoHistorial && <p role="status">Cargando historial…</p>}
       <Paginador total={historial.total} pagina={historial.pagina} porPagina={historial.porPagina} deshabilitado={ocupado || cargandoHistorial} onCambio={cargarHistorial} />
-      <div className="tabla-contenedor" role="region" aria-label="Historial de modificaciones de notas" tabIndex={0}><table className="tabla tabla-adaptable"><caption className="solo-lector">Historial de cambios con usuario y motivo de la corrección</caption><thead><tr><th scope="col">Fecha</th><th scope="col">Alumno</th><th scope="col">Anterior</th><th scope="col">Nueva</th><th scope="col">Observación anterior</th><th scope="col">Observación nueva</th><th scope="col">Usuario</th><th scope="col">Motivo</th></tr></thead><tbody>{historial.datos.map((c) => <tr key={c.id}><td data-etiqueta="Fecha">{new Date(c.fecha).toLocaleString('es-MX')}</td><td data-etiqueta="Alumno">{alumnos.find((i) => i.alumno.id === c.alumnoId)?.alumno.matricula ?? c.alumnoId}</td><td data-etiqueta="Anterior">{c.valorAnterior ?? '—'}</td><td data-etiqueta="Nueva">{c.valorNuevo}</td><td data-etiqueta="Observación anterior">{c.observacionAnterior ?? '—'}</td><td data-etiqueta="Observación nueva">{c.observacionNueva ?? '—'}</td><td data-etiqueta="Usuario">{c.usuarioId}</td><td data-etiqueta="Motivo">{c.motivo ?? '—'}</td></tr>)}{!historial.datos.length && <tr><td colSpan={8}>Sin cambios registrados.</td></tr>}</tbody></table></div>
+      <table className="tabla"><thead><tr><th>Fecha</th><th>Alumno</th><th>Anterior</th><th>Nueva</th><th>Observación anterior</th><th>Observación nueva</th><th>Usuario</th><th>Motivo</th></tr></thead><tbody>{historial.datos.map((c) => <tr key={c.id}><td>{new Date(c.fecha).toLocaleString('es-MX')}</td><td>{alumnos.find((i) => i.alumno.id === c.alumnoId)?.alumno.matricula ?? c.alumnoId}</td><td>{c.valorAnterior ?? '—'}</td><td>{c.valorNuevo}</td><td>{c.observacionAnterior ?? '—'}</td><td>{c.observacionNueva ?? '—'}</td><td>{c.usuarioId}</td><td>{c.motivo ?? '—'}</td></tr>)}{!historial.datos.length && <tr><td colSpan={8}>Sin cambios registrados.</td></tr>}</tbody></table>
     </section>}
   </>;
 }
