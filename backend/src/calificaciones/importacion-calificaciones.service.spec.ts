@@ -67,3 +67,8 @@ it('genera identificadores, nombre y validación Excel sin rellenar pendientes c
   });
   expect(String(libro.getWorksheet('Instrucciones')?.getCell('A2').value)).toContain('columna F');
 });
+
+it('no entrega una plantilla sin alumnos inscritos', async () => {
+  const { service } = crear([]);
+  await expect(service.plantilla({ grupoMateriaId: 7, parcial: 1 }, user)).rejects.toThrow('no tiene alumnos inscritos');
+});
