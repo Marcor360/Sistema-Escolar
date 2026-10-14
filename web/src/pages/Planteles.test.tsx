@@ -91,7 +91,7 @@ it('orienta la creación del plantel y las asignaciones pendientes', async () =>
   render(<PlantelesPage />);
   expect(screen.getByText(/Paso 1: registra la sede/)).toBeTruthy();
   await seleccionar(0);
-  expect(screen.getByRole('region', { name: 'Preparación del plantel' })).toBeTruthy();
+  expect(await screen.findByRole('region', { name: 'Preparación del plantel' })).toBeTruthy();
   expect(screen.getByText(/Asigna un director cuando tengas su cuenta creada/)).toBeTruthy();
   expect(screen.getByText(/La creación del expediente del alumno no equivale/)).toBeTruthy();
 });
