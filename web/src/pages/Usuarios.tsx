@@ -1,3 +1,4 @@
+import '../components/tabla-adaptable.css';
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
@@ -90,10 +91,10 @@ export default function UsuariosPage() {
     </div>
 
     {cargando && <p role="status">Cargando usuarios…</p>}
-    <table className="tabla" aria-busy={cargando}><thead><tr><th>Identificador</th><th>Nombre</th><th>Correo</th><th>Plantel(es)</th><th>Roles/Estatus</th></tr></thead><tbody>
-      {resultado.datos.map((fila) => <tr key={fila.id}><td>{fila.matricula ?? fila.numEmpleado ?? fila.id}</td><td>{fila.nombre}</td><td>{fila.correo ?? 'Restringido'}</td><td>{fila.plantel ?? fila.planteles?.join(', ') ?? '—'}</td><td>{fila.roles?.join(', ') ?? fila.estatus ?? (fila.activo ? 'ACTIVO' : 'INACTIVO')}{esSuperadmin && tipo === 'ADMINISTRATIVO' && <button disabled={enviando} onClick={async () => { try { const { data } = await api.get(`/usuarios/${fila.id}/personal`); setEditarId(data.id); setActivo(data.activo); setPlantelIds(data.plantelIds); setRolesElegidos(data.roles.map((r: { clave: string }) => r.clave)); setForm({ email: data.email, password: '', nombre: data.nombre, apellidoPaterno: data.apellidoPaterno, apellidoMaterno: data.apellidoMaterno ?? '', telefono: data.telefono ?? '' }); document.getElementById('personal-nombre')?.focus(); } catch (err) { setError(mensajeDeError(err)); } }}>Corregir cuenta</button>}</td></tr>)}
+    <div className="tabla-contenedor" role="region" aria-label="Usuarios" tabIndex={0}><table className="tabla tabla-adaptable" aria-busy={cargando}><thead><tr><th scope="col">Identificador</th><th scope="col">Nombre</th><th scope="col">Correo</th><th scope="col">Plantel(es)</th><th scope="col">Roles/Estatus</th></tr></thead><tbody>
+      {resultado.datos.map((fila) => <tr key={fila.id}><td data-etiqueta="Identificador">{fila.matricula ?? fila.numEmpleado ?? fila.id}</td><td data-etiqueta="Nombre">{fila.nombre}</td><td data-etiqueta="Correo">{fila.correo ?? 'Restringido'}</td><td data-etiqueta="Plantel(es)">{fila.plantel ?? fila.planteles?.join(', ') ?? '—'}</td><td data-etiqueta="Roles/Estatus">{fila.roles?.join(', ') ?? fila.estatus ?? (fila.activo ? 'ACTIVO' : 'INACTIVO')}{esSuperadmin && tipo === 'ADMINISTRATIVO' && <button disabled={enviando} onClick={async () => { try { const { data } = await api.get(`/usuarios/${fila.id}/personal`); setEditarId(data.id); setActivo(data.activo); setPlantelIds(data.plantelIds); setRolesElegidos(data.roles.map((r: { clave: string }) => r.clave)); setForm({ email: data.email, password: '', nombre: data.nombre, apellidoPaterno: data.apellidoPaterno, apellidoMaterno: data.apellidoMaterno ?? '', telefono: data.telefono ?? '' }); document.getElementById('personal-nombre')?.focus(); } catch (err) { setError(mensajeDeError(err)); } }}>Corregir cuenta</button>}</td></tr>)}
       {!cargando && !resultado.datos.length && <tr><td className="vacio" colSpan={5}>Sin resultados.</td></tr>}
-    </tbody></table>
+    </tbody></table></div>
     <Paginador total={resultado.total} pagina={resultado.pagina} porPagina={resultado.porPagina} deshabilitado={cargando} onCambio={(pagina) => cargar(pagina, tipo, plantelId, buscar)} />
   </>;
 }

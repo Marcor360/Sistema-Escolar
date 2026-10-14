@@ -126,7 +126,7 @@ export default function AlumnosPage() {
         tutorNombre: form.tutorNombre || undefined,
         tutorTelefono: form.tutorTelefono || undefined,
       });
-      setMensaje(`Alumno ${form.matricula} ${editando ? 'actualizado' : 'registrado'}`);
+      setMensaje(`Alumno ${form.matricula} ${editando ? 'actualizado' : 'registrado. Siguiente paso: inscribir en Grupos; crear el expediente no genera inscripción'}`);
       setEditando(null);
       setForm(FORM_INICIAL);
       recargarListado();
@@ -186,6 +186,7 @@ export default function AlumnosPage() {
         {(busquedaAplicada || plantelAplicado || buscar || plantelId) && <button type="button" className="boton secundario" onClick={() => { setBuscar(''); setPlantelId(''); cargar(1, '', ''); }}>Limpiar filtros</button>}
       </div></section>
 
+      {puedeGestionar && mensaje.includes('registrado') && <p><a className="boton secundario" href="/grupos">Ir a Grupos para inscribir al alumno</a></p>}
       <div className="cabecera-listado"><h2>Expedientes de alumnos</h2><p>{resultado.total} registros encontrados</p></div>
       <div className="tabla-contenedor" role="region" aria-label="Listado de alumnos" tabIndex={0}>
       <table className="tabla tabla-adaptable" aria-busy={cargando}>

@@ -84,7 +84,7 @@ export default function PlantelesPage() {
     {esSuperadmin && <section className="panel">
       <h2>Nuevo plantel</h2>
       <p className="texto-ayuda" id="ayuda-nuevo-plantel">Paso 1: registra la sede. Después selecciona el plantel para vincular su director y personal. Los alumnos se inscriben en grupos desde Control escolar.</p>
-      <form className="fila" onSubmit={crear} aria-busy={guardando}>
+      <form className="fila" onSubmit={crear} aria-busy={guardando} aria-describedby="ayuda-nuevo-plantel">
         <div className="campo"><label htmlFor="nuevo-plantel-clave">Clave</label><input id="nuevo-plantel-clave" required minLength={2} maxLength={10} value={alta.clave} onChange={(e) => setAlta({ ...alta, clave: e.target.value.toUpperCase() })} /></div>
         <div className="campo"><label htmlFor="nuevo-plantel-nombre">Nombre</label><input id="nuevo-plantel-nombre" required minLength={3} value={alta.nombre} onChange={(e) => setAlta({ ...alta, nombre: e.target.value })} /></div>
         <div className="campo"><label htmlFor="nuevo-plantel-municipio">Municipio</label><input id="nuevo-plantel-municipio" value={alta.municipio} onChange={(e) => setAlta({ ...alta, municipio: e.target.value })} /></div>
@@ -129,6 +129,7 @@ export default function PlantelesPage() {
           <li>Después configura ciclos, materias y grupos; registra e inscribe alumnos en sus grupos.</li>
         </ol>
         <p className="texto-ayuda">La creación del expediente del alumno no equivale a inscribirlo en un grupo.</p>
+        {puedeAdministrar && <nav aria-label="Siguientes pasos del plantel" className="fila">{esSuperadmin && <a className="boton secundario" href="/usuarios">Crear o ubicar personal</a>}<a className="boton secundario" href="/materias">Configurar ciclos y materias</a><a className="boton secundario" href="/grupos">Preparar grupos e inscripciones</a></nav>}
       </section>
       <h3>Director</h3>
       <p>{detalle.director ? `${detalle.director.nombre} ${detalle.director.apellidoPaterno} · ${detalle.director.email}` : 'Sin director asignado'}</p>
