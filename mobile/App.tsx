@@ -4,7 +4,7 @@ import {
 } from "./src/api/cache-academica";
 import * as Notifications from "expo-notifications";
 import { activarPush } from "./src/push";
-import { CLAVE_ULTIMA_ACTIVIDAD, crearControlInactividad, LIMITE_INACTIVIDAD_MS } from "./src/utils/inactividad";
+import { CLAVE_ULTIMA_ACTIVIDAD, crearControlInactividad, crearPersistenciaActividad, actividadRestaurable } from "./src/utils/inactividad";
 import { debeNotificarActividad } from "./src/utils/pulso-actividad";
 import { ETIQUETAS_NAVEGACION } from "./src/utils/etiquetas-navegacion";
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
@@ -92,14 +92,12 @@ function AppInterna() {
   const ultimaActividadGuardada = useRef(Date.now());
   const ultimaActividadPersistida = useRef(0);
   const ultimoAvisoServidor = useRef(0);
-  const escrituraActividad = useRef<Promise<void>>(Promise.resolve());
+  const persistenciaActividad = useRef(crearPersistenciaActividad(
+    (fecha) => SecureStore.setItemAsync(CLAVE_ULTIMA_ACTIVIDAD, String(fecha)),
+    () => SecureStore.deleteItemAsync(CLAVE_ULTIMA_ACTIVIDAD),
+  ));
   const controlInactividad = useRef<ReturnType<typeof crearControlInactividad> | null>(null);
-  const guardarActividad = (fecha: number) => {
-    escrituraActividad.current = escrituraActividad.current
-      .catch(() => undefined)
-      .then(() => SecureStore.setItemAsync(CLAVE_ULTIMA_ACTIVIDAD, String(fecha)))
-      .catch(() => undefined);
-  };
+  const guardarActividad = (fecha: number) => { void persistenciaActividad.current.guardar(fecha); };
   useEffect(() => {
     configurarCacheAcademica(sesion?.sub ?? null);
     return () => limpiarCacheAcademica();
@@ -131,10 +129,10 @@ function AppInterna() {
       const token = await SecureStore.getItemAsync(TOKEN_KEY);
       if (token) {
         const guardada = await SecureStore.getItemAsync(CLAVE_ULTIMA_ACTIVIDAD).catch(() => null);
-        const ultima = guardada === null ? Date.now() : Number(guardada);
-        if (!Number.isFinite(ultima) || ultima <= 0 || Date.now() - ultima >= LIMITE_INACTIVIDAD_MS) {
+        const ultima = actividadRestaurable(guardada, Date.now());
+        if (ultima === null) {
           await eliminarTokensSesion();
-          await SecureStore.deleteItemAsync(CLAVE_ULTIMA_ACTIVIDAD).catch(() => undefined);
+          await persistenciaActividad.current.borrar();
           setAvisoCierre("La sesión se cerró tras 30 minutos sin actividad. Ingresa nuevamente.");
           return;
         }
@@ -242,6 +240,7 @@ function AppInterna() {
     controlInactividad.current = null;
     configurarCacheAcademica(null);
     const borrarTokens = eliminarTokensSesion();
+    const borrarActividad = persistenciaActividad.current.borrar();
     setSesion(null);
     setAvisoCierre(motivo === "inactividad"
       ? "La sesión se cerró tras 30 minutos sin actividad. Ingresa nuevamente." : "");
@@ -249,8 +248,7 @@ function AppInterna() {
     try {
       await borrarTokens;
     } finally {
-      await escrituraActividad.current.catch(() => undefined);
-      await SecureStore.deleteItemAsync(CLAVE_ULTIMA_ACTIVIDAD).catch(() => undefined);
+      await borrarActividad;
     }
   };
 
