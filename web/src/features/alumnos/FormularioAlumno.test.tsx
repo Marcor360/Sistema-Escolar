@@ -26,6 +26,7 @@ describe('FormularioAlumno', () => {
     mostrar('');
     expect(screen.getByRole('group', { name: 'Identidad del alumno' })).toBeTruthy();
     expect(screen.getByRole('group', { name: 'Acceso institucional' })).toBeTruthy();
+    expect(screen.getByText(/todavía no se asigna un grupo ni materias/)).toBeTruthy();
     expect(screen.getByRole('group', { name: 'Contacto y datos adicionales' })).toBeTruthy();
     expect((screen.getByRole('button', { name: 'Registrar alumno' }) as HTMLButtonElement).disabled).toBe(true);
     expect((screen.getByLabelText('CURP *') as HTMLInputElement).required).toBe(true);
