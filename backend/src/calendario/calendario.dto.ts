@@ -1,3 +1,4 @@
+import { PartialType } from '@nestjs/swagger';
 import { IsDateString, MaxLength, MinLength, Min } from 'class-validator';
 import { Transform as Normalizar } from 'class-transformer';
 import { Type } from 'class-transformer';
@@ -16,4 +17,8 @@ export class EventoDto {
   @IsOptional() @IsDateString({ strict: true }) fechaFin?: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) plantelId?: number;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) grupoId?: number;
+}
+
+export class EditarEventoDto extends PartialType(EventoDto) {
+  @IsString() @MaxLength(64) @MinLength(64) revision!: string;
 }

@@ -1,6 +1,7 @@
+import { createHash } from 'crypto';
 import { esMaestroRestringido } from '../common/politica-acceso';
 import { exigirGrupoConfigurable, grupoVigente, inscripcionVigente } from '../common/contexto-academico';
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtUser } from '../common/current-user.decorator';
@@ -11,7 +12,7 @@ import { Grupo } from '../entities/grupo.entity';
 import { GrupoMateria } from '../entities/grupo-materia.entity';
 import { Inscripcion } from '../entities/inscripcion.entity';
 import { ScopeService } from '../planteles/scope.service';
-import { EventoDto } from './calendario.dto';
+import { EventoDto, EditarEventoDto } from './calendario.dto';
 
 @Injectable()
 export class CalendarioService {
@@ -78,10 +79,15 @@ export class CalendarioService {
         else if (plantelId) qb.andWhere('((e.plantel_id IS NULL AND e.grupo_id IS NULL) OR (e.grupo_id IS NULL AND e.plantel_id = :plantelId) OR EXISTS (SELECT 1 FROM grupos g WHERE g.id = e.grupo_id AND g.plantel_id = :plantelId))', { plantelId });
       }
     }
-    return qb.orderBy('e.fecha_inicio', 'ASC').getMany();
+    const eventos = await qb.orderBy('e.fecha_inicio', 'ASC').getMany();
+    return eventos.map((e) => ({ ...e, revision: this.revision(e) }));
   }
 
   async crear(dto: EventoDto, user: JwtUser) {
+    return this.eventos.save(this.eventos.create(await this.preparar(dto, user)));
+  }
+
+  private async preparar(dto: EventoDto, user: JwtUser) {
     const inicio = new Date(dto.fechaInicio).getTime();
     const fin = dto.fechaFin ? new Date(dto.fechaFin).getTime() : inicio;
     if (!Number.isFinite(inicio) || !Number.isFinite(fin) || fin < inicio) {
@@ -111,7 +117,7 @@ export class CalendarioService {
       if (plantelId && grupo.plantelId !== plantelId) throw new ForbiddenException('El grupo no pertenece al plantel indicado');
       plantelId = grupo.plantelId;
     }
-    return this.eventos.save(this.eventos.create({
+    return {
       titulo: dto.titulo,
       descripcion: dto.descripcion ?? null,
       tipo: dto.tipo ?? 'GENERAL',
@@ -120,21 +126,44 @@ export class CalendarioService {
       plantelId,
       grupoId: dto.grupoId ?? null,
       creadoPorId: user.sub,
-    }));
+    };
+  }
+
+  private revision(e: EventoCalendario) {
+    return createHash('sha256').update(JSON.stringify([e.id, e.titulo, e.descripcion, e.tipo, e.fechaInicio, e.fechaFin, e.plantelId, e.grupoId, e.creadoPorId])).digest('hex');
+  }
+
+  private async autorizarOrigen(evento: EventoCalendario, user: JwtUser) {
+    if (user.roles.includes('SUPERADMIN')) return;
+    if (esMaestroRestringido(user)) {
+      if (evento.creadoPorId !== user.sub || !evento.grupoId) throw new ForbiddenException('Solo puedes modificar eventos propios de tus grupos actuales');
+      const docente = await this.docentes.findOne({ where: { usuarioId: user.sub } });
+      const gm = docente ? await this.grupoMaterias.findOne({ where: { grupoId: evento.grupoId, docenteId: docente.id } }) : null;
+      if (!gm || !grupoVigente(gm.grupo)) throw new ForbiddenException('El grupo ya no está asignado o vigente');
+    } else {
+      if (!evento.plantelId) throw new ForbiddenException('Solo SUPERADMIN puede modificar eventos globales');
+      await this.scope.validarGestion(user, evento.plantelId);
+    }
+  }
+
+  async editar(id: number, dto: EditarEventoDto, user: JwtUser) {
+    return this.eventos.manager.transaction(async (manager) => {
+      const repo = manager.getRepository(EventoCalendario);
+      const evento = await repo.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+      if (!evento) throw new NotFoundException('Evento no encontrado');
+      await this.autorizarOrigen(evento, user);
+      if (dto.revision !== this.revision(evento)) throw new ConflictException('El evento cambió; recarga antes de editar');
+      const destino = await this.preparar({ titulo: dto.titulo ?? evento.titulo, descripcion: dto.descripcion === undefined ? evento.descripcion ?? undefined : dto.descripcion, tipo: dto.tipo ?? evento.tipo, fechaInicio: dto.fechaInicio ?? evento.fechaInicio.toISOString(), fechaFin: dto.fechaFin === undefined ? evento.fechaFin?.toISOString() : dto.fechaFin, plantelId: dto.plantelId === undefined ? evento.plantelId ?? undefined : dto.plantelId, grupoId: dto.grupoId === undefined ? evento.grupoId ?? undefined : dto.grupoId }, user);
+      Object.assign(evento, destino, { creadoPorId: evento.creadoPorId });
+      const actualizado = await repo.save(evento);
+      return { ...actualizado, revision: this.revision(actualizado) };
+    });
   }
 
   async eliminar(id: number, user: JwtUser) {
     const evento = await this.eventos.findOne({ where: { id } });
     if (!evento) throw new NotFoundException('Evento no encontrado');
-    if (!user.roles.includes('SUPERADMIN')) {
-      const maestroPuro = user.roles.includes('MAESTRO') && !user.roles.includes('ADMINISTRATIVO');
-      if (maestroPuro) {
-        if (evento.creadoPorId !== user.sub) throw new ForbiddenException('Solo puedes eliminar eventos que creaste');
-      } else {
-        if (!evento.plantelId) throw new ForbiddenException('Solo SUPERADMIN puede eliminar eventos globales');
-        await this.scope.validarGestion(user, evento.plantelId);
-      }
-    }
+    await this.autorizarOrigen(evento, user);
     await this.eventos.delete(id);
     return { ok: true };
   }

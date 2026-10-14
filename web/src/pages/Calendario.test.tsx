@@ -57,3 +57,16 @@ it.each([
   await waitFor(() => expect(screen.queryAllByRole('button', { name: 'Eliminar' })).toHaveLength(autorizados));
   expect(screen.queryAllByText('Solo lectura')).toHaveLength(3 - autorizados);
 });
+
+it('envía una edición con revisión y conserva datos ante conflicto', async () => {
+  const evento = { id: 1, revision: 'a'.repeat(64), grupoId: null, creadoPorId: 1, titulo: 'Examen', descripcion: '', tipo: 'EXAMEN', fechaInicio: '2026-10-20T10:00:00Z', fechaFin: null, plantel: { id: 1, nombre: 'Centro' } };
+  vi.spyOn(api, 'get').mockImplementation(async (url) => ({ data: url === '/calendario' ? [evento] : url === '/planteles/mios' ? [{ id: 1, nombre: 'Centro' }] : [] }));
+  const patch = vi.spyOn(api, 'patch').mockRejectedValue(new Error('Conflicto'));
+  render(<CalendarioPage />); await screen.findByText('Examen');
+  fireEvent.click(screen.getByRole('button', { name: 'Editar' }));
+  fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Examen corregido' } });
+  fireEvent.submit(screen.getByLabelText('Título').closest('form')!);
+  await screen.findByRole('alert');
+  expect(patch).toHaveBeenCalledWith('/calendario/1', expect.objectContaining({ revision: evento.revision, titulo: 'Examen corregido' }));
+  expect((screen.getByLabelText('Título') as HTMLInputElement).value).toBe('Examen corregido');
+});

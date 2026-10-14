@@ -9,6 +9,8 @@ import { useAuth } from '../auth/AuthContext';
 interface Evento {
   id: number;
   creadoPorId: number | null;
+  grupoId: number | null;
+  revision: string;
   titulo: string;
   descripcion: string | null;
   tipo: 'GENERAL' | 'EXAMEN' | 'ENTREGA' | 'FESTIVO' | 'PAGO' | 'JUNTA';
@@ -44,6 +46,9 @@ export default function CalendarioPage() {
     return !!sesion?.roles.includes('ADMINISTRATIVO') && evento.plantel !== null && planteles.some((plantel) => plantel.id === evento.plantel?.id);
   };
   const [form, setForm] = useState(FORM_INICIAL);
+  const [editando, setEditando] = useState<Evento | null>(null);
+  const fechaInput = (valor: string) => { const d = new Date(valor); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0,16); };
+  const editar = (e: Evento) => { setEditando(e); setForm({ titulo: e.titulo, descripcion: e.descripcion ?? '', tipo: e.tipo, plantelId: String(e.plantel?.id ?? ''), grupoId: String(e.grupoId ?? ''), fechaInicio: fechaInput(e.fechaInicio), fechaFin: e.fechaFin ? fechaInput(e.fechaFin) : '' }); document.getElementById('cal-titulo')?.focus(); };
   const [filtroPlantel, setFiltroPlantel] = useState('');
   const [error, setError] = useState(''); const [guardando, setGuardando] = useState(false); const mutando = useRef(false);
 
@@ -52,16 +57,18 @@ export default function CalendarioPage() {
     if (mutando.current) return; mutando.current = true; setGuardando(true);
     setError('');
     try {
-      await api.post('/calendario', {
+      const datos = { ...(editando ? { revision: editando.revision } : {}),
         titulo: form.titulo,
         tipo: form.tipo,
         fechaInicio: new Date(form.fechaInicio).toISOString(),
-        fechaFin: form.fechaFin ? new Date(form.fechaFin).toISOString() : undefined,
+        fechaFin: form.fechaFin ? new Date(form.fechaFin).toISOString() : editando ? null : undefined,
         descripcion: form.descripcion || undefined,
-        plantelId: form.plantelId ? Number(form.plantelId) : undefined,
-        grupoId: form.grupoId ? Number(form.grupoId) : undefined,
-      });
-      setForm(FORM_INICIAL);
+        plantelId: form.plantelId ? Number(form.plantelId) : editando ? null : undefined,
+        grupoId: form.grupoId ? Number(form.grupoId) : editando ? null : undefined,
+      };
+      if (editando) await api.patch(`/calendario/${editando.id}`, datos);
+      else await api.post('/calendario', datos);
+      setEditando(null); setForm(FORM_INICIAL);
       recargar();
     } catch (err) { setError(mensajeDeError(err)); } finally { mutando.current = false; setGuardando(false); }
   };
@@ -91,7 +98,7 @@ export default function CalendarioPage() {
       {(error || errorCarga) && <p role="alert" className="mensaje-error">{error || errorCarga}</p>}
 
       <section className="panel">
-        <h2>Nuevo evento</h2>
+        <h2>{editando ? 'Editar evento' : 'Nuevo evento'}</h2>
         <form onSubmit={crear} className="fila">
           <div className="campo"><label htmlFor="cal-titulo">Título</label>
             <input id="cal-titulo" required value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} />
@@ -113,7 +120,8 @@ export default function CalendarioPage() {
           <div className="campo" style={{ flex: '1 1 220px' }}><label htmlFor="cal-descripcion">Descripción</label>
             <input id="cal-descripcion" value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} />
           </div>
-          <button className="boton" disabled={guardando}>{guardando ? 'Guardando…' : 'Agregar al calendario'}</button>
+          <button className="boton" disabled={guardando}>{guardando ? 'Guardando…' : editando ? 'Guardar evento' : 'Agregar al calendario'}</button>
+          {editando && <button type="button" disabled={guardando} onClick={() => { setEditando(null); setForm(FORM_INICIAL); }}>Cancelar edición</button>}
         </form>
       </section>
 
@@ -131,7 +139,7 @@ export default function CalendarioPage() {
               <td>{ev.descripcion ?? '—'}</td>
               <td className="derecha">
                 {puedeEliminar(ev)
-                  ? <button className="boton peligro chico" disabled={guardando} onClick={() => eliminar(ev)}>Eliminar</button>
+                  ? <><button className="boton secundario chico" disabled={guardando} onClick={() => editar(ev)}>Editar</button><button className="boton peligro chico" disabled={guardando} onClick={() => eliminar(ev)}>Eliminar</button></>
                   : <span className="detalle">Solo lectura</span>}
               </td>
             </tr>
