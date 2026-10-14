@@ -17,3 +17,13 @@ export class EventoDto {
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) plantelId?: number;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) grupoId?: number;
 }
+
+export class EditarEventoDto {
+  @IsDateString({ strict: true }) fechaInicioEsperada!: string;
+  @IsOptional() @IsString() @MinLength(1) @MaxLength(150) titulo?: string;
+  @IsOptional() @IsString() @MaxLength(400) descripcion?: string | null;
+  @IsOptional() @IsIn(['GENERAL', 'EXAMEN', 'ENTREGA', 'FESTIVO', 'PAGO', 'JUNTA'])
+  tipo?: EventoDto['tipo'];
+  @IsOptional() @IsDateString({ strict: true }) fechaInicio?: string;
+  @IsOptional() @IsDateString({ strict: true }) fechaFin?: string | null;
+}
