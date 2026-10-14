@@ -1,5 +1,6 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { api, establecerToken, renovarSesion, mensajeDeError, registrarSesionExpirada } from '../api/client';
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
+import { api, establecerToken, obtenerTokenSesion, renovarSesion, mensajeDeError, registrarSesionExpirada } from '../api/client';
+import { CLAVE_ACTIVIDAD, CLAVE_CIERRE, LIMITE_INACTIVIDAD_MS, cierreLocalActivo, guardarUltimaActividad, iniciarActividadAutenticada, inactividadVencida, leerUltimaActividad, registrarCierreLocal } from './inactividad';
 
 export interface Sesion {
   sub: number;
@@ -25,14 +26,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [sesion, setSesion] = useState<Sesion | null>(null);
   const [cargando, setCargando] = useState(true);
   const [errorInicio, setErrorInicio] = useState(false);
+  const usuarioSesion = sesion?.sub;
+  const revocacion = useRef<Promise<void>>(Promise.resolve());
+  const cancelarRevocacion = useRef<AbortController | null>(null);
 
   useEffect(() => {
     let activo = true;
     localStorage.removeItem('token'); localStorage.removeItem('sesion');
+    const ultima = leerUltimaActividad();
+    if (cierreLocalActivo() || (ultima !== null && inactividadVencida(ultima, Date.now()))) {
+      if (!cierreLocalActivo()) registrarCierreLocal('inactividad');
+      setCargando(false);
+      return;
+    }
     renovarSesion().then(() => api.get<{
       id: number; email: string; nombreCompleto: string; roles: { clave: string }[]; passwordChangeRequired: boolean;
     }>('/auth/me')).then(({ data }) => {
-      if (!activo) return;
+      if (!activo || cierreLocalActivo()) return;
       const actual: Sesion = {
         sub: data.id, email: data.email, nombre: data.nombreCompleto,
         roles: data.roles.map((rol) => rol.clave), passwordChangeRequired: data.passwordChangeRequired,
@@ -54,21 +64,128 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => { registrarSesionExpirada(() => setSesion(null)); return () => registrarSesionExpirada(null); }, []);
 
   const login = async (email: string, password: string) => {
+    // Un refresh de logout antiguo no debe sobrescribir la cookie del login nuevo.
+    cancelarRevocacion.current?.abort();
+    await revocacion.current;
     const { data } = await api.post('/auth/login', { email, password });
+    iniciarActividadAutenticada();
     establecerToken(data.accessToken);
-
     setSesion(data.usuario);
   };
 
-  const finalizarSesionLocal = () => {
+  const cerrarLocal = (motivo: 'manual' | 'inactividad') => {
+    registrarCierreLocal(motivo);
     establecerToken(null);
     setSesion(null);
   };
 
-  const logout = async () => {
-    await api.post('/auth/logout');
-    finalizarSesionLocal();
+  const finalizarSesionLocal = () => cerrarLocal('manual');
+
+  // Revocación de mejor esfuerzo: el cierre local no depende de que la red responda.
+  const revocarDispositivo = (token: string | null) => {
+    if (!token || typeof fetch !== 'function') return;
+    // Tras 30 minutos el access (15m) ya expiró: rotar solo para revocar la sesión.
+    const control = new AbortController();
+    cancelarRevocacion.current?.abort();
+    cancelarRevocacion.current = control;
+    revocacion.current = (async () => {
+      const url = api.defaults.baseURL;
+      const sesionDelToken = (acceso: string): string | null => {
+        try {
+          const cuerpo = acceso.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+          const payload: unknown = JSON.parse(atob(cuerpo));
+          return typeof payload === 'object' && payload !== null &&
+            'sid' in payload && typeof payload.sid === 'string' ? payload.sid : null;
+        } catch { return null; }
+      };
+      const sidAnterior = sesionDelToken(token);
+      const retirar = (acceso: string) => fetch(`${url}/auth/logout`, {
+        method: 'POST', credentials: 'include', keepalive: true, signal: control.signal,
+        headers: { Authorization: `Bearer ${acceso}`, 'x-portal': 'WEB' },
+      });
+      const intento = await retirar(token);
+      if (intento.status !== 401 || !cierreLocalActivo()) return;
+      const nuevo = await fetch(`${url}/auth/refresh`, {
+        method: 'POST', credentials: 'include', keepalive: true, signal: control.signal,
+        headers: { 'x-portal': 'WEB', 'Content-Type': 'application/json' },
+        body: '{}',
+      });
+      if (!nuevo.ok) return;
+      const datos: { accessToken?: string } = await nuevo.json();
+      // Una autenticación manual nueva no puede ser revocada por un logout tardío.
+      if (datos.accessToken && sidAnterior && sesionDelToken(datos.accessToken) === sidAnterior &&
+          cierreLocalActivo()) await retirar(datos.accessToken);
+    })().catch(() => undefined).finally(() => {
+      if (cancelarRevocacion.current === control) cancelarRevocacion.current = null;
+    });
   };
+
+  const logout = async () => {
+    const token = obtenerTokenSesion();
+    finalizarSesionLocal();
+    revocarDispositivo(token);
+  };
+
+  useEffect(() => {
+    if (!usuarioSesion) return;
+    let cerrada = false;
+    let ultimo = leerUltimaActividad() ?? Date.now();
+    let ultimaPersistida = ultimo;
+    let temporizador: ReturnType<typeof setTimeout> | undefined;
+    if (leerUltimaActividad() === null) guardarUltimaActividad(ultimo);
+
+    const vencer = () => {
+      if (cerrada) return;
+      cerrada = true;
+      const token = obtenerTokenSesion();
+      cerrarLocal('inactividad');
+      revocarDispositivo(token);
+    };
+    const comprobar = () => {
+      if (cerrada) return;
+      const compartida = leerUltimaActividad();
+      if (compartida !== null && compartida > ultimo) ultimo = compartida;
+      if (inactividadVencida(ultimo, Date.now())) { vencer(); return; }
+      if (temporizador) clearTimeout(temporizador);
+      temporizador = setTimeout(comprobar, LIMITE_INACTIVIDAD_MS - (Date.now() - ultimo));
+    };
+    const actividad = () => {
+      if (cerrada) return;
+      const ahora = Date.now();
+      if (inactividadVencida(ultimo, ahora)) { comprobar(); return; }
+      ultimo = ahora;
+      if (ahora - ultimaPersistida >= 5000) {
+        ultimaPersistida = ahora;
+        guardarUltimaActividad(ahora);
+      }
+    };
+    const almacen = (evento: StorageEvent) => {
+      if (evento.key === CLAVE_CIERRE && evento.newValue !== null) {
+        cerrada = true;
+        if (temporizador) clearTimeout(temporizador);
+        establecerToken(null);
+        setSesion(null);
+      } else if (evento.key === CLAVE_ACTIVIDAD && evento.newValue) {
+        const fecha = Number(evento.newValue);
+        if (Number.isFinite(fecha) && fecha <= Date.now() && fecha > ultimo) ultimo = fecha;
+      }
+    };
+    const reanudar = () => { if (!document.hidden) comprobar(); };
+    const eventos = ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart'] as const;
+    for (const nombre of eventos) window.addEventListener(nombre, actividad, { passive: true });
+    window.addEventListener('storage', almacen);
+    window.addEventListener('focus', comprobar);
+    document.addEventListener('visibilitychange', reanudar);
+    comprobar();
+    return () => {
+      cerrada = true;
+      if (temporizador) clearTimeout(temporizador);
+      for (const nombre of eventos) window.removeEventListener(nombre, actividad);
+      window.removeEventListener('storage', almacen);
+      window.removeEventListener('focus', comprobar);
+      document.removeEventListener('visibilitychange', reanudar);
+    };
+  }, [usuarioSesion]);
 
   const tieneRol = (...roles: string[]) =>
     sesion !== null &&

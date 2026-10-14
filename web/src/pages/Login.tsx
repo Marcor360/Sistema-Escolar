@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { api, archivosBase, mensajeDeError } from '../api/client';
 import { useMarca } from '../marca/MarcaContext';
+import { CLAVE_CIERRE } from '../auth/inactividad';
 
 type Modo = 'entrar' | 'solicitar' | 'restablecer';
 
@@ -77,6 +78,9 @@ export default function LoginPage() {
           ? <img className="logo-marca" src={archivosBase + marca.logoUrl} alt={marca.nombreInstitucion} />
           : <div className="monograma" aria-hidden>{marca.nombreCorto}</div>}
         <h1>{marca.nombreInstitucion}</h1>
+        {localStorage.getItem(CLAVE_CIERRE) === 'inactividad' && (
+          <p role="status" className="mensaje-ok">La sesión se cerró tras 30 minutos sin actividad. Inicia sesión nuevamente.</p>
+        )}
 
         {modo === 'entrar' && (
           <form onSubmit={entrar}>

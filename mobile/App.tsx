@@ -4,7 +4,8 @@ import {
 } from "./src/api/cache-academica";
 import * as Notifications from "expo-notifications";
 import { activarPush } from "./src/push";
-import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { CLAVE_ULTIMA_ACTIVIDAD, crearControlInactividad, crearPersistenciaActividad, actividadRestaurable } from "./src/utils/inactividad";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   NavigationContainer,
   DefaultTheme,
@@ -13,7 +14,7 @@ import {
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "expo-status-bar";
-import { ActivityIndicator, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, AppState, BackHandler, TouchableOpacity, View } from "react-native";
 import { Text, FuenteContext } from "./src/components/Texto";
 import { useFonts } from "expo-font";
 import * as SecureStore from "expo-secure-store";
@@ -22,6 +23,7 @@ import {
   mensajeDeError,
   registrarSesionExpirada,
   TOKEN_KEY,
+  REFRESH_KEY,
   establecerTokensSesion,
   eliminarTokensSesion,
 } from "./src/api/client";
@@ -84,6 +86,15 @@ const iconos: Record<string, string> = {
 function AppInterna() {
   const fuenteLista = useContext(FuenteContext);
   const [sesion, setSesion] = useState<Sesion | null>(null);
+  const [avisoCierre, setAvisoCierre] = useState("");
+  const ultimaActividadGuardada = useRef(Date.now());
+  const ultimaActividadPersistida = useRef(0);
+  const persistenciaActividad = useRef(crearPersistenciaActividad(
+    (fecha) => SecureStore.setItemAsync(CLAVE_ULTIMA_ACTIVIDAD, String(fecha)),
+    () => SecureStore.deleteItemAsync(CLAVE_ULTIMA_ACTIVIDAD),
+  ));
+  const controlInactividad = useRef<ReturnType<typeof crearControlInactividad> | null>(null);
+  const guardarActividad = (fecha: number) => { void persistenciaActividad.current.guardar(fecha); };
   useEffect(() => {
     configurarCacheAcademica(sesion?.sub ?? null);
     return () => limpiarCacheAcademica();
@@ -114,6 +125,17 @@ function AppInterna() {
     try {
       const token = await SecureStore.getItemAsync(TOKEN_KEY);
       if (token) {
+        const guardada = await SecureStore.getItemAsync(CLAVE_ULTIMA_ACTIVIDAD).catch(() => null);
+        const ultima = actividadRestaurable(guardada, Date.now());
+        if (ultima === null) {
+          await eliminarTokensSesion();
+          await persistenciaActividad.current.borrar();
+          setAvisoCierre("La sesión se cerró tras 30 minutos sin actividad. Ingresa nuevamente.");
+          return;
+        }
+        ultimaActividadGuardada.current = ultima;
+        ultimaActividadPersistida.current = ultima;
+        if (guardada === null) guardarActividad(ultima);
         try {
           const { data } = await api.get("/auth/me");
           setSesion({
@@ -192,6 +214,11 @@ function AppInterna() {
   const iniciar = async (email: string, password: string) => {
     const { data } = await api.post("/auth/login", { email, password });
     await establecerTokensSesion(data.accessToken, data.refreshToken);
+    const ahora = Date.now();
+    ultimaActividadGuardada.current = ahora;
+    ultimaActividadPersistida.current = ahora;
+    guardarActividad(ahora);
+    setAvisoCierre("");
     setSesion(data.usuario);
   };
 
@@ -204,16 +231,84 @@ function AppInterna() {
     return () => sub.remove();
   }, [sesion]);
 
-  const finalizarSesionLocal = async () => {
-    await Notifications.dismissAllNotificationsAsync().catch(() => undefined);
+  const finalizarSesionLocal = async (motivo: "manual" | "inactividad" = "manual") => {
+    controlInactividad.current?.detener();
+    controlInactividad.current = null;
     configurarCacheAcademica(null);
-    await eliminarTokensSesion();
+    const borrarTokens = eliminarTokensSesion();
+    const borrarActividad = persistenciaActividad.current.borrar();
     setSesion(null);
+    setAvisoCierre(motivo === "inactividad"
+      ? "La sesión se cerró tras 30 minutos sin actividad. Ingresa nuevamente." : "");
+    await Notifications.dismissAllNotificationsAsync().catch(() => undefined);
+    try {
+      await borrarTokens;
+    } finally {
+      await borrarActividad;
+    }
   };
 
-  const cerrar = async () => {
-    await api.post("/auth/logout");
-    await finalizarSesionLocal();
+  const cerrar = async (motivo: "manual" | "inactividad" = "manual") => {
+    const [token, refresh] = await Promise.all([
+      SecureStore.getItemAsync(TOKEN_KEY).catch(() => null),
+      SecureStore.getItemAsync(REFRESH_KEY).catch(() => null),
+    ]);
+    await finalizarSesionLocal(motivo);
+    // El acceso de 15 minutos puede haber caducado; renovar SOLO para revocar el
+    // dispositivo, sin restaurar los tokens ni la interfaz después del cierre.
+    if ((token || refresh) && typeof fetch === "function") {
+      void (async () => {
+        const origen = api.defaults.baseURL;
+        const retirar = (acceso: string) => fetch(`${origen}/auth/logout`, {
+          method: "POST", headers: { Authorization: `Bearer ${acceso}`, "x-portal": "MOVIL" },
+        });
+        const respuesta = token ? await retirar(token) : null;
+        if (respuesta?.status !== 401 && respuesta !== null) return;
+        if (!refresh) return;
+        const renovacion = await fetch(`${origen}/auth/refresh`, {
+          method: "POST",
+          headers: { "x-portal": "MOVIL", "Content-Type": "application/json" },
+          body: JSON.stringify({ refreshToken: refresh }),
+        });
+        if (!renovacion.ok) return;
+        const datos: { accessToken?: string } = await renovacion.json();
+        if (datos.accessToken) await retirar(datos.accessToken);
+      })().catch(() => undefined);
+    }
+  };
+
+  useEffect(() => {
+    if (!sesion?.sub) return;
+    const control = crearControlInactividad(
+      () => { void cerrar("inactividad"); },
+      Date.now, setTimeout, clearTimeout, ultimaActividadGuardada.current,
+    );
+    controlInactividad.current = control;
+    const app = AppState.addEventListener("change", (estado) => {
+      if (estado === "active") control.comprobar();
+      else guardarActividad(control.ultimaActividad());
+    });
+    const atras = BackHandler.addEventListener("hardwareBackPress", () => {
+      control.actividad();
+      return false;
+    });
+    return () => {
+      control.detener();
+      if (controlInactividad.current === control) controlInactividad.current = null;
+      app.remove();
+      atras.remove();
+    };
+  }, [sesion?.sub]);
+
+  const registrarInteraccion = () => {
+    const control = controlInactividad.current;
+    if (!control) return;
+    control.actividad();
+    const fecha = control.ultimaActividad();
+    if (fecha - ultimaActividadPersistida.current >= 5000) {
+      ultimaActividadPersistida.current = fecha;
+      guardarActividad(fecha);
+    }
   };
 
   if (!listo || !marcaLista) {
@@ -286,6 +381,7 @@ function AppInterna() {
       <SesionContext.Provider
         value={{ sesion, iniciar, cerrar, finalizarSesionLocal }}
       >
+        <View style={{ flex: 1 }} onTouchStart={registrarInteraccion}>
         <NavigationContainer
           ref={navegacion}
           theme={tema}
@@ -345,9 +441,10 @@ function AppInterna() {
               <Tab.Screen name="Perfil" component={PerfilConDocumentos} options={{ headerShown: false }} />
             </Tab.Navigator>
           ) : (
-            <LoginScreen />
+            <LoginScreen aviso={avisoCierre} />
           )}
         </NavigationContainer>
+        </View>
       </SesionContext.Provider>
     </MarcaContext.Provider>
   );

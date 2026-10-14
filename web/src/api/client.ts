@@ -1,4 +1,5 @@
 import axios, { AxiosError } from 'axios';
+import { cierreLocalActivo } from '../auth/inactividad';
 export { mensajeDeError } from './errores';
 
 const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api').trim().replace(/\/+$/, '');
@@ -21,8 +22,14 @@ let renovando: Promise<void> | null = null;
 let alExpirar: (() => void) | null = null;
 export function registrarSesionExpirada(handler: (() => void) | null) { alExpirar = handler; }
 export function establecerToken(token: string | null) { accessToken = token; }
+export function obtenerTokenSesion() { return accessToken; }
 export async function renovarSesion() {
-  const renovar = async () => { const { data } = await api.post('/auth/refresh'); accessToken = data.accessToken; };
+  if (cierreLocalActivo()) throw new Error('La sesión se cerró localmente');
+  const renovar = async () => {
+    const { data } = await api.post('/auth/refresh');
+    if (cierreLocalActivo()) throw new Error('La sesión se cerró localmente');
+    accessToken = data.accessToken;
+  };
   // La cookie es compartida entre pestañas: se serializa la rotación entre ellas.
   const serializada = async () => {
     if (navigator.locks) await navigator.locks.request('escolar-refresh', renovar);
@@ -33,6 +40,7 @@ export async function renovarSesion() {
 }
 
 api.interceptors.response.use((res) => res, async (error: AxiosError) => {
+  if (cierreLocalActivo()) return Promise.reject(error);
   const config = error.config;
   if (error.response?.status === 401 && config && !['/auth/login', '/auth/refresh', '/auth/forgot-password', '/auth/reset-password'].includes(config.url ?? '') && !config.headers['x-reintento-sesion']) {
     try { await renovarSesion(); config.headers['x-reintento-sesion'] = '1'; return api.request(config); }

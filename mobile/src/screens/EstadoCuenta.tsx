@@ -54,6 +54,13 @@ export default function EstadoCuentaScreen() {
     null,
   );
   const [pagando, setPagando] = useState(false);
+  const [datosVigentes, setDatosVigentes] = useState(false);
+  const [fechaConsulta, setFechaConsulta] = useState(0);
+  useEffect(() => {
+    if (!datosVigentes || !fechaConsulta) return;
+    const timer = setTimeout(() => setDatosVigentes(false), Math.max(0, fechaConsulta + 5 * 60000 - Date.now()));
+    return () => clearTimeout(timer);
+  }, [datosVigentes, fechaConsulta]);
 
   const activa = useRef(true);
   useEffect(() => {
@@ -66,14 +73,20 @@ export default function EstadoCuentaScreen() {
   const lectura = useRef(crearControlLectura());
   const cargar = useCallback(() => {
     setError("");
+    setDatosVigentes(false);
     setCargando(true);
     void lectura.current.cargar(
       () => api.get<Estado>("/finanzas/me/estado-cuenta"),
       (r) => {
         setEstado(r.data);
+        setFechaConsulta(Date.now());
+        setDatosVigentes(true);
         setUltimaActualizacion(new Date().toLocaleString());
       },
-      (fallo) => setError(mensajeDeError(fallo)),
+      (fallo) => {
+        setDatosVigentes(false);
+        setError(mensajeDeError(fallo));
+      },
       () => setCargando(false),
     );
   }, []);
@@ -88,9 +101,23 @@ export default function EstadoCuentaScreen() {
   const pagoEnCurso = useRef(false);
   const pagarEnLinea = async (cargo: CargoDetalle) => {
     if (!activa.current || pagoEnCurso.current) return;
+    if (!datosVigentes) {
+      Alert.alert("Actualiza tu saldo", "Necesitas conexión y un estado de cuenta actualizado antes de iniciar un pago.");
+      return;
+    }
     pagoEnCurso.current = true;
     setPagando(true);
     try {
+      const { data: actualizado } = await api.get<Estado>("/finanzas/me/estado-cuenta");
+      if (!activa.current) return;
+      const cargoVigente = actualizado.cargos.find((item) => item.id === cargo.id);
+      setEstado(actualizado);
+      setFechaConsulta(Date.now());
+      if (!cargoVigente || cargoVigente.saldo <= 0 || cargoVigente.saldo !== cargo.saldo) {
+        setDatosVigentes(false);
+        Alert.alert("El saldo cambió", "Tu estado de cuenta cambió. Actualiza y revisa el importe antes de continuar.");
+        return;
+      }
       const { data } = await api.post("/finanzas/ordenes", {
         cargoId: cargo.id,
       });
@@ -122,8 +149,10 @@ export default function EstadoCuentaScreen() {
         );
       }
     } catch (err) {
-      if (activa.current)
+      if (activa.current) {
+        setDatosVigentes(false);
         Alert.alert("No se pudo generar la orden", mensajeDeError(err));
+      }
     } finally {
       pagoEnCurso.current = false;
       if (activa.current) setPagando(false);
@@ -157,6 +186,11 @@ export default function EstadoCuentaScreen() {
       {ultimaActualizacion && (
         <Text accessibilityRole="text">
           Última actualización: {ultimaActualizacion}
+        </Text>
+      )}
+      {estado && !datosVigentes && (
+        <Text accessibilityRole="alert" style={base.errorTexto}>
+          Los saldos mostrados pueden estar desactualizados. Actualiza tu estado de cuenta antes de pagar.
         </Text>
       )}
       {estado && (
@@ -196,8 +230,8 @@ export default function EstadoCuentaScreen() {
               <Sello texto={c.estatus} tono={tono(c.estatus)} />
               {c.saldo > 0 && (
                 <TouchableOpacity
-                  disabled={pagando}
-                  accessibilityState={{ disabled: pagando, busy: pagando }}
+                  disabled={pagando || !datosVigentes}
+                  accessibilityState={{ disabled: pagando || !datosVigentes, busy: pagando }}
                   style={estilos.boton}
                   onPress={() =>
                     Alert.alert(

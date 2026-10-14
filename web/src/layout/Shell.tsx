@@ -199,6 +199,7 @@ export function Shell() {
               Mi cuenta
             </NavLink>
             <p className="rol">{sesion?.roles.join(' · ')}</p>
+            <p className="detalle">Por seguridad, el sistema cierra la sesión tras 30 minutos sin actividad.</p>
             {errorCierre && (
               <p className="mensaje-error" role="alert">
                 {errorCierre}

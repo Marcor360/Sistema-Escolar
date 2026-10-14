@@ -1,4 +1,5 @@
 import { crearControlLectura } from "../api/lectura-vigente";
+import { fechaHoraEscolar } from "../utils/fecha-evento";
 import {
   obtenerResumenInicio,
   type AvisoInicio,
@@ -204,12 +205,7 @@ export default function InicioScreen() {
             <Text style={base.tituloTarjeta}>{ev.titulo}</Text>
             <Text style={base.secundario}>
               {ev.tipo} ·{" "}
-              {new Date(ev.fechaInicio).toLocaleString("es-MX", {
-                day: "2-digit",
-                month: "short",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
+              {fechaHoraEscolar(ev.fechaInicio)}
             </Text>
           </Tarjeta>
         ))}

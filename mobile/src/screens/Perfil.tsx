@@ -305,6 +305,9 @@ export default function PerfilScreen({ abrirDocumentos }: { abrirDocumentos?: ()
           {cerrando ? "Cerrando…" : "Cerrar sesión"}
         </Text>
       </TouchableOpacity>
+      <Text style={base.secundario}>
+        Por seguridad, tu sesión se cerrará después de 30 minutos sin actividad.
+      </Text>
       <Text style={{ height: 24 }} />
     </ScrollView>
   );

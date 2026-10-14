@@ -8,7 +8,7 @@ import Tareas from "./Tareas";
 import EstadoCuenta from "./EstadoCuenta";
 import Perfil from "./Perfil";
 import { api } from "../api/client";
-import { Alert, Linking, TouchableOpacity } from "react-native";
+import { Alert, Linking, ScrollView, Text, TouchableOpacity } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 const sesion = vi.hoisted(() => ({
   sub: 1 as number | null,
@@ -464,4 +464,41 @@ it("calificaciones descarta notas y consultas pendientes al cambiar de identidad
   await act(async () => resolver({ data: [nota("Respuesta obsoleta")] }));
   expect(texto()).not.toContain("Respuesta obsoleta");
   expect(api.get).toHaveBeenCalledTimes(llamadas);
+});
+
+it("bloquea nuevas órdenes cuando la consulta del saldo falla", async () => {
+  const estado = {
+    saldoTotal: 100,
+    cargos: [{ id: 1, descripcion: "Colegiatura", fechaVencimiento: null, estatus: "PENDIENTE", total: 100, pagado: 0, saldo: 100 }],
+    pagos: [],
+  };
+  vi.mocked(api.get).mockResolvedValue({ data: estado });
+  await montar(<EstadoCuenta />);
+  expect(vista.root.findAllByType(TouchableOpacity).length).toBeGreaterThan(0);
+  vi.mocked(api.get).mockRejectedValueOnce(new Error("Sin conexión"));
+  await act(async () => {
+    vista.root.findByType(ScrollView).props.refreshControl.props.onRefresh();
+  });
+  expect(vista.root.findAllByType(Text).some((n) =>
+    String(n.props.children).includes("saldos mostrados pueden estar desactualizados"))).toBe(true);
+  const boton = vista.root.findAllByType(TouchableOpacity)[0];
+  expect(boton.props.disabled).toBe(true);
+  expect(api.post).not.toHaveBeenCalled();
+});
+
+it("revalida el importe antes de generar una orden y rechaza saldos modificados", async () => {
+  const estado = {
+    saldoTotal: 100,
+    cargos: [{ id: 1, descripcion: "Colegiatura", fechaVencimiento: null, estatus: "PENDIENTE", total: 100, pagado: 0, saldo: 100 }],
+    pagos: [],
+  };
+  vi.mocked(api.get).mockResolvedValue({ data: estado });
+  await montar(<EstadoCuenta />);
+  vi.mocked(api.get).mockResolvedValueOnce({ data: { ...estado, saldoTotal: 80, cargos: [{ ...estado.cargos[0], saldo: 80 }] } });
+  const boton = vista.root.findAllByType(TouchableOpacity)[0];
+  await act(async () => boton.props.onPress());
+  const continuar = vi.mocked(Alert.alert).mock.calls.at(-1)?.[2]?.find((b) => b.text === "Continuar");
+  await act(async () => continuar?.onPress?.());
+  expect(api.post).not.toHaveBeenCalled();
+  expect(Alert.alert).toHaveBeenCalledWith("El saldo cambió", expect.any(String));
 });
