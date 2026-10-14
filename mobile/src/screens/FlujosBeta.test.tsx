@@ -465,3 +465,38 @@ it("calificaciones descarta notas y consultas pendientes al cambiar de identidad
   expect(texto()).not.toContain("Respuesta obsoleta");
   expect(api.get).toHaveBeenCalledTimes(llamadas);
 });
+
+it("bloquea nuevas órdenes cuando la consulta del saldo falla", async () => {
+  const estado = {
+    saldoTotal: 100,
+    cargos: [{ id: 1, descripcion: "Colegiatura", fechaVencimiento: null, estatus: "PENDIENTE", total: 100, pagado: 0, saldo: 100 }],
+    pagos: [],
+  };
+  vi.mocked(api.get).mockResolvedValueOnce({ data: estado }).mockRejectedValueOnce(new Error("Sin conexión"));
+  await montar(<EstadoCuenta />);
+  expect(texto()).toContain("Pagar en línea");
+  await act(async () => {
+    vista.root.findByType("RefreshControl").props.onRefresh();
+  });
+  expect(texto()).toContain("saldos mostrados pueden estar desactualizados");
+  const boton = vista.root.findByProps({ accessibilityLabel: "Pagar Colegiatura en línea. Saldo $100.00" });
+  expect(boton.props.disabled).toBe(true);
+  expect(api.post).not.toHaveBeenCalled();
+});
+
+it("revalida el importe antes de generar una orden y rechaza saldos modificados", async () => {
+  const estado = {
+    saldoTotal: 100,
+    cargos: [{ id: 1, descripcion: "Colegiatura", fechaVencimiento: null, estatus: "PENDIENTE", total: 100, pagado: 0, saldo: 100 }],
+    pagos: [],
+  };
+  vi.mocked(api.get).mockResolvedValueOnce({ data: estado })
+    .mockResolvedValueOnce({ data: { ...estado, saldoTotal: 80, cargos: [{ ...estado.cargos[0], saldo: 80 }] } });
+  await montar(<EstadoCuenta />);
+  const boton = vista.root.findAllByType(TouchableOpacity)[0];
+  await act(async () => boton.props.onPress());
+  const continuar = vi.mocked(Alert.alert).mock.calls.at(-1)?.[2]?.find((b) => b.text === "Continuar");
+  await act(async () => continuar?.onPress?.());
+  expect(api.post).not.toHaveBeenCalled();
+  expect(Alert.alert).toHaveBeenCalledWith("El saldo cambió", expect.any(String));
+});
