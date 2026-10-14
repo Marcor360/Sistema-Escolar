@@ -92,6 +92,10 @@ export default function DocumentosScreen() {
 
   const cargar = useCallback(() => {
     if (!sesion?.sub) return;
+    solicitudCarpeta.current++;
+    setMateriales({});
+    setCarpetaAbierta(null);
+    setCargandoCarpeta(null);
     setCargando(true);
     setError("");
     void lectura.current.cargar(
@@ -130,6 +134,8 @@ export default function DocumentosScreen() {
   }, [sesion?.sub]);
 
   useFocusEffect(useCallback(() => {
+    aperturaEnCurso.current = false;
+    setAbriendo(false);
     cargar();
     return () => {
       lectura.current.invalidar();
