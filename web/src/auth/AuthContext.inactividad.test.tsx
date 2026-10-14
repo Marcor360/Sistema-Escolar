@@ -5,9 +5,10 @@ import { api } from '../api/client';
 import { CLAVE_CIERRE, LIMITE_INACTIVIDAD_MS } from './inactividad';
 
 function Pantalla() {
-  const { sesion, cargando, logout } = useAuth();
+  const { sesion, cargando, logout, login } = useAuth();
   return <><p>{cargando ? 'Cargando' : sesion ? 'Autenticado' : 'Sesión cerrada'}</p>
-    {sesion && <button onClick={() => { void logout(); }}>Cerrar</button>}</>;
+    {sesion && <button onClick={() => { void logout(); }}>Cerrar</button>}
+    {!sesion && <button onClick={() => { void login('nuevo@example.invalid', 'clave'); }}>Ingresar</button>}</>;
 }
 
 beforeEach(() => {
@@ -21,7 +22,7 @@ beforeEach(() => {
   } });
 });
 afterEach(() => {
-  cleanup(); localStorage.clear(); vi.useRealTimers(); vi.restoreAllMocks();
+  cleanup(); localStorage.clear(); vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals();
 });
 async function montar() {
   render(<AuthProvider><Pantalla /></AuthProvider>);
@@ -61,4 +62,30 @@ it('cierra localmente incluso si la revocación al servidor falla por pérdida d
   expect(localStorage.getItem(CLAVE_CIERRE)).toBe('manual');
   expect(fetchFallido).toHaveBeenCalledOnce();
   vi.unstubAllGlobals();
+});
+
+it('cancela el refresh de logout antes de autenticar una sesión nueva', async () => {
+  let cancelado = false;
+  let refreshPendiente = false;
+  const fetchRevocacion = vi.fn().mockResolvedValueOnce({ status: 401 })
+    .mockImplementationOnce((_url: string, opciones: RequestInit) => new Promise((_resolver, rechazar) => {
+      refreshPendiente = true;
+      opciones.signal?.addEventListener('abort', () => {
+        cancelado = true; rechazar(new Error('Abortado'));
+      });
+    }));
+  vi.stubGlobal('fetch', fetchRevocacion);
+  await montar();
+  const post = vi.mocked(api.post);
+  post.mockImplementationOnce(async () => {
+    expect(cancelado).toBe(true);
+    return { data: { accessToken: 'nuevo-token', usuario: {
+      sub: 2, email: 'nuevo@example.invalid', nombre: 'Nuevo', roles: ['ADMINISTRATIVO'],
+    } } };
+  });
+  await act(async () => { fireEvent.click(screen.getByText('Cerrar')); });
+  expect(refreshPendiente).toBe(true);
+  await act(async () => { fireEvent.click(screen.getByText('Ingresar')); });
+  expect(screen.getByText('Autenticado')).toBeTruthy();
+  expect(post).toHaveBeenLastCalledWith('/auth/login', { email: 'nuevo@example.invalid', password: 'clave' });
 });
