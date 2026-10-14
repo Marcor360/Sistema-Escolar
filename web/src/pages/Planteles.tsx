@@ -63,7 +63,7 @@ export default function PlantelesPage() {
         telefono: alta.telefono || undefined,
       });
       setAlta({ clave: '', nombre: '', direccion: '', municipio: '', telefono: '' });
-      setMensaje('Plantel creado'); await cargar(); await seleccionar(data.id);
+      setMensaje('Plantel creado. Revisa el detalle y asigna director y personal.'); await cargar(); await seleccionar(data.id);
     } catch (err) { setError(mensajeDeError(err)); }
     finally { setGuardando(false); }
   };
@@ -83,6 +83,7 @@ export default function PlantelesPage() {
 
     {esSuperadmin && <section className="panel">
       <h2>Nuevo plantel</h2>
+      <p className="texto-ayuda" id="ayuda-nuevo-plantel">Paso 1: registra la sede. Después selecciona el plantel para vincular su director y personal. Los alumnos se inscriben en grupos desde Control escolar.</p>
       <form className="fila" onSubmit={crear} aria-busy={guardando}>
         <div className="campo"><label htmlFor="nuevo-plantel-clave">Clave</label><input id="nuevo-plantel-clave" required minLength={2} maxLength={10} value={alta.clave} onChange={(e) => setAlta({ ...alta, clave: e.target.value.toUpperCase() })} /></div>
         <div className="campo"><label htmlFor="nuevo-plantel-nombre">Nombre</label><input id="nuevo-plantel-nombre" required minLength={3} value={alta.nombre} onChange={(e) => setAlta({ ...alta, nombre: e.target.value })} /></div>
@@ -108,7 +109,7 @@ export default function PlantelesPage() {
               <td data-etiqueta="Estatus"><span className={`sello ${p.activo ? 'ok' : 'neutro'}`}>{p.activo ? 'Activo' : 'Inactivo'}</span></td>
               <td data-etiqueta="Acciones" className="derecha"><span className="acciones-fila"><button className="boton secundario chico" disabled={guardando} onClick={() => seleccionar(p.id)}>Ver detalle</button></span></td>
             </tr>)}
-            {!cargando && planteles.length === 0 && <tr><td colSpan={5} className="vacio">No hay planteles disponibles para tu cuenta.</td></tr>}
+            {!cargando && planteles.length === 0 && <tr><td colSpan={5} className="vacio">No hay planteles disponibles para tu cuenta. Si tienes permisos de superadministración, puedes registrar el primero.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -119,6 +120,16 @@ export default function PlantelesPage() {
       <h2>{detalle.nombre}</h2>
       <p className="detalle">{detalle.direccion || 'Sin dirección'} · {detalle.municipio || 'Sin municipio'} · {detalle.telefono || 'Sin teléfono'}</p>
       <div className="fila"><span className="sello neutro">{detalle.conteos.alumnos} alumnos</span><span className="sello neutro">{detalle.conteos.grupos} grupos</span></div>
+      <section aria-label="Preparación del plantel">
+        <h3>Pasos de configuración</h3>
+        <ol>
+          <li>Plantel registrado: <strong>{detalle.clave}</strong>.</li>
+          <li>{detalle.director ? 'Director asignado.' : 'Asigna un director cuando tengas su cuenta creada.'}</li>
+          <li>{detalle.personal.length ? 'Personal vinculado al plantel.' : 'Vincula personal autorizado para gestionar esta sede.'}</li>
+          <li>Después configura ciclos, materias y grupos; registra e inscribe alumnos en sus grupos.</li>
+        </ol>
+        <p className="texto-ayuda">La creación del expediente del alumno no equivale a inscribirlo en un grupo.</p>
+      </section>
       <h3>Director</h3>
       <p>{detalle.director ? `${detalle.director.nombre} ${detalle.director.apellidoPaterno} · ${detalle.director.email}` : 'Sin director asignado'}</p>
       {puedeAdministrar && <div className="fila"><div className="campo"><label htmlFor="correo-director-plantel">Correo del director</label><input id="correo-director-plantel" type="email" value={directorEmail} onChange={(e) => setDirectorEmail(e.target.value)} /></div><button className="boton" disabled={guardando || !directorEmail.trim()} onClick={() => operar(() => api.put(`/planteles/${detalle.id}/director`, { email: directorEmail }), 'Director actualizado')}>Asignar director</button></div>}

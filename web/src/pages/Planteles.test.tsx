@@ -85,3 +85,13 @@ it('permite crear y administrar planteles para SUPERADMIN', async () => {
   expect(await screen.findByRole('button', { name: 'Asignar director' })).toBeTruthy();
   expect(screen.getByRole('button', { name: 'Quitar' })).toBeTruthy();
 });
+
+it('orienta la creación del plantel y las asignaciones pendientes', async () => {
+  contexto.roles = ['SUPERADMIN'];
+  render(<PlantelesPage />);
+  expect(screen.getByText(/Paso 1: registra la sede/)).toBeTruthy();
+  await seleccionar(0);
+  expect(await screen.findByRole('region', { name: 'Preparación del plantel' })).toBeTruthy();
+  expect(screen.getByText(/Asigna un director cuando tengas su cuenta creada/)).toBeTruthy();
+  expect(screen.getByText(/La creación del expediente del alumno no equivale/)).toBeTruthy();
+});
