@@ -1,4 +1,5 @@
 import { leerConCache } from "../api/cache-academica";
+import { resolverEnlacePrivado } from "../api/enlaces-privados";
 import { crearControlLectura } from "../api/lectura-vigente";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -85,6 +86,8 @@ export default function MateriasScreen() {
     setCargandoMateriales(null);
     setCargaInicialCompleta(false);
     setUltimaActualizacion(null);
+    setOffline(false);
+    setCacheExpira(0);
     setError("");
     setCargando(false);
   }, [sesion?.sub]);
@@ -163,7 +166,7 @@ export default function MateriasScreen() {
         `/archivos/materiales/${materialId}/enlace`,
       );
       if (actual === consultaMateriales.current)
-        await Linking.openURL(`${archivosBase}${data.url}`);
+        await Linking.openURL(resolverEnlacePrivado(archivosBase, data.url, "material", materialId));
     } catch (fallo) {
       if (actual === consultaMateriales.current)
         setError(mensajeDeError(fallo));
