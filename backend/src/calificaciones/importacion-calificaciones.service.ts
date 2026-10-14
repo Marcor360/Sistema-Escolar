@@ -32,6 +32,7 @@ export class ImportacionCalificacionesService {
       .getRepository(Inscripcion)
       .find({ where: { ...inscripcionVigente, grupoId: gm.grupoId }, order: { alumnoId: 'ASC' } });
     if (inscripciones.length > 500) throw new BadRequestException('La plantilla supera 500 inscritos; solicita una exportación por lotes');
+    if (!inscripciones.length) throw new BadRequestException('La clase no tiene alumnos inscritos; realiza la inscripción antes de descargar la plantilla');
     const libro = new ExcelJS.Workbook();
     const hoja = libro.addWorksheet('CALIFICACIONES', {
       views: [{ state: 'frozen', ySplit: 1, activeCell: 'F2' }],
