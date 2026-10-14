@@ -477,7 +477,7 @@ it("bloquea nuevas órdenes cuando la consulta del saldo falla", async () => {
   expect(vista.root.findAllByType(TouchableOpacity).length).toBeGreaterThan(0);
   vi.mocked(api.get).mockRejectedValueOnce(new Error("Sin conexión"));
   await act(async () => {
-    vista.root.findByType("RefreshControl").props.onRefresh();
+    vista.root.findByType("ScrollView").props.refreshControl.props.onRefresh();
   });
   expect(vista.root.findAllByType("Text").some((n) =>
     String(n.props.children).includes("saldos mostrados pueden estar desactualizados"))).toBe(true);
