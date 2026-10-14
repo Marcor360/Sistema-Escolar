@@ -1,4 +1,4 @@
-import { ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { ReportesService } from './reportes.service';
 import { JwtUser } from '../common/current-user.decorator';
 
@@ -83,5 +83,31 @@ describe('ReportesService.calificacionesExcel', () => {
     await expect(service.calificacionesExcel(9, maestroUser, {} as any))
       .rejects.toThrow('El grupo no está activo');
     expect(calificaciones.find).not.toHaveBeenCalled();
+  });
+});
+
+describe('ReportesService.plantillaCalificacionesExcel', () => {
+  it('rechaza un parcial inválido sin consultar datos académicos', async () => {
+    const grupoMaterias = { findOne: jest.fn() };
+    const service = new ReportesService(
+      {} as never, {} as never, {} as never, grupoMaterias as never, {} as never,
+      {} as never, {} as never, {} as never, {} as never, {} as never, {} as never,
+    );
+    await expect(service.plantillaCalificacionesExcel(1, 4, maestroUser, {} as never))
+      .rejects.toBeInstanceOf(BadRequestException);
+    expect(grupoMaterias.findOne).not.toHaveBeenCalled();
+  });
+
+  it('no permite descargar plantilla al maestro de una clase ajena', async () => {
+    const grupoMaterias = { findOne: jest.fn().mockResolvedValue({
+      id: 9, docenteId: 3, grupoId: 10, grupo: { activo: true },
+    }) };
+    const docentes = { obtenerPorUsuario: jest.fn().mockResolvedValue({ id: 4 }) };
+    const service = new ReportesService(
+      {} as never, {} as never, {} as never, grupoMaterias as never, {} as never,
+      {} as never, {} as never, docentes as never, {} as never, {} as never, {} as never,
+    );
+    await expect(service.plantillaCalificacionesExcel(9, 1, maestroUser, {} as never))
+      .rejects.toBeInstanceOf(ForbiddenException);
   });
 });
