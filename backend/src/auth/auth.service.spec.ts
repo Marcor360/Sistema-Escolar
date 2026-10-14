@@ -20,7 +20,7 @@ describe('AuthService.login', () => {
     const sessions = { create: jest.fn((s) => s), save: jest.fn(async (s) => s), findOne: jest.fn().mockResolvedValue({ id: 1 }) };
     const source = { getRepository: jest.fn(() => sessions) };
     const service = new AuthService(repo as any, {} as any, bitacora as any, jwt as any, {} as any, config as any, source as any);
-    return { service, jwt, bitacora, repo };
+    return { service, jwt, bitacora, repo, sessions };
   };
 
   it('rechaza alumno en portal WEB', async () => {
@@ -46,6 +46,12 @@ describe('AuthService.login', () => {
     expect(repo.findOne).toHaveBeenCalledWith(expect.objectContaining({
       select: expect.arrayContaining(['passwordHash']),
     }));
+  });
+
+  it('persiste la actividad inicial sin milisegundos para MySQL DATETIME', async () => {
+    const { service, sessions } = await crear(['ADMINISTRATIVO']);
+    await service.login('demo@escuela.mx', 'Correcta123', 'WEB');
+    expect(sessions.create.mock.calls[0][0].ultimaActividadEn.getMilliseconds()).toBe(0);
   });
 
   it('permite alumno en MOVIL', async () => {

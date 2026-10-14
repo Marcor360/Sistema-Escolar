@@ -16,6 +16,7 @@ Entrada de lectura para main 1.24.0-beta.2. Revisión documental: 14 de octubre 
 | Operación y servidor | [Operación](OPERACION_PRODUCCION.md), [servidor existente](PUBLICAR_SERVIDOR_EXISTENTE.md), [staging Windows/IIS](STAGING_WINDOWS_IIS.md) |
 | Relación con entregables | [Etapas del contrato](ETAPAS_CONTRATO.md); no es acta de aceptación |
 | Dependencias y parches | [Política npm e historial](EXCEPCIONES_NPM_AUDIT.md), [vendor móvil](../mobile/vendor/README.md) |
+| Adjuntos del alumno | [Privacidad y límites del selector Expo](../mobile/docs/PRIVACIDAD_SELECTOR_ARCHIVOS_2026-10-14.md) |
 | Evidencia beta.2 | [Ejecución](EJECUCION_BETA_1.24.0-beta.2.md), [documentos/cache Expo](../mobile/docs/AUDITORIA_DOCUMENTOS_CACHE_2026-10-14.md) |
 | Aceptación institucional | [Puertas](BETA_ACEPTACION.json) y [QA UX](VALIDACION_UX_ONEST.md) |
 

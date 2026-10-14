@@ -19,3 +19,5 @@ La API verifica la señal autenticada recibida, no puede demostrar que provenga 
 Aplicar migracion_sesiones_inactividad.sql después de biblioteca, mediante runner incremental y sobre copia/ventana aprobada. No aplicar en datos institucionales desde esta revisión. Rollback de aplicación conserva la columna aditiva; volver al backend anterior elimina el control de inactividad de API y requiere evaluación explícita, no se considera equivalente.
 
 QA física y aceptación institucional pendientes. No se integran los PR #52–58, que tienen otro alcance.
+
+La primera integración MySQL detectó que DATETIME sin fracciones redondea milisegundos hacia el segundo siguiente, haciendo que una sesión recién creada parezca futura. Login y actividad guardan segundos completos sin redondear; se conservan las columnas existentes y se añaden regresiones de persistencia/precisión. No se permite tolerancia arbitraria para fechas futuras.
