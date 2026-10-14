@@ -15,7 +15,7 @@ import { archivosBase, mensajeDeError } from "../api/client";
 import { colores, radio, espacio, tipografia, textoSobreFondo } from "../theme";
 import { useMarca } from "../marca";
 
-export default function LoginScreen() {
+export default function LoginScreen({ aviso = "" }: { aviso?: string } = {}) {
   const { iniciar } = useSesion();
   const { marca } = useMarca();
   const [email, setEmail] = useState("");
@@ -77,6 +77,7 @@ export default function LoginScreen() {
             App del alumno: consulta materias, entrega tareas y revisa tus
             calificaciones y pagos. Ingresa con tu correo institucional.
           </Text>
+          {aviso !== "" && <Text accessibilityRole="alert" style={estilos.ayuda}>{aviso}</Text>}
           <Text style={estilos.etiqueta}>Correo institucional</Text>
           <TextInput
             style={estilos.input}
