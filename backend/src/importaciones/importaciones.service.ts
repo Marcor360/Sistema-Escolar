@@ -26,12 +26,13 @@ export const CABECERAS: Record<TipoImportacion, string[]> = {
   DOCENTES: ['email', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'numEmpleado', 'plantelIds', 'cedulaProfesional', 'especialidad', 'telefono'],
   PERSONAL: ['email', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'roles', 'plantelIds', 'telefono'],
   INSCRIPCIONES: ['matricula', 'grupoId'],
+  CALIFICACIONES: ['grupoMateriaId', 'parcial', 'alumnoId', 'matricula', 'grado', 'calificacion', 'observaciones'],
 };
 @Injectable()
 export class ImportacionesService {
   private readonly cifrado: PreviewCifrado;
   constructor(private readonly ds: DataSource, private readonly scope: ScopeService, config: ConfigService) { this.cifrado = new PreviewCifrado(config.getOrThrow<string>('JWT_SECRET')); }
-  private autorizar(tipo: TipoImportacion, user: JwtUser) { if (tipo === 'PERSONAL' && !user.roles.includes('SUPERADMIN')) throw new ForbiddenException('Importar personal corresponde a Superadmin'); }
+  private autorizar(tipo: TipoImportacion, user: JwtUser) { if (tipo === 'CALIFICACIONES') throw new BadRequestException('Utiliza la importación desde Calificaciones'); if (tipo === 'PERSONAL' && !user.roles.includes('SUPERADMIN')) throw new ForbiddenException('Importar personal corresponde a Superadmin'); }
   private preparar(tipo: TipoImportacion, fila: Fila) {
     const datos: Record<string, unknown> = Object.fromEntries(Object.entries(fila).filter(([, v]) => v !== ''));
     if (Object.keys(fila).some((k) => !CABECERAS[tipo].includes(k))) throw new BadRequestException('Hay columnas no admitidas; descarga la plantilla');

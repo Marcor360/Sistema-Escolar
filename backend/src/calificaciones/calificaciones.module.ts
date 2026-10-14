@@ -1,3 +1,5 @@
+import { ImportacionCalificacionesController } from './importacion-calificaciones.controller';
+import { ImportacionCalificacionesService } from './importacion-calificaciones.service';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Calificacion } from '../entities/calificacion.entity';
@@ -18,8 +20,8 @@ import { PlantelesModule } from '../planteles/planteles.module';
     AlumnosModule,
     PlantelesModule,
   ],
-  providers: [CalificacionesService],
-  controllers: [CalificacionesController],
+  providers: [CalificacionesService, ImportacionCalificacionesService],
+  controllers: [CalificacionesController, ImportacionCalificacionesController],
   exports: [CalificacionesService],
 })
 export class CalificacionesModule {}
