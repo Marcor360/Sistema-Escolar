@@ -1,5 +1,5 @@
 import { crearControlLectura } from "../api/lectura-vigente";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -9,6 +9,8 @@ import {
 import { Text } from "../components/Texto";
 import { useFocusEffect } from "@react-navigation/native";
 import { api, mensajeDeError } from "../api/client";
+import { useSesion } from "../sesion";
+import { ordenarPeriodos } from "../utils/orden-calificaciones";
 import { GuiaPantalla, base, ErrorCarga, Tarjeta, Vacio } from "./comunes";
 
 interface Calificacion {
@@ -24,6 +26,7 @@ interface Calificacion {
 }
 
 export default function CalificacionesScreen() {
+  const { sesion } = useSesion();
   const [registros, setRegistros] = useState<Calificacion[]>([]);
   const [cargando, setCargando] = useState(false);
   const [cargaInicialCompleta, setCargaInicialCompleta] = useState(false);
@@ -33,7 +36,16 @@ export default function CalificacionesScreen() {
   );
 
   const lectura = useRef(crearControlLectura());
+  useEffect(() => {
+    lectura.current.invalidar();
+    setRegistros([]);
+    setError("");
+    setCargando(false);
+    setCargaInicialCompleta(false);
+    setUltimaActualizacion(null);
+  }, [sesion?.sub]);
   const cargar = useCallback(() => {
+    if (!sesion?.sub) return;
     setError("");
     setCargando(true);
     void lectura.current.cargar(
@@ -46,7 +58,7 @@ export default function CalificacionesScreen() {
       (fallo) => setError(mensajeDeError(fallo)),
       () => setCargando(false),
     );
-  }, []);
+  }, [sesion?.sub]);
 
   useFocusEffect(
     useCallback(() => {
@@ -105,9 +117,7 @@ export default function CalificacionesScreen() {
               <Text style={base.tituloTarjeta} accessibilityRole="header">
                 {materia.nombre}
               </Text>
-              {materia.parciales
-                .sort((a, b) => a.parcial - b.parcial)
-                .map((p) => (
+              {ordenarPeriodos(materia.parciales).map((p) => (
                   <Text key={p.id} style={base.secundario}>
                     {p.parcial === 0 ? "Final" : `Parcial ${p.parcial}`}:{" "}
                     <Text style={base.monto}>{p.calificacion.toFixed(1)}</Text>
