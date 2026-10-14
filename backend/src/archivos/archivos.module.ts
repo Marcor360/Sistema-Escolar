@@ -1,3 +1,5 @@
+import { BibliotecaService } from '../biblioteca/biblioteca.service';
+import { BibliotecaController } from '../biblioteca/biblioteca.controller';
 import { ArchivoLimpiezaService } from './archivo-limpieza.service';
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -23,7 +25,8 @@ import { LogoPublicoController } from './logo-publico.controller';
       }),
     }),
   ],
-  providers: [ArchivosService, ArchivoLimpiezaService],
-  controllers: [ArchivosController, LogoPublicoController],
+  exports: [ArchivosService],
+  providers: [ArchivosService, ArchivoLimpiezaService, BibliotecaService],
+  controllers: [ArchivosController, LogoPublicoController, BibliotecaController],
 })
 export class ArchivosModule {}

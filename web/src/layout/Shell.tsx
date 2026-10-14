@@ -8,6 +8,7 @@ import { useMarca } from '../marca/MarcaContext';
 import { IconoTabler, type NombreIcono } from '../components/IconoTabler';
 
 const secciones = [
+  { destino: '/biblioteca', etiqueta: 'Biblioteca', roles: ['ADMINISTRATIVO'] },
   { destino: '/operaciones', etiqueta: 'Importar y promover', roles: ['ADMINISTRATIVO'] },
   { destino: '/conducta', etiqueta: 'Conducta e incidencias', roles: ['ADMINISTRATIVO', 'MAESTRO'] },
   { destino: '/analitica', etiqueta: 'Analítica', roles: ['ADMINISTRATIVO', 'FINANZAS', 'MAESTRO'] },
@@ -28,6 +29,7 @@ const secciones = [
 
 const iconosPorRuta: Record<string, NombreIcono> = {
   '/': 'layout-dashboard',
+  '/biblioteca': 'book',
   '/operaciones': 'clipboard-check',
   '/conducta': 'clipboard-check',
   '/analitica': 'chart-bar',
@@ -254,6 +256,7 @@ export function Shell() {
 
 const guias: Record<string, string> = {
   '/': 'Consulta indicadores y accesos de tus funciones. Selecciona un plantel para acotar el resumen.',
+  '/biblioteca': 'Organiza documentos, fotos, logos y calendarios privados del plantel. Selecciona una carpeta y carga un archivo; solo el personal administrativo autorizado puede descargarlo.',
   '/operaciones':
     'Revisa una importación antes de confirmarla. La promoción mueve inscripciones entre ciclos y debe verificarse antes de ejecutarse.',
   '/conducta':
