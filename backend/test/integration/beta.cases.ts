@@ -1,7 +1,9 @@
+import { AuthService } from '../../src/auth/auth.service';
 import { ContextoIntegracion } from './contexto';
 import { expect, it, jest } from '@jest/globals';
 import * as ExcelJS from 'exceljs';
 import {
+  Sesion,
   Calificacion,
   Grupo,
   GrupoMateria,
@@ -14,6 +16,26 @@ import {
 import * as antivirus from '../../src/biblioteca/validar-archivo';
 import { ServiceUnavailableException } from '@nestjs/common';
 export function registrarBeta(ctx: ContextoIntegracion) {
+  it('sesiones: actividad real, polling sin renovación y expiración de JWT/refresh en ambos motores', async () => {
+    const usuario = await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.superadminId });
+    await ctx.emitirToken(usuario.email);
+    const auth = ctx.app.get(AuthService);
+    const tokens = await auth.login(usuario.email, ctx.passwords.get(usuario.email) ?? 'Integracion_Segura_42!', 'WEB');
+    const sid = JSON.parse(Buffer.from(tokens.accessToken.split('.')[1], 'base64url').toString()).sid as string;
+    const repo = ctx.dataSource.getRepository(Sesion);
+    await repo.update({ id: sid }, { ultimaActividadEn: new Date(Date.now() - 120000) });
+    const antes = (await repo.findOneByOrFail({ id: sid })).ultimaActividadEn;
+    expect((await ctx.api('/auth/me', { token: tokens.accessToken })).response.status).toBe(200);
+    expect((await repo.findOneByOrFail({ id: sid })).ultimaActividadEn).toEqual(antes);
+    expect((await ctx.api('/auth/actividad', { method: 'POST', token: tokens.accessToken })).response.status).toBe(201);
+    expect((await repo.findOneByOrFail({ id: sid })).ultimaActividadEn!.getTime()).toBeGreaterThan(antes!.getTime());
+    await repo.update({ id: sid }, { ultimaActividadEn: new Date(Date.now() - 1800001) });
+    await expect(auth.refresh(tokens.refreshToken, 'WEB')).rejects.toThrow();
+    expect((await repo.findOneByOrFail({ id: sid })).revocada).toBe(true);
+    expect((await ctx.api('/auth/actividad', { method: 'POST', token: tokens.accessToken })).response.status).toBe(401);
+    expect((await ctx.api('/auth/me', { token: tokens.accessToken })).response.status).toBe(401);
+  });
+
   it('beta: plantilla y preview de notas verifican filas, guardan atómicamente y rechazan un preview obsoleto', async () => {
     const root = await ctx.emitirToken(
       (await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.superadminId })).email,

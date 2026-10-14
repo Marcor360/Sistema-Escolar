@@ -23,7 +23,7 @@ Sistema de información escolar (SIS) multiplantel, con administración académi
 | Finanzas | Cargos/pagos, idempotencia, cancelación/anulación, conciliación, origen estable tras traslado y cobranza auditable | Openpay sandbox real, SMTP y aceptación contable |
 | Conducta y analítica | Incidencias internas, seguimiento y métricas por capacidad/alcance | Política de conservación y validación de indicadores; sin objetivos académicos implementados |
 | Push | Opt-in, dispositivo/sesión, cola y recibos; deshabilitado por defecto | EAS/FCM/APNs y entrega física |
-| Base | Baseline v1 y ocho incrementales espejo; DB_SYNC=false, runner y pruebas de ambos motores | Estado del servidor real y ensayo en copia histórica |
+| Base | Baseline v1 y nueve incrementales espejo; DB_SYNC=false, runner y pruebas de ambos motores | Estado del servidor real y ensayo en copia histórica |
 | ETL | Planteles/alumnos, dry-run y siete pruebas | Esquema certweb sanitizado, TLS/mapeos/conciliación; no apto para migración general |
 | Operación | Scripts Windows/IIS, despliegue manual, health live/ready, rollback de código | Instalación real, alertas, respaldo cifrado externo y restore con RPO/RTO observado |
 
@@ -43,3 +43,17 @@ Sistema de información escolar (SIS) multiplantel, con administración académi
 4. Restore aislado, monitoreo, responsables, privacidad y aceptación formal.
 
 [Puertas institucionales](BETA_ACEPTACION.json) conserva pendientes sin evidencia firmada. Su estado no se cambia por depurar documentación. [Ejecución beta.2](EJECUCION_BETA_1.24.0-beta.2.md) conserva la historia de las entregas; [índice](README.md) distingue guías vigentes e informes históricos.
+
+## Actualización de sesión y consultas — #46
+
+Web y Expo cierran localmente después de 30 minutos sin interacción humana. Consultas y refresh automáticos no reinician ese plazo; se comprueba al reanudar. Web comparte actividad/cierre entre pestañas; móvil serializa escritura y limpieza de la marca temporal para que un logout anterior no borre la actividad del login nuevo.
+
+Estado de cuenta invalida saldo anterior al recargar, después de cinco minutos o ante fallo; antes de ordenar consulta otra vez y detecta cambios. Materias retira listados de materiales al actualizar. Eventos móviles usan America/Mexico_City.
+
+Esta política es del cliente: sin red la revocación remota no puede confirmarse y el backend conserva access de 15 minutos y refresh máximo de 30 días. No equivale a inactividad absoluta en API. [Contrato, regresiones y QA física pendiente](CIERRE_INACTIVIDAD_30M_2026-10-14.md).
+
+## Ampliación de inactividad en API — #47–51
+
+El conjunto añade comprobación de última señal autenticada en JWT, refresh y enlaces firmados, con revocación a los 30 minutos. Login inicializa la marca y clientes web/Expo notifican interacción limitada a un pulso por minuto. Peticiones de fondo no renuevan. La revocación es condicional frente a actividad concurrente.
+
+Esto amplía el cierre local descrito en #46; sus límites anteriores son históricos respecto de esta entrega. Access sigue 15 minutos y refresh máximo 30 días. La señal del cliente no demuestra presencia humana. Requiere la novena migración y clientes coordinados; sesiones históricas NULL exigen reingreso. [Contrato y aceptación](SESIONES_INACTIVIDAD_PLAN.md).
