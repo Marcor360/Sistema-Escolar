@@ -25,7 +25,8 @@
         "migracion_sesiones_rotativas.sql",
         "migracion_operacion_ampliada.sql",
         "migracion_integridad_operativa.sql",
-        "migracion_previews_importacion.sql"
+        "migracion_previews_importacion.sql",
+        "migracion_biblioteca_privada.sql"
       ]
     },
     "sqlserver": {
@@ -51,7 +52,8 @@
         "migracion_sesiones_rotativas.sql",
         "migracion_operacion_ampliada.sql",
         "migracion_integridad_operativa.sql",
-        "migracion_previews_importacion.sql"
+        "migracion_previews_importacion.sql",
+        "migracion_biblioteca_privada.sql"
       ]
     }
   }
