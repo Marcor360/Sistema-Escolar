@@ -1,3 +1,4 @@
+import Calificaciones from "./Calificaciones";
 import React, { useEffect, type ReactElement, type ReactNode } from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -420,4 +421,26 @@ it("no abre enlace de pago que llega después de desmontar la pantalla", async (
     resolver({ data: { urlPago: "https://seguro.test/pago" } }),
   );
   expect(Linking.openURL).not.toHaveBeenCalled();
+});
+
+it('boleta móvil obtiene enlace propio y no abre una descarga si la pantalla se desmontó', async () => {
+  let resolver!: (r: { data: { url: string } }) => void;
+  vi.mocked(api.get).mockImplementation(async (ruta) => {
+    if (ruta === '/reportes/mi-boleta/enlace') return new Promise((r) => { resolver = r; });
+    return { data: [] };
+  });
+  await montar(<Calificaciones />);
+  const boton = vista.root.findAllByType(TouchableOpacity)[0];
+  let peticion!: Promise<void>;
+  await act(async () => { peticion = boton.props.onPress(); });
+  await act(async () => vista.unmount());
+  await act(async () => { resolver({ data: { url: '/api/reportes/boleta-descarga/1?t=firmado' } }); await peticion; });
+  expect(Linking.openURL).not.toHaveBeenCalled();
+});
+it('boleta móvil selecciona inscripción propia para distinguir traslados del mismo ciclo', async () => {
+  vi.mocked(api.get).mockImplementation(async (ruta) => ({ data: ruta === '/reportes/mis-boletas' ? [{ inscripcionId: 9, cicloId: 2, ciclo: '2026', grupo: '1-A', plantel: 'Centro' }] : ruta === '/reportes/mi-boleta/enlace' ? { url: '/api/reportes/boleta-descarga/1?t=firmado' } : [] }));
+  await montar(<Calificaciones />);
+  await act(async () => vista.root.findByProps({ accessibilityLabel: 'Descargar boleta de 2026, 1-A' }).props.onPress());
+  expect(api.get).toHaveBeenCalledWith('/reportes/mi-boleta/enlace', { params: { cicloId: 2, inscripcionId: 9 } });
+  expect(Linking.openURL).toHaveBeenCalledWith('https://e.test/api/reportes/boleta-descarga/1?t=firmado');
 });

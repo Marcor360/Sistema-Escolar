@@ -84,11 +84,9 @@ it("marca pública no depende de SecureStore ni envía Authorization", async () 
 it("segundo 401 revoca sin bucle de refresh", async () => {
   const expirada = vi.fn();
   registrarSesionExpirada(expirada);
-  const renovar = vi
-    .spyOn(axios, "post")
-    .mockResolvedValue({
-      data: { accessToken: "nuevo", refreshToken: "rotado" },
-    });
+  const renovar = vi.spyOn(axios, "post").mockResolvedValue({
+    data: { accessToken: "nuevo", refreshToken: "rotado" },
+  });
   api.defaults.adapter = async (config) => {
     throw new AxiosError(
       "No autorizado",
@@ -104,4 +102,61 @@ it("segundo 401 revoca sin bucle de refresh", async () => {
   );
   expect(renovar).toHaveBeenCalledOnce();
   expect(expirada).toHaveBeenCalledOnce();
+});
+it("una renovación tardía no restaura tokens después del logout local", async () => {
+  const { eliminarTokensSesion } = await import("./client");
+  let resolver!: (r: {
+    data: { accessToken: string; refreshToken: string };
+  }) => void;
+  const renovar = vi.spyOn(axios, "post").mockImplementation(
+    () =>
+      new Promise((r) => {
+        resolver = r;
+      }),
+  );
+  api.defaults.adapter = async () => {
+    throw respuesta(401);
+  };
+  const peticion = api.get("/auth/me");
+  const rechazo = expect(peticion).rejects.toBeTruthy();
+  await vi.waitFor(() => expect(renovar).toHaveBeenCalledOnce());
+  await eliminarTokensSesion();
+  resolver({ data: { accessToken: "tardio", refreshToken: "tardio" } });
+  await rechazo;
+  expect(mocks.secure.setItemAsync).not.toHaveBeenCalled();
+});
+it("una respuesta 401 de una sesión anterior no cierra la cuenta nueva", async () => {
+  const { establecerTokensSesion } = await import("./client");
+  const expirada = vi.fn();
+  registrarSesionExpirada(expirada);
+  let rechazar!: (e: unknown) => void;
+  let configuracion!: import("axios").InternalAxiosRequestConfig;
+  api.defaults.adapter = (config) => {
+    configuracion = config;
+    return new Promise((_r, reject) => {
+      rechazar = reject;
+    });
+  };
+  const peticion = api.get("/auth/me");
+  const rechazo = expect(peticion).rejects.toBeTruthy();
+  await vi.waitFor(() => expect(rechazar).toBeTypeOf("function"));
+  await establecerTokensSesion("nueva", "nueva");
+  rechazar(
+    new AxiosError(
+      "401 antiguo",
+      "ERR_BAD_RESPONSE",
+      configuracion,
+      undefined,
+      {
+        status: 401,
+        data: {},
+        headers: {},
+        config: configuracion,
+        statusText: "Error",
+      },
+    ),
+  );
+  await rechazo;
+  expect(expirada).not.toHaveBeenCalled();
+  expect(mocks.secure.deleteItemAsync).not.toHaveBeenCalled();
 });

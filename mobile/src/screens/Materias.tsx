@@ -1,3 +1,4 @@
+import { leerConCache } from "../api/cache-academica";
 import { crearControlLectura } from "../api/lectura-vigente";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -57,6 +58,21 @@ export default function MateriasScreen() {
     null,
   );
 
+  const [offline, setOffline] = useState(false);
+  const [cacheExpira, setCacheExpira] = useState(0);
+  useEffect(() => {
+    if (!offline || !cacheExpira) return;
+    const timer = setTimeout(
+      () => {
+        setMaterias([]);
+        setOffline(false);
+        setUltimaActualizacion(null);
+        setError("La copia de lectura venció. Conéctate y actualiza.");
+      },
+      Math.max(0, cacheExpira - Date.now()),
+    );
+    return () => clearTimeout(timer);
+  }, [offline, cacheExpira]);
   const lectura = useRef(crearControlLectura());
   const consultaMateriales = useRef(0);
   useEffect(() => {
@@ -77,10 +93,15 @@ export default function MateriasScreen() {
     setError("");
     setCargando(true);
     void lectura.current.cargar(
-      () => api.get<Materia[]>("/alumnos/me/materias"),
+      () =>
+        leerConCache("/alumnos/me/materias", () =>
+          api.get<Materia[]>("/alumnos/me/materias"),
+        ),
       (r) => {
         setMaterias(r.data);
-        setUltimaActualizacion(new Date().toLocaleString());
+        setOffline(r.offline);
+        setCacheExpira(r.fecha + 5 * 60000);
+        setUltimaActualizacion(new Date(r.fecha).toLocaleString());
         setCargaInicialCompleta(true);
       },
       (fallo) => setError(mensajeDeError(fallo)),
@@ -155,6 +176,12 @@ export default function MateriasScreen() {
       {ultimaActualizacion && (
         <Text accessibilityRole="text">
           Última actualización: {ultimaActualizacion}
+        </Text>
+      )}
+      {offline && (
+        <Text accessibilityRole="alert">
+          Sin conexión: copia de materias de esta sesión, hasta 5 minutos. Los
+          archivos requieren conexión.
         </Text>
       )}
       <FlatList

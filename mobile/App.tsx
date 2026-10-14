@@ -1,3 +1,7 @@
+import {
+  configurarCacheAcademica,
+  limpiarCacheAcademica,
+} from "./src/api/cache-academica";
 import * as Notifications from "expo-notifications";
 import { activarPush } from "./src/push";
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
@@ -17,7 +21,8 @@ import {
   mensajeDeError,
   registrarSesionExpirada,
   TOKEN_KEY,
-  REFRESH_KEY,
+  establecerTokensSesion,
+  eliminarTokensSesion,
 } from "./src/api/client";
 import { Sesion, SesionContext } from "./src/sesion";
 import { colores, textoSobreFondo } from "./src/theme";
@@ -60,6 +65,10 @@ const iconos: Record<string, string> = {
 function AppInterna() {
   const fuenteLista = useContext(FuenteContext);
   const [sesion, setSesion] = useState<Sesion | null>(null);
+  useEffect(() => {
+    configurarCacheAcademica(sesion?.sub ?? null);
+    return () => limpiarCacheAcademica();
+  }, [sesion?.sub]);
   const [listo, setListo] = useState(false);
   const [marca, setMarca] = useState<Marca>(MARCA_POR_DEFECTO);
   const [marcaLista, setMarcaLista] = useState(false);
@@ -149,7 +158,10 @@ function AppInterna() {
   }, []);
 
   useEffect(() => {
-    registrarSesionExpirada(() => setSesion(null));
+    registrarSesionExpirada(() => {
+      configurarCacheAcademica(null);
+      setSesion(null);
+    });
     return () => registrarSesionExpirada(null);
   }, []);
 
@@ -160,8 +172,7 @@ function AppInterna() {
 
   const iniciar = async (email: string, password: string) => {
     const { data } = await api.post("/auth/login", { email, password });
-    await SecureStore.setItemAsync(REFRESH_KEY, data.refreshToken);
-    await SecureStore.setItemAsync(TOKEN_KEY, data.accessToken);
+    await establecerTokensSesion(data.accessToken, data.refreshToken);
     setSesion(data.usuario);
   };
 
@@ -176,8 +187,8 @@ function AppInterna() {
 
   const finalizarSesionLocal = async () => {
     await Notifications.dismissAllNotificationsAsync().catch(() => undefined);
-    await SecureStore.deleteItemAsync(TOKEN_KEY);
-    await SecureStore.deleteItemAsync(REFRESH_KEY);
+    configurarCacheAcademica(null);
+    await eliminarTokensSesion();
     setSesion(null);
   };
 

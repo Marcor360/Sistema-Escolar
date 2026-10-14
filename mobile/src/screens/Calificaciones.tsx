@@ -1,16 +1,27 @@
+import { useSesion } from "../sesion";
+import { leerConCache } from "../api/cache-academica";
 import { crearControlLectura } from "../api/lectura-vigente";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Linking,
+  TouchableOpacity,
   FlatList,
   RefreshControl,
   View,
 } from "react-native";
 import { Text } from "../components/Texto";
 import { useFocusEffect } from "@react-navigation/native";
-import { api, mensajeDeError } from "../api/client";
+import { api, archivosBase, mensajeDeError } from "../api/client";
 import { GuiaPantalla, base, ErrorCarga, Tarjeta, Vacio } from "./comunes";
 
+interface Boleta {
+  inscripcionId: number;
+  cicloId: number;
+  ciclo: string;
+  grupo: string;
+  plantel: string;
+}
 interface Calificacion {
   id: number;
   parcial: number;
@@ -24,6 +35,19 @@ interface Calificacion {
 }
 
 export default function CalificacionesScreen() {
+  const { sesion } = useSesion();
+  const [boletas, setBoletas] = useState<Boleta[]>([]);
+  const [errorBoletas, setErrorBoletas] = useState("");
+  const lecturaBoletas = useRef(crearControlLectura());
+  const cargarBoletas = useCallback(() => {
+    setErrorBoletas("");
+    void lecturaBoletas.current.cargar(
+      () => api.get<Boleta[]>("/reportes/mis-boletas"),
+      (r) => setBoletas(r.data),
+      (e) => setErrorBoletas(mensajeDeError(e)),
+      () => undefined,
+    );
+  }, [sesion?.sub]);
   const [registros, setRegistros] = useState<Calificacion[]>([]);
   const [cargando, setCargando] = useState(false);
   const [cargaInicialCompleta, setCargaInicialCompleta] = useState(false);
@@ -32,27 +56,86 @@ export default function CalificacionesScreen() {
     null,
   );
 
+  const [offline, setOffline] = useState(false);
+  const [cacheExpira, setCacheExpira] = useState(0);
+  useEffect(() => {
+    if (!offline || !cacheExpira) return;
+    const timer = setTimeout(
+      () => {
+        setRegistros([]);
+        setOffline(false);
+        setUltimaActualizacion(null);
+        setError("La copia de lectura venció. Conéctate y actualiza.");
+      },
+      Math.max(0, cacheExpira - Date.now()),
+    );
+    return () => clearTimeout(timer);
+  }, [offline, cacheExpira]);
+  const descargaVigente = useRef(0);
+  const [descargando, setDescargando] = useState(false);
+  const descargar = async (cicloId?: number, inscripcionId?: number) => {
+    if (descargando) return;
+    const actual = ++descargaVigente.current;
+    setDescargando(true);
+    setError("");
+    try {
+      const { data } = await api.get<{ url: string }>(
+        "/reportes/mi-boleta/enlace",
+        { params: { cicloId, inscripcionId } },
+      );
+      if (actual === descargaVigente.current)
+        await Linking.openURL(`${archivosBase}${data.url}`);
+    } catch (e) {
+      if (actual === descargaVigente.current) setError(mensajeDeError(e));
+    } finally {
+      if (actual === descargaVigente.current) setDescargando(false);
+    }
+  };
+
   const lectura = useRef(crearControlLectura());
+  useEffect(() => {
+    lectura.current.invalidar();
+    descargaVigente.current++;
+    setRegistros([]);
+    setBoletas([]);
+    setErrorBoletas("");
+    lecturaBoletas.current.invalidar();
+    setError("");
+    setOffline(false);
+    setUltimaActualizacion(null);
+    setCargaInicialCompleta(false);
+  }, [sesion?.sub]);
   const cargar = useCallback(() => {
     setError("");
     setCargando(true);
     void lectura.current.cargar(
-      () => api.get<Calificacion[]>("/calificaciones/mias"),
+      () =>
+        leerConCache("/calificaciones/mias", () =>
+          api.get<Calificacion[]>("/calificaciones/mias"),
+        ),
       (r) => {
         setRegistros(r.data);
-        setUltimaActualizacion(new Date().toLocaleString());
+        setOffline(r.offline);
+        setCacheExpira(r.fecha + 5 * 60000);
+        setUltimaActualizacion(new Date(r.fecha).toLocaleString());
         setCargaInicialCompleta(true);
       },
       (fallo) => setError(mensajeDeError(fallo)),
       () => setCargando(false),
     );
-  }, []);
+  }, [sesion?.sub]);
 
   useFocusEffect(
     useCallback(() => {
       cargar();
-      return () => lectura.current.invalidar();
-    }, [cargar]),
+      cargarBoletas();
+      return () => {
+        lecturaBoletas.current.invalidar();
+        lectura.current.invalidar();
+        descargaVigente.current++;
+        setDescargando(false);
+      };
+    }, [cargar, cargarBoletas]),
   );
 
   // Agrupar por materia para lectura tipo boleta
@@ -79,12 +162,49 @@ export default function CalificacionesScreen() {
           Última actualización: {ultimaActualizacion}
         </Text>
       )}
+      {offline && (
+        <Text accessibilityRole="alert">
+          Sin conexión: copia de lectura de esta sesión, hasta 5 minutos. No
+          confirma cambios.
+        </Text>
+      )}
+      {errorBoletas && !offline && (
+        <ErrorCarga mensaje={errorBoletas} reintentar={cargarBoletas} />
+      )}
+      {!boletas.length && (
+        <TouchableOpacity
+          accessibilityRole="button"
+          disabled={descargando || offline}
+          onPress={() => descargar()}
+          style={base.tarjeta}
+        >
+          <Text>Descargar boleta del ciclo vigente</Text>
+        </TouchableOpacity>
+      )}
       <FlatList
         ListHeaderComponent={
-          <GuiaPantalla
-            titulo="Mis calificaciones"
-            detalle="El promedio oficial usa los parciales 1, 2 y 3. La evaluación Final se muestra por separado; un parcial pendiente no equivale a cero."
-          />
+          <>
+            <GuiaPantalla
+              titulo="Mis calificaciones"
+              detalle="El promedio oficial usa los parciales 1, 2 y 3. La evaluación Final se muestra por separado; un parcial pendiente no equivale a cero."
+            />
+            {boletas.map((b) => (
+              <TouchableOpacity
+                key={b.inscripcionId}
+                accessibilityRole="button"
+                accessibilityLabel={`Descargar boleta de ${b.ciclo}, ${b.grupo}`}
+                disabled={descargando || offline}
+                onPress={() => descargar(b.cicloId, b.inscripcionId)}
+                style={base.tarjeta}
+              >
+                <Text>
+                  {descargando
+                    ? "Abriendo boleta…"
+                    : `Boleta PDF · ${b.ciclo} · ${b.grupo} · ${b.plantel}`}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </>
         }
         data={filas}
         keyExtractor={([clave]) => clave}
