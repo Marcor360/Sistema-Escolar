@@ -62,3 +62,17 @@ it('cierra localmente incluso si la revocación al servidor falla por pérdida d
   expect(fetchFallido).toHaveBeenCalledOnce();
   vi.unstubAllGlobals();
 });
+
+it('envía únicamente interacciones humanas a la API, con máximo un pulso por minuto', async () => {
+  await montar();
+  const post = vi.mocked(api.post);
+  expect(post).not.toHaveBeenCalledWith('/auth/actividad');
+  fireEvent.pointerDown(window);
+  await act(async () => { await Promise.resolve(); });
+  expect(post).toHaveBeenCalledWith('/auth/actividad');
+  fireEvent.keyDown(window, { key: 'A' });
+  expect(post.mock.calls.filter(([ruta]) => ruta === '/auth/actividad')).toHaveLength(1);
+  await act(async () => { await vi.advanceTimersByTimeAsync(60_001); });
+  fireEvent.keyDown(window, { key: 'B' });
+  expect(post.mock.calls.filter(([ruta]) => ruta === '/auth/actividad')).toHaveLength(2);
+});
