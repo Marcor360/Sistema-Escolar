@@ -5,6 +5,7 @@ import { api, mensajeDeError } from '../api/client';
 import { Encabezado } from '../components/Encabezado';
 import { SelectorBuscable } from '../components/SelectorBuscable';
 import { useAuth } from '../auth/AuthContext';
+import '../components/tabla-adaptable.css';
 interface Grupo { id: number; nombre: string; ciclo: { clave: string }; plantel: { nombre: string } }
 interface PreviewImport { previewId: string | null; registros: number; errores: { fila: number; mensaje: string }[]; regla: string; identificadores: { fila: number; identificador: string }[] }
 interface PreviewPromocion { origen: { nombre: string }; destino: { nombre: string }; plantel: string; regla: string; alumnos: { id: number; nombre: string; matricula: string; elegible: boolean }[] }
@@ -16,14 +17,29 @@ export default function OperacionesPage() {
   const [enviando, setEnviando] = useState(false); const [error, setError] = useState(''); const [mensaje, setMensaje] = useState('');
   useEffect(() => { api.get('/academico/ciclos').then(({ data }) => setCiclos(data)).catch((err) => setError(mensajeDeError(err))); }, []);
   const operar = async (fn: () => Promise<void>) => { if (enviando) return; setEnviando(true); setError(''); setMensaje(''); try { await fn(); } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); } };
-  const previsualizar = (e: FormEvent) => { e.preventDefault(); if (!archivo) return; void operar(async () => { const form = new FormData(); form.append('tipo', tipo); form.append('archivo', archivo); const { data } = await api.post<PreviewImport>('/importaciones/preview', form); setPreview(data); }); };
+  const previsualizar = (e: FormEvent) => {
+    e.preventDefault();
+    if (!archivo) return;
+    if (!/\.(csv|xlsx)$/i.test(archivo.name)) {
+      setError('Selecciona un archivo CSV o Excel XLSX.'); setPreview(null); return;
+    }
+    if (!archivo.size || archivo.size > 5 * 1024 * 1024) {
+      setError('El archivo debe contener datos y pesar como máximo 5 MB.'); setPreview(null); return;
+    }
+    void operar(async () => {
+      const form = new FormData();
+      form.append('tipo', tipo); form.append('archivo', archivo);
+      const { data } = await api.post<PreviewImport>('/importaciones/preview', form);
+      setPreview(data);
+    });
+  };
   const plantilla = () => { void operar(async () => { const { data } = await api.get<Blob>('/importaciones/plantilla', { params: { tipo }, responseType: 'blob' }); const url = URL.createObjectURL(data); const a = document.createElement('a'); a.href = url; a.download = `plantilla_${tipo.toLowerCase()}.xlsx`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }); };
   return <>{confirmacion.elemento}<Encabezado titulo="Operaciones académicas masivas" detalle="Previsualizar, revisar y confirmar. Las validaciones se repiten al aplicar y un fallo revierte todo el lote." />
     {error && <p role="alert" className="mensaje-error">{error}</p>}{mensaje && <p role="status">{mensaje}</p>}
-    <section className="panel"><h2>Importación CSV / Excel</h2><p>Máximo 500 registros y 5 MB. Planteles y roles múltiples se separan con punto y coma. No incluyas contraseñas. Para ALUMNOS son obligatorios el correo, nombres, apellido paterno, matrícula, CURP y plantel. El acceso inicial utiliza correo y matrícula; exige cambiar la contraseña al ingresar. Para DOCENTES y PERSONAL se mantiene la activación por recuperación de correo (requiere SMTP).</p>
-      <label htmlFor="tipo-importacion">Tipo</label><select id="tipo-importacion" disabled={enviando} value={tipo} onChange={(e) => { setTipo(e.target.value); setPreview(null); }}>{['ALUMNOS', 'DOCENTES', 'INSCRIPCIONES', ...(tieneRol('SUPERADMIN') ? ['PERSONAL'] : [])].map((t) => <option key={t}>{t}</option>)}</select><button disabled={enviando} onClick={plantilla}>Descargar plantilla</button>
-      <form onSubmit={previsualizar}><label htmlFor="archivo-importacion">Archivo</label><input id="archivo-importacion" type="file" required accept=".csv,.xlsx" disabled={enviando} onChange={(e) => { setArchivo(e.target.files?.[0] ?? null); setPreview(null); }} /><button className="boton" disabled={enviando || !archivo}>Previsualizar archivo</button></form>
-      {preview && <><p>{preview.registros} registros · {preview.regla}</p>{preview.errores.map((e) => <p key={e.fila} role="alert">Fila {e.fila}: {e.mensaje}</p>)}<table className="tabla"><thead><tr><th>Fila</th><th>Identificador</th></tr></thead><tbody>{preview.identificadores.map((i) => <tr key={i.fila}><td>{i.fila}</td><td>{i.identificador}</td></tr>)}</tbody></table><button disabled={enviando || !preview.previewId} onClick={async () => { if (!preview.previewId || !await confirmacion.solicitar(`¿Confirmar ${preview.registros} registros? Ninguno se aplicará si falla la validación.`)) return; void operar(async () => { const { data } = await api.post('/importaciones/confirmar', { previewId: preview.previewId, confirmado: true }); setMensaje(`${data.insertados} registros importados. ${data.activacion ?? ''}`); setPreview(null); }); }}>Confirmar importación</button></>}
+    <section className="panel"><h2>Importación CSV / Excel</h2><p className="texto-ayuda">1. Descarga la plantilla del tipo elegido. 2. Complétala sin fórmulas. 3. Adjunta el archivo. 4. Revisa los errores antes de confirmar. Esta importación es de expedientes, docentes, personal e inscripciones; la carga de calificaciones es un proceso diferente y aún no está habilitado.</p><p>Máximo 500 registros y 5 MB. Planteles y roles múltiples se separan con punto y coma. No incluyas contraseñas. Para ALUMNOS son obligatorios el correo, nombres, apellido paterno, matrícula, CURP y plantel. El acceso inicial utiliza correo y matrícula; exige cambiar la contraseña al ingresar. Para DOCENTES y PERSONAL se mantiene la activación por recuperación de correo (requiere SMTP).</p>
+      <label htmlFor="tipo-importacion">Tipo</label><select id="tipo-importacion" disabled={enviando} value={tipo} onChange={(e) => { setTipo(e.target.value); setArchivo(null); setPreview(null); setError(''); }}>{['ALUMNOS', 'DOCENTES', 'INSCRIPCIONES', ...(tieneRol('SUPERADMIN') ? ['PERSONAL'] : [])].map((t) => <option key={t}>{t}</option>)}</select><button disabled={enviando} onClick={plantilla}>Descargar plantilla</button>
+      <form onSubmit={previsualizar}><label htmlFor="archivo-importacion">Archivo</label><input key={tipo} id="archivo-importacion" type="file" required accept=".csv,.xlsx" disabled={enviando} onChange={(e) => { setArchivo(e.target.files?.[0] ?? null); setPreview(null); }} /><button className="boton" disabled={enviando || !archivo}>Previsualizar archivo</button></form>
+      {preview && <><p>{preview.registros} registros · {preview.regla}</p>{preview.errores.map((e) => <p key={e.fila} role="alert">Fila {e.fila}: {e.mensaje}</p>)}<div className="tabla-contenedor" role="region" aria-label="Filas de previsualización" tabIndex={0}><table className="tabla tabla-adaptable"><thead><tr><th scope="col">Fila</th><th scope="col">Identificador</th></tr></thead><tbody>{preview.identificadores.map((i) => <tr key={i.fila}><td data-etiqueta="Fila">{i.fila}</td><td data-etiqueta="Identificador">{i.identificador}</td></tr>)}</tbody></table></div><button disabled={enviando || !preview.previewId} onClick={async () => { if (!preview.previewId || !await confirmacion.solicitar(`¿Confirmar ${preview.registros} registros? Ninguno se aplicará si falla la validación.`)) return; void operar(async () => { const { data } = await api.post('/importaciones/confirmar', { previewId: preview.previewId, confirmado: true }); setMensaje(`${data.insertados} registros importados. ${data.activacion ?? ''}`); setPreview(null); }); }}>Confirmar importación</button></>}
     </section>
     <section className="panel"><h2>Promoción al siguiente ciclo</h2><p>Selecciona un grupo de ciclo cerrado y un destino de ciclo en preparación, dentro del mismo plantel.</p>
       <label htmlFor="ciclo-origen-promocion">Ciclo cerrado de origen</label><select id="ciclo-origen-promocion" required value={cicloOrigen} onChange={(e) => { setCicloOrigen(e.target.value); setOrigen(''); setPromocion(null); }}><option value="">Selecciona…</option>{ciclos.filter((c) => c.estado === 'CERRADO').map((c) => <option key={c.id} value={c.id}>{c.clave}</option>)}</select>
