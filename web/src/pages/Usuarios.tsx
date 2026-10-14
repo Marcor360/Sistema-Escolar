@@ -20,7 +20,10 @@ export default function UsuariosPage() {
   const esSuperadmin = sesion?.roles.includes('SUPERADMIN') ?? false;
   const maestroPuro = sesion?.roles.includes('MAESTRO') &&
     !sesion.roles.some((r) => ['SUPERADMIN', 'ADMINISTRATIVO'].includes(r));
+  const tituloFormRef = useRef<HTMLHeadingElement>(null);
   const [editarId, setEditarId] = useState<number | null>(null); const [activo, setActivo] = useState(true);
+  useEffect(() => { if (editarId !== null) tituloFormRef.current?.focus(); }, [editarId]);
+
   const [tipo, setTipo] = useState<Tipo>('ALUMNO');
   const [resultado, setResultado] = useState<Resultado>({ datos: [], total: 0, pagina: 1, porPagina: 20 });
   const [planteles, setPlanteles] = useState<Plantel[]>([]);
@@ -67,7 +70,7 @@ export default function UsuariosPage() {
 
   return <>
     <Encabezado titulo="Usuarios" detalle="Consulta de alumnos, docentes y personal según tu alcance" />
-    {esSuperadmin && <section className="panel"><h2>{editarId ? 'Corregir cuenta de personal' : 'Crear cuenta de personal'}</h2>
+    {esSuperadmin && <section className="panel"><h2 ref={tituloFormRef} tabIndex={-1}>{editarId ? 'Corregir cuenta de personal' : 'Crear cuenta de personal'}</h2>
       <form onSubmit={crear} aria-busy={enviando}><fieldset disabled={enviando} style={{ border: 0, padding: 0 }}><legend>Datos del personal</legend><div className="fila">
         <div className="campo"><label htmlFor="personal-nombre">Nombre</label><input id="personal-nombre" required value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} /></div>
         <div className="campo"><label htmlFor="personal-paterno">Apellido paterno</label><input id="personal-paterno" required value={form.apellidoPaterno} onChange={(e) => setForm({ ...form, apellidoPaterno: e.target.value })} /></div>
@@ -91,8 +94,8 @@ export default function UsuariosPage() {
     </div>
 
     {cargando && <p role="status">Cargando usuarios…</p>}
-    <div className="tabla-contenedor" role="region" aria-label="Usuarios" tabIndex={0}><table className="tabla tabla-adaptable" aria-busy={cargando}><thead><tr><th scope="col">Identificador</th><th scope="col">Nombre</th><th scope="col">Correo</th><th scope="col">Plantel(es)</th><th scope="col">Roles/Estatus</th></tr></thead><tbody>
-      {resultado.datos.map((fila) => <tr key={fila.id}><td data-etiqueta="Identificador">{fila.matricula ?? fila.numEmpleado ?? fila.id}</td><td data-etiqueta="Nombre">{fila.nombre}</td><td data-etiqueta="Correo">{fila.correo ?? 'Restringido'}</td><td data-etiqueta="Plantel(es)">{fila.plantel ?? fila.planteles?.join(', ') ?? '—'}</td><td data-etiqueta="Roles/Estatus">{fila.roles?.join(', ') ?? fila.estatus ?? (fila.activo ? 'ACTIVO' : 'INACTIVO')}{esSuperadmin && tipo === 'ADMINISTRATIVO' && <button disabled={enviando} onClick={async () => { try { const { data } = await api.get(`/usuarios/${fila.id}/personal`); setEditarId(data.id); setActivo(data.activo); setPlantelIds(data.plantelIds); setRolesElegidos(data.roles.map((r: { clave: string }) => r.clave)); setForm({ email: data.email, password: '', nombre: data.nombre, apellidoPaterno: data.apellidoPaterno, apellidoMaterno: data.apellidoMaterno ?? '', telefono: data.telefono ?? '' }); document.getElementById('personal-nombre')?.focus(); } catch (err) { setError(mensajeDeError(err)); } }}>Corregir cuenta</button>}</td></tr>)}
+    <div className="tabla-contenedor" role="region" aria-label="Listado de usuarios" tabIndex={0}><table className="tabla tabla-adaptable" aria-busy={cargando}><caption className="solo-lector">Identificador, nombre, correo, planteles y estatus de las cuentas visibles</caption><thead><tr><th scope="col">Identificador</th><th scope="col">Nombre</th><th scope="col">Correo</th><th scope="col">Plantel(es)</th><th scope="col">Roles/Estatus</th></tr></thead><tbody>
+      {resultado.datos.map((fila) => <tr key={fila.id}><td data-etiqueta="Identificador">{fila.matricula ?? fila.numEmpleado ?? fila.id}</td><td data-etiqueta="Nombre">{fila.nombre}</td><td data-etiqueta="Correo">{fila.correo ?? 'Restringido'}</td><td data-etiqueta="Plantel(es)">{fila.plantel ?? fila.planteles?.join(', ') ?? '—'}</td><td data-etiqueta="Roles/Estatus">{fila.roles?.join(', ') ?? fila.estatus ?? (fila.activo ? 'ACTIVO' : 'INACTIVO')}{esSuperadmin && tipo === 'ADMINISTRATIVO' && <button disabled={enviando} onClick={async () => { try { const { data } = await api.get(`/usuarios/${fila.id}/personal`); setEditarId(data.id); setActivo(data.activo); setPlantelIds(data.plantelIds); setRolesElegidos(data.roles.map((r: { clave: string }) => r.clave)); setForm({ email: data.email, password: '', nombre: data.nombre, apellidoPaterno: data.apellidoPaterno, apellidoMaterno: data.apellidoMaterno ?? '', telefono: data.telefono ?? '' }); } catch (err) { setError(mensajeDeError(err)); } }}>Corregir cuenta</button>}</td></tr>)}
       {!cargando && !resultado.datos.length && <tr><td className="vacio" colSpan={5}>Sin resultados.</td></tr>}
     </tbody></table></div>
     <Paginador total={resultado.total} pagina={resultado.pagina} porPagina={resultado.porPagina} deshabilitado={cargando} onCambio={(pagina) => cargar(pagina, tipo, plantelId, buscar)} />

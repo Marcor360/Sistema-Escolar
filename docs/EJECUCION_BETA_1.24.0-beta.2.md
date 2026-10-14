@@ -10,7 +10,7 @@ La candidata añade una migración de biblioteca. No se modificó ni desplegó `
 |---|---|---|
 | 01 | Auditoría conservada y complementada con estado de ejecución | #29, este informe y BETA_ACEPTACION.json |
 | 02 | Alta guiada de planteles; enlaces siguientes según rol y ayuda asociada al formulario | #30, Planteles.tsx y sus pruebas |
-| 03 | Usuarios adaptable y semántico, conserva corrección de cuenta/alcance | Usuarios.tsx; Chromium 320/375/768/1440 |
+| 03 | Usuarios adaptable y semántico, foco al formulario tras cargar edición de personal y regresiones de #31 | Usuarios.tsx/Usuarios.test.tsx; Chromium 320/375/768/1440 |
 | 04 | Alta de expediente diferencia inscripción y ofrece enlace a Grupos | FormularioAlumno.tsx, Alumnos.tsx |
 | 05 | Ciclos/materias muestran orden y significado de PREPARACION/ACTIVO/EN_CIERRE/CERRADO | Materias.tsx |
 | 06 | Grupos muestran siguiente acción y resumen de asignaciones/docentes/inscritos | Grupos.tsx |
@@ -29,10 +29,11 @@ La candidata añade una migración de biblioteca. No se modificó ni desplegó `
 
 Los órdenes son los del plan, no números reservados de GitHub. Las entregas se implementan en commits por área con dependencias explícitas, sin crear PR vacíos. La biblioteca es administrativa: ni Finanzas, ni docentes, ni alumnos obtienen acceso por conocer el ID o la URL. Los logos almacenados en la biblioteca no cambian automáticamente la marca pública.
 
-## Correcciones encontradas en la revisión de #28–30
+## Correcciones encontradas en la revisión de #28–31
 
 - #28: una renovación tardía podía guardar tokens después del cierre local o borrar una cuenta nueva tras un 401 anterior. Las escrituras/borrados de SecureStore se serializan y las solicitudes se asocian a la generación de sesión; se cancelan respuestas antiguas. Regresiones de logout/renovación e identidad nuevas.
 - #29: se conserva como auditoría histórica, diferenciando lectura estática, implementación y aceptación externa. El estado actual es esta matriz; no se atribuyen resultados de las pruebas anteriores al SHA futuro.
+- #31: se conservaron el caption, región semántica y foco posterior al render al editar personal; se incorporó la prueba original y una regresión de foco. Los cambios equivalentes y estas correcciones quedan en #42.
 - #30: la guía queda asociada al alta y ofrece enlaces operables hacia personal, materias/ciclos y grupos/inscripciones, respetando roles.
 
 ## Contratos añadidos
@@ -57,7 +58,7 @@ Rollback de aplicación: volver al binario anterior y mantener tablas aditivas. 
 ## Evidencia automatizada local
 
 - Backend: lint sin errores, typecheck, build y 194 pruebas en 41 suites; advertencias históricas de tipos `any` en pruebas existentes.
-- Web: lint, build y 82 pruebas de UI en 23 archivos.
+- Web: lint, build y 84 pruebas de UI en 24 archivos.
 - Expo: typecheck, 65 pruebas de flujos/caché/cliente en 11 archivos, 11 pruebas Node y exportación Android correcta. No equivale a certificación nativa.
 - MySQL 8.4: 80 casos de integración, incluidos tres recorridos con Chromium/API/DB reales; se amplió el recorrido académico para incluir preview/confirmación de CSV desde UI. La ampliación pasó, y la selección de boleta propia se comprobó además contra API/MySQL reales.
 - SQL Server 2022: 77 casos de integración, migraciones/paridad y nuevas pruebas negativas, sin simulación del motor.
