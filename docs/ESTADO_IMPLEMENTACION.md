@@ -23,7 +23,7 @@ Sistema de información escolar (SIS) multiplantel, con administración académi
 | Finanzas | Cargos/pagos, idempotencia, cancelación/anulación, conciliación, origen estable tras traslado y cobranza auditable | Openpay sandbox real, SMTP y aceptación contable |
 | Conducta y analítica | Incidencias internas, seguimiento y métricas por capacidad/alcance | Política de conservación y validación de indicadores; sin objetivos académicos implementados |
 | Push | Opt-in, dispositivo/sesión, cola y recibos; deshabilitado por defecto | EAS/FCM/APNs y entrega física |
-| Base | Baseline v1 y ocho incrementales espejo; DB_SYNC=false, runner y pruebas de ambos motores | Estado del servidor real y ensayo en copia histórica |
+| Base | Baseline v1 y nueve incrementales espejo; DB_SYNC=false, runner y pruebas de ambos motores | Estado del servidor real y ensayo en copia histórica |
 | ETL | Planteles/alumnos, dry-run y siete pruebas | Esquema certweb sanitizado, TLS/mapeos/conciliación; no apto para migración general |
 | Operación | Scripts Windows/IIS, despliegue manual, health live/ready, rollback de código | Instalación real, alertas, respaldo cifrado externo y restore con RPO/RTO observado |
 
