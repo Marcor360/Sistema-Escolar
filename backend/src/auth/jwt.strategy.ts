@@ -6,6 +6,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { Repository } from 'typeorm';
 import { JwtUser } from '../common/current-user.decorator';
 import { Sesion } from '../entities/sesion.entity';
+import { sesionInactiva } from './sesion-inactividad';
 import { Usuario } from '../entities/usuario.entity';
 import { Alumno } from '../entities/alumno.entity';
 import { Docente } from '../entities/docente.entity';
@@ -34,6 +35,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (payload.kind !== 'ACCESS' || !payload.sid) throw new UnauthorizedException('Inicia sesión nuevamente');
     const sesion = await this.usuarios.manager.getRepository(Sesion).findOne({ where: { id: payload.sid, usuarioId: usuario.id, revocada: false } });
     if (!sesion || sesion.expiraEn <= new Date() || sesion.version !== (usuario.sessionVersion ?? 0)) throw new UnauthorizedException('La sesión fue revocada');
+    if (sesionInactiva(sesion.ultimaActividadEn, new Date())) {
+      await this.usuarios.manager.getRepository(Sesion)
+        .update({ id: payload.sid, usuarioId: usuario.id, revocada: false }, { revocada: true });
+      throw new UnauthorizedException('La sesión expiró por inactividad');
+    }
     const roles = usuario.roles.map((rol) => rol.clave);
     if (roles.includes('ALUMNO')) {
       const alumno = await this.alumnos.findOne({ where: { usuarioId: usuario.id, estatus: 'ACTIVO' } });
