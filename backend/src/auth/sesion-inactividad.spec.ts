@@ -11,6 +11,8 @@ describe('Expiración estricta de sesiones', () => {
     expect(sesionInactiva(new Date(ahora.getTime() - LIMITE_INACTIVIDAD_MS), ahora)).toBe(true);
   });
 
+  it('rechaza marcas futuras', () => { expect(sesionInactiva(new Date(ahora.getTime() + 1000), ahora)).toBe(true); });
+
   it('rechaza sesiones existentes que no hayan registrado actividad', () => {
     expect(sesionInactiva(null, ahora)).toBe(true);
     expect(sesionInactiva(undefined, ahora)).toBe(true);

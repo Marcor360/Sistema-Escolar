@@ -45,3 +45,27 @@ export function crearControlInactividad(
     },
   };
 }
+
+/** Ordena también el borrado de logout antes de las escrituras de un nuevo login. */
+export function crearPersistenciaActividad(
+  guardar: (fecha: number) => Promise<void>,
+  borrar: () => Promise<void>,
+) {
+  let cola: Promise<void> = Promise.resolve();
+  const encolar = (operacion: () => Promise<void>) => {
+    cola = cola.catch(() => undefined).then(operacion).catch(() => undefined);
+    return cola;
+  };
+  return {
+    guardar: (fecha: number) => encolar(() => guardar(fecha)),
+    borrar: () => encolar(borrar),
+  };
+}
+
+/** Una marca futura o corrupta no puede extender la sesión restaurada. */
+export function actividadRestaurable(valor: string | null, ahora: number): number | null {
+  if (valor === null) return ahora; // Compatibilidad con sesiones anteriores al control.
+  const fecha = Number(valor);
+  return Number.isFinite(fecha) && fecha > 0 && fecha <= ahora &&
+    ahora - fecha < LIMITE_INACTIVIDAD_MS ? fecha : null;
+}

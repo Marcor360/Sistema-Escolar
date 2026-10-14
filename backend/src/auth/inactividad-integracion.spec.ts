@@ -13,32 +13,40 @@ describe('Sesiones inactivas: seguridad de la API', () => {
   afterEach(() => jest.useRealTimers());
 
   function estrategia(ultimaActividadEn: Date | null) {
+    const builder = { update: jest.fn().mockReturnThis(), set: jest.fn().mockReturnThis(), where: jest.fn().mockReturnThis(), andWhere: jest.fn().mockReturnThis(), execute: jest.fn().mockResolvedValue({ affected: 1 }) };
     const sesiones = {
       findOne: jest.fn().mockResolvedValue({
         id: payload.sid, usuarioId: payload.sub, version: 0,
         expiraEn: new Date(ahora.getTime() + 60_000), ultimaActividadEn,
       }),
-      update: jest.fn().mockResolvedValue({ affected: 1 }),
+      createQueryBuilder: jest.fn(() => builder),
     };
     const usuarios = { findOne: jest.fn().mockResolvedValue(usuario),
       manager: { getRepository: jest.fn(() => sesiones) } };
     const strategy = new JwtStrategy({ get: () => 'test-secret' } as never, usuarios as never,
       { findOne: jest.fn().mockResolvedValue({ id: 1 }) } as never, {} as never);
-    return { sesiones, strategy };
+    return { sesiones, strategy, builder };
   }
 
   it('cierra acceso por JWT si la última actividad ocurrió hace 30 minutos', async () => {
-    const { strategy, sesiones } = estrategia(new Date(ahora.getTime() - 1_800_000));
+    const { strategy, builder } = estrategia(new Date(ahora.getTime() - 1_800_000));
     await expect(strategy.validate(payload)).rejects.toBeInstanceOf(UnauthorizedException);
-    expect(sesiones.update).toHaveBeenCalledWith(
-      { id: 'sesion-uno', usuarioId: 1, revocada: false }, { revocada: true },
-    );
+    expect(builder.set).toHaveBeenCalledWith({ revocada: true });
+    expect(builder.andWhere).toHaveBeenCalledWith(expect.stringContaining('ultima_actividad_en <= :umbral'), expect.objectContaining({ umbral: new Date(ahora.getTime() - 1_800_000) }));
   });
 
   it('no actualiza la actividad al validar una petición automática', async () => {
     const { strategy, sesiones } = estrategia(new Date(ahora.getTime() - 10_000));
     await expect(strategy.validate(payload)).resolves.toMatchObject({ sub: 1, sid: 'sesion-uno' });
-    expect(sesiones.update).not.toHaveBeenCalled();
+    expect(sesiones.createQueryBuilder).not.toHaveBeenCalled();
+  });
+
+  it('no revoca una actividad actualizada entre lectura y revocación', async () => {
+    const { strategy, sesiones, builder } = estrategia(new Date(ahora.getTime() - 1_800_000));
+    builder.execute.mockResolvedValue({ affected: 0 });
+    sesiones.findOne.mockResolvedValueOnce({ version: 0, expiraEn: new Date(ahora.getTime() + 60000), ultimaActividadEn: new Date(ahora.getTime() - 1800000) })
+      .mockResolvedValueOnce({ version: 0, expiraEn: new Date(ahora.getTime() + 60000), ultimaActividadEn: ahora });
+    await expect(strategy.validate(payload)).resolves.toMatchObject({ sub: 1 });
   });
 
   function servicioConRepo(sesiones: Record<string, unknown>) {
