@@ -4,6 +4,7 @@ import { api } from '../api/client';
 import OperacionesPage from './Operaciones';
 
 vi.mock('../auth/AuthContext', () => ({ useAuth: () => ({ tieneRol: () => true }) }));
+vi.mock('../components/BitacoraAcademica', () => ({ BitacoraAcademica: () => null }));
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 it('rechaza archivos vacíos y de tipo incorrecto antes de enviarlos a la API', async () => {
