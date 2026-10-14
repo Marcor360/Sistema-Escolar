@@ -93,6 +93,11 @@ export default function MateriasScreen() {
   }, [sesion?.sub]);
   const cargar = useCallback(() => {
     if (!sesion?.sub) return;
+    consultaMateriales.current += 1;
+    setAbierta(null);
+    setMaterialesPor({});
+    setErroresMateriales({});
+    setCargandoMateriales(null);
     setError("");
     setCargando(true);
     void lectura.current.cargar(
