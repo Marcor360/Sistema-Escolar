@@ -114,6 +114,7 @@ export class AuthService {
       .andWhere('ultima_actividad_en > :umbral AND ultima_actividad_en <= :ahora', {
         umbral: new Date(ahora.getTime() - LIMITE_INACTIVIDAD_MS), ahora,
       })
+      .andWhere('expira_en > :ahora AND version = :version', { ahora, version: user.ver ?? 0 })
       .execute();
     if (actualizado.affected !== 1) throw new UnauthorizedException('La sesión expiró por inactividad');
     return { mensaje: 'Actividad registrada' };

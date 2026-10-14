@@ -51,3 +51,9 @@ Web y Expo cierran localmente después de 30 minutos sin interacción humana. Co
 Estado de cuenta invalida saldo anterior al recargar, después de cinco minutos o ante fallo; antes de ordenar consulta otra vez y detecta cambios. Materias retira listados de materiales al actualizar. Eventos móviles usan America/Mexico_City.
 
 Esta política es del cliente: sin red la revocación remota no puede confirmarse y el backend conserva access de 15 minutos y refresh máximo de 30 días. No equivale a inactividad absoluta en API. [Contrato, regresiones y QA física pendiente](CIERRE_INACTIVIDAD_30M_2026-10-14.md).
+
+## Ampliación de inactividad en API — #47–51
+
+El conjunto añade comprobación de última señal autenticada en JWT, refresh y enlaces firmados, con revocación a los 30 minutos. Login inicializa la marca y clientes web/Expo notifican interacción limitada a un pulso por minuto. Peticiones de fondo no renuevan. La revocación es condicional frente a actividad concurrente.
+
+Esto amplía el cierre local descrito en #46; sus límites anteriores son históricos respecto de esta entrega. Access sigue 15 minutos y refresh máximo 30 días. La señal del cliente no demuestra presencia humana. Requiere la novena migración y clientes coordinados; sesiones históricas NULL exigen reingreso. [Contrato y aceptación](SESIONES_INACTIVIDAD_PLAN.md).
