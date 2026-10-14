@@ -218,6 +218,7 @@ export default function PerfilScreen({ abrirDocumentos }: { abrirDocumentos?: ()
           disabled={cambiandoPassword}
           onPress={cambiarPassword}
           accessibilityRole="button"
+          accessibilityLabel="Actualizar contraseña"
           accessibilityState={{ disabled: cambiandoPassword }}
         >
           <Text
