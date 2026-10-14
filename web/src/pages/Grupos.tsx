@@ -233,11 +233,12 @@ export default function GruposPage() {
       {cargandoListado && <p role="status">Cargando grupos…</p>}
       <div className="tabla-contenedor" role="region" aria-label="Listado de grupos" tabIndex={0}>
       <table className="tabla tabla-adaptable" aria-busy={cargandoListado}>
-        <caption className="solo-lector">Grupo, plantel, ciclo, grado, turno y acciones</caption>
-        <thead><tr><th scope="col">Grupo</th><th scope="col">Plantel</th><th scope="col">Ciclo</th><th scope="col">Grado</th><th scope="col">Turno</th><th scope="col">Acciones</th></tr></thead>
+        <caption className="solo-lector">ID de importación, grupo, plantel, ciclo, grado, turno y acciones</caption>
+        <thead><tr><th scope="col">ID</th><th scope="col">Grupo</th><th scope="col">Plantel</th><th scope="col">Ciclo</th><th scope="col">Grado</th><th scope="col">Turno</th><th scope="col">Acciones</th></tr></thead>
         <tbody>
           {resultado.datos.map((g) => (
             <tr key={g.id}>
+              <td data-etiqueta="ID"><code>{g.id}</code></td>
               <td data-etiqueta="Grupo">{g.nombre}</td>
               <td data-etiqueta="Plantel">{g.plantel?.nombre ?? <span className="sello neutro">Sin plantel</span>}</td>
               <td data-etiqueta="Ciclo">{g.ciclo?.clave}</td>
@@ -252,8 +253,8 @@ export default function GruposPage() {
               </td>
             </tr>
           ))}
-          {!cargandoListado && resultado.datos.length === 0 && <tr><td className="vacio" colSpan={6}>No hay grupos para este ciclo y plantel.</td></tr>}
-          {cargandoListado && resultado.datos.length === 0 && <tr><td className="vacio" colSpan={6}>Consultando grupos…</td></tr>}
+          {!cargandoListado && resultado.datos.length === 0 && <tr><td className="vacio" colSpan={7}>No hay grupos para este ciclo y plantel.</td></tr>}
+          {cargandoListado && resultado.datos.length === 0 && <tr><td className="vacio" colSpan={7}>Consultando grupos…</td></tr>}
         </tbody>
       </table></div>
       <Paginador total={resultado.total} pagina={resultado.pagina} porPagina={resultado.porPagina} deshabilitado={cargandoListado} onCambio={(pagina) => cargar(pagina, plantelAplicado)} />
