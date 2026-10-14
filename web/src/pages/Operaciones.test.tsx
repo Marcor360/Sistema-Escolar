@@ -34,3 +34,11 @@ it('cambiar de importación obliga a elegir nuevamente el archivo', async () => 
   fireEvent.change(screen.getByLabelText('Tipo'), { target: { value: 'DOCENTES' } });
   expect((screen.getByRole('button', { name: 'Previsualizar archivo' }) as HTMLButtonElement).disabled).toBe(true);
 });
+
+it('explica dónde consultar los IDs del plantel y del grupo', () => {
+  vi.spyOn(api, 'get').mockResolvedValue({ data: [] });
+  render(<OperacionesPage />);
+  expect(screen.getByText(/son identificadores numéricos/)).toBeTruthy();
+  expect(screen.getByRole('link', { name: 'Planteles' }).getAttribute('href')).toBe('/planteles');
+  expect(screen.getByRole('link', { name: 'Grupos' }).getAttribute('href')).toBe('/grupos');
+});
