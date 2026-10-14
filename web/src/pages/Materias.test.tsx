@@ -26,3 +26,12 @@ it('cancelar una transición no anuncia éxito y un fallo conserva la clave para
   await screen.findByRole('alert'); expect((screen.getByLabelText('Texto') as HTMLInputElement).value).toBe('2027'); expect(screen.queryByText('Operación completada')).toBeNull();
   fireEvent.click(screen.getByText('Confirmar')); await screen.findByText('Operación completada'); expect(post).toHaveBeenCalledTimes(2);
 });
+
+it('muestra los requisitos y tablas accesibles de materias y ciclos', async () => {
+  vi.spyOn(api, 'get').mockResolvedValue({ data: [] });
+  render(<MateriasPage />);
+  expect(screen.getByText(/Primero prepara el ciclo y el catálogo de materias/)).toBeTruthy();
+  await waitFor(() => expect(screen.getByText(/No hay materias registradas/)).toBeTruthy());
+  expect(screen.getByRole('region', { name: 'Catálogo de materias' }).querySelector('.tabla-adaptable')).toBeTruthy();
+  expect(screen.getByRole('region', { name: 'Ciclos escolares' }).querySelector('.tabla-adaptable')).toBeTruthy();
+});

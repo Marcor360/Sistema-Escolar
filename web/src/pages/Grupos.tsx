@@ -144,7 +144,7 @@ export default function GruposPage() {
         grado: formGrupo.grado || undefined,
         turno: formGrupo.turno,
       });
-      setEditando(null); setMensaje('Grupo guardado. Abre Administrar para asignar materias, docentes e inscribir alumnos.');
+      setEditando(null); setMensaje(editando ? 'Grupo actualizado.' : 'Grupo creado. Ahora selecciona Administrar para asignar materias, docente e inscribir alumnos.');
       setFormGrupo({ cicloId: '', plantelId: '', nombre: '', grado: '', turno: 'MATUTINO' });
       cargar(1, plantelAplicado);
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
@@ -161,6 +161,7 @@ export default function GruposPage() {
       });
       setMateriaId(''); setDocenteId('');
       await abrirGrupo(seleccionado);
+      setMensaje('Materia vinculada. Revisa que tenga docente asignado antes de la captura.');
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
@@ -172,12 +173,14 @@ export default function GruposPage() {
       await api.post(`/academico/grupos/${seleccionado.id}/alumnos`, { alumnoId: Number(alumnoId) });
       setAlumnoId('');
       await abrirGrupo(seleccionado);
+      setMensaje('Inscripción registrada. El alumno podrá consultar las materias y actividades vigentes que le correspondan.');
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
   return (
     <>{confirmacion.elemento}
       <Encabezado titulo="Grupos" detalle="Grupos por ciclo, materias asignadas e inscripciones" />
+      <p className="texto-ayuda">Orden recomendado: prepara el ciclo y las materias, registra docentes y alumnos, crea el grupo, asígnale materias con docente e inscribe a los alumnos. Cada paso es independiente y conserva las reglas de autorización del servidor.</p>
       {error && <p role="alert" className="mensaje-error">{error}</p>}{mensaje && <p role="status" className="mensaje-ok">{mensaje}</p>}
       {cargandoCatalogos && <p role="status">Cargando catálogos…</p>}
       {errorCatalogos && <div role="alert"><p>{errorCatalogos}</p><button className="boton secundario" onClick={() => { void cargarCatalogos(); }}>Reintentar catálogos</button></div>}

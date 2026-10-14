@@ -33,3 +33,11 @@ it('conserva nota y motivo ante fallo; reintenta solo los cambios y evita duplic
   await waitFor(() => expect((screen.getByRole('button',{ name: 'Guardar calificaciones' }) as HTMLButtonElement).disabled).toBe(false));
   fireEvent.click(screen.getByRole('button',{ name: 'Guardar calificaciones' })); await screen.findByText('No hay cambios que guardar.'); expect(post).toHaveBeenCalledTimes(2);
 });
+
+it('presenta una captura legible por alumno y el historial como tabla adaptable', async () => {
+  await preparar();
+  const region = screen.getByRole('region', { name: 'Captura de notas por alumno' });
+  expect(region.querySelector('table.tabla-adaptable')).toBeTruthy();
+  expect(region.querySelector('[data-etiqueta="Matrícula"]')?.textContent).toBe('AL1');
+  expect(screen.getByRole('region', { name: 'Historial de modificaciones de notas' })).toBeTruthy();
+});

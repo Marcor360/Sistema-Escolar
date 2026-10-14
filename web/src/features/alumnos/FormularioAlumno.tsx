@@ -90,7 +90,7 @@ export function FormularioAlumno({
             </div>
             {nuevo && <div className="aviso-credenciales" role="note">
               <strong>Primer acceso del alumno</strong>
-              <p>Ingresará con su correo institucional y su matrícula como contraseña temporal. Deberá crear una contraseña nueva al iniciar sesión.</p>
+              <p>Ingresará con su correo institucional y su matrícula como contraseña temporal. Deberá crear una contraseña nueva al iniciar sesión.</p><p>Al registrar el expediente todavía no se asigna un grupo ni materias. Después inscríbelo desde Grupos en el plantel y ciclo que correspondan.</p>
             </div>}
           </div>
         </fieldset>

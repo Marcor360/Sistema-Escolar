@@ -29,10 +29,11 @@ La candidata añade una migración de biblioteca. No se modificó ni desplegó `
 
 Los órdenes son los del plan, no números reservados de GitHub. Las entregas se implementan en commits por área con dependencias explícitas, sin crear PR vacíos. La biblioteca es administrativa: ni Finanzas, ni docentes, ni alumnos obtienen acceso por conocer el ID o la URL. Los logos almacenados en la biblioteca no cambian automáticamente la marca pública.
 
-## Correcciones encontradas en la revisión de #28–31
+## Correcciones encontradas en la revisión de #28–35
 
 - #28: una renovación tardía podía guardar tokens después del cierre local o borrar una cuenta nueva tras un 401 anterior. Las escrituras/borrados de SecureStore se serializan y las solicitudes se asocian a la generación de sesión; se cancelan respuestas antiguas. Regresiones de logout/renovación e identidad nuevas.
 - #29: se conserva como auditoría histórica, diferenciando lectura estática, implementación y aceptación externa. El estado actual es esta matriz; no se atribuyen resultados de las pruebas anteriores al SHA futuro.
+- #32–35: se conservaron las guías de expediente/inscripción, los estados de éxito de grupo/materia/inscripción, los estados vacíos y regiones/captions de materias/ciclos y de captura/historial, y la revocación diferida de la descarga Excel. Se incorporaron las regresiones originales; los estados vacíos de catálogo esperan el fin de carga y no ocultan un fallo. Los cierres se realizan como sustituidos por #42.
 - #31: se conservaron el caption, región semántica y foco posterior al render al editar personal; se incorporó la prueba original y una regresión de foco. Los cambios equivalentes y estas correcciones quedan en #42.
 - #30: la guía queda asociada al alta y ofrece enlaces operables hacia personal, materias/ciclos y grupos/inscripciones, respetando roles.
 
@@ -58,7 +59,7 @@ Rollback de aplicación: volver al binario anterior y mantener tablas aditivas. 
 ## Evidencia automatizada local
 
 - Backend: lint sin errores, typecheck, build y 194 pruebas en 41 suites; advertencias históricas de tipos `any` en pruebas existentes.
-- Web: lint, build y 84 pruebas de UI en 24 archivos.
+- Web: lint, build y 87 pruebas de UI en 24 archivos.
 - Expo: typecheck, 65 pruebas de flujos/caché/cliente en 11 archivos, 11 pruebas Node y exportación Android correcta. No equivale a certificación nativa.
 - MySQL 8.4: 80 casos de integración, incluidos tres recorridos con Chromium/API/DB reales; se amplió el recorrido académico para incluir preview/confirmación de CSV desde UI. La ampliación pasó, y la selección de boleta propia se comprobó además contra API/MySQL reales.
 - SQL Server 2022: 77 casos de integración, migraciones/paridad y nuevas pruebas negativas, sin simulación del motor.
