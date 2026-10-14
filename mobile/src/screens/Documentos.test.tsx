@@ -17,12 +17,16 @@ vi.mock("@react-navigation/native", () => ({
   useFocusEffect: (efecto: () => void | (() => void)) => useEffect(efecto, [efecto]),
 }));
 vi.mock("../components/Texto", () => ({ Text: "Text" }));
-vi.mock("react-native", () => ({
-  View: "View", Text: "Text", ScrollView: "ScrollView",
+vi.mock("react-native", async () => {
+  const { createElement } = await import("react");
+  return {
+  View: "View", Text: "Text", Pressable: "Pressable",
+  ScrollView: ({ children }: { children: ReactNode }) => createElement("ScrollView", null, children),
   TouchableOpacity: "TouchableOpacity", ActivityIndicator: "ActivityIndicator",
   RefreshControl: "RefreshControl", Linking: { openURL: vi.fn() },
   StyleSheet: { create: (styles: unknown) => styles },
-}));
+};
+});
 const boleta = { inscripcionId: 3, cicloId: 2, ciclo: "2026", grupo: "1-A", plantel: "Centro" };
 const materia = { id: 7, materia: { clave: "MAT", nombre: "Matemáticas" },
   grupo: { nombre: "1-A", ciclo: { clave: "2026" } } };
