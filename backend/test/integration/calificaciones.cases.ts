@@ -67,6 +67,13 @@ it('inscribe a un alumno, captura una calificaci??n y la muestra en su portal', 
     expect(calificaciones.data).toEqual(expect.arrayContaining([
       expect.objectContaining({ grupoMateriaId, parcial: 1, calificacion: 92 }),
     ]));
+    // El recorrido de alumno es de solo lectura; ni la captura ni el expediente ajeno son accesibles.
+    expect((await ctx.api(`/calificaciones/grupo-materia/${grupoMateriaId}`, { token: tokenAlumno })).response.status).toBe(403);
+    expect((await ctx.api(`/calificaciones/alumno/${ctx.alumnoId}`, { token: tokenAlumno })).response.status).toBe(403);
+    expect((await ctx.api('/calificaciones/captura', { method: 'POST', token: tokenAlumno,
+      body: { grupoMateriaId, parcial: 1, items: [{ alumnoId: ctx.alumnoId, calificacion: 100 }] },
+    })).response.status).toBe(403);
+    expect((await ctx.api('/calificaciones/mias', { token: tokenAdmin })).response.status).toBe(403);
     expect(await ctx.dataSource.getRepository(Inscripcion).countBy({ alumnoId: ctx.alumnoId, grupoId, estatus: 'ACTIVA' })).toBe(1);
   });
   },
@@ -90,6 +97,18 @@ it('conserva notas de entregas calificadas y bloquea envíos a actividades desac
       method: 'PATCH', token: tokenAdmin, body: { calificacion: 80, comentario: 'Corregir' },
     });
     expect(calificada.response.status).toBe(200);
+    const tareasAlumno = await ctx.api('/alumnos/me/tareas', { token: tokenAlumno });
+    expect(tareasAlumno.response.status).toBe(200);
+    expect(tareasAlumno.data).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: actividad.data.id,
+        entrega: expect.objectContaining({ id: primera.data.id, estatus: 'CALIFICADA', calificacion: 80 }),
+      }),
+    ]));
+    // La API nunca delega al alumno endpoints reservados para el docente.
+    expect((await ctx.api(`/actividades/${actividad.data.id}/entregas`, { token: tokenAlumno })).response.status).toBe(403);
+    expect((await ctx.api(`/entregas/${primera.data.id}/calificar`, {
+      method: 'PATCH', token: tokenAlumno, body: { calificacion: 100 },
+    })).response.status).toBe(403);
     const corregida = await ctx.api(`/actividades/${actividad.data.id}/entrega`, {
       method: 'POST', token: tokenAlumno, body: { comentario: 'Segunda versión' },
     });
@@ -160,6 +179,23 @@ it('separa notas de ciclos, calcula P1-P3 sin Final y exporta inscritos sin nota
     const propia = await ctx.dataSource.getRepository(Inscripcion).findOneByOrFail({ alumnoId: ctx.alumnoId, grupoId: actual.grupoId });
     const pdf = await fetch(`${ctx.baseUrl}/reportes/boleta/${ctx.alumnoId}?cicloId=${actual.grupo.cicloId}&inscripcionId=${propia.id}`, { headers: { authorization: `Bearer ${token}` } });
     expect(pdf.status).toBe(200); expect(pdf.headers.get('content-type')).toContain('application/pdf');
+
+    const disponibles = await ctx.api('/reportes/mis-boletas', { token: movil });
+    expect(disponibles.response.status).toBe(200);
+    expect(disponibles.data).toEqual(expect.arrayContaining([
+      expect.objectContaining({ inscripcionId: propia.id }),
+    ]));
+    const enlace = await ctx.api(`/reportes/mi-boleta/enlace?cicloId=${actual.grupo.cicloId}&inscripcionId=${propia.id}`, { token: movil });
+    expect(enlace.response.status).toBe(200);
+    expect(enlace.data.url).toMatch(/^\/api\/reportes\/boleta-descarga\/\d+\?t=/);
+    const descarga = await fetch(new URL(enlace.data.url, ctx.baseUrl));
+    expect(descarga.status).toBe(200);
+    expect(descarga.headers.get('content-type')).toContain('application/pdf');
+    expect(descarga.headers.get('cache-control')).toContain('no-store');
+    const contenidoPdf = Buffer.from(await descarga.arrayBuffer());
+    expect(contenidoPdf.subarray(0, 5).toString()).toBe('%PDF-');
+    // Ni una boleta solicitada con ID explícito permite cambiar de expediente.
+    expect((await ctx.api(`/reportes/boleta/${sinNota.data.id}`, { token: movil })).response.status).toBe(403);
   });
   },
   36: (ctx) => {

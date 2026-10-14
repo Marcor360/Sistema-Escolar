@@ -122,6 +122,20 @@ it('acepta pagos parciales y rechaza exceder el saldo restante', async () => {
     expect(excedente.response.status).toBe(400);
     expect((await ctx.dataSource.getRepository(Cargo).findOneByOrFail({ id: cargo.data.id })).estatus).toBe('PARCIAL');
     expect(await ctx.dataSource.getRepository(Pago).countBy({ cargoId: cargo.data.id })).toBe(1);
+
+    // El alumno ve el cargo parcialmente pagado, pero nunca puede registrar pagos manuales.
+    const alumno = await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.alumnoUsuarioId });
+    const tokenAlumno = await ctx.emitirToken(alumno.email);
+    const propio = await ctx.api('/finanzas/me/estado-cuenta', { token: tokenAlumno });
+    expect(propio.response.status).toBe(200);
+    expect(propio.data.cargos).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: cargo.data.id, saldo: 150 }),
+    ]));
+    expect((await ctx.api('/finanzas/cargos', { token: tokenAlumno })).response.status).toBe(403);
+    expect((await ctx.api('/finanzas/pagos', { method: 'POST', token: tokenAlumno,
+      body: { alumnoId: ctx.alumnoId, cargoId: cargo.data.id, monto: 50, metodo: 'EFECTIVO',
+        referencia: 'DENEGADO', claveIdempotencia: randomUUID() },
+    })).response.status).toBe(403);
   });
   },
   17: (ctx) => {
