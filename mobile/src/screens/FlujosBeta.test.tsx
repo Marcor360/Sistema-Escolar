@@ -226,7 +226,7 @@ it("pago requiere confirmación antes de crear orden", async () => {
     },
   });
   await montar(<EstadoCuenta />);
-  const boton = vista.root.findAllByType(TouchableOpacity)[0];
+  const boton = vista.root.findByProps({ accessibilityLabel: "Actualizar contraseña" });
   await act(async () => boton.props.onPress());
   expect(api.post).not.toHaveBeenCalled();
   expect(Alert.alert).toHaveBeenCalledWith(
