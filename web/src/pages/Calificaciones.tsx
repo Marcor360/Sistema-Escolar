@@ -80,6 +80,22 @@ export default function CalificacionesPage() {
     try { const { data } = await api.get(`/reportes/grupo-materias/${claseId}/calificaciones.xlsx`,{ responseType: 'blob' }); const url = URL.createObjectURL(data), a = document.createElement('a'); a.href = url; a.download = 'calificaciones.xlsx'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 60_000); }
     catch (err) { setError(mensajeDeError(err)); } finally { setDescargando(false); }
   };
+  const descargarPlantilla = async () => {
+    if (!claseId || descargando || ocupado) return;
+    setDescargando(true); setError('');
+    try {
+      const { data } = await api.get<Blob>(`/reportes/grupo-materias/${claseId}/plantilla-calificaciones.xlsx`, {
+        params: { parcial: Number(parcial) }, responseType: 'blob',
+      });
+      const url = URL.createObjectURL(data);
+      const enlace = document.createElement('a');
+      enlace.href = url; enlace.download = `plantilla-calificaciones-${claseId}-${parcial}.xlsx`;
+      enlace.click();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err) { setError(mensajeDeError(err)); }
+    finally { setDescargando(false); }
+  };
+
   return <>{confirmacion.elemento}
     <Encabezado titulo="Captura de calificaciones" detalle="Evaluación oficial por parcial; las actividades de clase se registran por separado" />
     {error && <p role="alert" className="mensaje-error">{error}</p>}{mensaje && <p role="status" className="mensaje-ok">{mensaje}</p>}
@@ -89,6 +105,7 @@ export default function CalificacionesPage() {
       <div className="campo"><label htmlFor="parcial-calificacion">Parcial</label><select id="parcial-calificacion" disabled={ocupado} value={parcial} onChange={(e) => { limpiar(); setParcial(e.target.value); }}><option value="1">Parcial 1</option><option value="2">Parcial 2</option><option value="3">Parcial 3</option><option value="0">Final</option></select></div>
       <button className="boton secundario" disabled={!clase || ocupado} onClick={cargarAlumnos}>{cargando ? 'Cargando lista…' : 'Cargar lista'}</button>
       <button className="boton secundario" disabled={!clase || ocupado || descargando} onClick={descargarExcel}>{descargando ? 'Descargando…' : 'Descargar Excel'}</button>
+      <button className="boton secundario" disabled={!clase || ocupado || descargando} onClick={descargarPlantilla}>Descargar plantilla XLSX</button>
     </div>{cargando && <p role="status">Cargando alumnos, notas e historial…</p>}</section>
     {periodo && <section className="panel"><p role="status">Periodo {periodo.estatus.toLowerCase()} · Inscritos: {periodo.inscritos} · Capturados: {periodo.capturados} · Faltantes: {periodo.faltantes}</p>
       {tieneRol('ADMINISTRATIVO') && <button className="boton secundario" disabled={ocupado} onClick={cambiarEstado}>{periodo.estatus === 'ABIERTO' ? 'Cerrar periodo' : 'Reabrir periodo'}</button>}
