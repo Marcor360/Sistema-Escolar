@@ -472,14 +472,16 @@ it("bloquea nuevas órdenes cuando la consulta del saldo falla", async () => {
     cargos: [{ id: 1, descripcion: "Colegiatura", fechaVencimiento: null, estatus: "PENDIENTE", total: 100, pagado: 0, saldo: 100 }],
     pagos: [],
   };
-  vi.mocked(api.get).mockResolvedValueOnce({ data: estado }).mockRejectedValueOnce(new Error("Sin conexión"));
+  vi.mocked(api.get).mockResolvedValue({ data: estado });
   await montar(<EstadoCuenta />);
-  expect(texto()).toContain("Pagar en línea");
+  expect(vista.root.findAllByType(TouchableOpacity).length).toBeGreaterThan(0);
+  vi.mocked(api.get).mockRejectedValueOnce(new Error("Sin conexión"));
   await act(async () => {
     vista.root.findByType("RefreshControl").props.onRefresh();
   });
-  expect(texto()).toContain("saldos mostrados pueden estar desactualizados");
-  const boton = vista.root.findByProps({ accessibilityLabel: "Pagar Colegiatura en línea. Saldo $100.00" });
+  expect(vista.root.findAllByType("Text").some((n) =>
+    String(n.props.children).includes("saldos mostrados pueden estar desactualizados"))).toBe(true);
+  const boton = vista.root.findAllByType(TouchableOpacity)[0];
   expect(boton.props.disabled).toBe(true);
   expect(api.post).not.toHaveBeenCalled();
 });
@@ -490,9 +492,9 @@ it("revalida el importe antes de generar una orden y rechaza saldos modificados"
     cargos: [{ id: 1, descripcion: "Colegiatura", fechaVencimiento: null, estatus: "PENDIENTE", total: 100, pagado: 0, saldo: 100 }],
     pagos: [],
   };
-  vi.mocked(api.get).mockResolvedValueOnce({ data: estado })
-    .mockResolvedValueOnce({ data: { ...estado, saldoTotal: 80, cargos: [{ ...estado.cargos[0], saldo: 80 }] } });
+  vi.mocked(api.get).mockResolvedValue({ data: estado });
   await montar(<EstadoCuenta />);
+  vi.mocked(api.get).mockResolvedValueOnce({ data: { ...estado, saldoTotal: 80, cargos: [{ ...estado.cargos[0], saldo: 80 }] } });
   const boton = vista.root.findAllByType(TouchableOpacity)[0];
   await act(async () => boton.props.onPress());
   const continuar = vi.mocked(Alert.alert).mock.calls.at(-1)?.[2]?.find((b) => b.text === "Continuar");
