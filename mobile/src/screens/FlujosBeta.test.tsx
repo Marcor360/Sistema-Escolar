@@ -502,3 +502,23 @@ it("revalida el importe antes de generar una orden y rechaza saldos modificados"
   expect(api.post).not.toHaveBeenCalled();
   expect(Alert.alert).toHaveBeenCalledWith("El saldo cambió", expect.any(String));
 });
+
+it("tareas conserva datos solo como referencia y bloquea entregas con información obsoleta", async () => {
+  const tarea = { id: 3, titulo: "Trabajo", tipo: "TAREA", parcial: 1, fechaEntrega: null, entrega: null };
+  vi.mocked(api.get).mockResolvedValue({ data: [tarea] });
+  await montar(<Tareas />);
+  expect(vista.root.findByProps({ accessibilityLabel: "Entregar archivo: Trabajo" }).props.disabled).toBe(false);
+  vi.mocked(api.get).mockRejectedValueOnce(new Error("Red interrumpida"));
+  await act(async () =>
+    vista.root.findByProps({ accessibilityLabel: "Actualizar tareas" }).props.onPress(),
+  );
+  expect(vista.root.findByProps({ accessibilityLabel: "Entregar archivo: Trabajo" }).props.disabled).toBe(true);
+  expect(texto()).toContain("desactualizados");
+  expect(DocumentPicker.getDocumentAsync).not.toHaveBeenCalled();
+
+  vi.mocked(api.get).mockResolvedValueOnce({ data: [tarea] });
+  await act(async () =>
+    vista.root.findByProps({ accessibilityLabel: "Actualizar tareas" }).props.onPress(),
+  );
+  expect(vista.root.findByProps({ accessibilityLabel: "Entregar archivo: Trabajo" }).props.disabled).toBe(false);
+});
