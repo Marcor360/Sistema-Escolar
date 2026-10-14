@@ -179,6 +179,21 @@ it('separa notas de ciclos, calcula P1-P3 sin Final y exporta inscritos sin nota
     const propia = await ctx.dataSource.getRepository(Inscripcion).findOneByOrFail({ alumnoId: ctx.alumnoId, grupoId: actual.grupoId });
     const pdf = await fetch(`${ctx.baseUrl}/reportes/boleta/${ctx.alumnoId}?cicloId=${actual.grupo.cicloId}&inscripcionId=${propia.id}`, { headers: { authorization: `Bearer ${token}` } });
     expect(pdf.status).toBe(200); expect(pdf.headers.get('content-type')).toContain('application/pdf');
+
+    const disponibles = await ctx.api('/reportes/mis-boletas', { token: movil });
+    expect(disponibles.response.status).toBe(200);
+    expect(disponibles.data).toEqual(expect.arrayContaining([
+      expect.objectContaining({ inscripcionId: propia.id }),
+    ]));
+    const enlace = await ctx.api(`/reportes/mi-boleta/enlace?cicloId=${actual.grupo.cicloId}&inscripcionId=${propia.id}`, { token: movil });
+    expect(enlace.response.status).toBe(200);
+    expect(enlace.data.url).toMatch(/^\/api\/reportes\/boleta-descarga\/\d+\?t=/);
+    const descarga = await fetch(new URL(enlace.data.url, ctx.baseUrl));
+    expect(descarga.status).toBe(200);
+    expect(descarga.headers.get('content-type')).toContain('application/pdf');
+    expect(descarga.headers.get('cache-control')).toContain('no-store');
+    // Ni una boleta solicitada con ID explícito permite cambiar de expediente.
+    expect((await ctx.api(`/reportes/boleta/${sinNota.data.id}`, { token: movil })).response.status).toBe(403);
   });
   },
   36: (ctx) => {
