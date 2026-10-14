@@ -72,15 +72,15 @@ El dispositivo debe poder alcanzar la API; `localhost` del teléfono no apunta a
 
 ## Base de datos y seguridad
 
-Los esquemas de ambos motores documentan 39 tablas, con baseline `v1` y siete migraciones incrementales ordenadas posteriores. Su estado en un servidor existente debe consultarse: no se certificó la base productiva. Los últimos PR de interfaz no cambian el esquema. [Procedimiento y manifiestos](docs/MIGRACIONES.md).
+Los esquemas de ambos motores documentan 39 tablas, con baseline `v1` y ocho migraciones incrementales pendientes ordenadas en el manifiesto de cada motor. Su estado en un servidor existente debe consultarse: no se certificó la base productiva. Los últimos PR de interfaz no cambian el esquema. [Procedimiento y manifiestos](docs/MIGRACIONES.md).
 
 La API aplica autorización centralizada, validación de datos, límites de solicitudes, contraseñas con hash, acceso de corta duración y refresh rotativo con revocación. El portal usa refresh en cookie HttpOnly/SameSite Strict y acceso en memoria; la app usa SecureStore. Producción exige configuración TLS y secretos adecuados. El portal dispone de CSP y cabeceras de seguridad. Uploads no se publican como carpeta estática; las descargas verifican firma, sesión y permisos. La configuración y operación siguen siendo responsabilidad del despliegue.
 
-La auditoría de dependencias no informó vulnerabilidades conocidas en npm ni en la resolución Python revisada. Esto no constituye certificación de seguridad. Los uploads no cuentan con antivirus ni cuotas agregadas; se requieren políticas de conservación y aceptación institucional. Los parches de dependencias incluidas localmente necesitan mantenimiento.
+La auditoría de dependencias no informó vulnerabilidades conocidas en npm ni en la resolución Python revisada. Esto no constituye certificación de seguridad. La biblioteca privada exige antivirus ClamAV y cuota configurable por plantel; se requieren pruebas del escáner real y políticas institucionales de conservación. Las cargas de otros módulos no están cubiertas por la cuota de la biblioteca. Los parches de dependencias incluidas localmente necesitan mantenimiento.
 
 ## Validación y límites actuales
 
-La candidata incorpora 191 pruebas unitarias de backend, 80 web, 58 móviles y 11 pruebas Node de configuración/auditoría. El ETL conserva sus siete pruebas. La integración y compilación se exigen en CI antes de publicar cada commit. CI ejecutó 73 pruebas de integración en cada motor y verificaciones de navegador/responsive entre 320 y 3840 px. Tipos, builds y exportación Android Expo aprobaron. Backend lint tiene cero errores y 527 advertencias que deben reducirse. [Evidencia y alcance de la candidata](docs/PREPARACION_BETA_1.24.0-beta.1.md#validación).
+La revisión de la candidata beta.2 registró 202 pruebas unitarias de backend, 94 web, 68 móviles y 11 pruebas Node de configuración/auditoría; nuevas modificaciones requieren repetir las suites. El ETL conserva sus siete pruebas. La integración y compilación se exigen en CI antes de publicar cada commit. La validación de beta.2 registró 80 pruebas MySQL, 77 SQL Server y verificaciones de navegador/responsive entre 320 y 3840 px. Tipos, builds y exportación Android Expo aprobaron. Backend lint tiene cero errores y 527 advertencias que deben reducirse. [Evidencia y alcance de la candidata](docs/PREPARACION_BETA_1.24.0-beta.1.md#validación).
 
 ```sh
 # Desde backend/
@@ -102,7 +102,7 @@ npx tsc --noEmit
 python -m unittest discover -s tests
 ```
 
-Las integraciones requieren bases aisladas configuradas para pruebas. Los ocho jobs de la [CI de esta candidata](https://github.com/Marcor360/Sistema-Escolar/pull/28/checks) deben aprobar antes de integrar. Revisar también la CI del commit que se vaya a desplegar.
+Las integraciones requieren bases aisladas configuradas para pruebas. Los ocho jobs de la [CI de la candidata fusionada #42](https://github.com/Marcor360/Sistema-Escolar/pull/42/checks) aprobaron; cualquier PR posterior debe superar su propia CI antes de integrar. Revisar también la CI del commit que se vaya a desplegar.
 
 Antes del piloto:
 
@@ -111,7 +111,7 @@ Antes del piloto:
 - Probar builds firmados en Android/iOS físicos, push, permisos, reconexión y cambio de cuenta.
 - Certificar staging, SMTP/Openpay, permisos, cierre/promoción, copias y restauración con responsables institucionales.
 
-La edición de eventos, una biblioteca general de archivos y una cola académica offline no forman parte de la implementación actual. No se certificaron VPS, bases reales, proveedores ni tiendas de aplicaciones durante este barrido.
+La edición de eventos y la biblioteca administrativa privada están implementadas; no existe una cola académica de escrituras offline ni una biblioteca general para docentes o alumnos. No se certificaron VPS, bases reales, proveedores ni tiendas de aplicaciones durante este barrido.
 
 ## Documentación operativa
 
