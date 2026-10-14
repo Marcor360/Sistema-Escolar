@@ -1,4 +1,5 @@
 import { crearControlLectura } from "../api/lectura-vigente";
+import { validarArchivoEntrega } from "../utils/archivos-entrega";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -92,6 +93,11 @@ export default function TareasScreen() {
       });
       if (!activa.current || resultado.canceled || !resultado.assets[0]) return;
       const archivo = resultado.assets[0];
+      const problema = validarArchivoEntrega(archivo);
+      if (problema) {
+        Alert.alert("Archivo no válido", problema);
+        return;
+      }
 
       const form = new FormData();
       if (comentarios[tarea.id]?.trim())
@@ -164,7 +170,7 @@ export default function TareasScreen() {
         ListHeaderComponent={
           <GuiaPantalla
             titulo="Mis tareas"
-            detalle="Adjunta un archivo y, si lo necesitas, un comentario. La entrega queda registrada sólo cuando aparece la confirmación."
+            detalle="Adjunta un PDF, documento de Office, imagen, ZIP o TXT (límite preliminar de 5 MB). La entrega solo queda registrada al recibir confirmación del servidor."
           />
         }
         keyboardShouldPersistTaps="handled"
