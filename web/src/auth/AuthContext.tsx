@@ -26,6 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [sesion, setSesion] = useState<Sesion | null>(null);
   const [cargando, setCargando] = useState(true);
   const [errorInicio, setErrorInicio] = useState(false);
+  const usuarioSesion = sesion?.sub;
 
   useEffect(() => {
     let activo = true;
@@ -116,7 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    if (!sesion) return;
+    if (!usuarioSesion) return;
     let cerrada = false;
     let ultimo = leerUltimaActividad() ?? Date.now();
     let ultimaPersistida = ultimo;
@@ -174,7 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       window.removeEventListener('focus', comprobar);
       document.removeEventListener('visibilitychange', reanudar);
     };
-  }, [sesion?.sub]);
+  }, [usuarioSesion]);
 
   const tieneRol = (...roles: string[]) =>
     sesion !== null &&

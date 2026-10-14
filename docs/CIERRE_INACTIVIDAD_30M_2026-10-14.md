@@ -25,3 +25,9 @@ Web para MAESTRO, ADMINISTRATIVO, FINANZAS y SUPERADMIN; Expo exclusivamente ALU
 7. Zona horaria: un evento creado en México presenta la hora institucional en teléfono con zona horaria distinta.
 
 No se modifica la plantilla oficial de boletas, el acceso a biblioteca administrativa, la descarga de PDF ni la cola offline. Los ocho trabajos de CI son evidencia técnica, no sustituyen UAT ni pruebas Android/iOS físicas.
+
+## Correcciones durante revisión de #46
+
+La marca de actividad se escribe y se elimina mediante una misma cola: la limpieza de logout queda encolada antes de que un login nuevo pueda guardar su marca. Se evita que una eliminación tardía borre la actividad de la nueva sesión. Regresiones de almacenamiento lento y fallido, y rechazo de marcas futuras/corruptas/vencidas al restaurar. Una sesión anterior sin marca adopta el reloj actual por compatibilidad; no se presenta como prueba de inactividad previa.
+
+Continúan los límites de revocación remota sin red y la aceptación nativa pendiente.
