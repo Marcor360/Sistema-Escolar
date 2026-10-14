@@ -155,6 +155,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const ahora = Date.now();
       if (inactividadVencida(ultimo, ahora)) { comprobar(); return; }
       ultimo = ahora;
+      // Solo las interacciones de la persona actualizan la caducidad en la API.
+      // El refresh JWT, polling y cargas automáticas no renuevan este plazo.
       if (ahora - ultimoEnvioActividad >= 60_000) {
         ultimoEnvioActividad = ahora;
         void api.post('/auth/actividad').catch(() => undefined);

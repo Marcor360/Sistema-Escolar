@@ -13,6 +13,7 @@ import { Material } from '../entities/material.entity';
 import { Entrega } from '../entities/entrega.entity';
 import { Inscripcion } from '../entities/inscripcion.entity';
 import { Usuario } from '../entities/usuario.entity';
+import { sesionInactiva } from '../auth/sesion-inactividad';
 import { Sesion } from '../entities/sesion.entity';
 import { grupoVigente } from '../common/contexto-academico';
 import { ScopeService } from '../planteles/scope.service';
@@ -186,7 +187,7 @@ export class ArchivosService {
     const usuario = await this.usuarios.findOne({ where: { id: payload.sub, activo: true } });
     if (!usuario || usuario.passwordChangeRequired || usuario.sessionVersion !== payload.ver) throw new UnauthorizedException('Enlace inválido o sesión revocada');
     const sesion = await this.usuarios.manager.getRepository(Sesion).findOne({ where: { id: payload.sid, usuarioId: usuario.id, revocada: false } });
-    if (!sesion || sesion.expiraEn <= new Date() || sesion.version !== payload.ver) throw new UnauthorizedException('La sesión del enlace fue revocada');
+    if (!sesion || sesion.expiraEn <= new Date() || sesion.version !== payload.ver || sesionInactiva(sesion.ultimaActividadEn, new Date())) throw new UnauthorizedException('La sesión del enlace fue revocada');
     return {
       sub: usuario.id, email: usuario.email, nombre: usuario.nombreCompleto,
       roles: usuario.roles.map((r) => r.clave), ver: payload.ver, sid: payload.sid, kind: 'ACCESS',

@@ -293,7 +293,7 @@ function AppInterna() {
       else guardarActividad(control.ultimaActividad());
     });
     const atras = BackHandler.addEventListener("hardwareBackPress", () => {
-      control.actividad();
+      registrarInteraccion();
       return false;
     });
     return () => {

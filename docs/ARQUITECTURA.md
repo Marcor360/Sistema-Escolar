@@ -122,3 +122,11 @@ Calendario permite PATCH con revision completa y validación de alcance de orige
 Expo mantiene seis pestañas y un stack Perfil → Mis documentos. Consulta boletas por inscripción/ciclo y materiales por materia; verifica origen y ruta de enlaces antes de abrirlos. Caché académica y de índices solo en memoria, TTL de cinco minutos e invalidación por identidad/logout; sin escritura offline ni PDFs/URLs firmadas persistidos. SecureStore conserva secretos, no expedientes. Remontaje de navegación por alumno y cancelación de respuestas antiguas complementan la autorización de servidor.
 
 Biblioteca añade carpetas y archivos privados, con migración aditiva espejo. El detalle está en [API](API.md), [migraciones](MIGRACIONES.md) y [estado vigente](ESTADO_IMPLEMENTACION.md). El requisito de [activación segura](REQUERIMIENTO_ACTIVACION_SEGURA.md) está pendiente; la arquitectura de invitaciones no está implementada.
+
+## Señal de actividad autenticada — #47–51
+
+Además del cierre local, la API conserva sesiones.ultima_actividad_en y exige señal vigente de los últimos 30 minutos en JWT, refresh y descargas firmadas. El login la inicializa y POST /auth/actividad registra hora del servidor con actualización condicional; consultas de fondo no la modifican. Una lectura antigua del guard no revoca una fila renovada concurrentemente.
+
+Clientes web/Expo notifican interacción limitada a un pulso por minuto. Esta señal autenticada no prueba que un cliente modificado tenga una persona presente. La precisión del motor y la frecuencia del pulso delimitan el umbral respecto del reloj local. Access conserva 15 minutos y refresh máximo 30 días.
+
+Requiere la migración aditiva sesiones_inactividad y despliegue coordinado; NULL histórico exige reautenticación. [Contrato, pruebas y rollback](SESIONES_INACTIVIDAD_PLAN.md).
