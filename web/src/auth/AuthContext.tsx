@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
 import { api, establecerToken, obtenerTokenSesion, renovarSesion, mensajeDeError, registrarSesionExpirada } from '../api/client';
 import { CLAVE_ACTIVIDAD, CLAVE_CIERRE, LIMITE_INACTIVIDAD_MS, cierreLocalActivo, guardarUltimaActividad, iniciarActividadAutenticada, inactividadVencida, leerUltimaActividad, registrarCierreLocal } from './inactividad';
 
@@ -26,6 +26,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [sesion, setSesion] = useState<Sesion | null>(null);
   const [cargando, setCargando] = useState(true);
   const [errorInicio, setErrorInicio] = useState(false);
+  const usuarioSesion = sesion?.sub;
+  const revocacion = useRef<Promise<void>>(Promise.resolve());
+  const cancelarRevocacion = useRef<AbortController | null>(null);
 
   useEffect(() => {
     let activo = true;
@@ -61,6 +64,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => { registrarSesionExpirada(() => setSesion(null)); return () => registrarSesionExpirada(null); }, []);
 
   const login = async (email: string, password: string) => {
+    // Un refresh de logout antiguo no debe sobrescribir la cookie del login nuevo.
+    cancelarRevocacion.current?.abort();
+    await revocacion.current;
     const { data } = await api.post('/auth/login', { email, password });
     iniciarActividadAutenticada();
     establecerToken(data.accessToken);
@@ -79,7 +85,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const revocarDispositivo = (token: string | null) => {
     if (!token || typeof fetch !== 'function') return;
     // Tras 30 minutos el access (15m) ya expiró: rotar solo para revocar la sesión.
-    void (async () => {
+    const control = new AbortController();
+    cancelarRevocacion.current?.abort();
+    cancelarRevocacion.current = control;
+    revocacion.current = (async () => {
       const url = api.defaults.baseURL;
       const sesionDelToken = (acceso: string): string | null => {
         try {
@@ -91,13 +100,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
       const sidAnterior = sesionDelToken(token);
       const retirar = (acceso: string) => fetch(`${url}/auth/logout`, {
-        method: 'POST', credentials: 'include', keepalive: true,
+        method: 'POST', credentials: 'include', keepalive: true, signal: control.signal,
         headers: { Authorization: `Bearer ${acceso}`, 'x-portal': 'WEB' },
       });
       const intento = await retirar(token);
       if (intento.status !== 401 || !cierreLocalActivo()) return;
       const nuevo = await fetch(`${url}/auth/refresh`, {
-        method: 'POST', credentials: 'include', keepalive: true,
+        method: 'POST', credentials: 'include', keepalive: true, signal: control.signal,
         headers: { 'x-portal': 'WEB', 'Content-Type': 'application/json' },
         body: '{}',
       });
@@ -106,7 +115,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Una autenticación manual nueva no puede ser revocada por un logout tardío.
       if (datos.accessToken && sidAnterior && sesionDelToken(datos.accessToken) === sidAnterior &&
           cierreLocalActivo()) await retirar(datos.accessToken);
-    })().catch(() => undefined);
+    })().catch(() => undefined).finally(() => {
+      if (cancelarRevocacion.current === control) cancelarRevocacion.current = null;
+    });
   };
 
   const logout = async () => {
@@ -116,7 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    if (!sesion) return;
+    if (!usuarioSesion) return;
     let cerrada = false;
     let ultimo = leerUltimaActividad() ?? Date.now();
     let ultimaPersistida = ultimo;
@@ -174,7 +185,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       window.removeEventListener('focus', comprobar);
       document.removeEventListener('visibilitychange', reanudar);
     };
-  }, [sesion?.sub]);
+  }, [usuarioSesion]);
 
   const tieneRol = (...roles: string[]) =>
     sesion !== null &&
