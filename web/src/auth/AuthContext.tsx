@@ -81,6 +81,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Tras 30 minutos el access (15m) ya expiró: rotar solo para revocar la sesión.
     void (async () => {
       const url = api.defaults.baseURL;
+      const sesionDelToken = (acceso: string): string | null => {
+        try {
+          const cuerpo = acceso.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+          const payload: unknown = JSON.parse(atob(cuerpo));
+          return typeof payload === 'object' && payload !== null &&
+            'sid' in payload && typeof payload.sid === 'string' ? payload.sid : null;
+        } catch { return null; }
+      };
+      const sidAnterior = sesionDelToken(token);
       const retirar = (acceso: string) => fetch(`${url}/auth/logout`, {
         method: 'POST', credentials: 'include', keepalive: true,
         headers: { Authorization: `Bearer ${acceso}`, 'x-portal': 'WEB' },
@@ -95,7 +104,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!nuevo.ok) return;
       const datos: { accessToken?: string } = await nuevo.json();
       // Una autenticación manual nueva no puede ser revocada por un logout tardío.
-      if (datos.accessToken && cierreLocalActivo()) await retirar(datos.accessToken);
+      if (datos.accessToken && sidAnterior && sesionDelToken(datos.accessToken) === sidAnterior &&
+          cierreLocalActivo()) await retirar(datos.accessToken);
     })().catch(() => undefined);
   };
 
