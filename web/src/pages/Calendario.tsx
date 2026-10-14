@@ -1,5 +1,5 @@
 import { useConfirmacion } from '../components/useConfirmacion';
-import { FormEvent, useRef, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { Encabezado } from '../components/Encabezado';
 import { useDatos } from '../hooks/useDatos';
@@ -48,23 +48,27 @@ export default function CalendarioPage() {
   const [form, setForm] = useState(FORM_INICIAL);
   const [editando, setEditando] = useState<Evento | null>(null);
   const fechaInput = (valor: string) => { const d = new Date(valor); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0,16); };
-  const editar = (e: Evento) => { setEditando(e); setForm({ titulo: e.titulo, descripcion: e.descripcion ?? '', tipo: e.tipo, plantelId: String(e.plantel?.id ?? ''), grupoId: String(e.grupoId ?? ''), fechaInicio: fechaInput(e.fechaInicio), fechaFin: e.fechaFin ? fechaInput(e.fechaFin) : '' }); document.getElementById('cal-titulo')?.focus(); };
+  const editar = (e: Evento) => { setEditando(e); setForm({ titulo: e.titulo, descripcion: e.descripcion ?? '', tipo: e.tipo, plantelId: String(e.plantel?.id ?? ''), grupoId: String(e.grupoId ?? ''), fechaInicio: fechaInput(e.fechaInicio), fechaFin: e.fechaFin ? fechaInput(e.fechaFin) : '' }); setError(''); };
   const [filtroPlantel, setFiltroPlantel] = useState('');
   const [error, setError] = useState(''); const [guardando, setGuardando] = useState(false); const mutando = useRef(false);
 
+  useEffect(() => { if (editando) document.getElementById('cal-titulo')?.focus(); }, [editando]);
+
   const crear = async (e: FormEvent) => {
     e.preventDefault();
-    if (mutando.current) return; mutando.current = true; setGuardando(true);
+    if (mutando.current) return;
+    if (!form.titulo.trim()) { setError('Escribe el título del evento.'); return; }
+    if (form.fechaFin && new Date(form.fechaFin) < new Date(form.fechaInicio)) { setError('El fin no puede ser anterior al inicio.'); return; }
+    mutando.current = true; setGuardando(true);
     setError('');
     try {
       const datos = { ...(editando ? { revision: editando.revision } : {}),
-        titulo: form.titulo,
+        titulo: form.titulo.trim(),
         tipo: form.tipo,
         fechaInicio: new Date(form.fechaInicio).toISOString(),
         fechaFin: form.fechaFin ? new Date(form.fechaFin).toISOString() : editando ? null : undefined,
-        descripcion: form.descripcion || undefined,
-        plantelId: form.plantelId ? Number(form.plantelId) : editando ? null : undefined,
-        grupoId: form.grupoId ? Number(form.grupoId) : editando ? null : undefined,
+        descripcion: form.descripcion.trim() || (editando ? null : undefined),
+        ...(!editando ? { plantelId: form.plantelId ? Number(form.plantelId) : undefined, grupoId: form.grupoId ? Number(form.grupoId) : undefined } : {}),
       };
       if (editando) await api.patch(`/calendario/${editando.id}`, datos);
       else await api.post('/calendario', datos);
@@ -97,31 +101,32 @@ export default function CalendarioPage() {
       <Encabezado titulo="Calendario académico" detalle="Exámenes, entregas, días festivos y avisos generales" />
       {(error || errorCarga) && <p role="alert" className="mensaje-error">{error || errorCarga}</p>}
 
-      <section className="panel">
-        <h2>{editando ? 'Editar evento' : 'Nuevo evento'}</h2>
-        <form onSubmit={crear} className="fila">
+      <section className="panel" aria-labelledby="cal-form-titulo">
+        <h2 id="cal-form-titulo">{editando ? 'Editar evento' : 'Nuevo evento'}</h2>
+        {editando && <p>La edición conserva el plantel y grupo. Si otra persona modifica el evento, recarga antes de volver a guardar.</p>}
+        <form onSubmit={crear} className="fila" aria-busy={guardando}>
           <div className="campo"><label htmlFor="cal-titulo">Título</label>
-            <input id="cal-titulo" required value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} />
+            <input id="cal-titulo" disabled={guardando} maxLength={150} required value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} />
           </div>
           <div className="campo"><label htmlFor="cal-tipo">Tipo</label>
-            <select id="cal-tipo" value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })}>
+            <select id="cal-tipo" disabled={guardando} value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })}>
               <option>GENERAL</option><option>EXAMEN</option><option>ENTREGA</option><option>FESTIVO</option>
               <option>PAGO</option><option>JUNTA</option>
             </select>
           </div>
-          <div className="campo"><label htmlFor="cal-plantel">Plantel</label><select id="cal-plantel" required={!esSuperadmin && !maestroPuro} disabled={maestroPuro} value={form.plantelId} onChange={(e) => setForm({ ...form, plantelId: e.target.value })}>{esSuperadmin && <option value="">Global (todos)</option>}{!esSuperadmin && <option value="">Selecciona…</option>}{planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div>
-          <div className="campo"><label htmlFor="cal-grupo">Grupo {maestroPuro ? '' : '(opcional)'}</label><select id="cal-grupo" required={maestroPuro} value={form.grupoId} onChange={(e) => setForm({ ...form, grupoId: e.target.value })}><option value="">Sin grupo</option>{Array.from(new Map(clases.map((c) => [c.grupo.id, c.grupo])).values()).map((g) => <option key={g.id} value={g.id}>{g.nombre}</option>)}</select></div>
+          <div className="campo"><label htmlFor="cal-plantel">Plantel</label><select id="cal-plantel" required={!esSuperadmin && !maestroPuro} disabled={maestroPuro || !!editando || guardando} value={form.plantelId} onChange={(e) => setForm({ ...form, plantelId: e.target.value })}>{esSuperadmin && <option value="">Global (todos)</option>}{!esSuperadmin && <option value="">Selecciona…</option>}{planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div>
+          <div className="campo"><label htmlFor="cal-grupo">Grupo {maestroPuro ? '' : '(opcional)'}</label><select id="cal-grupo" disabled={!!editando || guardando} required={maestroPuro} value={form.grupoId} onChange={(e) => setForm({ ...form, grupoId: e.target.value })}><option value="">Sin grupo</option>{Array.from(new Map(clases.map((c) => [c.grupo.id, c.grupo])).values()).map((g) => <option key={g.id} value={g.id}>{g.nombre}</option>)}</select></div>
           <div className="campo"><label htmlFor="cal-inicio">Inicio</label>
-            <input id="cal-inicio" type="datetime-local" required value={form.fechaInicio} onChange={(e) => setForm({ ...form, fechaInicio: e.target.value })} />
+            <input id="cal-inicio" disabled={guardando} type="datetime-local" required value={form.fechaInicio} onChange={(e) => setForm({ ...form, fechaInicio: e.target.value })} />
           </div>
           <div className="campo"><label htmlFor="cal-fin">Fin (opcional)</label>
-            <input id="cal-fin" type="datetime-local" min={form.fechaInicio} value={form.fechaFin} onChange={(e) => setForm({ ...form, fechaFin: e.target.value })} />
+            <input id="cal-fin" disabled={guardando} type="datetime-local" min={form.fechaInicio} value={form.fechaFin} onChange={(e) => setForm({ ...form, fechaFin: e.target.value })} />
           </div>
           <div className="campo" style={{ flex: '1 1 220px' }}><label htmlFor="cal-descripcion">Descripción</label>
-            <input id="cal-descripcion" value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} />
+            <input id="cal-descripcion" disabled={guardando} value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} />
           </div>
           <button className="boton" disabled={guardando}>{guardando ? 'Guardando…' : editando ? 'Guardar evento' : 'Agregar al calendario'}</button>
-          {editando && <button type="button" disabled={guardando} onClick={() => { setEditando(null); setForm(FORM_INICIAL); }}>Cancelar edición</button>}
+          {editando && <button type="button" disabled={guardando} onClick={() => { setEditando(null); setForm(FORM_INICIAL); setError(''); }}>Cancelar edición</button>}
         </form>
       </section>
 

@@ -63,7 +63,7 @@ Rollback de aplicación: volver al binario anterior y mantener tablas aditivas. 
 ## Evidencia automatizada local
 
 - Backend: lint sin errores, typecheck, build y 202 pruebas en 42 suites; advertencias históricas de tipos `any` en pruebas existentes.
-- Web: lint, build y 91 pruebas de UI en 25 archivos.
+- Web: lint, build y 94 pruebas de UI en 26 archivos.
 - Expo: typecheck, 65 pruebas de flujos/caché/cliente en 11 archivos, 11 pruebas Node y exportación Android correcta. No equivale a certificación nativa.
 - MySQL 8.4: 80 casos de integración, incluidos tres recorridos con Chromium/API/DB reales; se amplió el recorrido académico para incluir preview/confirmación de CSV desde UI. La ampliación pasó, y la selección de boleta propia se comprobó además contra API/MySQL reales.
 - SQL Server 2022: 77 casos de integración, migraciones/paridad y nuevas pruebas negativas, sin simulación del motor.
@@ -90,3 +90,10 @@ En la primera ejecución de integración se omitió crear `UPLOADS_DIR` de prueb
 | UAT por roles | Firmas de Control escolar, docente, alumno, Finanzas y Superadmin sobre el SHA candidato |
 
 No se inventaron firmas, acceso a VPS, dispositivos físicos ni correo externo. Ninguna puerta se marca aprobada por una prueba local. La candidata es revisable y verificable; la aprobación del piloto permanece pendiente de esa evidencia.
+
+
+### Cierre de PR #39 y #40
+
+- #39: edición accesible con foco tras render, cancelación que limpia errores, validación de fechas y título, campos bloqueados al guardar y conservación de plantel/grupo. PATCH envía revisión completa del evento y permite vaciar descripción; no envía cambios implícitos de ámbito.
+- #40: una sola descarga XLSX en el panel de importación, por clase y parcial, con nombre identificable, estado/error y liberación diferida de URL. Usa el endpoint compatible de #37 y la plantilla canónica compartida. Descargar es lectura y permanece disponible con periodo cerrado; importar sigue bloqueado.
+- Regresiones web añadidas para foco/ámbito/cancelación/descripción, descarga en periodo cerrado y fallo recuperable. Sin cambios de esquema ni despliegue.

@@ -42,21 +42,24 @@ export function ImportarCalificaciones({
     };
   }, [claseId, parcial]);
   const plantilla = async () => {
+    if (!claseId || ocupado) return;
+    const actual = contexto.current;
     setOcupado(true);
     setError('');
     try {
-      const { data } = await api.get('/importaciones/calificaciones/plantilla', {
-        params: { grupoMateriaId: claseId, parcial },
+      const { data } = await api.get(`/reportes/grupo-materias/${claseId}/plantilla-calificaciones.xlsx`, {
+        params: { parcial: Number(parcial) },
         responseType: 'blob',
       });
+      if (actual !== contexto.current) return;
       const url = URL.createObjectURL(data),
         a = document.createElement('a');
       a.href = url;
-      a.download = 'plantilla_calificaciones.xlsx';
+      a.download = `plantilla-calificaciones-${claseId}-${parcial}.xlsx`;
       a.click();
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch (err) {
-      setError(mensajeDeError(err));
+      if (actual === contexto.current) setError(mensajeDeError(err));
     } finally {
       setOcupado(false);
     }
@@ -106,7 +109,7 @@ export function ImportarCalificaciones({
       setMensaje(`${data.capturadas} notas importadas; ${data.sinCambios} sin cambios.`);
       alConfirmar();
     } catch (err) {
-      setError(mensajeDeError(err));
+      if (actual === contexto.current) setError(mensajeDeError(err));
     } finally {
       setOcupado(false);
     }
@@ -119,11 +122,9 @@ export function ImportarCalificaciones({
         Descarga la plantilla de esta clase y parcial. Conserva los identificadores y elimina las filas pendientes. CSV
         o XLSX, hasta 500 alumnos y 5 MB. La previsualización vence en 15 minutos.
       </p>
+      <button type="button" disabled={!claseId || ocupado} onClick={plantilla}>Descargar plantilla XLSX</button>
       <fieldset disabled={deshabilitado || ocupado} className="grupo-formulario" style={{ border: 0 }}>
         <legend>Archivo y motivo</legend>
-        <button type="button" onClick={plantilla}>
-          Descargar plantilla
-        </button>
         <div className="campo">
           <label htmlFor="archivo-notas">Archivo de calificaciones</label>
           <input id="archivo-notas" ref={archivo} type="file" accept=".csv,.xlsx" onChange={() => setPreview(null)} />
