@@ -95,3 +95,10 @@ it('orienta la creación del plantel y las asignaciones pendientes', async () =>
   expect(screen.getByText(/Asigna un director cuando tengas su cuenta creada/)).toBeTruthy();
   expect(screen.getByText(/La creación del expediente del alumno no equivale/)).toBeTruthy();
 });
+
+it('expone el ID numérico de plantel requerido por las plantillas masivas', async () => {
+  render(<PlantelesPage />);
+  const listado = await screen.findByRole('region', { name: 'Listado de planteles' });
+  expect(within(listado).getByRole('columnheader', { name: 'ID' })).toBeTruthy();
+  expect(within(listado).getByText('1')).toBeTruthy();
+});
