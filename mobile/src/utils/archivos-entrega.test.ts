@@ -12,3 +12,11 @@ it("rechaza formatos no previstos, vacío y archivos demasiado grandes", () => {
   expect(validarArchivoEntrega({ name: "tarea.pdf", size: -1 })).toContain("tamaño");
   expect(validarArchivoEntrega({ name: "tarea.pdf", size: Number.NaN })).toContain("tamaño");
 });
+
+it("acepta solo URI local del selector, sin divulgar archivos por una URL remota", () => {
+  expect(validarArchivoEntrega({ name: "archivo.pdf", uri: "file:///data/cache/archivo.pdf" })).toBeNull();
+  expect(validarArchivoEntrega({ name: "archivo.pdf", uri: "content://proveedor/archivo" })).toBeNull();
+  expect(validarArchivoEntrega({ name: "archivo.pdf", uri: "https://tercero.invalid/doc.pdf" })).toContain("local");
+  expect(validarArchivoEntrega({ name: "archivo.pdf", uri: "javascript:alert(1)" })).toContain("local");
+  expect(validarArchivoEntrega({ name: "../privado.pdf", uri: "file:///cache/x" })).toContain("nombre");
+});
