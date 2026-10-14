@@ -1,6 +1,7 @@
 import { ordenarPeriodos } from "../utils/orden-calificaciones";
 import { useSesion } from "../sesion";
 import { leerConCache } from "../api/cache-academica";
+import { resolverEnlacePrivado } from "../api/enlaces-privados";
 import { crearControlLectura } from "../api/lectura-vigente";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -86,7 +87,7 @@ export default function CalificacionesScreen() {
         { params: { cicloId, inscripcionId } },
       );
       if (actual === descargaVigente.current)
-        await Linking.openURL(`${archivosBase}${data.url}`);
+        await Linking.openURL(resolverEnlacePrivado(archivosBase, data.url, "boleta"));
     } catch (e) {
       if (actual === descargaVigente.current) setError(mensajeDeError(e));
     } finally {

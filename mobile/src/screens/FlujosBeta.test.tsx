@@ -239,7 +239,7 @@ it("perfil no cambia contraseña sin confirmación coincidente", async () => {
   await montar(<Perfil />);
   await escribir("Contraseña actual", "actual");
   await escribir("Nueva contraseña, mínimo 8 caracteres", "nuevaclave");
-  const boton = vista.root.findAllByType(TouchableOpacity)[0];
+  const boton = vista.root.findByProps({ accessibilityLabel: "Actualizar contraseña" });
   await act(async () => boton.props.onPress());
   expect(api.post).not.toHaveBeenCalled();
   expect(Alert.alert).toHaveBeenCalledWith(

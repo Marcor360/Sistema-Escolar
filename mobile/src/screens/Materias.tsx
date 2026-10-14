@@ -1,4 +1,5 @@
 import { leerConCache } from "../api/cache-academica";
+import { resolverEnlacePrivado } from "../api/enlaces-privados";
 import { crearControlLectura } from "../api/lectura-vigente";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -85,6 +86,8 @@ export default function MateriasScreen() {
     setCargandoMateriales(null);
     setCargaInicialCompleta(false);
     setUltimaActualizacion(null);
+    setOffline(false);
+    setCacheExpira(0);
     setError("");
     setCargando(false);
   }, [sesion?.sub]);
@@ -163,7 +166,7 @@ export default function MateriasScreen() {
         `/archivos/materiales/${materialId}/enlace`,
       );
       if (actual === consultaMateriales.current)
-        await Linking.openURL(`${archivosBase}${data.url}`);
+        await Linking.openURL(resolverEnlacePrivado(archivosBase, data.url, "material", materialId));
     } catch (fallo) {
       if (actual === consultaMateriales.current)
         setError(mensajeDeError(fallo));
@@ -207,14 +210,14 @@ export default function MateriasScreen() {
           const desplegada = abierta === item.id;
           const materiales = materialesPor[item.id];
           return (
-            <TouchableOpacity
+            <Tarjeta>
+              <TouchableOpacity
               onPress={() => alternar(item)}
               activeOpacity={0.7}
               accessibilityRole="button"
               accessibilityLabel={`${item.materia.clave}: ${item.materia.nombre}. ${desplegada ? "Ocultar" : "Ver"} materiales`}
               accessibilityState={{ expanded: desplegada }}
             >
-              <Tarjeta>
                 <Text style={base.tituloTarjeta}>
                   {item.materia.clave} — {item.materia.nombre}
                 </Text>
@@ -229,6 +232,10 @@ export default function MateriasScreen() {
                 ) : (
                   <Sello texto="Sin docente asignado" tono="aviso" />
                 )}
+                <Text style={estilos.indicador}>
+                  {desplegada ? "Ocultar materiales ▲" : "Ver materiales ▼"}
+                </Text>
+              </TouchableOpacity>
 
                 {desplegada && (
                   <View style={estilos.materiales}>
@@ -267,11 +274,7 @@ export default function MateriasScreen() {
                     ))}
                   </View>
                 )}
-                <Text style={estilos.indicador}>
-                  {desplegada ? "Ocultar materiales ▲" : "Ver materiales ▼"}
-                </Text>
               </Tarjeta>
-            </TouchableOpacity>
           );
         }}
       />

@@ -29,7 +29,7 @@ interface Perfil {
   };
 }
 
-export default function PerfilScreen() {
+export default function PerfilScreen({ abrirDocumentos }: { abrirDocumentos?: () => void } = {}) {
   const { sesion, cerrar, finalizarSesionLocal } = useSesion();
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [actual, setActual] = useState("");
@@ -161,6 +161,15 @@ export default function PerfilScreen() {
         )}
       </Tarjeta>
       <Tarjeta>
+        <Text style={base.tituloTarjeta} accessibilityRole="header">Mis documentos</Text>
+        <Text style={base.secundario}>Consulta tus boletas PDF y carpetas de materiales de clase. Se descargan desde el servidor al abrirlos.</Text>
+        <TouchableOpacity style={base.botonAccesible} accessibilityRole="button"
+          accessibilityLabel="Ver mis documentos" onPress={abrirDocumentos}
+          disabled={!abrirDocumentos}>
+          <Text>Ver mis documentos y boletas</Text>
+        </TouchableOpacity>
+      </Tarjeta>
+      <Tarjeta>
         <Text style={base.tituloTarjeta} accessibilityRole="header">
           Cambiar contraseña
         </Text>
@@ -209,6 +218,7 @@ export default function PerfilScreen() {
           disabled={cambiandoPassword}
           onPress={cambiarPassword}
           accessibilityRole="button"
+          accessibilityLabel="Actualizar contraseña"
           accessibilityState={{ disabled: cambiandoPassword }}
         >
           <Text
