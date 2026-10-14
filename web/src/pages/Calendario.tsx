@@ -199,7 +199,7 @@ export default function CalendarioPage() {
               <td className="derecha">
                 {puedeEliminar(ev)
                   ? <span className="acciones-fila"><button className="boton secundario chico" disabled={guardando} onClick={() => abrirEdicion(ev)}>Editar evento</button><button className="boton peligro chico" disabled={guardando} onClick={() => eliminar(ev)}>Eliminar</button></span>
-                  : <span className="detalle">Solo lectura</span>
+                  : <span className="detalle">Solo lectura</span>}
               </td>
             </tr>
           ))}
