@@ -427,6 +427,7 @@ CREATE TABLE sesiones (
   refresh_hash VARCHAR(64) NOT NULL,
   version INT NOT NULL,
   expira_en DATETIME NOT NULL,
+  ultima_actividad_en DATETIME NULL,
   revocada BOOLEAN NOT NULL DEFAULT FALSE,
   KEY idx_sesiones_usuario (usuario_id),
   CONSTRAINT fk_sesion_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
