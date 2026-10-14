@@ -38,7 +38,7 @@ it('cambiar de importación obliga a elegir nuevamente el archivo', async () => 
 it('explica dónde consultar los IDs del plantel y del grupo', () => {
   vi.spyOn(api, 'get').mockResolvedValue({ data: [] });
   render(<OperacionesPage />);
-  expect(screen.getByText(/son identificadores numéricos/)).toBeTruthy();
+  expect(screen.getByText(/identificadores numéricos/)).toBeTruthy();
   expect(screen.getByRole('link', { name: 'Planteles' }).getAttribute('href')).toBe('/planteles');
   expect(screen.getByRole('link', { name: 'Grupos' }).getAttribute('href')).toBe('/grupos');
 });
