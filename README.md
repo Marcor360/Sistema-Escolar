@@ -115,6 +115,8 @@ La edición de eventos y la biblioteca administrativa privada están implementad
 
 ## Documentación operativa
 
+[Índice de documentación vigente e histórica](docs/README.md) · [Estado beta.2](docs/ESTADO_IMPLEMENTACION.md) · [Requisito de activación segura pendiente](docs/REQUERIMIENTO_ACTIVACION_SEGURA.md).
+
 - [Preparación de beta, guía de uso y 30 mejoras](docs/PREPARACION_BETA_1.24.0-beta.1.md)
 - [Auditoría base e inventario](docs/AUDITORIA_ESTADO_1.23.5_2026-10-13.md)
 - [Reglas del piloto](docs/REGLAS_PILOTO.md)

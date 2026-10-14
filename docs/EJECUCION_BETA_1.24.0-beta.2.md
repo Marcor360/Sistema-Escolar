@@ -2,7 +2,7 @@
 
 Fecha de trabajo: 13 de octubre de 2026 (America/Mexico_City). Base `main`: `01b40b4`. Se incorporaron en una rama de trabajo los SHA `c5507c7` (#28), `5acbdf1` (#29) y `4226606` (#30). Los tres PR originales tenían CI exitosa y se combinaron sin conflictos. Este informe describe la implementación posterior; los informes de beta.1 y de auditoría conservan su contexto histórico.
 
-La candidata añade una migración de biblioteca. No se modificó ni desplegó `main`, no se accedió a producción ni se ejecutaron migraciones sobre datos institucionales. Las bases utilizadas en las pruebas son desechables y contienen cuentas sintéticas.
+La candidata añadió una migración de biblioteca. Durante la ejecución inicial no se modificó ni desplegó main, no se accedió a producción ni se ejecutaron migraciones sobre datos institucionales. Posteriormente #42 se fusionó en main; esa integración no desplegó el servidor. Las bases utilizadas en las pruebas son desechables y contienen cuentas sintéticas.
 
 ## Entregas y límites de aceptación
 
@@ -104,3 +104,10 @@ No se inventaron firmas, acceso a VPS, dispositivos físicos ni correo externo. 
 - #41: orden P1→P2→P3→Final sin mutar datos, periodos pendientes y fuente inmutable cubiertos por las pruebas originales. Se conserva invalidación de consultas y boletas por identidad; se reinician carga, descarga y vencimiento al cambiar de alumno y no se consulta con sesión vacía. Regresión de pantalla comprueba que una respuesta tardía no restaura notas tras logout.
 - Móvil: typecheck, 68 pruebas Vitest en 12 archivos y 11 pruebas Node aprobados.
 - #42 reúne #28–41 como candidata de software revisable. Su integración en main no constituye aprobación de release: UAT, dispositivos físicos, SMTP institucional, antivirus real y restauración mantienen sus puertas pendientes. El despliegue solo se ejecuta mediante workflow manual.
+
+
+### Integración posterior y documentación vigente
+
+#42 se fusionó en main; #43 mejoró plantillas e IDs y #44 añadió Mis documentos en Expo. Los conteos y límites anteriores pertenecen a las ejecuciones descritas, no se reescriben como pruebas del SHA más nuevo. [Estado vigente](ESTADO_IMPLEMENTACION.md) reúne evidencia por commit y funciones actuales.
+
+La sustitución de la contraseña inicial basada en matrícula es un requisito confirmado pendiente de implementar. [Criterios de activación segura](REQUERIMIENTO_ACTIVACION_SEGURA.md). Esta nota no cambia el mecanismo de acceso.

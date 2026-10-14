@@ -49,4 +49,4 @@ La carga reproducible usa 100 alumnos, tres clases, 900 notas y tres capturas si
 - Caché móvil persistente offline queda condicionada a política de privacidad/retención y pérdida de dispositivo. No se encolan pagos ni entregas automáticamente.
 - Pruebas de contraste, lector de pantalla y dispositivos físicos siguen en el gate de staging; Chromium automatizado no las reemplaza.
 
-Inventario completo de archivos de esta auditoría: [ARCHIVOS_AUDITORIA_1.18.0.md](ARCHIVOS_AUDITORIA_1.18.0.md). La CI debe verificarse para el SHA exacto de main; no basta el resultado de una versión anterior.
+Inventario completo de archivos de esta auditoría: [inventario histórico en Git](https://github.com/Marcor360/Sistema-Escolar/blob/706abcf96ac8e684652c741027df1d7f93a5629c/docs/ARCHIVOS_AUDITORIA_1.18.0.md). La CI debe verificarse para el SHA exacto de main; no basta el resultado de una versión anterior.

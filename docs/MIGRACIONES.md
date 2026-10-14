@@ -36,7 +36,7 @@ Las migraciones históricas que agregan columnas o índices no son idempotentes.
 
 Para una instalación nueva, crear primero una base vacía con el nombre aprobado y ejecutar exactamente una vez `database/mysql/baseline_v1.sql` o `database/sqlserver/baseline_v1.sql` según el motor. Son snapshots versionados y no crean ni seleccionan bases por su cuenta. Después compilar el backend y ejecutar `npm run db:migrate:adopt` con `DB_MIGRATION_BASELINE=v1`; esto solo registra el baseline y las migraciones que el manifest declara incluidas, no cambia el esquema. Confirma antes que la base corresponda a ese baseline. Luego `npm run db:migrate:status` muestra los pasos pendientes y `npm run db:migrate` los aplica. La migración de unicidad por plantel aparece como pendiente. Antes, comprobar duplicados con `SELECT ciclo_id, plantel_id, nombre, COUNT(*) FROM grupos GROUP BY ciclo_id, plantel_id, nombre HAVING COUNT(*) > 1;`. Si devuelve filas, resolverlas manualmente con el responsable de datos; no borrar ni combinar grupos automáticamente. `schema.sql` permanece como referencia documental; nunca se usa como instalador. `npm run seed` requiere que el baseline haya terminado correctamente y `ALLOW_DEV_SEED=true`; se bloquea en producción.
 
-La suite de integración instala cada baseline en una base aislada con prefijo `escolar_integration_`, exige que no tenga tablas, agrega un fixture previo y ejecuta `db:migrate:adopt`, `db:migrate` y `db:migrate:status` con `DB_SYNC=false`. También inicia dos procesos `up` concurrentes para validar el bloqueo. Después comprueba que el grupo existente permanece, que el mismo nombre se acepta en dos planteles y se rechaza al repetirlo dentro del mismo plantel. Esto cubre la ruta del runner en MySQL y SQL Server en CI; no valida la actualización de una base institucional histórica. En este entorno local no hay Docker ni servicios en 3306/1433. `db:migrate:adopt` marca como aplicadas las entradas de `incluye` y no comprueba el contenido real de la base; no lo uses sin confirmar la paridad.
+La suite de integración instala cada baseline en una base aislada con prefijo `escolar_integration_`, exige que no tenga tablas, agrega un fixture previo y ejecuta `db:migrate:adopt`, `db:migrate` y `db:migrate:status` con `DB_SYNC=false`. También inicia dos procesos `up` concurrentes para validar el bloqueo. Después comprueba que el grupo existente permanece, que el mismo nombre se acepta en dos planteles y se rechaza al repetirlo dentro del mismo plantel. Esto cubre la ruta del runner en MySQL y SQL Server en CI; no valida la actualización de una base institucional histórica. `db:migrate:adopt` marca como aplicadas las entradas de `incluye` y no comprueba el contenido real de la base; no lo uses sin confirmar la paridad.
 
 ## Aplicación manual
 
@@ -57,3 +57,21 @@ Reemplazar el archivo por la migración pendiente que corresponda. No incluir co
 ## Límite actual
 
 El runner no aplica baselines, no deduce el historial de una base antigua ni puede revertir DDL parcial de MySQL; en SQL Server las migraciones del runner quedan dentro de una transacción. La adopción de una base existente requiere auditoría manual. Si un archivo falla, inspecciona el esquema y corrige el problema antes de volver a ejecutar. `up`, `adopt` y `status` se serializan mediante el bloqueo del motor.
+
+
+## Orden vigente posterior al baseline v1
+
+El manifiesto define ocho incrementales, en este orden para ambos motores:
+
+1. migracion_grupos_plantel_unique.sql
+2. migracion_pagos_manual_idempotencia.sql
+3. migracion_cierre_historial_calificaciones.sql
+4. migracion_sesiones_rotativas.sql
+5. migracion_operacion_ampliada.sql
+6. migracion_integridad_operativa.sql
+7. migracion_previews_importacion.sql
+8. migracion_biblioteca_privada.sql
+
+La última agrega carpetas/archivos de biblioteca y sus referencias e índices; aplicar antes de habilitar ese módulo. El baseline no se reemplaza. Las migraciones antiguas declaradas en incluye ya forman parte del baseline v1; no reaplicarlas por seguir una lista histórica.
+
+Pendientes en el manifiesto significa posteriores al baseline, no necesariamente sin aplicar en un servidor. Consultar el historial mediante db:migrate:status y contrastarlo con el esquema real. La depuración documental no aplica migraciones ni modifica datos.

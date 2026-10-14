@@ -37,3 +37,10 @@
 No se agregan dependencias ni migraciones. Se modifican exportadores de plantillas y directorios web y se añaden regresiones de contrato/formato. La ejecución local de lint, typecheck, build, tests y XLSX visual no fue posible desde el conector de GitHub; **el merge queda condicionado a la CI del SHA del PR y una revisión humana en Excel/LibreOffice de al menos una plantilla por tipo**. Las pruebas automatizadas añadidas verifican cabeceras, instrucciones, congelado de encabezado, formato de la columna editable y round-trip XLSX del lector existente.
 
 El despliegue del VPS, la base institucional, la publicación de app, los proveedores externos y la aceptación del piloto **no se tocaron ni se certificaron**.
+
+
+## Actualización documental posterior a #43 y #44
+
+Los cambios de plantillas/IDs se integraron mediante #43 y sus ocho controles aprobaron; #44 incorporó documentos del alumno sin abrir la biblioteca administrativa. [Estado vigente y evidencia](ESTADO_IMPLEMENTACION.md) distingue el código integrado de la aceptación física/operativa.
+
+La sustitución de la contraseña inicial de matrícula ya fue confirmada por el usuario como requisito del cliente. Continúa pendiente de implementación y de acordar canal/entrega/transición; la nota original de no cambiar unilateralmente describe la revisión previa. [Especificación vigente](REQUERIMIENTO_ACTIVACION_SEGURA.md). No se realizaron aquí pruebas visuales humanas en Excel/LibreOffice.
