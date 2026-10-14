@@ -157,7 +157,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ultimo = ahora;
       if (ahora - ultimoEnvioActividad >= 60_000) {
         ultimoEnvioActividad = ahora;
-        void api.post("/auth/actividad").catch(() => undefined);
+        void api.post('/auth/actividad').catch(() => undefined);
       }
       if (ahora - ultimaPersistida >= 5000) {
         ultimaPersistida = ahora;
