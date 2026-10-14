@@ -11,6 +11,7 @@ import {
   createNavigationContainerRef,
 } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "expo-status-bar";
 import { ActivityIndicator, TouchableOpacity, View } from "react-native";
 import { Text, FuenteContext } from "./src/components/Texto";
@@ -34,6 +35,7 @@ import TareasScreen from "./src/screens/Tareas";
 import CalificacionesScreen from "./src/screens/Calificaciones";
 import EstadoCuentaScreen from "./src/screens/EstadoCuenta";
 import PerfilScreen from "./src/screens/Perfil";
+import DocumentosScreen from "./src/screens/Documentos";
 import { cargarMarca } from "./src/marca-carga";
 import {
   aplicarColores,
@@ -41,6 +43,7 @@ import {
   MARCA_POR_DEFECTO,
   Marca,
   MarcaContext,
+  useMarca,
 } from "./src/marca";
 
 const navegacion = createNavigationContainerRef<{
@@ -52,6 +55,22 @@ const navegacion = createNavigationContainerRef<{
   Perfil: undefined;
 }>();
 const Tab = createBottomTabNavigator();
+const PerfilStack = createNativeStackNavigator<{ MiPerfil: undefined; MisDocumentos: undefined }>();
+
+function PerfilConDocumentos() {
+  const { marca } = useMarca();
+  return (
+    <PerfilStack.Navigator screenOptions={{
+      headerStyle: { backgroundColor: marca.colorPrimario },
+      headerTintColor: textoSobreFondo(marca.colorPrimario),
+    }}>
+      <PerfilStack.Screen name="MiPerfil" options={{ title: "Perfil" }}>
+        {({ navigation }) => <PerfilScreen abrirDocumentos={() => navigation.navigate("MisDocumentos")} />}
+      </PerfilStack.Screen>
+      <PerfilStack.Screen name="MisDocumentos" component={DocumentosScreen} options={{ title: "Mis documentos" }} />
+    </PerfilStack.Navigator>
+  );
+}
 
 const iconos: Record<string, string> = {
   Inicio: "🏠",
@@ -322,7 +341,7 @@ function AppInterna() {
                 component={EstadoCuentaScreen}
                 options={{ title: "Estado de cuenta", tabBarLabel: "Cuenta" }}
               />
-              <Tab.Screen name="Perfil" component={PerfilScreen} />
+              <Tab.Screen name="Perfil" component={PerfilConDocumentos} options={{ headerShown: false }} />
             </Tab.Navigator>
           ) : (
             <LoginScreen />
