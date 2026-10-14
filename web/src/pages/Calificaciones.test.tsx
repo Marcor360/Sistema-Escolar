@@ -41,3 +41,20 @@ it('presenta una captura legible por alumno y el historial como tabla adaptable'
   expect(region.querySelector('[data-etiqueta="Matrícula"]')?.textContent).toBe('AL1');
   expect(screen.getByRole('region', { name: 'Historial de modificaciones de notas' })).toBeTruthy();
 });
+
+it('solicita una plantilla de la clase y el periodo elegidos', async () => {
+  await preparar();
+  const get = vi.mocked(api.get);
+  const crearUrl = vi.fn().mockReturnValue('blob:plantilla-de-prueba');
+  const revocarUrl = vi.fn();
+  Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: crearUrl });
+  Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: revocarUrl });
+  get.mockResolvedValueOnce({ data: new Blob(['excel'], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }) });
+  const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+  fireEvent.change(screen.getByLabelText('Parcial'), { target: { value: '2' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Descargar plantilla XLSX' }));
+  await waitFor(() => expect(get).toHaveBeenCalledWith('/reportes/grupo-materias/7/plantilla-calificaciones.xlsx',
+    { params: { parcial: 2 }, responseType: 'blob' }));
+  expect(crearUrl).toHaveBeenCalled();
+  click.mockRestore();
+});
