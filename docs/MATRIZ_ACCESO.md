@@ -35,3 +35,10 @@ Rutas y roles por endpoint: [API.md](API.md). La decisión final debe documentar
 ## Cuentas con varios roles (1.16.1)
 
 La capacidad depende de la operación. SUPERADMIN es global. ADMINISTRATIVO concede gestión académica en planteles asignados, incluso combinado con MAESTRO. MAESTRO sin ADMINISTRATIVO/SUPERADMIN sigue limitado a clases asignadas aunque también tenga FINANZAS. FINANZAS no concede consulta/captura/exportación de calificaciones, gestión de inscripciones ni conducta. Concede operación financiera por planteles; `/finanzas/alumnos` es el selector mínimo financiero independiente. La analítica suma el bloque financiero a las clases propias del maestro sin ampliar el alcance académico. Calendario GET admite ALUMNO, MAESTRO, ADMINISTRATIVO y SUPERADMIN; FINANZAS solo recibe 403.
+
+
+## Biblioteca y documentos
+
+Biblioteca administrativa: ADMINISTRATIVO por planteles y SUPERADMIN global; MAESTRO, FINANZAS y ALUMNO no reciben acceso por sí solos. Mis documentos en Expo no amplía estos permisos: usa boletas propias por inscripción/ciclo y materiales de clases autorizadas. Cada enlace firmado revalida recurso, sesión y alcance; un catálogo cacheado no concede permiso de descarga.
+
+Calendario PATCH conserva autorización por creador/plantel y valida destino si se solicita cambiar ámbito. No basta que la interfaz muestre el botón.

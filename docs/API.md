@@ -1,4 +1,4 @@
-# API — Sistema Escolar MVP
+# API — Sistema Escolar 1.24.0-beta.2
 
 Base: `http://localhost:3000/api` · Autenticación: `Authorization: Bearer <token>` ·
 Documentación interactiva: `/api/docs` (Swagger), solo fuera de producción. Los DTO anotados con validadores generan sus esquemas al compilar mediante el plugin oficial `@nestjs/swagger`. `SUPERADMIN` accede a todo.
@@ -19,7 +19,7 @@ Para el resumen por rol y las decisiones que requieren validación institucional
 | POST | /auth/refresh | público con refresh válido | Rotación controlada por sesión; web usa cookie HttpOnly y móvil envía refreshToken |
 | GET | /auth/me | autenticado | Perfil del usuario |
 | POST | /auth/logout | autenticado | Revoca la sesión/dispositivo actual y limpia su cookie; baja/cambio de contraseña invalidan todas las sesiones por versión |
-| POST | /auth/forgot-password | público | Genera token de recuperación (1 h; se persiste solo su hash sha256) |
+| POST | /auth/forgot-password | público | Respuesta genérica; token de un uso y 1 h, hash persistido; solicitar no acredita entrega SMTP |
 | POST | /auth/reset-password | público | Cambia contraseña con el token en claro recibido por correo |
 | POST | /auth/cambiar-password | autenticado | Cambio propio (exige la contraseña actual) |
 
@@ -180,3 +180,33 @@ Swagger y los DTO/controladores son el contrato detallado por endpoint; esta gu�
 Contraseñas nuevas: mínimo ocho caracteres y máximo 72 bytes UTF-8 en altas, edición, cambio y recuperación. El límite cuenta bytes, no caracteres; el login de una cuenta existente mantiene compatibilidad.
 
 El formato nuevo de hash conserva bcrypt y marca que el límite fue validado. El login rechaza entradas con bytes sobrantes para esos hashes. Hashes anteriores conservan compatibilidad para permitir renovar contraseñas; una contraseña legacy excesiva debe renovarse para retirar su truncamiento. La columna de hash existente no cambia.
+
+## Contratos incorporados en beta.2
+
+Las rutas siguen omitiendo /api. El código/Swagger es el contrato detallado; esta tabla resume #42–44. RolesGuard permite SUPERADMIN y cada servicio revalida el alcance.
+
+| Método | Ruta | Acceso y comportamiento |
+|---|---|---|
+| GET | /health/live | Público; proceso y versión, sin certificar DB |
+| GET | /health/ready | Público; DB, historial de migraciones y permisos R/W de uploads; 503 si no está listo |
+| PATCH | /calendario/:id | MAESTRO/ADMINISTRATIVO, según autor/alcance; revision de 64 caracteres del registro completo; conflicto 409; valida origen/destino |
+| GET | /importaciones/plantilla?tipo= | ADMINISTRATIVO; XLSX ALUMNOS/DOCENTES/PERSONAL/INSCRIPCIONES, instrucciones y columnas de texto; PERSONAL se autoriza al procesar |
+| GET | /importaciones/calificaciones/plantilla?grupoMateriaId=&parcial= | MAESTRO/ADMINISTRATIVO; clase autorizada; 0=Final, 1–3=parciales |
+| GET | /reportes/grupo-materias/:id/plantilla-calificaciones.xlsx?parcial= | Alias de la misma plantilla/importador; rechaza clase sin inscritos o más de 500 |
+| POST | /importaciones/calificaciones/preview | Multipart archivo, grupoMateriaId, parcial y motivo; hasta 500 filas/5 MB; preview cifrado del actor, 15 minutos |
+| POST | /importaciones/calificaciones/confirmar | previewId y confirmado=true; consume una vez, revalida permisos/periodo/ciclo/notas y confirma todo o nada |
+| GET | /reportes/mis-boletas | ALUMNO; inscripciones propias por ciclo/grupo/plantel |
+| GET | /reportes/mi-boleta/enlace?cicloId=&inscripcionId= | ALUMNO; devuelve URL firmada de dos minutos |
+| GET | /reportes/boleta-descarga/:id?t= | Sin bearer; exige token firmado y revalida sesión/propiedad; PDF no-store |
+| GET | /biblioteca?plantelId= | ADMINISTRATIVO por plantel; carpetas y archivos privados |
+| POST | /biblioteca/carpetas | Crea carpeta en plantel autorizado |
+| POST | /biblioteca/archivos | Multipart; PNG/JPEG/PDF, hasta 10 MB, firma/MIME y ClamAV obligatorio |
+| DELETE | /biblioteca/archivos/:id | Retira referencia y programa limpieza persistente |
+| GET | /archivos/biblioteca/:id/enlace | Sesión normal; servicio restringe autorización administrativa y plantel |
+| GET | /archivos/biblioteca/:id?t= | Sin bearer; exige firma vigente y revalida sesión/alcance |
+
+La plantilla de notas conserva IDs, parcial y matrícula; la columna F es calificacion. Eliminar filas sin nota antes del preview. Matrículas/teléfonos se mantienen como texto. La descripción del evento admite null para limpiarla; la UI conserva plantel/grupo al editar, aunque la API valida cambios explícitos de ámbito autorizados.
+
+Mis documentos en Expo reutiliza boletas y materiales; no abre la biblioteca administrativa ni crea un contrato nuevo de ficha/constancia. Los índices pueden leerse en memoria hasta cinco minutos; enlaces/PDF solo online.
+
+El alta actual de ALUMNO todavía usa contraseña inicial basada en matrícula. Su sustitución es un [requisito confirmado pendiente](REQUERIMIENTO_ACTIVACION_SEGURA.md), no una función ya disponible.

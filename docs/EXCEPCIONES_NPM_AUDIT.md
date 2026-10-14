@@ -1,4 +1,6 @@
-# Excepciones temporales de npm audit móvil
+# Auditoría npm móvil: política vigente e historial
+
+**Política vigente:** cero excepciones activas. El gate exige cero avisos y las dependencias parcheadas locales requieren mantenimiento. Las secciones siguientes hasta “Remediación” son históricas y no autorizan tolerar avisos actuales. Véase [vendor móvil](../mobile/vendor/README.md).
 
 Al 2 de octubre de 2026, Expo 56 y React Native 0.85.3 conservan dos avisos altos en dependencias transitivas de sus herramientas:
 

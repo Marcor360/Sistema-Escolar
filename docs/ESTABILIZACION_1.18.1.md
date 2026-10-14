@@ -32,6 +32,6 @@ Backend: 167 pruebas en 33 suites; web: 17 en ocho archivos; móvil: ocho prueba
 
 No hay cambios de entidades, baseline, schemas ni migraciones nuevas; aplicar las migraciones ya pendientes de versiones anteriores mediante el runner.
 
-Rollback: regresar al código 1.18.0 sin revertir esquema. No elimina notas, pagos ni auditoría. El historial previo permanece íntegro. Inventario completo: [ARCHIVOS_ESTABILIZACION_1.18.1.md](ARCHIVOS_ESTABILIZACION_1.18.1.md).
+Rollback: regresar al código 1.18.0 sin revertir esquema. No elimina notas, pagos ni auditoría. El historial previo permanece íntegro. Inventario completo: [inventario histórico en Git](https://github.com/Marcor360/Sistema-Escolar/blob/5951136ad57f921f64aaaa12b6f655a19d9b7b93/docs/ARCHIVOS_ESTABILIZACION_1.18.1.md).
 
 Pendientes externos: staging Windows/IIS/HTTPS, SMTP real, Openpay sandbox, push FCM/APNs, móviles físicos firmados, contraste/lector de pantalla/dispositivos y backup restaurado. Certweb histórico requiere esquema real sanitizado. Chromium automatizado no reemplaza pruebas físicas ni accesibilidad completa. No declarar PILOTO LISTO hasta certificar el gate institucional.

@@ -53,15 +53,13 @@ confirman en una transacción. Si falla la creación externa, la orden local que
 porque el proveedor podría haber creado el cargo aunque la respuesta no llegara.
 Sin credenciales el servicio queda deshabilitado de forma segura (503 explicativo).
 
-**Archivos.** Multer a disco (`UPLOADS_DIR`), nombre UUID, límite 5 MB y lista
-blanca de extensiones y comprobación básica de firmas; reemplazo confirmado con limpieza del archivo anterior. El alcance del contrato excluye almacenamiento ilimitado
-y antivirus avanzado.
+**Archivos.** Materiales y entregas usan Multer, UPLOADS_DIR privado, nombres UUID, límite configurable (5 MB por defecto), extensiones y firmas; limpieza persistente después del commit. La biblioteca administrativa es un módulo distinto: archivos de hasta 10 MB, PNG/JPEG/PDF, ClamAV obligatorio, cuota por plantel y cuarentena. La política del scanner/cuota de biblioteca no se extiende automáticamente a materiales/entregas. No existe almacenamiento ilimitado ni uploads estático público.
 
 **Seguridad.** Contraseñas con bcrypt; validación con class-validator
 (`whitelist: true`); `helmet` para encabezados; rate limiting global de
 120 req/min y estricto de 5 req/min en login/recuperación (@nestjs/throttler);
-CORS restringible con `CORS_ORIGINS`; webhook de Openpay protegible con Basic
-Auth (`OPENPAY_WEBHOOK_USER/PASS`); Swagger deshabilitado con
+CORS restringible con `CORS_ORIGINS`; webhook de Openpay protegido con Basic
+Auth obligatoria en producción (`OPENPAY_WEBHOOK_USER/PASS`); Swagger deshabilitado con
 `NODE_ENV=production`, que además exige un `JWT_SECRET` real; interceptor
 global de bitácora para escrituras autenticadas; separación de ambientes por
 `.env`.
@@ -98,7 +96,7 @@ en México.
 
 ## Ampliación operativa 1.15.0
 
-Los ciclos separan preparación de vigencia y cierre formal. Las operaciones de calificación bloquean primero el ciclo y después la clase para coordinarse con el cierre. Promoción e importaciones confirman lotes bajo transacción; los previews de importación son temporales en memoria del proceso (15 minutos, máximo cinco por actor), adecuados para un único servidor. Un despliegue de varias instancias requiere almacenar esos previews en un recurso compartido y compartir uploads.
+Los ciclos separan preparación de vigencia y cierre formal. Las operaciones de calificación bloquean primero el ciclo y después la clase para coordinarse con el cierre. Promoción e importaciones confirman lotes bajo transacción; los previews son cifrados y persistidos en la base, ligados al actor y con caducidad de 15 minutos; sobreviven reinicios y su consumo es único. Las instancias comparten base y secreto; rotarlo invalida previews pendientes. Los uploads requieren almacenamiento compartido si hay varias instancias.
 
 Conducta es un módulo exclusivamente interno; no se importa en móvil y no genera notificaciones. Analítica reutiliza el promedio backend y devuelve indicadores agregados con scope por rol, sin expedientes ni notas internas.
 
@@ -115,3 +113,12 @@ La analítica agrega en DB y devuelve filas por clase; no carga todas las notas/
 `notificaciones.push_pendiente` es un outbox: la cola y la retirada del marcador se confirman en la misma transacción. La recuperación ocurre aun con push externo deshabilitado; no contacta al proveedor hasta habilitarlo.
 
 `cobranza_envios` registra cada destinatario, clave diaria del saldo, actor, lease, intentos y resultado. Estado ENVIANDO con lease vencido pasa a INCIERTO; no se repite automáticamente una transmisión potencialmente aceptada. SMTP no garantiza exactly-once: Message-ID estable ayuda al diagnóstico, pero una incertidumbre se resuelve con verificación del proveedor y confirmación explícita. No se guardan destinatarios/asuntos/cuerpos en logs ni se devuelve email en el seguimiento.
+
+
+## Estado actual de beta.2
+
+Calendario permite PATCH con revision completa y validación de alcance de origen/destino. Importación de notas reutiliza el servicio transaccional de captura, agrega preview cifrado, motivo/historial y rechazo de datos modificados desde el preview.
+
+Expo mantiene seis pestañas y un stack Perfil → Mis documentos. Consulta boletas por inscripción/ciclo y materiales por materia; verifica origen y ruta de enlaces antes de abrirlos. Caché académica y de índices solo en memoria, TTL de cinco minutos e invalidación por identidad/logout; sin escritura offline ni PDFs/URLs firmadas persistidos. SecureStore conserva secretos, no expedientes. Remontaje de navegación por alumno y cancelación de respuestas antiguas complementan la autorización de servidor.
+
+Biblioteca añade carpetas y archivos privados, con migración aditiva espejo. El detalle está en [API](API.md), [migraciones](MIGRACIONES.md) y [estado vigente](ESTADO_IMPLEMENTACION.md). El requisito de [activación segura](REQUERIMIENTO_ACTIVACION_SEGURA.md) está pendiente; la arquitectura de invitaciones no está implementada.

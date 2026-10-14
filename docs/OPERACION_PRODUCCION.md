@@ -2,12 +2,11 @@
 
 Este documento separa lo configurable en el repositorio de lo que depende del hosting, dominio, institución o proveedor. La configuración local actual no es una instalación productiva.
 
-## Estado observado del entorno de desarrollo
+## Alcance y punto de partida
 
-- `backend/.env` selecciona `DB_TYPE=mysql`, host `localhost`, puerto `3306` y base `escolar`.
-- En la revisión no hubo servicio TCP en `localhost:3306` ni en `localhost:1433`, y Docker no está instalado. No se pudo consultar ni respaldar una base activa.
-- `docker-compose.yml` define persistencia local con el volumen nombrado `mysql_data`. Docker administra su ubicación; no se crea como archivo de datos dentro de `backend/`.
-- `backend/uploads/` es una carpeta local vacía para cargas. No tiene almacenamiento externo o replicado configurado.
+El repositorio dispone de scripts Windows/IIS y workflow manual de staging, pero su presencia no acredita instalación, tareas programadas ni operación del servidor institucional. Los datos de una máquina local antigua no describen el entorno actual.
+
+Antes de intervenir: auditar el host con Audit-StagingHost.ps1, identificar motor/versión, consultar migraciones, verificar almacenamiento y responsables. No leer ni copiar secretos de .env a un reporte. Usar [staging Windows](STAGING_WINDOWS_IIS.md) y [servidor existente](PUBLICAR_SERVIDOR_EXISTENTE.md) para la configuración específica.
 
 ## Secretos y variables
 
@@ -35,7 +34,7 @@ La API exige TLS para la base cuando `NODE_ENV=production`: MySQL usa `DB_SSL=tr
 6. Probar restauraciones periódicas en un entorno aislado y registrar duración y resultado.
 7. Alertar por errores de conexión, espacio, crecimiento, respaldos fallidos y latencia.
 
-El repositorio no configura un servicio administrado de base de datos, programación de respaldos ni restauración. Esos elementos deben configurarse en el proveedor elegido.
+El repositorio incluye Deploy-Staging.ps1, Restore-Staging.ps1 y Prune-Staging.ps1. No configura por sí solo tareas de respaldo, copias externas ni un servicio administrado. Restore exige un destino aislado y vacío; su ejecución institucional, duración y resultado deben comprobarse.
 
 ## Archivos subidos
 
@@ -49,9 +48,9 @@ La API escribe en `UPLOADS_DIR` y los entrega mediante el módulo `archivos` con
 - Configurar reinicio del proceso, comprobación de disponibilidad y alertas desde el hosting.
 - Centralizar logs con retención y acceso restringido. Evitar tokens, contraseñas, CURP y datos financieros en logs.
 
-No hay configuración de hosting, DNS, certificados, métricas ni alertas versionada en el proyecto. El proveedor aún debe elegirse.
+Existen ejemplos y scripts IIS/ARR, servicio y despliegue manual. No acreditan DNS/certificados instalados, monitoreo ni alertas operativas en el servidor existente. Verificar capacidad y configuración real antes de habilitar el piloto.
 
-La API ofrece `GET /api/health` sin autenticación; responde `200` cuando la consulta de base funciona y `503` cuando falla. Usar esa ruta como comprobación de disponibilidad del proceso y la dependencia de datos.
+La API ofrece /api/health/live (proceso/versión), /api/health (consulta básica de DB) y /api/health/ready (DB, historial de migraciones y permisos R/W de uploads). El deploy exige live/ready y la versión esperada; /health básico no sustituye readiness. Un ready correcto tampoco certifica SMTP, Openpay, ClamAV, espacio disponible ni restore.
 
 ## Servicios externos
 
@@ -84,3 +83,12 @@ npx eas build --profile production --platform android
 ```
 
 El perfil de producción incrementa automáticamente el número de build. La firma, las cuentas de tiendas, la URL API definitiva y la aceptación del build siguen pendientes de la institución.
+
+
+## Biblioteca y activación antes del piloto
+
+Aplicar migracion_biblioteca_privada.sql mediante el runner y verificar ClamAV real, cuarentena y ACL. BIBLIOTECA_CUOTA_MB es 100 por defecto (1–2000); hasta 10 MB por archivo. Sin scanner disponible se bloquean cargas. Esa cuota no cubre otros módulos. Respaldar y restaurar también archivos y referencias de biblioteca.
+
+La [activación segura](REQUERIMIENTO_ACTIVACION_SEGURA.md) es un requisito pendiente del cliente. Antes de habilitar altas nuevas para el piloto, implementar el canal acordado, confirmar entrega/recuperación y ensayar cuentas existentes. No atribuir ese mecanismo al código actual.
+
+Puertas y evidencia institucional: [BETA_ACEPTACION.json](BETA_ACEPTACION.json). Los registros siguen pendientes hasta tener evidencia y responsables; CI no equivale a aceptar el despliegue.
