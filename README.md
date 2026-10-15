@@ -92,6 +92,8 @@ node ../scripts/check-project-consistency.cjs
 # Desde web/
 npm run lint
 npm test
+# Antes del build: configurar VITE_API_URL HTTPS institucional terminada en /api
+# mediante el entorno o web/.env.production; el localhost de .env.example es solo para dev.
 npm run build
 
 # Desde mobile/

@@ -46,6 +46,8 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+        env:
+          VITE_API_URL: https://api.example.invalid/api
 
   mobile:
     runs-on: ubuntu-latest

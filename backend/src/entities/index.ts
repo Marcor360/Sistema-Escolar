@@ -3,6 +3,7 @@ export * from './usuario.entity';
 export * from './plantel.entity';
 export * from './usuario-plantel.entity';
 export * from './password-reset-token.entity';
+export * from './activacion-token.entity';
 export * from './alumno.entity';
 export * from './docente.entity';
 export * from './ciclo-escolar.entity';

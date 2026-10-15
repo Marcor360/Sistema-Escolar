@@ -123,7 +123,7 @@ export class ImportacionesService {
         await repo.insert(p); for (const lote of trozos(cifradas)) await manager.getRepository(ImportacionFila).insert(lote);
       }); previewId = p.id;
     }
-    return { previewId, registros: filas.length, errores, identificadores: filas.map((f,i) => ({ fila: i+2, identificador: f.matricula ?? f.numEmpleado ?? f.email })), regla: tipo === 'ALUMNOS' ? 'Confirmación atómica. Acceso inicial con correo institucional y matrícula como contraseña temporal; cambio obligatorio en el primer ingreso.' : 'Confirmación atómica. Cuentas nuevas se activan estableciendo contraseña mediante recuperación por correo; no se entregan contraseñas en la importación.' };
+    return { previewId, registros: filas.length, errores, identificadores: filas.map((f,i) => ({ fila: i+2, identificador: f.matricula ?? f.numEmpleado ?? f.email })), regla: tipo === 'ALUMNOS' ? 'Confirmación atómica. El alumno no recibe contraseña inicial; debe solicitar y completar la activación por código de un solo uso en su correo. Si no hay correo operativo, el acceso queda pendiente.' : 'Confirmación atómica. Cuentas nuevas se activan estableciendo contraseña mediante recuperación por correo; no se entregan contraseñas en la importación.' };
   }
   private comprobar(p: ImportacionPreview | null, user: JwtUser): asserts p is ImportacionPreview { if (!p || p.expira < new Date() || p.actorId !== user.sub) throw new NotFoundException('Previsualización expirada, consumida o no disponible para tu sesión'); this.autorizar(p.tipo,user); }
   async confirmar(previewId: string, confirmado: boolean, user: JwtUser) {
@@ -136,8 +136,8 @@ export class ImportacionesService {
     const hashes: string[] = [];
     if (previa.tipo !== 'INSCRIPCIONES') {
       for (let i = 0; i < filas.length; i += 4) {
-        hashes.push(...await Promise.all(filas.slice(i, i + 4).map((fila) =>
-          hashPasswordNueva(previa.tipo === 'ALUMNOS' ? fila.matricula.trim().toUpperCase() : randomBytes(24).toString('base64url')),
+        hashes.push(...await Promise.all(filas.slice(i, i + 4).map(() =>
+          hashPasswordNueva(randomBytes(32).toString('base64url')),
         )));
       }
     }
@@ -162,7 +162,7 @@ export class ImportacionesService {
         const nuevos = await repo.save(cuentas.map((v,i) => {
           const d = v.instancia, claves = p.tipo === 'ALUMNOS' ? ['ALUMNO'] : p.tipo === 'DOCENTES' ? ['MAESTRO'] : (d as CrearUsuarioDto).roles;
           const roles = [...new Set(claves)].map((clave) => { const rol = c.roles.get(clave); if (!rol) throw new ConflictException('Rol inexistente'); return rol; });
-          return repo.create({ email: d.email, nombre: d.nombre, apellidoPaterno: d.apellidoPaterno, apellidoMaterno: d.apellidoMaterno ?? null, telefono: d.telefono ?? null, passwordHash: hashes[i], passwordChangeRequired: true, roles });
+          return repo.create({ email: d.email, nombre: d.nombre, apellidoPaterno: d.apellidoPaterno, apellidoMaterno: d.apellidoMaterno ?? null, telefono: d.telefono ?? null, passwordHash: hashes[i], passwordChangeRequired: true, activacionPendiente: p.tipo === 'ALUMNOS', roles });
         }),{ chunk: 50 });
         const usuarios = new Map(nuevos.map((u) => [u.email,u.id]));
         if (p.tipo === 'ALUMNOS') {
@@ -182,7 +182,7 @@ export class ImportacionesService {
       if (auditoria.length !== filas.length) throw new ConflictException('El lote no está completo');
       for (const lote of trozos(auditoria)) await manager.getRepository(BitacoraAcademica).insert(lote);
       await manager.getRepository(ImportacionPreview).delete(p.id);
-      return { insertados: filas.length, activacion: p.tipo === 'INSCRIPCIONES' ? null : p.tipo === 'ALUMNOS' ? 'Acceso inicial con correo institucional y matrícula como contraseña temporal; cambio obligatorio en el primer ingreso.' : 'Establecer contraseña mediante recuperación por correo o reinicio temporal autorizado en la cuenta.' };
+      return { insertados: filas.length, activacion: p.tipo === 'INSCRIPCIONES' ? null : p.tipo === 'ALUMNOS' ? 'Cuenta pendiente de activación. El alumno solicitará un código privado por correo institucional y establecerá su propia contraseña.' : 'Establecer contraseña mediante recuperación por correo o reinicio temporal autorizado en la cuenta.' };
     }); } catch (e) { if (e instanceof BadRequestException || e instanceof ForbiddenException || e instanceof ConflictException || e instanceof NotFoundException) throw e; throw new ConflictException('La importación no se aplicó; revisa duplicados o cambios concurrentes y genera otra previsualización'); }
   }
 }

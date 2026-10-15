@@ -61,7 +61,7 @@ El runner no aplica baselines, no deduce el historial de una base antigua ni pue
 
 ## Orden vigente posterior al baseline v1
 
-El manifiesto define nueve incrementales, en este orden para ambos motores:
+El manifiesto define diez incrementales, en este orden para ambos motores:
 
 1. migracion_grupos_plantel_unique.sql
 2. migracion_pagos_manual_idempotencia.sql
@@ -72,7 +72,8 @@ El manifiesto define nueve incrementales, en este orden para ambos motores:
 7. migracion_previews_importacion.sql
 8. migracion_biblioteca_privada.sql
 9. migracion_sesiones_inactividad.sql
+10. migracion_activacion_alumnos.sql
 
-La octava agrega carpetas/archivos de biblioteca y sus referencias e índices. La novena agrega sesiones.ultima_actividad_en nullable; sesiones anteriores requieren reautenticación al activar el control de API. Aplicar el esquema antes del backend y actualizar clientes web/Expo coordinados. El baseline no se reemplaza. Las migraciones antiguas declaradas en incluye ya forman parte del baseline v1; no reaplicarlas por seguir una lista histórica.
+La octava agrega carpetas/archivos de biblioteca y sus referencias e índices. La novena agrega sesiones.ultima_actividad_en nullable; sesiones anteriores requieren reautenticación al activar el control de API. Aplicar el esquema antes del backend y actualizar clientes web/Expo coordinados. La décima agrega usuarios.activacion_pendiente con default false y activacion_tokens; no cambia las cuentas históricas ni conecta todavía las altas. Aplicarla tras respaldo antes de desplegar el servicio de activación. El baseline no se reemplaza. Las migraciones antiguas declaradas en incluye ya forman parte del baseline v1; no reaplicarlas por seguir una lista histórica.
 
 Pendientes en el manifiesto significa posteriores al baseline, no necesariamente sin aplicar en un servidor. Consultar el historial mediante db:migrate:status y contrastarlo con el esquema real. La depuración documental no aplica migraciones ni modifica datos.

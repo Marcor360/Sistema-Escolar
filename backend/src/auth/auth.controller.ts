@@ -3,7 +3,8 @@ import type { Request, Response } from 'express';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
-import { CambiarPasswordDto, ForgotPasswordDto, LoginDto, ResetPasswordDto, RefreshDto } from './dto/auth.dto';
+import { ActivacionService } from './activacion.service';
+import { ActivarCuentaDto, CambiarPasswordDto, ForgotPasswordDto, LoginDto, ResetPasswordDto, RefreshDto } from './dto/auth.dto';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { CurrentUser, JwtUser } from '../common/current-user.decorator';
 import { Portal, PortalActual } from '../common/portales';
@@ -13,7 +14,7 @@ const LIMITE_ESTRICTO = { default: { limit: 5, ttl: 60_000 } };
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly auth: AuthService) {}
+  constructor(private readonly auth: AuthService, private readonly activacion: ActivacionService) {}
 
   @ApiOperation({ summary: 'Iniciar sesión: access 15 minutos; refresh web en cookie HttpOnly o móvil en respuesta' })
   @ApiResponse({ status: 400, description: 'Datos o transición inválidos' })
@@ -93,6 +94,16 @@ export class AuthController {
   cambiarPassword(@CurrentUser() user: JwtUser, @Body() dto: CambiarPasswordDto) {
     return this.auth.cambiarPassword(user.sub, dto.actual, dto.nueva);
   }
+
+  @Post('solicitar-activacion')
+  @ApiOperation({ summary: 'Solicitar invitación de un solo uso sin revelar existencia de cuenta' })
+  @Throttle(LIMITE_ESTRICTO)
+  solicitarActivacion(@Body() dto: ForgotPasswordDto) { return this.activacion.solicitar(dto.email); }
+
+  @Post('activar-cuenta')
+  @ApiOperation({ summary: 'Activar cuenta pendiente mediante código y contraseña nueva' })
+  @Throttle(LIMITE_ESTRICTO)
+  activarCuenta(@Body() dto: ActivarCuentaDto) { return this.activacion.activar(dto.token, dto.password); }
 
   @Post('forgot-password')
   @Throttle(LIMITE_ESTRICTO)

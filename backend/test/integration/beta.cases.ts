@@ -1,3 +1,8 @@
+import { ActivacionService } from '../../src/auth/activacion.service';
+import { NotificacionesService } from '../../src/notificaciones/notificaciones.service';
+import { ActivacionToken, PasswordResetToken } from '../../src/entities';
+import { hashPasswordNueva, compararPassword } from '../../src/common/password-bcrypt';
+import { createHash, randomUUID } from 'crypto';
 import { instanteActividad } from '../../src/auth/sesion-inactividad';
 import { AuthService } from '../../src/auth/auth.service';
 import { ContextoIntegracion } from './contexto';
@@ -17,6 +22,56 @@ import {
 import * as antivirus from '../../src/biblioteca/validar-archivo';
 import { ServiceUnavailableException } from '@nestjs/common';
 export function registrarBeta(ctx: ContextoIntegracion) {
+  it('activación: reemisión, consumo concurrente, expiración y aislamiento del restablecimiento', async () => {
+    const usuarios = ctx.dataSource.getRepository(Usuario), tokens = ctx.dataSource.getRepository(ActivacionToken);
+    const root = await usuarios.findOneByOrFail({ id: ctx.superadminId });
+    const password = 'Activacion_Segura_42!';
+    const nuevo = await usuarios.save({ email: `activacion_${ctx.sufijo}@example.invalid`, nombre: 'Activación', apellidoPaterno: 'Prueba', activo: true, activacionPendiente: false, passwordHash: await hashPasswordNueva(password), roles: root.roles });
+    const auth = ctx.app.get(AuthService), activacion = ctx.app.get(ActivacionService);
+    const previa = await auth.login(nuevo.email, password, 'WEB');
+    await usuarios.update(nuevo.id, { activacionPendiente: true });
+    await expect(auth.login(nuevo.email, password, 'WEB')).rejects.toThrow();
+    await expect(auth.refresh(previa.refreshToken, 'WEB')).rejects.toThrow();
+    expect((await ctx.api('/auth/me', { token: previa.accessToken })).response.status).toBe(401);
+    const correo = jest.spyOn(ctx.app.get(NotificacionesService), 'enviarEmail');
+    const codigos: string[] = [];
+    correo.mockImplementation(async (_email, _asunto, html) => { codigos.push(html.match(/<strong>([a-f0-9]{64})<\/strong>/)![1]); return { simulado: false }; });
+    try {
+      const generica = await activacion.solicitar('inexistente@example.invalid');
+      expect(await activacion.solicitar(nuevo.email)).toEqual(generica);
+      await activacion.onModuleDestroy();
+      expect((await tokens.findBy({ usuarioId: nuevo.id }))[0].token).toBe(createHash('sha256').update(codigos[0]).digest('hex'));
+      expect(JSON.stringify(generica)).not.toContain(codigos[0]);
+      await activacion.solicitar(nuevo.email);
+      await activacion.onModuleDestroy();
+      await expect(activacion.activar(codigos[0], password)).rejects.toThrow();
+      const reset = randomUUID();
+      await ctx.dataSource.getRepository(PasswordResetToken).save({ usuarioId: nuevo.id, token: createHash('sha256').update(reset).digest('hex'), expiraEn: new Date(Date.now() + 60000), usado: false });
+      await expect(auth.resetPassword(reset, password)).rejects.toThrow('Activa primero');
+      expect((await ctx.api('/auth/activar-cuenta', { method: 'POST', body: { token: codigos[1], password: 'corta' } })).response.status).toBe(400);
+      const resultados = await Promise.allSettled([activacion.activar(codigos[1], password), activacion.activar(codigos[1], password)]);
+      expect(resultados.filter(r => r.status === 'fulfilled')).toHaveLength(1);
+      const activo = await usuarios.findOne({ where: { id: nuevo.id }, select: ['id', 'passwordHash', 'activacionPendiente', 'passwordChangeRequired', 'sessionVersion'] });
+      await expect(auth.resetPassword(reset, 'Otra_Contraseña_42!')).rejects.toThrow();
+      expect((await ctx.dataSource.getRepository(PasswordResetToken).findOneByOrFail({ token: createHash('sha256').update(reset).digest('hex') })).usado).toBe(true);
+      expect(activo!.activacionPendiente).toBe(false);
+      expect(activo!.passwordChangeRequired).toBe(false);
+      expect(activo!.sessionVersion).toBe(1);
+      expect(await compararPassword(password, activo!.passwordHash)).toBe(true);
+      await expect(auth.refresh(previa.refreshToken, 'WEB')).rejects.toThrow();
+      await expect(auth.login(nuevo.email, password, 'WEB')).resolves.toHaveProperty('accessToken');
+      await usuarios.update(nuevo.id, { activacionPendiente: true });
+      await activacion.solicitar(nuevo.email);
+      await activacion.onModuleDestroy();
+      await tokens.update({ usuarioId: nuevo.id, usado: false }, { expiraEn: new Date(Date.now() - 60000) });
+      await expect(activacion.activar(codigos[2], password)).rejects.toThrow();
+      correo.mockResolvedValue({ simulado: true });
+      expect(await activacion.solicitar(nuevo.email)).toEqual(generica);
+      await activacion.onModuleDestroy();
+      expect((await usuarios.findOneByOrFail({ id: nuevo.id })).activacionPendiente).toBe(true);
+    } finally { await activacion.onModuleDestroy(); correo.mockRestore(); }
+  });
+
   it('sesiones: actividad real, polling sin renovación y expiración de JWT/refresh en ambos motores', async () => {
     const usuario = await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.superadminId });
     await ctx.emitirToken(usuario.email);

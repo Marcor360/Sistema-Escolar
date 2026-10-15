@@ -10,14 +10,14 @@ Sistema de información escolar (SIS) multiplantel, con administración académi
 
 | Área | Implementado y localización | Pendiente |
 |---|---|---|
-| Identidad y acceso | Expedientes, baja/egreso/transferencia/reactivación; permisos por plantel y clase; auth y ScopeService | Sustituir la contraseña inicial derivada de matrícula; requisito confirmado del cliente, aún sin implementar |
+| Identidad y acceso | Expedientes, baja/egreso/transferencia/reactivación; permisos por plantel y clase; auth y ScopeService | Altas nuevas sin contraseña predecible, pendientes hasta activación por código privado; aceptación SMTP institucional pendiente |
 | Sesiones | Access 15 minutos, refresh rotativo de hasta 30 días, hash, revocación, cookie HttpOnly web y SecureStore móvil | Ensayo HTTPS, expiración y cambio de cuenta en entornos/dispositivos objetivo |
 | Academia | Ciclos en preparación/activo/cierre, grupos, asignaciones, inscripción y promoción transaccional | Validación institucional de cierre/promoción y datos representativos |
 | Calificaciones | P1-P3 y Final independiente; motivo/historial, cierre/reapertura, XLSX/CSV con preview cifrado y confirmación única/transaccional | Regla y formatos aceptados por control escolar; archivos institucionales |
 | Calendario | Consulta, alta, PATCH y baja; autorización de origen/destino y revision completa para conflictos; web conserva ámbito al editar | Uso real y posibles vistas/exportaciones futuras |
 | Documentos | Boleta propia por ciclo/inscripción y enlace de dos minutos; concentrados y adeudos Excel | Formatos oficiales y abrir/guardar PDF en Android/iOS |
 | Biblioteca | Administración privada por plantel; carpetas, PNG/JPEG/PDF, firma/MIME, ClamAV obligatorio, cuota y enlaces revocables | Scanner real, ACL, conservación y restore; no concede acceso a alumno/maestro |
-| Importaciones | ALUMNOS/DOCENTES/PERSONAL/INSCRIPCIONES, hasta 500 filas/5 MB; plantillas legibles, IDs visibles, preview por actor 15 minutos y confirmación atómica | Activación segura de alumnos y entrega institucional del acceso |
+| Importaciones | ALUMNOS/DOCENTES/PERSONAL/INSCRIPCIONES, hasta 500 filas/5 MB; plantillas legibles, IDs visibles, preview por actor 15 minutos y confirmación atómica | Ensayo institucional de entrega y activación por correo; cuentas nuevas permanecen pendientes sin SMTP operativo |
 | Web | Recorridos guiados, tablas adaptables, teclado/foco, estados y errores; permisos revalidados en API | UAT por rol/plantel, Edge y auditoría integral de accesibilidad |
 | Móvil | Seis pestañas; Perfil → Mis documentos; boletas y materiales por materia, enlaces restringidos al origen/ruta, lectura en memoria hasta cinco minutos, aislamiento por identidad | Build firmado y pruebas físicas; no guarda PDF ni firmas en caché y no confirma tareas/pagos offline |
 | Finanzas | Cargos/pagos, idempotencia, cancelación/anulación, conciliación, origen estable tras traslado y cobranza auditable | Openpay sandbox real, SMTP y aceptación contable |
@@ -37,7 +37,7 @@ Sistema de información escolar (SIS) multiplantel, con administración académi
 
 ## Orden de preparación
 
-1. Implementar [activación segura](REQUERIMIENTO_ACTIVACION_SEGURA.md) y acordar canal de entrega.
+1. Validar institucionalmente la [activación segura incorporada](REQUERIMIENTO_ACTIVACION_SEGURA.md), con SMTP real y dispositivos objetivo.
 2. Staging HTTPS y esquema conciliado; SMTP, Openpay y antivirus reales según servicios habilitados.
 3. UAT por rol en al menos dos planteles; archivos/reportes institucionales y pruebas físicas Android/iOS.
 4. Restore aislado, monitoreo, responsables, privacidad y aceptación formal.
@@ -71,3 +71,17 @@ Las seis pestañas de alumno incluyen etiquetas explícitas para lectores de pan
 ### Barrido responsivo del 15 de octubre de 2026
 
 Se corrige el reflujo de paginación y campos financieros con texto al 200 %, se añaden regiones accesibles a quince tablas pendientes y se adaptan los diálogos a pantallas bajas. La [matriz reproducible y sus límites](BARRIDO_RESPONSIVO_2026-10-15.md) amplía las comprobaciones de navegación/listados con siete pantallas adicionales, pestañas financieras con datos largos y recuperación de contraseña. La presentación web automatizada y los contratos móviles no reemplazan QA física ni aceptación institucional.
+
+### Activación segura: estructura y API (#60–#61)
+
+Se incorpora la décima migración incremental, con estado pendiente default false y tokens SHA-256 de un uso. La API permite solicitar invitación genérica por SMTP y activar con contraseña validada, bloquea login/refresh/JWT/restablecimiento/descargas de cuentas pendientes y revoca sesiones previas por versión. Reemisión y consumo se serializan por usuario. Los endpoints públicos tienen límite por IP; la columna de intentos queda reservada, sin contador por cuenta implementado.
+
+Esta etapa no conecta altas individuales/lotes ni pantallas: aún no cierra el requisito de eliminar la contraseña inicial de matrícula. No se aplica migración ni se despliega a la institución; requiere respaldo y esquema previo al código, clientes y aceptación de SMTP real. Véase [requisito y estado de implementación](REQUERIMIENTO_ACTIVACION_SEGURA.md).
+
+Revisión adicional de #61: entrega de invitaciones en cola acotada de memoria, respuesta HTTP independiente de consultas/SMTP y emisión/aceptación SMTP serializada por usuario. Activar invalida también recuperaciones anteriores; emitir recuperación revalida estado y versión bajo bloqueo. La cola no acredita entrega ni sobrevive reinicios; ante falta de correo el titular solicita de nuevo. No cambia el pendiente de altas/clientes ni la aceptación SMTP institucional.
+
+### Integración #62–#66: altas y clientes de activación
+
+Altas nuevas individuales y masivas de ALUMNO generan hashes de contraseñas aleatorias no entregadas; ninguna deriva de matrícula. La cuenta queda pendiente hasta consumir el código y establecer contraseña. Web y Expo ofrecen solicitud, activación y vuelta al login; la respuesta genérica no acredita entrega SMTP. Las cuentas anteriores no se bloquean retroactivamente. Esto completa la conexión pendiente de #60–#61 en el código, con aceptación institucional y despliegue aún pendientes.
+
+Push omite sesiones inactivas y cuentas pendientes. El preflight de entregas comprueba tarea vigente/no calificada antes del selector y cancela si se desmontó la pantalla; no elimina copias nativas existentes. Toda compilación web, también con modo development, exige VITE_API_URL HTTPS absoluta terminada en /api, sin credenciales, parámetros ni loopback. El servidor dev conserva configuración local. CI usa un dominio de ejemplo solo para compilar; no es un servicio desplegado.

@@ -156,6 +156,8 @@ async function esperarServidor() {
       const cargoQA = { id: 1, descripcion: 'Colegiatura con descripción extensa para comprobar el ancho', periodo: '2026-10', monto: 123456.78, descuento: 0, recargo: 0, fechaVencimiento: '2026-10-31', estatus: 'PENDIENTE', total: 123456.78, pagado: 0, saldo: 123456.78, alumno: { id: 1, matricula: 'FIN-QA-001', usuario: { nombre: 'Alumno con nombre extenso de prueba', apellidoPaterno: 'Prueba' } } };
       if (path.endsWith('/finanzas/cargos') || path.endsWith('/finanzas/adeudos')) data = { datos: [cargoQA], total: 1, pagina: 1, porPagina: 20 };
       if (path.endsWith('/finanzas/pagos')) data = { datos: [{ id: 1, monto: 123456.78, metodo: 'TRANSFERENCIA', referencia: 'REFERENCIA_' + 'larga'.repeat(15), fechaPago: '2026-10-15T12:00:00Z', estatus: 'APLICADO', alumno: cargoQA.alumno }], total: 1, pagina: 1, porPagina: 20 };
+      if (path.endsWith('/auth/solicitar-activacion')) data = { mensaje: 'Si la cuenta está pendiente y el correo está disponible, recibirás instrucciones.' };
+      if (path.endsWith('/auth/activar-cuenta')) data = { mensaje: 'Cuenta activada. Inicia sesión.' };
       if (path.endsWith('/auth/forgot-password')) data = { mensaje: 'Solicitud recibida' };
       if (path.endsWith('/finanzas/cobranza/envios')) data = { datos: [{ id: 1, usuarioId: 1, plantelId: 1, saldo: 123456.78, estado: 'ERROR', intentos: 1, error: 'SMTP_' + 'sin_conexion_'.repeat(20) }], total: 1, pagina: 1 };
       await route.fulfill({ json: data });
@@ -465,6 +467,18 @@ async function esperarServidor() {
     const geometria = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, width: innerWidth }));
     if (geometria.scroll > geometria.width + 1) throw Error('Login overflow ' + JSON.stringify(geometria));
     console.log('PASS recovery ' + width + 'x' + height);
+    await page.goto(baseUrl + '/login');
+    await page.getByRole('button', { name: 'Activar mi cuenta por primera vez' }).click();
+    await page.getByLabel('Correo institucional del alumno').fill('alumno@example.test');
+    await page.getByRole('button', { name: 'Solicitar código de activación', exact: true }).click();
+    await page.getByLabel('Código de activación (64 caracteres)').fill('a'.repeat(64));
+    await page.getByLabel('Nueva contraseña (mínimo 8 caracteres)').fill('Nueva_Segura_42!');
+    const activacion = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, width: innerWidth }));
+    if (activacion.scroll > activacion.width + 1) throw Error('Activation overflow ' + JSON.stringify(activacion));
+    await page.getByRole('button', { name: 'Activar mi cuenta', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Entrar', exact: true })).toBeVisible();
+    await expect(page.getByRole('status')).toContainText('Cuenta activada');
+    console.log('PASS activation ' + width + 'x' + height);
   }
   if (errors.length) throw Error(errors.join('\n'));
 })()
