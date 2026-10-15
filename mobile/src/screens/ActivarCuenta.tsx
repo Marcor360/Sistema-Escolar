@@ -16,7 +16,7 @@ export default function ActivarCuentaScreen({ volver, correoInicial = "" }: { vo
   const [terminado, setTerminado] = useState(false);
   const enCurso = useRef(false);
   const activa = useRef(true);
-  useEffect(() => () => { activa.current = false; }, []);
+  useEffect(() => { activa.current = true; return () => { activa.current = false; }; }, []);
   const ejecutar = async () => {
     if (enCurso.current || !activa.current) return;
     enCurso.current = true;
@@ -36,6 +36,7 @@ export default function ActivarCuentaScreen({ volver, correoInicial = "" }: { vo
     } catch (fallo) { if (activa.current) setError(mensajeDeError(fallo)); }
     finally { enCurso.current = false; if (activa.current) setEnviando(false); }
   };
+  const bloqueado = enviando || (paso === "solicitar" ? !email.trim() : token.length !== 64 || password.length < 8 || !confirmacion);
   return (
     <KeyboardAvoidingView style={styles.pantalla} behavior={Platform.OS === "ios" ? "padding" : "height"}>
       <ScrollView contentContainerStyle={styles.contenido} keyboardShouldPersistTaps="handled">
@@ -69,8 +70,8 @@ export default function ActivarCuentaScreen({ volver, correoInicial = "" }: { vo
           {!terminado && (
             <TouchableOpacity style={styles.boton} onPress={() => { void ejecutar(); }} accessibilityRole="button"
               accessibilityLabel={paso === "solicitar" ? "Solicitar código de activación" : "Activar cuenta"}
-              accessibilityState={{ disabled: enviando, busy: enviando }}
-              disabled={enviando || (paso === "solicitar" ? !email.trim() : token.length !== 64 || password.length < 8 || !confirmacion)}>
+              accessibilityState={{ disabled: bloqueado, busy: enviando }}
+              disabled={bloqueado}>
               <Text style={styles.botonTexto}>{enviando ? "Procesando…" : paso === "solicitar" ? "Solicitar código" : "Activar cuenta"}</Text>
             </TouchableOpacity>
           )}
