@@ -23,6 +23,7 @@ CREATE TABLE usuarios (
   telefono VARCHAR(20) NULL,
   activo TINYINT(1) NOT NULL DEFAULT 1,
   session_version INT NOT NULL DEFAULT 0,
+  activacion_pendiente TINYINT(1) NOT NULL DEFAULT 0,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   deleted_at DATETIME NULL,
@@ -69,6 +70,18 @@ CREATE TABLE password_reset_tokens (
   usado TINYINT(1) NOT NULL DEFAULT 0,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_prt_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE activacion_tokens (
+  id VARCHAR(36) PRIMARY KEY,
+  usuario_id INT NOT NULL,
+  token VARCHAR(64) NOT NULL UNIQUE,
+  expira_en DATETIME NOT NULL,
+  usado TINYINT(1) NOT NULL DEFAULT 0,
+  intentos INT NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_activacion_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+  KEY idx_activacion_usuario (usuario_id)
 ) ENGINE=InnoDB;
 
 -- ---------- Personas ----------
