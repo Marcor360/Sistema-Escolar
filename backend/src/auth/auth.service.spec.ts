@@ -123,6 +123,7 @@ describe('AuthService.forgotPassword / resetPassword', () => {
           update: jest.fn().mockResolvedValue({ affected: 1 }),
         }
         : {
+          save: tokens.save, create: tokens.create,
           createQueryBuilder: jest.fn(() => ({
             update: jest.fn().mockReturnThis(),
             set: jest.fn().mockReturnThis(),
@@ -165,6 +166,17 @@ describe('AuthService.forgotPassword / resetPassword', () => {
 
     expect(registrarError).toHaveBeenCalled();
     registrarError.mockRestore();
+  });
+
+  it('no emite recuperación si la versión cambia antes de adquirir el bloqueo', async () => {
+    const { service, usuarios, tokens, notificaciones, dataSource } = crear();
+    usuarios.findOne.mockResolvedValue({ id: 1, email: 'demo@escuela.mx', sessionVersion: 0 });
+    dataSource.transaction.mockImplementationOnce(async (callback) => callback({
+      getRepository: () => ({ findOne: async () => ({ id: 1, sessionVersion: 1 }) }),
+    } as never));
+    await service.forgotPassword('demo@escuela.mx');
+    expect(tokens.save).not.toHaveBeenCalled();
+    expect(notificaciones.enviarEmail).not.toHaveBeenCalled();
   });
 
   it('resetPassword acepta el token original aunque solo se persista su hash', async () => {

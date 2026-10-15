@@ -39,9 +39,11 @@ export function registrarBeta(ctx: ContextoIntegracion) {
     try {
       const generica = await activacion.solicitar('inexistente@example.invalid');
       expect(await activacion.solicitar(nuevo.email)).toEqual(generica);
+      await activacion.onModuleDestroy();
       expect((await tokens.findBy({ usuarioId: nuevo.id }))[0].token).toBe(createHash('sha256').update(codigos[0]).digest('hex'));
       expect(JSON.stringify(generica)).not.toContain(codigos[0]);
       await activacion.solicitar(nuevo.email);
+      await activacion.onModuleDestroy();
       await expect(activacion.activar(codigos[0], password)).rejects.toThrow();
       const reset = randomUUID();
       await ctx.dataSource.getRepository(PasswordResetToken).save({ usuarioId: nuevo.id, token: createHash('sha256').update(reset).digest('hex'), expiraEn: new Date(Date.now() + 60000), usado: false });
@@ -50,6 +52,8 @@ export function registrarBeta(ctx: ContextoIntegracion) {
       const resultados = await Promise.allSettled([activacion.activar(codigos[1], password), activacion.activar(codigos[1], password)]);
       expect(resultados.filter(r => r.status === 'fulfilled')).toHaveLength(1);
       const activo = await usuarios.findOne({ where: { id: nuevo.id }, select: ['id', 'passwordHash', 'activacionPendiente', 'passwordChangeRequired', 'sessionVersion'] });
+      await expect(auth.resetPassword(reset, 'Otra_Contraseña_42!')).rejects.toThrow();
+      expect((await ctx.dataSource.getRepository(PasswordResetToken).findOneByOrFail({ token: createHash('sha256').update(reset).digest('hex') })).usado).toBe(true);
       expect(activo!.activacionPendiente).toBe(false);
       expect(activo!.passwordChangeRequired).toBe(false);
       expect(activo!.sessionVersion).toBe(1);
@@ -58,12 +62,14 @@ export function registrarBeta(ctx: ContextoIntegracion) {
       await expect(auth.login(nuevo.email, password, 'WEB')).resolves.toHaveProperty('accessToken');
       await usuarios.update(nuevo.id, { activacionPendiente: true });
       await activacion.solicitar(nuevo.email);
+      await activacion.onModuleDestroy();
       await tokens.update({ usuarioId: nuevo.id, usado: false }, { expiraEn: new Date(Date.now() - 60000) });
       await expect(activacion.activar(codigos[2], password)).rejects.toThrow();
       correo.mockResolvedValue({ simulado: true });
       expect(await activacion.solicitar(nuevo.email)).toEqual(generica);
+      await activacion.onModuleDestroy();
       expect((await usuarios.findOneByOrFail({ id: nuevo.id })).activacionPendiente).toBe(true);
-    } finally { correo.mockRestore(); }
+    } finally { await activacion.onModuleDestroy(); correo.mockRestore(); }
   });
 
   it('sesiones: actividad real, polling sin renovación y expiración de JWT/refresh en ambos motores', async () => {
