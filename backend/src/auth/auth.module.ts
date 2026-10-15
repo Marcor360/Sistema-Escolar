@@ -10,6 +10,7 @@ import { BitacoraActividad } from '../entities/bitacora-actividad.entity';
 import { Alumno } from '../entities/alumno.entity';
 import { Docente } from '../entities/docente.entity';
 import { AuthService } from './auth.service';
+import { ActivacionService } from './activacion.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { NotificacionesModule } from '../notificaciones/notificaciones.module';
@@ -30,7 +31,7 @@ import { NotificacionesModule } from '../notificaciones/notificaciones.module';
       },
     }),
   ],
-  providers: [AuthService, JwtStrategy, SesionesLimpiezaService],
+  providers: [AuthService, ActivacionService, JwtStrategy, SesionesLimpiezaService],
   controllers: [AuthController],
 })
 export class AuthModule {}
