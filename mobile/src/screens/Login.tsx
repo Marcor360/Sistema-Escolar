@@ -14,6 +14,7 @@ import { useSesion } from "../sesion";
 import { archivosBase, mensajeDeError } from "../api/client";
 import { colores, radio, espacio, tipografia, textoSobreFondo } from "../theme";
 import { useMarca } from "../marca";
+import ActivarCuentaScreen from "./ActivarCuenta";
 
 export default function LoginScreen({ aviso = "" }: { aviso?: string } = {}) {
   const { iniciar } = useSesion();
@@ -25,6 +26,7 @@ export default function LoginScreen({ aviso = "" }: { aviso?: string } = {}) {
   const enCurso = useRef(false);
   const [mostrarPassword, setMostrarPassword] = useState(false);
   const [logoFallo, setLogoFallo] = useState(false);
+  const [activacionVisible, setActivacionVisible] = useState(false);
 
   const entrar = async () => {
     if (enCurso.current || !email.trim() || !password) return;
@@ -40,6 +42,8 @@ export default function LoginScreen({ aviso = "" }: { aviso?: string } = {}) {
       setEnviando(false);
     }
   };
+
+  if (activacionVisible) return <ActivarCuentaScreen correoInicial={email} volver={() => setActivacionVisible(false)} />;
 
   return (
     <KeyboardAvoidingView
@@ -145,6 +149,9 @@ export default function LoginScreen({ aviso = "" }: { aviso?: string } = {}) {
             >
               {enviando ? "Verificando…" : "Entrar"}
             </Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={estilos.controlPassword} onPress={() => setActivacionVisible(true)} accessibilityRole="button" accessibilityLabel="Activar mi cuenta por primera vez">
+            <Text>Activar mi cuenta por primera vez</Text>
           </TouchableOpacity>
           <Text style={estilos.ayuda}>
             Si no tienes acceso o necesitas recuperar tu contraseña, contacta a
