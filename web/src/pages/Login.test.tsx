@@ -18,12 +18,12 @@ it('solicita activación sin acreditar entrega, conserva errores y vuelve al log
   fireEvent.change(screen.getByLabelText('Código de activación (64 caracteres)'), { target: { value: 'A'.repeat(64) } });
   fireEvent.change(screen.getByLabelText('Nueva contraseña (mínimo 8 caracteres)'), { target: { value: 'Nueva_Segura_42!' } });
   post.mockRejectedValueOnce(new Error('Código vencido'));
-  fireEvent.click(screen.getByRole('button', { name: 'Activar mi cuenta', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Activar mi cuenta' }));
   await screen.findByRole('alert');
   expect(screen.getByLabelText('Código de activación (64 caracteres)')).toBeTruthy();
   post.mockResolvedValueOnce({ data: { mensaje: 'Cuenta activada. Inicia sesión.' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Activar mi cuenta', exact: true }));
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Entrar', exact: true })).toBeTruthy());
+  fireEvent.click(screen.getByRole('button', { name: 'Activar mi cuenta' }));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Entrar' })).toBeTruthy());
   expect(post).toHaveBeenLastCalledWith('/auth/activar-cuenta', { token: 'a'.repeat(64), password: 'Nueva_Segura_42!' });
   expect(screen.getByRole('status').textContent).toContain('Cuenta activada');
 });
