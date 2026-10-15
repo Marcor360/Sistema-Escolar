@@ -605,7 +605,7 @@ it("CURP se oculta por defecto y vuelve a ocultarse tras 30 segundos", async () 
     await act(async () => cambio("background"));
     expect(texto()).not.toContain(curp);
     await act(async () => vista.root.findByProps({ accessibilityLabel: "Mostrar CURP completa" }).props.onPress());
-    await act(async () => vi.advanceTimersByTime(30_000));
+    await act(async () => { vi.advanceTimersByTime(30_000); });
     expect(texto()).not.toContain(curp);
   } finally { vi.useRealTimers(); }
 });
