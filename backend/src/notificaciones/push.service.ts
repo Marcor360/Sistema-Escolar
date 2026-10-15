@@ -5,6 +5,7 @@ import axios from 'axios';
 import { PushDispositivo } from '../entities/push-dispositivo.entity';
 import { PushEnvio } from '../entities/push-envio.entity';
 import { Sesion } from '../entities/sesion.entity';
+import { sesionInactiva } from '../auth/sesion-inactividad';
 import { Usuario } from '../entities/usuario.entity';
 import { Notificacion } from '../entities/notificacion.entity';
 import { JwtUser } from '../common/current-user.decorator';
@@ -79,7 +80,7 @@ export class PushService implements OnModuleInit, OnModuleDestroy {
         const usuario = dispositivo ? await this.ds.getRepository(Usuario).findOneBy({ id: dispositivo.usuarioId, activo: true }) : null;
         const sesion = dispositivo ? await this.ds.getRepository(Sesion).findOneBy({ id: dispositivo.sesionId, usuarioId: dispositivo.usuarioId, revocada: false }) : null;
         const notificacion = await this.ds.getRepository(Notificacion).findOneBy({ id: reclamado.notificacionId });
-        if (!dispositivo || !usuario || !sesion || sesion.version !== usuario.sessionVersion || sesion.expiraEn <= new Date() || !notificacion || notificacion.usuarioId !== dispositivo.usuarioId) {
+        if (!dispositivo || !usuario || !sesion || sesion.version !== usuario.sessionVersion || sesion.expiraEn <= new Date() || sesionInactiva(sesion.ultimaActividadEn, new Date()) || !notificacion || notificacion.usuarioId !== dispositivo.usuarioId) {
           await repo.update(reclamado.id, { estado: 'OMITIDO', error: 'SESION_INACTIVA' }); continue;
         }
         try {
