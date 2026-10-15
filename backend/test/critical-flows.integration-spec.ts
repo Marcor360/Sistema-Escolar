@@ -23,6 +23,7 @@ import { NestFactory } from '@nestjs/core';
 import * as ExcelJS from 'exceljs';
 import { BitacoraFinanciera } from '../src/entities/bitacora-financiera.entity';
 import { AuthService } from '../src/auth/auth.service';
+import { ActivacionService } from '../src/auth/activacion.service';
 import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { AddressInfo } from 'net';
 import { basename, resolve } from 'path';
@@ -246,8 +247,23 @@ describe('Integración de flujos críticos (base aislada)', () => {
     });
     const alumno = usuario.roles.some((r) => r.clave === 'ALUMNO')
       ? await dataSource.getRepository(Alumno).findOneBy({ usuarioId: usuario.id }) : null;
+    if (alumno && usuario.activacionPendiente) {
+      // Fixture sintético: ejercitar la activación real, sin dependencia de SMTP externo.
+      let codigo = '';
+      const correo = jest.spyOn(app.get(NotificacionesService), 'enviarEmail')
+        .mockImplementation(async (_to, _subject, html) => {
+          codigo = /<strong>([0-9a-f]{64})<\/strong>/.exec(html)?.[1] ?? '';
+          return { simulado: false };
+        });
+      try {
+        await app.get(ActivacionService).solicitar(email);
+        expect(codigo).toMatch(/^[0-9a-f]{64}$/);
+        await app.get(ActivacionService).activar(codigo, 'Integracion_Renovada_42!');
+      } finally { correo.mockRestore(); }
+      passwords.set(email, 'Integracion_Renovada_42!');
+    }
     const passwordInicial = passwords.get(email) ?? alumno?.matricula ?? 'Integracion_Segura_42!';
-    if (usuario.passwordChangeRequired) {
+    if (usuario.passwordChangeRequired && !usuario.activacionPendiente) {
       await app.get(AuthService).cambiarPassword(usuario.id, passwordInicial, 'Integracion_Renovada_42!');
       passwords.set(email, 'Integracion_Renovada_42!');
     }
