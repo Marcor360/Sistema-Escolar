@@ -71,3 +71,11 @@ Las seis pestañas de alumno incluyen etiquetas explícitas para lectores de pan
 ### Barrido responsivo del 15 de octubre de 2026
 
 Se corrige el reflujo de paginación y campos financieros con texto al 200 %, se añaden regiones accesibles a quince tablas pendientes y se adaptan los diálogos a pantallas bajas. La [matriz reproducible y sus límites](BARRIDO_RESPONSIVO_2026-10-15.md) amplía las comprobaciones de navegación/listados con siete pantallas adicionales, pestañas financieras con datos largos y recuperación de contraseña. La presentación web automatizada y los contratos móviles no reemplazan QA física ni aceptación institucional.
+
+### Activación segura: estructura y API (#60–#61)
+
+Se incorpora la décima migración incremental, con estado pendiente default false y tokens SHA-256 de un uso. La API permite solicitar invitación genérica por SMTP y activar con contraseña validada, bloquea login/refresh/JWT/restablecimiento/descargas de cuentas pendientes y revoca sesiones previas por versión. Reemisión y consumo se serializan por usuario. Los endpoints públicos tienen límite por IP; la columna de intentos queda reservada, sin contador por cuenta implementado.
+
+Esta etapa no conecta altas individuales/lotes ni pantallas: aún no cierra el requisito de eliminar la contraseña inicial de matrícula. No se aplica migración ni se despliega a la institución; requiere respaldo y esquema previo al código, clientes y aceptación de SMTP real. Véase [requisito y estado de implementación](REQUERIMIENTO_ACTIVACION_SEGURA.md).
+
+Revisión adicional de #61: entrega de invitaciones en cola acotada de memoria, respuesta HTTP independiente de consultas/SMTP y emisión/aceptación SMTP serializada por usuario. Activar invalida también recuperaciones anteriores; emitir recuperación revalida estado y versión bajo bloqueo. La cola no acredita entrega ni sobrevive reinicios; ante falta de correo el titular solicita de nuevo. No cambia el pendiente de altas/clientes ni la aceptación SMTP institucional.

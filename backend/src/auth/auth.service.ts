@@ -182,16 +182,16 @@ export class AuthService {
     // Respuesta idéntica exista o no el correo (no revelar cuentas)
     if (!usuario || usuario.activacionPendiente) return { mensaje: 'Solicitud recibida. Si la cuenta existe y el correo está disponible, recibirás instrucciones. Si no llegan, contacta a Control escolar.' };
 
-    await this.tokens.update({ usuarioId: usuario.id, usado: false }, { usado: true });
-
     const token = randomUUID().replace(/-/g, '');
-    await this.tokens.save(
-      this.tokens.create({
-        usuarioId: usuario.id,
-        token: this.hashToken(token),
-        expiraEn: new Date(Date.now() + 60 * 60 * 1000),
-      }),
-    );
+    const emitido = await this.dataSource.transaction(async (manager) => {
+      const actual = await manager.getRepository(Usuario).findOne({ where: { id: usuario.id, activo: true }, lock: { mode: 'pessimistic_write' } });
+      if (!actual || actual.activacionPendiente || (actual.sessionVersion ?? 0) !== (usuario.sessionVersion ?? 0)) return false;
+      const tokens = manager.getRepository(PasswordResetToken);
+      await tokens.update({ usuarioId: usuario.id, usado: false }, { usado: true });
+      await tokens.save(tokens.create({ usuarioId: usuario.id, token: this.hashToken(token), expiraEn: new Date(Date.now() + 60 * 60 * 1000) }));
+      return true;
+    });
+    if (!emitido) return { mensaje: 'Solicitud recibida. Si la cuenta existe y el correo está disponible, recibirás instrucciones. Si no llegan, contacta a Control escolar.' };
     await this.notificaciones.enviarEmail(
       usuario.email,
       'Recuperación de contraseña',
@@ -211,7 +211,7 @@ export class AuthService {
       // Mismo orden de bloqueo que cambio de contraseña: usuario antes de tokens.
       const usuarios = manager.getRepository(Usuario);
       const usuario = await usuarios.findOne({
-        where: { id: registro.usuarioId, activo: true }, select: ['id'], lock: { mode: 'pessimistic_write' },
+        where: { id: registro.usuarioId, activo: true }, select: ['id', 'activacionPendiente'], lock: { mode: 'pessimistic_write' },
       });
       if (!usuario) throw new UnauthorizedException('La cuenta ya no está activa');
       if (usuario.activacionPendiente) throw new UnauthorizedException('Activa primero la cuenta');
