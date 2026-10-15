@@ -132,7 +132,7 @@ export default function CalendarioPage() {
 
       <div className="fila" style={{ marginBottom: 12 }}><div className="campo"><label htmlFor="cal-filtro">Ver plantel</label><select id="cal-filtro" value={filtroPlantel} onChange={(e) => setFiltroPlantel(e.target.value)}><option value="">Todos</option>{planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div><button className="boton secundario" disabled={cargando} onClick={filtrarEventos}>Aplicar</button></div>
 
-      <table className="tabla">
+      <div className="tabla-contenedor" role="region" aria-label="Eventos del calendario" tabIndex={0}><table className="tabla">
         <thead><tr><th>Fecha</th><th>Evento</th><th>Ámbito</th><th>Tipo</th><th>Descripción</th><th className="derecha">Acciones</th></tr></thead>
         <tbody>
           {eventos.map((ev) => (
@@ -153,7 +153,7 @@ export default function CalendarioPage() {
             <tr><td className="vacio" colSpan={6}>Calendario vacío. Agrega el primer evento del ciclo.</td></tr>
           )}
         </tbody>
-      </table>
+      </table></div>
     </>
   );
 }

@@ -35,7 +35,7 @@ export function MateriasGrupo({ seleccionado, reasignando, nuevoDocente, setNuev
                 filtros={{ plantelId: seleccionado.plantel?.id }} texto={(d) => `${d.numEmpleado} — ${d.usuario.nombre} ${d.usuario.apellidoPaterno}`} />
               <button disabled={enviando} className="boton">Asignar materia</button>
             </form>
-            <table className="tabla">
+            <div className="tabla-contenedor" role="region" aria-label="Materias asignadas al grupo" tabIndex={0}><table className="tabla">
               <thead><tr><th>Materia</th><th>Docente</th><th>Correcciones</th></tr></thead>
               <tbody>
                 {asignaciones.map((gm) => (
@@ -48,5 +48,5 @@ export function MateriasGrupo({ seleccionado, reasignando, nuevoDocente, setNuev
                 ))}
                 {asignaciones.length === 0 && <tr><td className="vacio" colSpan={2}>Sin materias asignadas.</td></tr>}
               </tbody>
-            </table>
+            </table></div>
           </section>); }

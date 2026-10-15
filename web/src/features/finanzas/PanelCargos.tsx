@@ -72,7 +72,7 @@ export function PanelCargos({ crearCargo, formCargo, setFormCargo, conceptos,  e
             </form>
           </section>
 
-          <table className="tabla">
+          <div className="tabla-contenedor" role="region" aria-label="Listado de cargos" tabIndex={0}><table className="tabla">
             <thead><tr><th>Alumno</th><th>Descripción</th><th>Periodo</th><th>Vence</th><th className="derecha">Monto</th><th className="derecha">Recargo</th><th>Estatus</th><th>Correcciones</th></tr></thead>
             <tbody>
               {resultadoCargos.datos.map((c) => (
@@ -88,6 +88,6 @@ export function PanelCargos({ crearCargo, formCargo, setFormCargo, conceptos,  e
               ))}
               {resultadoCargos.datos.length === 0 && <tr><td className="vacio" colSpan={7}>Sin cargos registrados.</td></tr>}
             </tbody>
-          </table>
+          </table></div>
           <Paginador total={resultadoCargos.total} pagina={resultadoCargos.pagina} porPagina={resultadoCargos.porPagina} onCambio={cargarCargos} />
         </div>); }

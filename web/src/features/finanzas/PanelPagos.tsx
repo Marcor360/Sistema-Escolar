@@ -35,7 +35,7 @@ export function PanelPagos({ registrarPago, formPago, setFormPago, enviando, res
             </form>
           </section>
 
-          <table className="tabla">
+          <div className="tabla-contenedor" role="region" aria-label="Listado de pagos" tabIndex={0}><table className="tabla">
             <thead><tr><th>Fecha</th><th>Alumno</th><th className="derecha">Monto</th><th>Método</th><th>Referencia</th><th>Estatus</th><th>Correcciones</th></tr></thead>
             <tbody>
               {resultadoPagos.datos.map((p) => (
@@ -50,6 +50,6 @@ export function PanelPagos({ registrarPago, formPago, setFormPago, enviando, res
               ))}
               {resultadoPagos.datos.length === 0 && <tr><td className="vacio" colSpan={6}>Sin pagos registrados.</td></tr>}
             </tbody>
-          </table>
+          </table></div>
           <Paginador total={resultadoPagos.total} pagina={resultadoPagos.pagina} porPagina={resultadoPagos.porPagina} onCambio={cargarPagos} />
         </div>); }

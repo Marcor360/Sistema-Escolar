@@ -44,7 +44,7 @@ export function ActividadesClase({ claseActiva, crearActividad, form, setForm, e
             <button disabled={enviando} className="boton">{editandoActividad ? 'Guardar corrección' : 'Crear actividad'}</button>
           </form>
 
-          <table className="tabla">
+          <div className="tabla-contenedor" role="region" aria-label="Actividades de la clase" tabIndex={0}><table className="tabla">
             <thead><tr><th>Actividad</th><th>Tipo</th><th>Parcial</th><th>Entrega</th><th /></tr></thead>
             <tbody>
               {actividades.map((a) => (
@@ -62,5 +62,5 @@ export function ActividadesClase({ claseActiva, crearActividad, form, setForm, e
                 <tr><td className="vacio" colSpan={5}>Sin actividades. Crea la primera arriba.</td></tr>
               )}
             </tbody>
-          </table>
+          </table></div>
         </section>); }

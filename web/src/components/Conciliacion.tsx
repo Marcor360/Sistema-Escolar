@@ -34,11 +34,11 @@ export function Conciliacion() {
     <label htmlFor="tipo-incidencia">Incidencias</label><select id="tipo-incidencia" value={tipo} onChange={(e) => { setTipo(e.target.value as typeof tipo); setPagina(1); setSeleccion(null); }}>
       <option value="ordenes">Órdenes ambiguas o pendientes</option><option value="pagos">Pagos confirmados no aplicados</option></select>
     {error && <p role="alert" className="mensaje-error">{error}</p>}{mensaje && <p role="status" className="mensaje-ok">{mensaje}</p>}
-    <table className="tabla"><thead><tr><th>Referencia</th><th>Alumno</th><th>Monto</th><th>Fecha</th><th>Estado / motivo</th><th>Resolución</th></tr></thead><tbody>
+    <div className="tabla-contenedor" role="region" aria-label="Incidencias de conciliación" tabIndex={0}><table className="tabla"><thead><tr><th>Referencia</th><th>Alumno</th><th>Monto</th><th>Fecha</th><th>Estado / motivo</th><th>Resolución</th></tr></thead><tbody>
       {resultado.datos.map((i) => <tr key={i.id}><td>{i.referencia}</td><td>{i.matricula}</td><td>{pesos(i.monto)}</td><td>{new Date(i.fecha).toLocaleString('es-MX')}</td><td>{i.estatus} · {i.motivo}</td>
         <td><button disabled={enviando} onClick={() => { setSeleccion(i); setMotivo(''); setCargoId(''); }}>Revisar</button></td></tr>)}
       {!resultado.datos.length && <tr><td colSpan={6}>Sin incidencias pendientes.</td></tr>}
-    </tbody></table><Paginador total={resultado.total} pagina={pagina} porPagina={20} onCambio={setPagina} />
+    </tbody></table></div><Paginador total={resultado.total} pagina={pagina} porPagina={20} onCambio={setPagina} />
     {seleccion && <form onSubmit={resolver}><h3>Resolver {seleccion.referencia}</h3>
       {tipo === 'pagos' && <SelectorBuscable<Cargo> ruta="/finanzas/cargos" valor={cargoId} cambiar={setCargoId} etiqueta="Cargo de destino"
         filtros={{ alumnoId: seleccion.alumnoId }} texto={(c) => `${c.descripcion} · ${c.estatus}`} />}

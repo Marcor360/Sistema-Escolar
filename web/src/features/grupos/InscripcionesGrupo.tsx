@@ -18,7 +18,7 @@ export function InscripcionesGrupo({ seleccionado, inscribir, alumnoId, setAlumn
                 filtros={{ plantelId: seleccionado.plantel?.id }} texto={(a) => `${a.matricula} — ${a.usuario.nombre} ${a.usuario.apellidoPaterno}`} />
               <button disabled={enviando} className="boton">Inscribir</button>
             </form>
-            <table className="tabla">
+            <div className="tabla-contenedor" role="region" aria-label="Inscripciones del grupo" tabIndex={0}><table className="tabla">
               <thead><tr><th>Matrícula</th><th>Alumno</th><th>Correcciones</th></tr></thead>
               <tbody>
                 {inscritos.map((i) => (
@@ -29,5 +29,5 @@ export function InscripcionesGrupo({ seleccionado, inscribir, alumnoId, setAlumn
                 ))}
                 {inscritos.length === 0 && <tr><td className="vacio" colSpan={2}>Sin alumnos inscritos.</td></tr>}
               </tbody>
-            </table>
+            </table></div>
           </section>); }
