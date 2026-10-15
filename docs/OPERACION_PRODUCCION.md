@@ -6,7 +6,16 @@ Este documento separa lo configurable en el repositorio de lo que depende del ho
 
 El repositorio dispone de scripts Windows/IIS y workflow manual de staging, pero su presencia no acredita instalación, tareas programadas ni operación del servidor institucional. Los datos de una máquina local antigua no describen el entorno actual.
 
-Antes de intervenir: auditar el host con Audit-StagingHost.ps1, identificar motor/versión, consultar migraciones, verificar almacenamiento y responsables. No leer ni copiar secretos de .env a un reporte. Usar [staging Windows](STAGING_WINDOWS_IIS.md) y [servidor existente](PUBLICAR_SERVIDOR_EXISTENTE.md) para la configuración específica.
+Antes de intervenir: auditar el host con Audit-StagingHost.ps1, identificar motor/versión, consultar migraciones, verificar almacenamiento y responsables.
+
+Para comprobar de forma **no destructiva** que una API de staging responde con la versión prevista, ejecutar desde PowerShell (sin escribir credenciales ni consultas institucionales):
+
+```powershell
+.\scripts\windows\Test-PilotReadiness.ps1 -ApiBaseUrl 'https://api.staging.ejemplo.mx' -ExpectedVersion '1.24.0-beta.2' -OutputPath '.\pilot-readiness.json'
+```
+
+Este diagnóstico consulta únicamente `/api/health/live` y `/api/health/ready`; no valida antivirus, pagos, correo, respaldo o UAT. Nunca se aceptan certificados TLS sin validación y no sobrescribe el informe existente.
+ No leer ni copiar secretos de .env a un reporte. Usar [staging Windows](STAGING_WINDOWS_IIS.md) y [servidor existente](PUBLICAR_SERVIDOR_EXISTENTE.md) para la configuración específica.
 
 ## Secretos y variables
 
