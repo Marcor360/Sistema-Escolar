@@ -32,7 +32,7 @@ describe('SMTP seguro en entornos desplegados', () => {
 
   beforeEach(() => jest.clearAllMocks());
 
-  it.each([
+  it.each<[string, string, string | undefined, boolean, boolean]>([
     ['587', 'production', undefined, true, false],
     ['587', 'development', 'staging', true, false],
     ['587', 'development', undefined, false, false],
