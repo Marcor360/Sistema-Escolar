@@ -4,7 +4,7 @@ import { validarUrlApiBuild } from './src/api/validar-url-build';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ command, mode }) => {
-  if (command === 'build' && mode !== 'development') {
+  if (command === 'build') {
     const config = loadEnv(mode, '.', 'VITE_');
     validarUrlApiBuild(config.VITE_API_URL);
   }

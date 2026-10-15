@@ -80,7 +80,7 @@ export class PushService implements OnModuleInit, OnModuleDestroy {
         const usuario = dispositivo ? await this.ds.getRepository(Usuario).findOneBy({ id: dispositivo.usuarioId, activo: true }) : null;
         const sesion = dispositivo ? await this.ds.getRepository(Sesion).findOneBy({ id: dispositivo.sesionId, usuarioId: dispositivo.usuarioId, revocada: false }) : null;
         const notificacion = await this.ds.getRepository(Notificacion).findOneBy({ id: reclamado.notificacionId });
-        if (!dispositivo || !usuario || !sesion || sesion.version !== usuario.sessionVersion || sesion.expiraEn <= new Date() || sesionInactiva(sesion.ultimaActividadEn, new Date()) || !notificacion || notificacion.usuarioId !== dispositivo.usuarioId) {
+        if (!dispositivo || !usuario || usuario.activacionPendiente || !sesion || sesion.version !== usuario.sessionVersion || sesion.expiraEn <= new Date() || sesionInactiva(sesion.ultimaActividadEn, new Date()) || !notificacion || notificacion.usuarioId !== dispositivo.usuarioId) {
           await repo.update(reclamado.id, { estado: 'OMITIDO', error: 'SESION_INACTIVA' }); continue;
         }
         try {

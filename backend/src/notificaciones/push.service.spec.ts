@@ -11,12 +11,12 @@ import { JwtUser } from '../common/current-user.decorator';
 jest.mock('axios');
 const post = jest.mocked(axios.post);
 const user: JwtUser = { sub: 1, email: 'a@example.invalid', nombre: 'Alumno', roles: ['ALUMNO'], sid: 'sesion' };
-function entorno({ revocada = false, habilitado = true, inactiva = false } = {}) {
+function entorno({ revocada = false, habilitado = true, inactiva = false, pendiente = false } = {}) {
   const envio = { id: 8, dispositivoId: 2, notificacionId: 5, estado: 'PENDIENTE', intentos: 0, proximoIntento: new Date(0) };
   const envios = { find: jest.fn().mockResolvedValueOnce([envio]).mockResolvedValue([]), findOne: jest.fn().mockResolvedValue(envio), save: jest.fn(async (e: unknown) => e), update: jest.fn(), insert: jest.fn() };
   const dispositivos = { findOneBy: jest.fn().mockResolvedValue({ id: 2, usuarioId: 1, sesionId: 'sesion', token: 'ExponentPushToken[abc]' }), findOne: jest.fn().mockResolvedValue({ id: 2, usuarioId: 99 }), update: jest.fn(), create: jest.fn(() => ({})), save: jest.fn() };
   const sesiones = { findOneBy: jest.fn().mockResolvedValue(revocada ? null : { version: 3, expiraEn: new Date(Date.now() + 60000), ultimaActividadEn: new Date(Date.now() - (inactiva ? 31 : 2) * 60_000) }) };
-  const usuarios = { findOneBy: jest.fn().mockResolvedValue({ sessionVersion: 3 }) };
+  const usuarios = { findOneBy: jest.fn().mockResolvedValue({ sessionVersion: 3, activacionPendiente: pendiente }) };
   const notificaciones = { findOneBy: jest.fn().mockResolvedValue({ id: 5, usuarioId: 1, titulo: 'Calificación privada', mensaje: 'Dato privado' }) };
   const repos = new Map<unknown, unknown>([[PushEnvio, envios], [PushDispositivo, dispositivos], [Sesion, sesiones], [Usuario, usuarios], [Notificacion, notificaciones]]);
   const manager = { getRepository: (target: unknown) => repos.get(target) } as unknown as EntityManager;
@@ -32,3 +32,5 @@ it('envía aviso genérico sin notas ni calificaciones; guarda ticket', async ()
 it('desactiva token no registrado y conserva fallo controlado', async () => { post.mockResolvedValue({ data: { data: { status: 'error', details: { error: 'DeviceNotRegistered' } } } }); const { service, dispositivos, envios } = entorno(); await service.procesar(); expect(dispositivos.update).toHaveBeenCalledWith(2, { activo: false }); expect(envios.update).toHaveBeenCalledWith(8, { estado: 'ERROR', error: 'DEVICE_NOT_REGISTERED' }); });
 it('reintenta fallo de red y agota el límite sin enviar otra vez', async () => { post.mockRejectedValue(new Error('timeout')); const { service, envios, envio } = entorno(); await service.procesar(); expect(envios.update).toHaveBeenCalledWith(8, expect.objectContaining({ estado: 'PENDIENTE', error: 'PROVEEDOR_NO_DISPONIBLE' })); envio.estado = 'PENDIENTE'; envio.intentos = 3; envio.proximoIntento = new Date(0); envios.find.mockResolvedValueOnce([envio]); await service.procesar(); expect(post).toHaveBeenCalledTimes(1); expect(envios.update).toHaveBeenCalledWith(8, { estado: 'ERROR', error: 'REINTENTOS_AGOTADOS' }); });
 it('vincula token existente a la cuenta y sesión actuales', async () => { const { service, dispositivos } = entorno(); await service.registrar({ instalacionId: 'instalacion', token: 'ExponentPushToken[abc]' }, user); expect(dispositivos.save).toHaveBeenCalledWith(expect.objectContaining({ usuarioId: 1, sesionId: 'sesion', activo: true })); await service.retirar('instalacion', user); expect(dispositivos.update).toHaveBeenCalledWith({ usuarioId: 1, instalacionId: 'instalacion' }, { activo: false }); });
+
+it('omite push de cuentas pendientes de activación aunque la sesión anterior sea reciente', async () => { const { service, envios } = entorno({ pendiente: true }); await service.procesar(); expect(envios.update).toHaveBeenCalledWith(8, { estado: 'OMITIDO', error: 'SESION_INACTIVA' }); expect(post).not.toHaveBeenCalled(); });

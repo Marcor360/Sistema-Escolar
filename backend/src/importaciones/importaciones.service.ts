@@ -136,7 +136,7 @@ export class ImportacionesService {
     const hashes: string[] = [];
     if (previa.tipo !== 'INSCRIPCIONES') {
       for (let i = 0; i < filas.length; i += 4) {
-        hashes.push(...await Promise.all(filas.slice(i, i + 4).map((fila) =>
+        hashes.push(...await Promise.all(filas.slice(i, i + 4).map(() =>
           hashPasswordNueva(randomBytes(32).toString('base64url')),
         )));
       }

@@ -42,7 +42,7 @@ export async function renovarSesion() {
 api.interceptors.response.use((res) => res, async (error: AxiosError) => {
   if (cierreLocalActivo()) return Promise.reject(error);
   const config = error.config;
-  if (error.response?.status === 401 && config && !['/auth/login', '/auth/refresh', '/auth/forgot-password', '/auth/reset-password'].includes(config.url ?? '') && !config.headers['x-reintento-sesion']) {
+  if (error.response?.status === 401 && config && !['/auth/login', '/auth/refresh', '/auth/forgot-password', '/auth/reset-password', '/auth/solicitar-activacion', '/auth/activar-cuenta'].includes(config.url ?? '') && !config.headers['x-reintento-sesion']) {
     try { await renovarSesion(); config.headers['x-reintento-sesion'] = '1'; return api.request(config); }
     catch (fallo) {
       if (![401, 403].includes((fallo as AxiosError).response?.status ?? 0)) return Promise.reject(fallo);

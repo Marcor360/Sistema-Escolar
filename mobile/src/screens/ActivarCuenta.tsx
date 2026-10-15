@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { Text } from "../components/Texto";
 import { api, mensajeDeError } from "../api/client";
@@ -14,21 +14,27 @@ export default function ActivarCuentaScreen({ volver, correoInicial = "" }: { vo
   const [error, setError] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [terminado, setTerminado] = useState(false);
+  const enCurso = useRef(false);
+  const activa = useRef(true);
+  useEffect(() => () => { activa.current = false; }, []);
   const ejecutar = async () => {
-    if (enviando) return;
+    if (enCurso.current || !activa.current) return;
+    enCurso.current = true;
     setEnviando(true); setError(""); setMensaje("");
     try {
       if (paso === "solicitar") {
         const { data } = await api.post<{ mensaje: string }>("/auth/solicitar-activacion", { email: email.trim() });
+        if (!activa.current) return;
         setMensaje(data.mensaje);
         setPaso("activar");
       } else {
         if (password !== confirmacion) { setError("Las contraseñas no coinciden."); return; }
         const { data } = await api.post<{ mensaje: string }>("/auth/activar-cuenta", { token: token.trim().toLowerCase(), password });
+        if (!activa.current) return;
         setMensaje(data.mensaje); setToken(""); setPassword(""); setConfirmacion(""); setTerminado(true);
       }
-    } catch (fallo) { setError(mensajeDeError(fallo)); }
-    finally { setEnviando(false); }
+    } catch (fallo) { if (activa.current) setError(mensajeDeError(fallo)); }
+    finally { enCurso.current = false; if (activa.current) setEnviando(false); }
   };
   return (
     <KeyboardAvoidingView style={styles.pantalla} behavior={Platform.OS === "ios" ? "padding" : "height"}>
@@ -50,29 +56,30 @@ export default function ActivarCuentaScreen({ volver, correoInicial = "" }: { vo
           {!terminado && paso === "activar" && (
             <>
               <Text style={styles.etiqueta}>Código de activación</Text>
-              <TextInput accessibilityLabel="Código de activación" style={styles.input} value={token} onChangeText={setToken}
+              <TextInput accessibilityLabel="Código de activación" style={styles.input} value={token} onChangeText={(valor) => setToken(valor.trim().toLowerCase())}
                 autoCapitalize="none" autoCorrect={false} maxLength={64} editable={!enviando} />
               <Text style={styles.etiqueta}>Nueva contraseña (mínimo 8 caracteres)</Text>
               <TextInput accessibilityLabel="Nueva contraseña" style={styles.input} value={password} onChangeText={setPassword}
-                secureTextEntry autoCapitalize="none" editable={!enviando} />
+                secureTextEntry autoCapitalize="none" autoCorrect={false} editable={!enviando} />
               <Text style={styles.etiqueta}>Confirmar nueva contraseña</Text>
               <TextInput accessibilityLabel="Confirmar nueva contraseña" style={styles.input} value={confirmacion} onChangeText={setConfirmacion}
-                secureTextEntry autoCapitalize="none" editable={!enviando} />
+                secureTextEntry autoCapitalize="none" autoCorrect={false} editable={!enviando} />
             </>
           )}
           {!terminado && (
             <TouchableOpacity style={styles.boton} onPress={() => { void ejecutar(); }} accessibilityRole="button"
               accessibilityLabel={paso === "solicitar" ? "Solicitar código de activación" : "Activar cuenta"}
+              accessibilityState={{ disabled: enviando, busy: enviando }}
               disabled={enviando || (paso === "solicitar" ? !email.trim() : token.length !== 64 || password.length < 8 || !confirmacion)}>
               <Text style={styles.botonTexto}>{enviando ? "Procesando…" : paso === "solicitar" ? "Solicitar código" : "Activar cuenta"}</Text>
             </TouchableOpacity>
           )}
           {!terminado && paso === "activar" && (
-            <TouchableOpacity style={styles.enlace} onPress={() => { setPaso("solicitar"); setToken(""); }} accessibilityRole="button">
+            <TouchableOpacity style={styles.enlace} disabled={enviando} onPress={() => { setPaso("solicitar"); setToken(""); }} accessibilityRole="button">
               <Text>Solicitar otro código</Text>
             </TouchableOpacity>
           )}
-          <TouchableOpacity style={styles.enlace} onPress={volver} accessibilityRole="button" accessibilityLabel="Volver a iniciar sesión">
+          <TouchableOpacity style={styles.enlace} disabled={enviando} onPress={volver} accessibilityRole="button" accessibilityLabel="Volver a iniciar sesión">
             <Text>Volver a iniciar sesión</Text>
           </TouchableOpacity>
         </View>

@@ -257,9 +257,10 @@ describe('Integración de flujos críticos (base aislada)', () => {
         });
       try {
         await app.get(ActivacionService).solicitar(email);
+        await app.get(ActivacionService).onModuleDestroy();
         expect(codigo).toMatch(/^[0-9a-f]{64}$/);
         await app.get(ActivacionService).activar(codigo, 'Integracion_Renovada_42!');
-      } finally { correo.mockRestore(); }
+      } finally { await app.get(ActivacionService).onModuleDestroy(); correo.mockRestore(); }
       passwords.set(email, 'Integracion_Renovada_42!');
     }
     const passwordInicial = passwords.get(email) ?? alumno?.matricula ?? 'Integracion_Segura_42!';

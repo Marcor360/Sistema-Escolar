@@ -1,10 +1,10 @@
 # Requisito del cliente: activación segura de cuentas nuevas
 
-Estado: requisito confirmado; #60–#61 implementan estructura y API de activación con entrega por SMTP cuando esté configurado. La conexión de altas individuales/lotes y pantallas sigue pendiente de las siguientes etapas. Las altas existentes aún conservan su comportamiento: el requisito no se considera cerrado ni desplegado. La migración aditiva debe preceder al código; SMTP real requiere aceptación institucional.
+Estado: #60–#66 incorporan estructura, API, altas individuales/masivas y pantallas web/Expo. El requisito de eliminar la contraseña derivada de matrícula está implementado para cuentas ALUMNO nuevas. La aceptación operativa sigue pendiente: migración previa al código, SMTP institucional, despliegue coordinado y pruebas físicas. No se considera un servicio desplegado por haber aprobado CI.
 
 ## Situación actual
 
-AlumnosService.crear usa la matrícula como contraseña inicial; la confirmación masiva de ALUMNOS también genera su hash y comunica esa regla. Se exige cambio inicial, pero la credencial continúa siendo predecible antes de cambiarla. La matrícula debe conservarse como identificador académico.
+AlumnosService.crear y la importación ALUMNOS generan una contraseña aleatoria no mostrada y guardan activacionPendiente=true. La matrícula queda solo como identificador. El titular elige «Activar mi cuenta» en web o Expo, solicita el código privado y establece su contraseña. La cuenta no puede iniciar sesión antes de activarse y no recibe acceso alternativo si SMTP no funciona. Cuentas históricas conservan su estado; no hay bloqueo masivo ni cambio retroactivo de sus contraseñas.
 
 Auth ya ofrece recuperación con token de un uso y expiración; reutilizar sus reglas y mecanismos cuando proceda, sin presentar recuperación y activación como el mismo estado de negocio. DOCENTES/PERSONAL tienen flujos distintos y deben comprobarse al coordinar la entrega.
 
@@ -53,3 +53,9 @@ Reemitir invalida códigos anteriores bajo bloqueo por usuario. Activar establec
 La solicitud encola el correo sin consultar la cuenta ni esperar SMTP antes de responder. La cola en memoria está limitada a 100 trabajos por proceso y no es duradera: un reinicio o saturación puede requerir una nueva solicitud. No se acredita entrega a partir de la respuesta HTTP. La generación, invalidación y aceptación SMTP se serializan bajo bloqueo por usuario, incluso entre instancias. El bloqueo dura hasta la aceptación o timeout SMTP; un fallo revierte la emisión y conserva la invitación previa. El orden garantiza la aceptación por el proveedor; la llegada final al buzón depende de ese proveedor.
 
 Al completar la activación también se invalidan los códigos de recuperación pendientes, en la misma transacción. La emisión de recuperación revalida estado y versión bajo el mismo bloqueo para no introducir un código después de una activación concurrente. Se prueban respuesta independiente de SMTP, reenvíos simultáneos y rechazo de un código de recuperación anterior después de activar.
+
+## Cierre de la conexión de altas y clientes (#62–#66)
+
+La etapa pendiente indicada en los apartados históricos #60–#61 queda incorporada en el código. Alta individual y lote se mantienen atómicos, sin revelar credenciales en respuestas, preview o XLSX. Las pruebas de ambos motores activan alumnos nuevos con códigos capturados por un doble SMTP sintético; esto no acredita entrega institucional. Los clientes evitan envíos duplicados y mantienen errores recuperables sin declarar entrega. Expo sigue siendo exclusivo de ALUMNO.
+
+Se mantienen los límites documentados de cola efímera y rate limit por IP; no existe un contador de intentos por cuenta implementado. Continúan pendientes la limpieza física de copias del selector y las pruebas en Android/iOS, TalkBack y VoiceOver.

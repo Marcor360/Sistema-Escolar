@@ -110,6 +110,7 @@ export default function TareasScreen() {
       setEntregandoId(tarea.id);
       // Evitar crear otra copia privada en caché cuando la API no está disponible.
       const { data: disponibles } = await api.get<Tarea[]>("/alumnos/me/tareas");
+      if (!activa.current) return;
       const actual = disponibles.find((item) => item.id === tarea.id);
       if (!actual || actual.entrega?.estatus === "CALIFICADA") {
         Alert.alert("Entrega no disponible", "La tarea cambió. Actualiza la lista antes de seleccionar otro archivo.");

@@ -16,3 +16,7 @@ describe('URL de API de build web', () => {
     expect(validarUrlApiBuild('https://api.example.invalid/api')).toBe('https://api.example.invalid/api');
   });
 });
+
+it.each(['https://localhost./api', 'https://alumno.localhost/api', 'https://127.0.0.2/api', 'https://[::1]/api', 'https://[::ffff:127.0.0.1]/api', 'https://api.example.invalid/api?', 'https://api.example.invalid/api#'])('rechaza variantes locales o parámetros vacíos: %s', (url) => {
+  expect(() => validarUrlApiBuild(url)).toThrow();
+});
