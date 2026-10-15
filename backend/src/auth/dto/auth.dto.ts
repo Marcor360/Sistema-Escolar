@@ -1,7 +1,7 @@
 import { PasswordNuevaValida } from '../../common/password-bcrypt';
 import { Transform } from 'class-transformer';
 import { IsOptional } from 'class-validator';
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, Matches, MinLength } from 'class-validator';
 
 export class LoginDto {
   @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim().toLowerCase() : value)
@@ -16,6 +16,11 @@ export class ForgotPasswordDto {
 
 export class ResetPasswordDto {
   @IsString() @IsNotEmpty() token!: string;
+  @IsString() @MinLength(8) @PasswordNuevaValida() password!: string;
+}
+
+export class ActivarCuentaDto {
+  @IsString() @Matches(/^[0-9a-f]{64}$/) token!: string;
   @IsString() @MinLength(8) @PasswordNuevaValida() password!: string;
 }
 
