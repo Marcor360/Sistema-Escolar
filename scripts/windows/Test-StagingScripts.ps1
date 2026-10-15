@@ -34,4 +34,5 @@ if (-not ('ServiceLogonConfig' -as [type])) { Add-Type -TypeDefinition $interop.
 if (-not (Test-Path -LiteralPath (Join-Path $root 'web\public\web.config'))) { throw 'Falta configuración SPA de IIS.' }
 & (Join-Path $PSScriptRoot 'Test-DeployStaging.ps1')
 & (Join-Path $PSScriptRoot 'Test-PruneStaging.ps1')
+& (Join-Path $PSScriptRoot 'Test-PilotReadiness.Tests.ps1')
 Write-Host 'Estructura de scripts Windows válida.'

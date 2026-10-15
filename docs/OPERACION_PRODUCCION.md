@@ -98,6 +98,12 @@ El perfil de producción incrementa automáticamente el número de build. La fir
 
 Aplicar migracion_biblioteca_privada.sql mediante el runner y verificar ClamAV real, cuarentena y ACL. BIBLIOTECA_CUOTA_MB es 100 por defecto (1–2000); hasta 10 MB por archivo. Sin scanner disponible se bloquean cargas. Esa cuota no cubre otros módulos. Respaldar y restaurar también archivos y referencias de biblioteca.
 
-La [activación segura](REQUERIMIENTO_ACTIVACION_SEGURA.md) es un requisito pendiente del cliente. Antes de habilitar altas nuevas para el piloto, implementar el canal acordado, confirmar entrega/recuperación y ensayar cuentas existentes. No atribuir ese mecanismo al código actual.
+La [activación segura](REQUERIMIENTO_ACTIVACION_SEGURA.md) está implementada en altas nuevas y clientes desde #60–#66. Antes de habilitar el piloto, aplicar la migración previa al código, confirmar entrega/recuperación con SMTP institucional y ensayar las cuentas existentes. CI no acredita entrega ni despliegue.
 
 Puertas y evidencia institucional: [BETA_ACEPTACION.json](BETA_ACEPTACION.json). Los registros siguen pendientes hasta tener evidencia y responsables; CI no equivale a aceptar el despliegue.
+
+### Evidencia UAT y límites del diagnóstico
+
+`node scripts/check-uat-matrix.cjs` valida la estructura de los doce escenarios institucionales, roles y canales. Para una aprobación se exigen responsable designado, aprobadoPor, fecha UTC ISO exacta no futura, SHA completo del build y referencias de evidencia no vacías. El validador no autentica la identidad del firmante ni verifica el contenido de esas referencias: esa revisión corresponde a la institución. `--release` rechaza escenarios pendientes; ejecutar también `node scripts/check-beta-gates.cjs --release`. Los doce escenarios permanecen pendientes.
+
+`Test-PilotReadiness.ps1` verifica el contrato JSON de live/ready, la versión de ambos endpoints cuando se indica ExpectedVersion y los indicadores database/schema/storage. No sigue redirecciones y admite únicamente el origen o /api; HTTP solo se permite en loopback para pruebas locales. Un informe se crea de forma exclusiva y nunca sobrescribe uno existente. Las pruebas Windows usan transporte simulado, no acreditan disponibilidad institucional.

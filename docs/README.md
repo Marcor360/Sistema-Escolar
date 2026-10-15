@@ -7,6 +7,7 @@ Entrada de lectura para main 1.24.0-beta.2. Revisión documental: 14 de octubre 
 | Tarea | Fuente vigente |
 |---|---|
 | Barrido responsivo, matriz y límites | [Revisión del 15 de octubre](BARRIDO_RESPONSIVO_2026-10-15.md) |
+| Aceptación por rol y canal | [Matriz UAT pendiente](UAT_MATRIZ_2026-10-15.json) y [operación](OPERACION_PRODUCCION.md) |
 | Estado, clasificación y pendientes | [Estado de implementación](ESTADO_IMPLEMENTACION.md) |
 | Diseño y contratos | [Arquitectura](ARQUITECTURA.md), [API](API.md), [matriz de acceso](MATRIZ_ACCESO.md) |
 | Reglas académicas/financieras | [Reglas del piloto](REGLAS_PILOTO.md) |

@@ -5,7 +5,7 @@
     {
       "id": "UAT-01",
       "rol": "SUPERADMIN",
-      "escenario": "Crear un plantel, ciclo y personal; impedir ver datos de otro plantel",
+      "escenario": "Crear plantel, ciclo y personal; comprobar acceso global de SUPERADMIN y denegación entre planteles de personal restringido",
       "canales": [
         "web",
         "api",

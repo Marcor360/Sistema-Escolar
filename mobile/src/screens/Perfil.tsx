@@ -1,8 +1,9 @@
 import { activarPush, desactivarPush } from "../push";
 import { crearControlLectura } from "../api/lectura-vigente";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  AppState,
   Alert,
   ScrollView,
   StyleSheet,
@@ -34,6 +35,15 @@ export default function PerfilScreen({ abrirDocumentos }: { abrirDocumentos?: ()
   const { sesion, cerrar, finalizarSesionLocal } = useSesion();
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [mostrarCurp, setMostrarCurp] = useState(false);
+  useEffect(() => {
+    if (!mostrarCurp) return;
+    const timer = setTimeout(() => setMostrarCurp(false), 30_000);
+    return () => clearTimeout(timer);
+  }, [mostrarCurp]);
+  useEffect(() => {
+    const listener = AppState.addEventListener("change", (estado) => { if (estado !== "active") setMostrarCurp(false); });
+    return () => listener.remove();
+  }, []);
   const [actual, setActual] = useState("");
   const [nueva, setNueva] = useState("");
   const [confirmacion, setConfirmacion] = useState("");
@@ -129,7 +139,7 @@ export default function PerfilScreen({ abrirDocumentos }: { abrirDocumentos?: ()
   useFocusEffect(
     useCallback(() => {
       cargarPerfil();
-      return () => lectura.current.invalidar();
+      return () => { setMostrarCurp(false); lectura.current.invalidar(); };
     }, [cargarPerfil]),
   );
 

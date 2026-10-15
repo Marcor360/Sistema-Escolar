@@ -9,7 +9,7 @@ import Tareas from "./Tareas";
 import EstadoCuenta from "./EstadoCuenta";
 import Perfil from "./Perfil";
 import { api } from "../api/client";
-import { Alert, Linking, ScrollView, Text, TouchableOpacity } from "react-native";
+import { Alert, AppState, Linking, ScrollView, Text, TouchableOpacity } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 const sesion = vi.hoisted(() => ({
   sub: 1 as number | null,
@@ -58,6 +58,7 @@ vi.mock("react-native", async () => {
     TouchableOpacity: "TouchableOpacity",
     Pressable: "Pressable",
     ActivityIndicator: "ActivityIndicator",
+    AppState: { addEventListener: vi.fn(() => ({ remove: vi.fn() })) },
     RefreshControl: "RefreshControl",
     Platform: { OS: "android" },
     Alert: { alert: vi.fn() },
@@ -588,4 +589,23 @@ it("no abre el selector si la pantalla se desmonta durante el preflight", async 
   await act(async () => resolver({ data: [tarea] }));
   expect(DocumentPicker.getDocumentAsync).not.toHaveBeenCalled();
   expect(api.post).not.toHaveBeenCalled();
+});
+
+
+it("CURP se oculta por defecto y vuelve a ocultarse tras 30 segundos", async () => {
+  const curp = "GODE561231HDFRRN09";
+  vi.mocked(api.get).mockResolvedValue({ data: { matricula: "PRIV-001", curp, usuario: { nombre: "Alumno", apellidoPaterno: "Prueba" }, plantel: { nombre: "Plantel" } } });
+  await montar(<Perfil />);
+  expect(texto()).not.toContain(curp);
+  vi.useFakeTimers();
+  try {
+    await act(async () => vista.root.findByProps({ accessibilityLabel: "Mostrar CURP completa" }).props.onPress());
+    expect(texto()).toContain(curp);
+    const cambio = vi.mocked(AppState.addEventListener).mock.calls.at(-1)![1];
+    await act(async () => cambio("background"));
+    expect(texto()).not.toContain(curp);
+    await act(async () => vista.root.findByProps({ accessibilityLabel: "Mostrar CURP completa" }).props.onPress());
+    await act(async () => vi.advanceTimersByTime(30_000));
+    expect(texto()).not.toContain(curp);
+  } finally { vi.useRealTimers(); }
 });
