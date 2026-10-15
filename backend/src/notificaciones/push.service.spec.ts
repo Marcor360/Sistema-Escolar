@@ -11,11 +11,11 @@ import { JwtUser } from '../common/current-user.decorator';
 jest.mock('axios');
 const post = jest.mocked(axios.post);
 const user: JwtUser = { sub: 1, email: 'a@example.invalid', nombre: 'Alumno', roles: ['ALUMNO'], sid: 'sesion' };
-function entorno({ revocada = false, habilitado = true } = {}) {
+function entorno({ revocada = false, habilitado = true, inactiva = false } = {}) {
   const envio = { id: 8, dispositivoId: 2, notificacionId: 5, estado: 'PENDIENTE', intentos: 0, proximoIntento: new Date(0) };
   const envios = { find: jest.fn().mockResolvedValueOnce([envio]).mockResolvedValue([]), findOne: jest.fn().mockResolvedValue(envio), save: jest.fn(async (e: unknown) => e), update: jest.fn(), insert: jest.fn() };
   const dispositivos = { findOneBy: jest.fn().mockResolvedValue({ id: 2, usuarioId: 1, sesionId: 'sesion', token: 'ExponentPushToken[abc]' }), findOne: jest.fn().mockResolvedValue({ id: 2, usuarioId: 99 }), update: jest.fn(), create: jest.fn(() => ({})), save: jest.fn() };
-  const sesiones = { findOneBy: jest.fn().mockResolvedValue(revocada ? null : { version: 3, expiraEn: new Date(Date.now() + 60000) }) };
+  const sesiones = { findOneBy: jest.fn().mockResolvedValue(revocada ? null : { version: 3, expiraEn: new Date(Date.now() + 60000), ultimaActividadEn: new Date(Date.now() - (inactiva ? 31 : 2) * 60_000) }) };
   const usuarios = { findOneBy: jest.fn().mockResolvedValue({ sessionVersion: 3 }) };
   const notificaciones = { findOneBy: jest.fn().mockResolvedValue({ id: 5, usuarioId: 1, titulo: 'Calificación privada', mensaje: 'Dato privado' }) };
   const repos = new Map<unknown, unknown>([[PushEnvio, envios], [PushDispositivo, dispositivos], [Sesion, sesiones], [Usuario, usuarios], [Notificacion, notificaciones]]);
@@ -27,6 +27,7 @@ function entorno({ revocada = false, habilitado = true } = {}) {
 beforeEach(() => post.mockReset());
 it('no envía cuando push está deshabilitado', async () => { const { service, envios } = entorno({ habilitado: false }); await service.procesar(); expect(envios.find).not.toHaveBeenCalled(); expect(post).not.toHaveBeenCalled(); });
 it('omite una sesión revocada sin contactar al proveedor', async () => { const { service, envios } = entorno({ revocada: true }); await service.procesar(); expect(envios.update).toHaveBeenCalledWith(8, { estado: 'OMITIDO', error: 'SESION_INACTIVA' }); expect(post).not.toHaveBeenCalled(); });
+it('no emite push después de 30 minutos de inactividad aunque la fila no esté revocada', async () => { const { service, envios } = entorno({ inactiva: true }); await service.procesar(); expect(envios.update).toHaveBeenCalledWith(8, { estado: 'OMITIDO', error: 'SESION_INACTIVA' }); expect(post).not.toHaveBeenCalled(); });
 it('envía aviso genérico sin notas ni calificaciones; guarda ticket', async () => { post.mockResolvedValue({ data: { data: { status: 'ok', id: 'ticket' } } }); const { service, envios } = entorno(); await service.procesar(); const payload = post.mock.calls[0][1]; expect(JSON.stringify(payload)).not.toMatch(/privad|Calificación/); expect(payload).toMatchObject({ data: { notificacionId: 5 } }); expect(envios.update).toHaveBeenCalledWith(8, expect.objectContaining({ estado: 'ACEPTADO', ticketId: 'ticket' })); });
 it('desactiva token no registrado y conserva fallo controlado', async () => { post.mockResolvedValue({ data: { data: { status: 'error', details: { error: 'DeviceNotRegistered' } } } }); const { service, dispositivos, envios } = entorno(); await service.procesar(); expect(dispositivos.update).toHaveBeenCalledWith(2, { activo: false }); expect(envios.update).toHaveBeenCalledWith(8, { estado: 'ERROR', error: 'DEVICE_NOT_REGISTERED' }); });
 it('reintenta fallo de red y agota el límite sin enviar otra vez', async () => { post.mockRejectedValue(new Error('timeout')); const { service, envios, envio } = entorno(); await service.procesar(); expect(envios.update).toHaveBeenCalledWith(8, expect.objectContaining({ estado: 'PENDIENTE', error: 'PROVEEDOR_NO_DISPONIBLE' })); envio.estado = 'PENDIENTE'; envio.intentos = 3; envio.proximoIntento = new Date(0); envios.find.mockResolvedValueOnce([envio]); await service.procesar(); expect(post).toHaveBeenCalledTimes(1); expect(envios.update).toHaveBeenCalledWith(8, { estado: 'ERROR', error: 'REINTENTOS_AGOTADOS' }); });
