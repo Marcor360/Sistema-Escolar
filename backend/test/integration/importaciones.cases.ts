@@ -22,17 +22,14 @@ it('importa con preview ligado al actor, valida duplicados y confirma una sola v
     expect((await ctx.api('/importaciones/confirmar', { method: 'POST', token: superadmin, body: { previewId: preview.data.previewId, confirmado: true } })).response.status).toBe(404);
     const confirmado = await ctx.api('/importaciones/confirmar', { method: 'POST', token: admin, body: { previewId: preview.data.previewId, confirmado: true } }); expect(confirmado.response.status).toBe(201); expect(confirmado.data.insertados).toBe(1);
     expect((await ctx.api('/importaciones/confirmar', { method: 'POST', token: admin, body: { previewId: preview.data.previewId, confirmado: true } })).response.status).toBe(404);
-    const cuenta = await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ email }); expect(cuenta.passwordChangeRequired).toBe(true);
+    const cuenta = await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ email });
+    expect(cuenta.passwordChangeRequired).toBe(true);
+    expect(cuenta.activacionPendiente).toBe(true);
     expect(await ctx.dataSource.getRepository(Alumno).countBy({ usuarioId: cuenta.id })).toBe(1);
     const inicio = await ctx.api('/auth/login', { method: 'POST', headers: { 'x-portal': 'MOVIL' }, body: { email, password: `IMP${ctx.sufijo}`.toUpperCase() } });
-    expect(inicio.response.status).toBe(201);
-    expect(inicio.data.usuario.passwordChangeRequired).toBe(true);
-    expect((await ctx.api('/calificaciones/mias', { token: inicio.data.accessToken })).response.status).toBe(403);
-    expect((await ctx.api('/auth/cambiar-password', { method: 'POST', token: inicio.data.accessToken,
-      body: { actual: `IMP${ctx.sufijo}`.toUpperCase(), nueva: 'Alumno_Renovada_42!' } })).response.status).toBe(201);
-    expect((await ctx.api('/auth/me', { token: inicio.data.accessToken })).response.status).toBe(401);
-    await expect(ctx.app.get(AuthService).login(email, `IMP${ctx.sufijo}`.toUpperCase(), 'MOVIL')).rejects.toThrow();
-    const definitiva = await ctx.app.get(AuthService).login(email, 'Alumno_Renovada_42!', 'MOVIL');
+    expect(inicio.response.status).toBe(401);
+    await ctx.emitirToken(email); // Activación real: token enviado al mock de correo, consumido una vez.
+    const definitiva = await ctx.app.get(AuthService).login(email, 'Integracion_Renovada_42!', 'MOVIL');
     expect(definitiva.usuario.passwordChangeRequired).toBe(false);
     expect((await ctx.api('/calificaciones/mias', { token: definitiva.accessToken })).response.status).toBe(200);
     expect(await ctx.dataSource.getRepository(BitacoraAcademica).countBy({ accion: 'IMPORTAR_ALUMNOS' })).toBe(1);
