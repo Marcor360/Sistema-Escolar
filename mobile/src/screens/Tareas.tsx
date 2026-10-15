@@ -108,6 +108,15 @@ export default function TareasScreen() {
     entregaEnCurso.current = true;
     try {
       setEntregandoId(tarea.id);
+      // Evitar crear otra copia privada en caché cuando la API no está disponible.
+      const { data: disponibles } = await api.get<Tarea[]>("/alumnos/me/tareas");
+      const actual = disponibles.find((item) => item.id === tarea.id);
+      if (!actual || actual.entrega?.estatus === "CALIFICADA") {
+        Alert.alert("Entrega no disponible", "La tarea cambió. Actualiza la lista antes de seleccionar otro archivo.");
+        cargar();
+        return;
+      }
+      if (!vigente()) { avisarDatosVencidos(); return; }
       const resultado = await DocumentPicker.getDocumentAsync({
         copyToCacheDirectory: true,
       });
