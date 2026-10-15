@@ -5,8 +5,8 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ command, mode }) => {
   if (command === 'build' && mode !== 'development') {
-    const config = loadEnv(mode, process.cwd(), 'VITE_');
-    validarUrlApiBuild(process.env.VITE_API_URL || config.VITE_API_URL);
+    const config = loadEnv(mode, '.', 'VITE_');
+    validarUrlApiBuild(config.VITE_API_URL);
   }
   return {
     plugins: [react()],
