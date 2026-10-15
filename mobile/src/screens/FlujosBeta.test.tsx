@@ -1,3 +1,4 @@
+import ActivarCuenta from "./ActivarCuenta";
 import Calificaciones from "./Calificaciones";
 import React, { useEffect, type ReactElement, type ReactNode } from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
@@ -537,4 +538,54 @@ it("bloquea el envío si la consulta vence mientras el selector está abierto", 
     expect(api.post).not.toHaveBeenCalled();
     expect(Alert.alert).toHaveBeenCalledWith("Actualiza tus tareas", expect.any(String));
   } finally { reloj.mockRestore(); }
+});
+
+it("rechaza crear una copia temporal del adjunto cuando el preflight online falla", async () => {
+  const tarea = { id: 8, titulo: "Informe", tipo: "TAREA", parcial: 1, fechaEntrega: null, entrega: null };
+  vi.mocked(api.get).mockResolvedValueOnce({ data: [tarea] }).mockRejectedValueOnce(new Error("Sin red"));
+  await montar(<Tareas />);
+  await act(async () => vista.root.findByProps({ accessibilityLabel: "Entregar archivo: Informe" }).props.onPress());
+  expect(DocumentPicker.getDocumentAsync).not.toHaveBeenCalled();
+  expect(api.post).not.toHaveBeenCalled();
+  expect(Alert.alert).toHaveBeenCalledWith("No se pudo entregar", expect.any(String));
+});
+
+
+it("activa una cuenta de alumno, impide duplicados y limpia los secretos al terminar", async () => {
+  vi.mocked(api.post).mockResolvedValueOnce({ data: { mensaje: "Solicitud recibida; revisa tu correo si está disponible" } });
+  await montar(<ActivarCuenta volver={vi.fn()} />);
+  await escribir("Correo institucional", "alumno@example.test");
+  await act(async () => vista.root.findByProps({ accessibilityLabel: "Solicitar código de activación" }).props.onPress());
+  expect(api.post).toHaveBeenCalledWith("/auth/solicitar-activacion", { email: "alumno@example.test" });
+  await escribir("Código de activación", "A".repeat(64));
+  await escribir("Nueva contraseña", "Nueva_Segura_42!");
+  await escribir("Confirmar nueva contraseña", "Distinta_42!");
+  await act(async () => vista.root.findByProps({ accessibilityLabel: "Activar cuenta" }).props.onPress());
+  expect(api.post).toHaveBeenCalledTimes(1);
+  expect(texto()).toContain("no coinciden");
+  await escribir("Confirmar nueva contraseña", "Nueva_Segura_42!");
+  let resolver!: (valor: { data: { mensaje: string } }) => void;
+  vi.mocked(api.post).mockReturnValueOnce(new Promise(r => { resolver = r; }));
+  await act(async () => {
+    const boton = vista.root.findByProps({ accessibilityLabel: "Activar cuenta" });
+    boton.props.onPress(); boton.props.onPress();
+  });
+  expect(api.post).toHaveBeenCalledTimes(2);
+  expect(api.post).toHaveBeenLastCalledWith("/auth/activar-cuenta", { token: "a".repeat(64), password: "Nueva_Segura_42!" });
+  await act(async () => resolver({ data: { mensaje: "Cuenta activada" } }));
+  expect(texto()).toContain("Cuenta activada");
+  expect(vista.root.findAllByProps({ accessibilityLabel: "Código de activación" })).toHaveLength(0);
+});
+
+it("no abre el selector si la pantalla se desmonta durante el preflight", async () => {
+  const tarea = { id: 3, titulo: "Trabajo", tipo: "TAREA", parcial: 1, fechaEntrega: null, entrega: null };
+  vi.mocked(api.get).mockResolvedValueOnce({ data: [tarea] });
+  await montar(<Tareas />);
+  let resolver!: (valor: { data: typeof tarea[] }) => void;
+  vi.mocked(api.get).mockReturnValueOnce(new Promise(r => { resolver = r; }));
+  await act(async () => vista.root.findByProps({ accessibilityLabel: "Entregar archivo: Trabajo" }).props.onPress());
+  await act(async () => vista.unmount());
+  await act(async () => resolver({ data: [tarea] }));
+  expect(DocumentPicker.getDocumentAsync).not.toHaveBeenCalled();
+  expect(api.post).not.toHaveBeenCalled();
 });

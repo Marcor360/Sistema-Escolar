@@ -19,7 +19,7 @@ Para el resumen por rol y las decisiones que requieren validación institucional
 | POST | /auth/refresh | público con refresh válido | Rotación controlada por sesión; web usa cookie HttpOnly y móvil envía refreshToken |
 | GET | /auth/me | autenticado | Perfil del usuario |
 | POST | /auth/logout | autenticado | Revoca la sesión/dispositivo actual y limpia su cookie; baja/cambio de contraseña invalidan todas las sesiones por versión |
-| POST | /auth/solicitar-activacion | público, 5/min por IP | Respuesta genérica; código aleatorio 256 bits por SMTP, hash persistido, reemisión invalida anteriores; no conecta aún las altas |
+| POST | /auth/solicitar-activacion | público, 5/min por IP | Respuesta genérica; código aleatorio 256 bits por SMTP, hash persistido, reemisión invalida anteriores; las altas ALUMNO nuevas quedan pendientes |
 | POST | /auth/activar-cuenta | público, 5/min por IP | Código hexadecimal de 64 caracteres y password nueva; consumo único transaccional, vigencia 1 h y revocación por session_version |
 | POST | /auth/forgot-password | público | Respuesta genérica; token de un uso y 1 h, hash persistido; solicitar no acredita entrega SMTP |
 | POST | /auth/reset-password | público | Cambia contraseña con el token en claro recibido por correo |
@@ -211,7 +211,7 @@ La plantilla de notas conserva IDs, parcial y matrícula; la columna F es califi
 
 Mis documentos en Expo reutiliza boletas y materiales; no abre la biblioteca administrativa ni crea un contrato nuevo de ficha/constancia. Los índices pueden leerse en memoria hasta cinco minutos; enlaces/PDF solo online.
 
-El alta actual de ALUMNO todavía usa contraseña inicial basada en matrícula. Su sustitución es un [requisito confirmado pendiente](REQUERIMIENTO_ACTIVACION_SEGURA.md), no una función ya disponible.
+El alta individual y por lote de ALUMNO genera una contraseña aleatoria no entregada y deja activacionPendiente=true. El titular solicita código privado y establece contraseña desde web o Expo; la matrícula no es una credencial. Véanse [contrato y límites de activación](REQUERIMIENTO_ACTIVACION_SEGURA.md). La entrega requiere SMTP institucional operativo.
 
 ## Actividad de sesión — #47–51
 

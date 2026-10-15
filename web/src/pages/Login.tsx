@@ -1,11 +1,11 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { api, archivosBase, mensajeDeError } from '../api/client';
 import { useMarca } from '../marca/MarcaContext';
 import { CLAVE_CIERRE } from '../auth/inactividad';
 
-type Modo = 'entrar' | 'solicitar' | 'restablecer';
+type Modo = 'entrar' | 'solicitar' | 'restablecer' | 'activar-solicitar' | 'activar-codigo';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -71,6 +71,32 @@ export default function LoginPage() {
     }
   };
 
+  const activacionEnCurso = useRef(false);
+  const pedirActivacion = async (e: FormEvent) => {
+    e.preventDefault();
+    if (activacionEnCurso.current) return;
+    activacionEnCurso.current = true;
+    limpiar(); setEnviando(true);
+    try {
+      const { data } = await api.post<{ mensaje: string }>('/auth/solicitar-activacion', { email });
+      setAviso(data.mensaje);
+      setModo('activar-codigo');
+    } catch (err) { setError(mensajeDeError(err)); }
+    finally { activacionEnCurso.current = false; setEnviando(false); }
+  };
+
+  const activarCuenta = async (e: FormEvent) => {
+    e.preventDefault();
+    if (activacionEnCurso.current) return;
+    activacionEnCurso.current = true;
+    limpiar(); setEnviando(true);
+    try {
+      const { data } = await api.post<{ mensaje: string }>('/auth/activar-cuenta', { token: token.trim(), password: nueva });
+      setAviso(data.mensaje); setToken(''); setNueva(''); setPassword(''); setModo('entrar');
+    } catch (err) { setError(mensajeDeError(err)); }
+    finally { activacionEnCurso.current = false; setEnviando(false); }
+  };
+
   return (
     <div className="login-fondo">
       <div className="login-caja">
@@ -100,6 +126,9 @@ export default function LoginPage() {
             <button type="button" className="enlace" onClick={() => { limpiar(); setModo('solicitar'); }}>
               ¿Olvidaste tu contraseña?
             </button>
+            <button type="button" className="enlace" onClick={() => { limpiar(); setModo('activar-solicitar'); }}>
+              Activar mi cuenta por primera vez
+            </button>
           </form>
         )}
 
@@ -120,6 +149,37 @@ export default function LoginPage() {
               Volver a iniciar sesión
             </button>
           </form>
+        )}
+
+        {modo === 'activar-solicitar' && (
+          <form onSubmit={pedirActivacion}><fieldset disabled={enviando} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+            <p className="detalle">La matrícula no es una contraseña. Solicita un código privado a tu correo institucional para establecer tu contraseña.</p>
+            <div className="campo">
+              <label htmlFor="activar-email">Correo institucional del alumno</label>
+              <input id="activar-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus />
+            </div>
+            {error && <p role="alert" className="mensaje-error">{error}</p>}
+            <button className="boton" disabled={enviando}>{enviando ? 'Solicitando…' : 'Solicitar código de activación'}</button>
+            <button type="button" className="enlace" onClick={() => { limpiar(); setToken(''); setNueva(''); setModo('entrar'); }}>Volver al inicio</button>
+          </fieldset></form>
+        )}
+        {modo === 'activar-codigo' && (
+          <form onSubmit={activarCuenta}><fieldset disabled={enviando} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+            <p className="detalle">Si el correo está disponible, recibirás un código válido durante una hora. Si no llega, contacta a Control escolar.</p>
+            {aviso && <p role="status" className="mensaje-ok">{aviso}</p>}
+            <div className="campo">
+              <label htmlFor="activar-token">Código de activación (64 caracteres)</label>
+              <input id="activar-token" value={token} maxLength={64} autoComplete="off" autoCapitalize="off" onChange={(e) => setToken(e.target.value.trim().toLowerCase())} required />
+            </div>
+            <div className="campo">
+              <label htmlFor="activar-pass">Nueva contraseña (mínimo 8 caracteres)</label>
+              <input id="activar-pass" type="password" autoComplete="new-password" value={nueva} onChange={(e) => setNueva(e.target.value)} minLength={8} required />
+            </div>
+            {error && <p role="alert" className="mensaje-error">{error}</p>}
+            <button className="boton" disabled={enviando || token.length !== 64}>{enviando ? 'Activando…' : 'Activar mi cuenta'}</button>
+            <button type="button" className="enlace" onClick={() => { limpiar(); setToken(''); setNueva(''); setModo('activar-solicitar'); }}>Solicitar otro código</button>
+            <button type="button" className="enlace" onClick={() => { limpiar(); setToken(''); setNueva(''); setModo('entrar'); }}>Volver al inicio</button>
+          </fieldset></form>
         )}
 
         {modo === 'restablecer' && (

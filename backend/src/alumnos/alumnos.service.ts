@@ -1,3 +1,5 @@
+import { randomBytes } from 'crypto';
+import { Usuario } from '../entities/usuario.entity';
 import { esMaestroRestringido } from '../common/politica-acceso';
 import { BitacoraAcademica } from '../entities/bitacora-academica.entity';
 import { inscripcionVigente } from '../common/contexto-academico';
@@ -158,13 +160,14 @@ export class AlumnosService {
       if (!plantel) throw new ConflictException('El plantel no está activo');
       const usuario = await this.usuarios.crear({
         email: dto.email,
-        password: dto.matricula,
+        password: randomBytes(32).toString('base64url'),
         nombre: dto.nombre,
         apellidoPaterno: dto.apellidoPaterno,
         apellidoMaterno: dto.apellidoMaterno,
         telefono: dto.telefono,
         roles: ['ALUMNO'],
       }, manager);
+      await manager.getRepository(Usuario).update({ id: usuario.id }, { activacionPendiente: true });
       const alumnos = manager.getRepository(Alumno);
       return alumnos.save(alumnos.create({
         usuarioId: usuario.id,

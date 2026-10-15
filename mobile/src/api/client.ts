@@ -62,6 +62,8 @@ api.interceptors.request.use(async (config) => {
       "/auth/login",
       "/auth/forgot-password",
       "/auth/reset-password",
+      "/auth/solicitar-activacion",
+      "/auth/activar-cuenta",
     ].includes(config.url ?? "")
   )
     return config;
