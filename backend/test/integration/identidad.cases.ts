@@ -380,8 +380,8 @@ export function registrarAltasInstitucionales(ctx: ContextoIntegracion) {
     const datos = { nombre: 'Institucional',apellidoPaterno: 'Prueba',apellidoMaterno: 'Materno',telefono: '5550001111',password: 'Integracion_Segura_42!' };
     const alumno = await ctx.api('/alumnos',{ method: 'POST',token: root,body: { ...{ nombre: datos.nombre, apellidoPaterno: datos.apellidoPaterno, apellidoMaterno: datos.apellidoMaterno, telefono: datos.telefono },email: `insal_${ctx.sufijo}@example.invalid`,matricula: `IA${ctx.sufijo}`,plantelId: ctx.plantelId,curp: 'TEST090101HMCRXX00',fechaNacimiento: '2009-01-02',direccion: 'Calle institucional 12',tutorNombre: 'Tutor institucional',tutorTelefono: '5550002222' } }); expect(alumno.response.status).toBe(201);
     const inicioAlumno = await ctx.api('/auth/login', { method: 'POST', headers: { 'x-portal': 'MOVIL' }, body: { email: `insal_${ctx.sufijo}@example.invalid`, password: `IA${ctx.sufijo}`.toUpperCase() } });
-    expect(inicioAlumno.response.status).toBe(201);
-    expect(inicioAlumno.data.usuario.passwordChangeRequired).toBe(true);
+    expect(inicioAlumno.response.status).toBe(401);
+    expect((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: alumno.data.usuarioId })).activacionPendiente).toBe(true);
     const ficha = await ctx.api(`/alumnos/${alumno.data.id}`,{ token: root }); expect(ficha.data).toMatchObject({ fechaNacimiento: '2009-01-02',direccion: 'Calle institucional 12',usuario: { apellidoMaterno: 'Materno',telefono: '5550001111' } });
     expect((await ctx.api(`/alumnos/${alumno.data.id}`,{ method: 'PATCH',token: root,body: { telefono: '',apellidoMaterno: '',fechaNacimiento: null } })).response.status).toBe(200);
     const corregida = await ctx.api(`/alumnos/${alumno.data.id}`,{ token: root }); expect(corregida.data).toMatchObject({ fechaNacimiento: null,direccion: 'Calle institucional 12',usuario: { apellidoMaterno: '',telefono: '' } });
@@ -400,12 +400,17 @@ export function registrarAltasInstitucionales(ctx: ContextoIntegracion) {
     for (const id of cuentas) {
       const u = await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id }); expect(u.passwordChangeRequired).toBe(true); expect(u.roles).toHaveLength(1);
       const portal = u.roles[0].clave === 'ALUMNO' ? 'MOVIL' : 'WEB';
-      const passwordInicial = u.roles[0].clave === 'ALUMNO' ? `IA${ctx.sufijo}`.toUpperCase() : datos.password;
-      const inicial = await ctx.app.get(AuthService).login(u.email,passwordInicial,portal);
+      if (portal === 'MOVIL') {
+        expect(u.activacionPendiente).toBe(true);
+        await expect(ctx.app.get(AuthService).login(u.email, `IA${ctx.sufijo}`.toUpperCase(), 'MOVIL')).rejects.toThrow();
+        const token = await ctx.emitirToken(u.email); // Activación por código real del alumno.
+        expect(token).toBeTruthy();
+        continue;
+      }
+      const inicial = await ctx.app.get(AuthService).login(u.email,datos.password,portal);
       expect(inicial.usuario.passwordChangeRequired).toBe(true);
-      // Las rutas HTTP de cambio ya se prueban arriba. Aquí cinco altas usan el servicio
-      // real para no agotar el límite por IP compartido con el resto de la suite.
-      await ctx.app.get(AuthService).cambiarPassword(u.id,passwordInicial,'Institucional_Renovada_42!');
+      // El personal conserva el primer cambio obligatorio; el alumno activa por código.
+      await ctx.app.get(AuthService).cambiarPassword(u.id,datos.password,'Institucional_Renovada_42!');
       expect((await ctx.api('/auth/me',{ token: inicial.accessToken,headers: { 'x-portal': portal } })).response.status).toBe(401);
       ctx.passwords.set(u.email,'Institucional_Renovada_42!');
       const token = await ctx.emitirToken(u.email); expect(token).toBeTruthy(); expect((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id })).passwordChangeRequired).toBe(false);
