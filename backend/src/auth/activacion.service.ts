@@ -48,7 +48,7 @@ export class ActivacionService {
     const existente = await this.ds.getRepository(ActivacionToken).findOne({ where: { token: hash, usado: false } });
     if (!existente || existente.expiraEn <= new Date()) throw new BadRequestException('Código de activación inválido o vencido');
     // Fuera de la transacción para mantener corto el bloqueo por usuario.
-    if (nueva.length < 8) throw new BadRequestException("La contraseña debe tener al menos 8 caracteres");
+    if (nueva.length < 8) throw new BadRequestException('La contraseña debe tener al menos 8 caracteres');
     const passwordHash = await hashPasswordNueva(nueva);
     await this.ds.transaction(async (manager) => {
       const usuarios = manager.getRepository(Usuario);
@@ -63,7 +63,7 @@ export class ActivacionService {
         passwordHash, activacionPendiente: false, passwordChangeRequired: false,
         sessionVersion: () => 'COALESCE(session_version, 0) + 1',
       });
-      if (activado.affected !== 1) throw new BadRequestException("Código de activación inválido o vencido");
+      if (activado.affected !== 1) throw new BadRequestException('Código de activación inválido o vencido');
       await tokens.update({ usuarioId: usuario.id, usado: false }, { usado: true });
     });
     return { mensaje: 'Cuenta activada. Inicia sesión con tu correo y contraseña.' };

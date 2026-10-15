@@ -37,6 +37,13 @@ describe('AuthService.login', () => {
     );
   });
 
+  it('rechaza cuenta pendiente aunque la contraseña sea correcta', async () => {
+    const { service, repo, jwt } = await crear(['ADMINISTRATIVO']);
+    repo.findOne.mockResolvedValue({ ...await usuario(['ADMINISTRATIVO']), activacionPendiente: true } as never);
+    await expect(service.login('demo@escuela.mx', 'Correcta123', 'WEB')).rejects.toThrow('necesita activación');
+    expect(jwt.sign).not.toHaveBeenCalled();
+  });
+
   it('firma token en caso feliz', async () => {
     const { service, jwt, repo } = await crear(['ADMINISTRATIVO']);
     const respuesta = await service.login('demo@escuela.mx', 'Correcta123', 'WEB');

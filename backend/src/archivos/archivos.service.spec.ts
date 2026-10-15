@@ -90,9 +90,9 @@ describe('ArchivosService', () => {
     const { service } = crearService({ jwt });
     await expect(service.descargarMaterial(1, 'token', {} as any)).rejects.toBeInstanceOf(UnauthorizedException);
   });
-  it.each(['revocada', 'expirada', 'version', 'inactiva'])('rechaza enlace firmado con sesión %s', async (caso) => {
+  it.each(['revocada', 'expirada', 'version', 'inactiva', 'activacion-pendiente'])('rechaza enlace firmado con sesión %s', async (caso) => {
     const payload = { sub: 20, rec: 'material', id: 1, kind: 'FILE', sid: 'sesion-maestro', ver: 0 };
-    const usuario = { id: 20, activo: true, sessionVersion: caso === 'version' ? 1 : 0, roles: [{ clave: 'MAESTRO' }] };
+    const usuario = { id: 20, activo: true, activacionPendiente: caso === 'activacion-pendiente', sessionVersion: caso === 'version' ? 1 : 0, roles: [{ clave: 'MAESTRO' }] };
     const sesiones = { findOne: jest.fn().mockResolvedValue(caso === 'revocada' ? null : { version: 0, ultimaActividadEn: new Date(caso === 'inactiva' ? Date.now() - 1800000 : Date.now()), expiraEn: new Date(caso === 'expirada' ? 0 : Date.now() + 60000) }) };
     const usuariosRepo = { findOne: jest.fn().mockResolvedValue(usuario), manager: { getRepository: () => sesiones } };
     const jwt = { sign: jest.fn(), verify: jest.fn().mockReturnValue(payload) };
