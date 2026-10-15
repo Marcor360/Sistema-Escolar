@@ -38,5 +38,6 @@ if ('$($caso.Nombre)' -in @('informe', 'colision')) { `$salida = '$informe' }
     if ($caso.Nombre -eq 'informe') { $previo = [IO.File]::ReadAllText($informe) }
     if ($caso.Nombre -eq 'colision' -and [IO.File]::ReadAllText($informe) -ne $previo) { throw 'Se sobrescribió un informe.' }
   }
+  $global:LASTEXITCODE = 0
   Write-Host 'Diagnóstico HTTP: contrato, versión y no sobrescritura comprobados con transporte simulado.'
 } finally { Remove-Item -LiteralPath $carpeta -Recurse -Force }
