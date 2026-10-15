@@ -32,12 +32,13 @@ export class AuthService {
   async login(email: string, password: string, portal: Portal = 'WEB', ip?: string) {
     const usuario = await this.usuarios.findOne({
       where: { email, activo: true },
-      select: ['id', 'email', 'passwordHash', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'sessionVersion', 'passwordChangeRequired'],
+      select: ['id', 'email', 'passwordHash', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'sessionVersion', 'passwordChangeRequired', 'activacionPendiente'],
     });
     if (!usuario || !(await compararPassword(password, usuario.passwordHash))) {
       await this.registrarLoginFallido(usuario?.id ?? null, 'FALLIDO', ip);
       throw new UnauthorizedException('Credenciales inválidas');
     }
+    if (usuario.activacionPendiente) throw new UnauthorizedException('La cuenta necesita activación antes de iniciar sesión');
     const roles = usuario.roles.map((r) => r.clave);
     if (!roles.some((rol) => (ROLES_POR_PORTAL[portal] as string[]).includes(rol))) {
       await this.registrarLoginFallido(usuario.id, 'PORTAL_RECHAZADO', ip);
@@ -88,7 +89,7 @@ export class AuthService {
         sesion.revocada = true; await sesiones.save(sesion); return null;
       }
       const usuario = await manager.getRepository(Usuario).findOne({ where: { id: payload.sub, activo: true } });
-      if (!usuario || sesion.version !== usuario.sessionVersion) return null;
+      if (!usuario || usuario.activacionPendiente || sesion.version !== usuario.sessionVersion) return null;
       const roles = usuario.roles.map((r) => r.clave);
       if (!roles.some((r) => (ROLES_POR_PORTAL[portal] as string[]).includes(r))) return null;
       await this.validarExpediente(usuario.id, roles);
@@ -179,7 +180,7 @@ export class AuthService {
   async forgotPassword(email: string) {
     const usuario = await this.usuarios.findOne({ where: { email, activo: true } });
     // Respuesta idéntica exista o no el correo (no revelar cuentas)
-    if (!usuario) return { mensaje: 'Solicitud recibida. Si la cuenta existe y el correo está disponible, recibirás instrucciones. Si no llegan, contacta a Control escolar.' };
+    if (!usuario || usuario.activacionPendiente) return { mensaje: 'Solicitud recibida. Si la cuenta existe y el correo está disponible, recibirás instrucciones. Si no llegan, contacta a Control escolar.' };
 
     await this.tokens.update({ usuarioId: usuario.id, usado: false }, { usado: true });
 
@@ -213,6 +214,7 @@ export class AuthService {
         where: { id: registro.usuarioId, activo: true }, select: ['id'], lock: { mode: 'pessimistic_write' },
       });
       if (!usuario) throw new UnauthorizedException('La cuenta ya no está activa');
+      if (usuario.activacionPendiente) throw new UnauthorizedException('Activa primero la cuenta');
       const tokens = manager.getRepository(PasswordResetToken);
       const consumo = await tokens.createQueryBuilder()
         .update(PasswordResetToken)
