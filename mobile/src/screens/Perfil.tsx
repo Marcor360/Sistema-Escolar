@@ -163,7 +163,7 @@ export default function PerfilScreen({ abrirDocumentos }: { abrirDocumentos?: ()
                   <Text>{mostrarCurp ? "Ocultar CURP" : "Mostrar mi CURP"}</Text>
                 </TouchableOpacity>
               </>
-            )
+            )}
             {perfil.tutorNombre && (
               <Text style={base.secundario}>Tutor: {perfil.tutorNombre}</Text>
             )}
