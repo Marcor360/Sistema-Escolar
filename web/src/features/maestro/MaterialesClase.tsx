@@ -30,7 +30,7 @@ export function MaterialesClase({ claseActiva, subirMaterial, tituloMaterial, se
             </div>
             <button disabled={enviando} className="boton">Subir material</button>
           </form>
-          <table className="tabla">
+          <div className="tabla-contenedor" role="region" aria-label="Materiales de la clase" tabIndex={0}><table className="tabla">
             <thead><tr><th>Título</th><th>Archivo</th><th>Tamaño</th><th>Fecha</th></tr></thead>
             <tbody>
               {materiales.map((m) => (
@@ -48,5 +48,5 @@ export function MaterialesClase({ claseActiva, subirMaterial, tituloMaterial, se
                 <tr><td className="vacio" colSpan={4}>Sin materiales. Sube el primero: los alumnos lo verán en su app.</td></tr>
               )}
             </tbody>
-          </table>
+          </table></div>
         </section>); }

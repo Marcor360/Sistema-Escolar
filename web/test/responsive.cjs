@@ -151,9 +151,17 @@ async function esperarServidor() {
       if (path.endsWith('/biblioteca')) data = { carpetas: [{ id: 1, nombre: 'Documentos Beta', padreId: null }], archivos: [{ id: 1, titulo: 'Calendario institucional de prueba para familias y docentes', archivoNombre: 'calendario-con-nombre-extenso.pdf', categoria: 'CALENDARIO', bytes: 512 }], total: 1, pagina: 1, porPagina: 20, bytes: 512, cuota: 104857600 };
       if (path.endsWith('/academico/bitacora')) data = { datos: [], total: 0, pagina: 1 };
       if (path.endsWith('/importaciones/preview')) data = { previewId: 'qa-preview', registros: 1, errores: [], regla: 'Confirmación atómica del lote', identificadores: [{ fila: 2, identificador: 'ALUMNO-QA-001' }] };
+      if (['/finanzas/cargos', '/finanzas/pagos', '/finanzas/adeudos', '/conducta/incidencias', '/finanzas/conciliacion/ordenes', '/finanzas/conciliacion/pagos'].some(p => path.endsWith(p)))
+        data = { datos: [], total: 0, pagina: 1, porPagina: 20 };
+      const cargoQA = { id: 1, descripcion: 'Colegiatura con descripción extensa para comprobar el ancho', periodo: '2026-10', monto: 123456.78, descuento: 0, recargo: 0, fechaVencimiento: '2026-10-31', estatus: 'PENDIENTE', total: 123456.78, pagado: 0, saldo: 123456.78, alumno: { id: 1, matricula: 'FIN-QA-001', usuario: { nombre: 'Alumno con nombre extenso de prueba', apellidoPaterno: 'Prueba' } } };
+      if (path.endsWith('/finanzas/cargos') || path.endsWith('/finanzas/adeudos')) data = { datos: [cargoQA], total: 1, pagina: 1, porPagina: 20 };
+      if (path.endsWith('/finanzas/pagos')) data = { datos: [{ id: 1, monto: 123456.78, metodo: 'TRANSFERENCIA', referencia: 'REFERENCIA_' + 'larga'.repeat(15), fechaPago: '2026-10-15T12:00:00Z', estatus: 'APLICADO', alumno: cargoQA.alumno }], total: 1, pagina: 1, porPagina: 20 };
+      if (path.endsWith('/auth/forgot-password')) data = { mensaje: 'Solicitud recibida' };
+      if (path.endsWith('/finanzas/cobranza/envios')) data = { datos: [{ id: 1, usuarioId: 1, plantelId: 1, saldo: 123456.78, estado: 'ERROR', intentos: 1, error: 'SMTP_' + 'sin_conexion_'.repeat(20) }], total: 1, pagina: 1 };
       await route.fulfill({ json: data });
     },
   );
+  if (!process.env.RESPONSIVE_EXTENDED_ONLY) {
   for (const width of [320, 375, 360, 768, 1024, 1440, 2560, 3840]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('http://127.0.0.1:5182/');
@@ -410,6 +418,53 @@ async function esperarServidor() {
       liberarModulo();
       await page.unroute(rutaModulo);
     }
+  }
+  }
+  for (const [width, height, escala] of [[320, 568, 1], [375, 667, 2], [568, 320, 1], [768, 1024, 1], [1024, 768, 1], [1440, 900, 2]]) {
+    await page.setViewportSize({ width, height });
+    for (const ruta of ['/cuenta', '/configuracion', '/conducta', '/calendario', '/avisos', '/finanzas', '/pago-completado']) {
+      console.log('CHECK extended', ruta, width, height, escala);
+      await page.goto(baseUrl + ruta);
+      try { await expect(page.locator('h1')).toBeVisible(); } catch (error) { console.log(await page.locator('body').innerText(), errors); throw error; }
+      await page.evaluate(escala => { document.documentElement.style.fontSize = `${escala * 100}%`; }, escala);
+      if (ruta === '/finanzas') {
+        for (const nombre of ['Cargos', 'Pagos', 'Adeudos y cobranza']) {
+          await page.getByRole('tab', { name: nombre, exact: true }).click();
+          await expect(page.getByRole('tab', { name: nombre, exact: true })).toHaveAttribute('aria-selected', 'true');
+          const region = page.getByRole('tabpanel').getByRole('region').first();
+          await expect(region.getByText('FIN-QA-001', { exact: false })).toBeVisible();
+          await region.scrollIntoViewIfNeeded();
+          await region.focus();
+          await expect(region).toBeFocused();
+          if (width <= 768) {
+            await region.evaluate(el => { el.scrollLeft = 0; });
+            await page.keyboard.press('ArrowRight');
+            await expect.poll(() => region.evaluate(el => el.scrollLeft)).toBeGreaterThan(0);
+          }
+        }
+        await expect(page.getByText('SMTP_', { exact: false })).toBeVisible();
+        await page.getByRole('button', { name: 'Reintentar con motivo' }).click();
+        await expect(page.getByRole('dialog')).toBeVisible();
+        const dialogo = await page.getByRole('dialog').evaluate(el => ({ ancho: el.clientWidth, scroll: el.scrollWidth, alto: el.getBoundingClientRect().height, limite: innerHeight }));
+        if (dialogo.scroll > dialogo.ancho + 1 || dialogo.alto > dialogo.limite) throw Error('Dialog layout ' + JSON.stringify({ width, height, escala, dialogo }));
+        await page.keyboard.press('Escape');
+      }
+      const geometria = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, width: innerWidth }));
+      if (geometria.scroll > geometria.width + 1) { console.log('Overflow elements', await page.evaluate(() => [...document.querySelectorAll('main *')].filter(e => e.getBoundingClientRect().right > innerWidth + 1).slice(0,15).map(e => ({tag:e.tagName,clase:e.className,texto:e.textContent.slice(0,60),ancho:e.getBoundingClientRect().width})))); throw Error('Extended overflow ' + ruta + ' ' + JSON.stringify({ width, height, escala, geometria })); }
+      console.log('PASS extended ' + ruta + ' ' + width + 'x' + height + ' text=' + escala);
+    }
+  }
+  await page.route('**/api/auth/refresh', route => route.fulfill({ status: 401, json: { message: 'No autenticado' } }));
+  for (const [width, height] of [[320, 568], [568, 320], [1440, 900]]) {
+    await page.setViewportSize({ width, height });
+    await page.goto(baseUrl + '/login');
+    await page.getByRole('button', { name: '¿Olvidaste tu contraseña?' }).click();
+    await page.getByLabel('Correo institucional').fill('qa@example.test');
+    await page.getByRole('button', { name: 'Enviar código', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Restablecer contraseña', exact: true })).toBeVisible();
+    const geometria = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, width: innerWidth }));
+    if (geometria.scroll > geometria.width + 1) throw Error('Login overflow ' + JSON.stringify(geometria));
+    console.log('PASS recovery ' + width + 'x' + height);
   }
   if (errors.length) throw Error(errors.join('\n'));
 })()

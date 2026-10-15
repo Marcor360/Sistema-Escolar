@@ -17,7 +17,7 @@ export function PanelAdeudos({ enviando, enviarAvisos, descargarExcel, adeudos, 
             <button disabled={enviando} className="boton" onClick={enviarAvisos}>Programar avisos de cobranza</button>
             <button className="boton secundario" onClick={descargarExcel}>Descargar Excel de adeudos</button>
           </div>
-          <table className="tabla">
+          <div className="tabla-contenedor" role="region" aria-label="Listado de adeudos" tabIndex={0}><table className="tabla">
             <thead><tr><th>Alumno</th><th>Concepto</th><th>Vence</th><th className="derecha">Total</th><th className="derecha">Pagado</th><th className="derecha">Saldo</th><th>Estatus</th><th>Correcciones</th></tr></thead>
             <tbody>
               {adeudos.map((c) => (
@@ -33,6 +33,6 @@ export function PanelAdeudos({ enviando, enviarAvisos, descargarExcel, adeudos, 
               ))}
               {adeudos.length === 0 && <tr><td className="vacio" colSpan={7}>Sin adeudos: todos los cargos están cubiertos.</td></tr>}
             </tbody>
-          </table>
+          </table></div>
           <SeguimientoCobranza /><Paginador total={totalAdeudos} pagina={paginaAdeudos} porPagina={20} onCambio={cargarAdeudos} />
         </div>); }

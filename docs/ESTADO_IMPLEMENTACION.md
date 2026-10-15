@@ -67,3 +67,7 @@ Expo comprueba URI local file/content cuando está presente, tamaño finito y no
 ### Cierre IUA 11–12: navegación y recuperación de tareas
 
 Las seis pestañas de alumno incluyen etiquetas explícitas para lectores de pantalla. Tareas conserva la última consulta como referencia ante un fallo, permite reintentar y bloquea entregas mientras se actualiza o al vencer cinco minutos. La vigencia se comprueba también después de cerrar el selector de archivos, evitando enviar con una consulta vencida durante la selección. Las pruebas cubren fallo y recuperación de red y vencimiento durante el selector. Continúa pendiente la validación en dispositivos con TalkBack, VoiceOver, fuentes ampliadas y pantallas de 320 px.
+
+### Barrido responsivo del 15 de octubre de 2026
+
+Se corrige el reflujo de paginación y campos financieros con texto al 200 %, se añaden regiones accesibles a quince tablas pendientes y se adaptan los diálogos a pantallas bajas. La [matriz reproducible y sus límites](BARRIDO_RESPONSIVO_2026-10-15.md) amplía las comprobaciones de navegación/listados con siete pantallas adicionales, pestañas financieras con datos largos y recuperación de contraseña. La presentación web automatizada y los contratos móviles no reemplazan QA física ni aceptación institucional.

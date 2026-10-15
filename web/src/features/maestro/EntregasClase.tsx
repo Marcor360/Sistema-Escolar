@@ -15,7 +15,7 @@ guardadas: Set<number>;
 }
 export function EntregasClase({ actividadActiva, entregas, comentarios, setComentarios, notas, setNotas, enviando, guardarNota, guardadas }: Props) { return (<section className="panel">
           <h2>Entregas — {actividadActiva.titulo}</h2>
-          <table className="tabla">
+          <div className="tabla-contenedor" role="region" aria-label="Entregas de la clase" tabIndex={0}><table className="tabla">
             <thead>
               <tr><th>Alumno</th><th>Fecha</th><th>Estatus</th><th>Archivo</th><th style={{ width: 190 }}>Calificación</th></tr>
             </thead>
@@ -49,5 +49,5 @@ export function EntregasClase({ actividadActiva, entregas, comentarios, setComen
                 <tr><td className="vacio" colSpan={5}>Aún no hay entregas de los alumnos.</td></tr>
               )}
             </tbody>
-          </table>
+          </table></div>
         </section>); }
