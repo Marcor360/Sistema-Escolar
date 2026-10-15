@@ -19,6 +19,8 @@ Para el resumen por rol y las decisiones que requieren validación institucional
 | POST | /auth/refresh | público con refresh válido | Rotación controlada por sesión; web usa cookie HttpOnly y móvil envía refreshToken |
 | GET | /auth/me | autenticado | Perfil del usuario |
 | POST | /auth/logout | autenticado | Revoca la sesión/dispositivo actual y limpia su cookie; baja/cambio de contraseña invalidan todas las sesiones por versión |
+| POST | /auth/solicitar-activacion | público, 5/min por IP | Respuesta genérica; código aleatorio 256 bits por SMTP, hash persistido, reemisión invalida anteriores; no conecta aún las altas |
+| POST | /auth/activar-cuenta | público, 5/min por IP | Código hexadecimal de 64 caracteres y password nueva; consumo único transaccional, vigencia 1 h y revocación por session_version |
 | POST | /auth/forgot-password | público | Respuesta genérica; token de un uso y 1 h, hash persistido; solicitar no acredita entrega SMTP |
 | POST | /auth/reset-password | público | Cambia contraseña con el token en claro recibido por correo |
 | POST | /auth/cambiar-password | autenticado | Cambio propio (exige la contraseña actual) |

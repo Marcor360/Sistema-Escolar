@@ -185,7 +185,7 @@ export class ArchivosService {
   /** Reconstruye el JwtUser (con roles vigentes) a partir del `sub` del enlace firmado. */
   private async usuarioDesdeToken(payload: EnlacePayload): Promise<JwtUser> {
     const usuario = await this.usuarios.findOne({ where: { id: payload.sub, activo: true } });
-    if (!usuario || usuario.passwordChangeRequired || usuario.sessionVersion !== payload.ver) throw new UnauthorizedException('Enlace inválido o sesión revocada');
+    if (!usuario || usuario.activacionPendiente || usuario.passwordChangeRequired || usuario.sessionVersion !== payload.ver) throw new UnauthorizedException('Enlace inválido o sesión revocada');
     const sesion = await this.usuarios.manager.getRepository(Sesion).findOne({ where: { id: payload.sid, usuarioId: usuario.id, revocada: false } });
     if (!sesion || sesion.expiraEn <= new Date() || sesion.version !== payload.ver || sesionInactiva(sesion.ultimaActividadEn, new Date())) throw new UnauthorizedException('La sesión del enlace fue revocada');
     return {

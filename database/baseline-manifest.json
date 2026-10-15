@@ -27,7 +27,8 @@
         "migracion_integridad_operativa.sql",
         "migracion_previews_importacion.sql",
         "migracion_biblioteca_privada.sql",
-        "migracion_sesiones_inactividad.sql"
+        "migracion_sesiones_inactividad.sql",
+        "migracion_activacion_alumnos.sql"
       ]
     },
     "sqlserver": {
@@ -55,7 +56,8 @@
         "migracion_integridad_operativa.sql",
         "migracion_previews_importacion.sql",
         "migracion_biblioteca_privada.sql",
-        "migracion_sesiones_inactividad.sql"
+        "migracion_sesiones_inactividad.sql",
+        "migracion_activacion_alumnos.sql"
       ]
     }
   }
