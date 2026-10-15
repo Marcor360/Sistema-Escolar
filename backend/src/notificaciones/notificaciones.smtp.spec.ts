@@ -18,6 +18,8 @@ describe('SMTP seguro en entornos desplegados', () => {
       SMTP_HOST: 'smtp.example.test',
       SMTP_PORT: port,
       SMTP_FROM: 'noreply@example.test',
+      SMTP_USER: 'test-user',
+      SMTP_PASS: 'test-password',
       NODE_ENV: env,
       ...(appEnv ? { APP_ENV: appEnv } : {}),
     };
