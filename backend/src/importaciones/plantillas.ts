@@ -17,7 +17,7 @@ const DESCRIPCIONES: Record<TipoPlantilla, Record<string, string>> = {
     nombre: 'Nombre o nombres del alumno.',
     apellidoPaterno: 'Primer apellido del alumno.',
     apellidoMaterno: 'Segundo apellido, si corresponde.',
-    matricula: 'Matrícula única. Conserva ceros iniciales; se usa como contraseña temporal inicial.',
+    matricula: 'Matrícula única, solo identificador; conserva ceros iniciales. No es una contraseña. El alumno solicita un código privado de activación por correo y establece su propia contraseña; sin correo operativo el acceso permanece pendiente.',
     plantelId: 'ID numérico de un plantel activo al que tienes acceso.',
     curp: 'CURP de 18 caracteres; conserva letras y números exactamente.',
     fechaNacimiento: 'Fecha como texto AAAA-MM-DD, por ejemplo 2026-01-30.',

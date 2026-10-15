@@ -41,3 +41,18 @@ it('preserva ceros de matrícula, CURP y teléfonos al completar e importar XLSX
     fechaNacimiento: '2001-01-01',
   });
 });
+
+it('la plantilla descargada de alumnos explica activación tanto en la nota como en la guía', async () => {
+  const buffer = await crearPlantillaImportacion('ALUMNOS').xlsx.writeBuffer();
+  const libro = new ExcelJS.Workbook();
+  await libro.xlsx.load(buffer as never);
+  const indice = CABECERAS.ALUMNOS.indexOf('matricula') + 1;
+  const nota = JSON.stringify(libro.getWorksheet('ALUMNOS')!.getRow(1).getCell(indice).note);
+  const guia = libro.getWorksheet('Instrucciones')!;
+  const fila = guia.getRows(7, guia.rowCount)!.find(r => r.getCell(1).value === 'matricula')!;
+  for (const texto of [nota, String(fila.getCell(3).value)]) {
+    expect(texto).toContain('No es una contraseña');
+    expect(texto).toContain('código privado de activación');
+    expect(texto).not.toContain('contraseña temporal inicial');
+  }
+});
