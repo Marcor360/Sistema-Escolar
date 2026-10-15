@@ -22,6 +22,8 @@ jobs:
       - run: node ../scripts/ci-install.cjs
       - run: node ../scripts/check-project-consistency.cjs
       - run: node ../scripts/check-beta-gates.cjs
+      - run: node ../scripts/check-uat-matrix.cjs
+      - run: node --test ../scripts/check-uat-matrix.test.cjs
       - run: npm audit
       - run: npm run lint
       - run: npm run typecheck

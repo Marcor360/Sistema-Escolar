@@ -1,0 +1,161 @@
+{
+  "version": "1.24.0-beta.2",
+  "alcance": "Escenarios de aceptación institucional sin resultados fabricados",
+  "escenarios": [
+    {
+      "id": "UAT-01",
+      "rol": "SUPERADMIN",
+      "escenario": "Crear plantel, ciclo y personal; comprobar acceso global de SUPERADMIN y denegación entre planteles de personal restringido",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable institucional por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-02",
+      "rol": "ADMINISTRATIVO",
+      "escenario": "Registrar alumno sin contraseña de matrícula; solicitud y confirmación de activación",
+      "canales": [
+        "web",
+        "api",
+        "smtp"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable institucional por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-03",
+      "rol": "ADMINISTRATIVO",
+      "escenario": "Importar 500 alumnos y rechazar lote con duplicados sin crear cuentas",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable institucional por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-04",
+      "rol": "ADMINISTRATIVO",
+      "escenario": "Inscripción, transferencia, baja, reactivación y consulta histórica",
+      "canales": [
+        "web",
+        "api"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable institucional por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-05",
+      "rol": "MAESTRO",
+      "escenario": "Publicar tarea y materiales; calificar y corregir con motivo",
+      "canales": [
+        "web",
+        "api"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable institucional por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-06",
+      "rol": "ALUMNO",
+      "escenario": "Activación, primera sesión, lectura de materias, notas y PDF propio",
+      "canales": [
+        "android",
+        "ios",
+        "api"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable institucional por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-07",
+      "rol": "ALUMNO",
+      "escenario": "Entregar adjunto y recuperar fallo de red sin duplicar envío",
+      "canales": [
+        "android",
+        "ios",
+        "api"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable institucional por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-08",
+      "rol": "FINANZAS",
+      "escenario": "Cargo, pago parcial, orden en sandbox, webhook repetido y conciliación",
+      "canales": [
+        "web",
+        "api",
+        "openpay"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable institucional por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-09",
+      "rol": "ADMINISTRATIVO",
+      "escenario": "Biblioteca con escáner real, aislamiento por plantel y borrado autorizado",
+      "canales": [
+        "web",
+        "api",
+        "antivirus"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable institucional por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-10",
+      "rol": "ALUMNO",
+      "escenario": "Cierre por 30 minutos, sesión revocada y bloqueo de notificaciones",
+      "canales": [
+        "android",
+        "ios",
+        "api"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable institucional por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-11",
+      "rol": "SUPERADMIN",
+      "escenario": "Revisión de restore en ambiente aislado, RTO/RPO y alertas operativas",
+      "canales": [
+        "windows",
+        "mysql",
+        "sqlserver"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable institucional por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-12",
+      "rol": "MAESTRO",
+      "escenario": "Accesibilidad de captura y navegación mediante teclado y lector",
+      "canales": [
+        "web",
+        "ux"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable institucional por designar",
+      "evidencias": []
+    }
+  ]
+}

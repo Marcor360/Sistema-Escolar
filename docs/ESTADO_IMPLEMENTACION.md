@@ -85,3 +85,9 @@ Revisión adicional de #61: entrega de invitaciones en cola acotada de memoria, 
 Altas nuevas individuales y masivas de ALUMNO generan hashes de contraseñas aleatorias no entregadas; ninguna deriva de matrícula. La cuenta queda pendiente hasta consumir el código y establecer contraseña. Web y Expo ofrecen solicitud, activación y vuelta al login; la respuesta genérica no acredita entrega SMTP. Las cuentas anteriores no se bloquean retroactivamente. Esto completa la conexión pendiente de #60–#61 en el código, con aceptación institucional y despliegue aún pendientes.
 
 Push omite sesiones inactivas y cuentas pendientes. El preflight de entregas comprueba tarea vigente/no calificada antes del selector y cancela si se desmontó la pantalla; no elimina copias nativas existentes. Toda compilación web, también con modo development, exige VITE_API_URL HTTPS absoluta terminada en /api, sin credenciales, parámetros ni loopback. El servidor dev conserva configuración local. CI usa un dominio de ejemplo solo para compilar; no es un servicio desplegado.
+
+### Privacidad de perfil y preparación institucional (#67–#69)
+
+Expo muestra la CURP enmascarada por defecto, con revelación explícita por hasta 30 segundos y ocultación al recargar, salir del perfil o pasar a segundo plano. No cambia el alcance de la API ni bloquea capturas de pantalla del sistema operativo. Requiere QA física.
+
+El diagnóstico Windows valida live/ready y, si se indica, la versión; rechaza contratos incompletos y redirecciones, no modifica datos ni despliega y crea informes sin sobrescritura. CI comprueba comportamiento con transporte simulado en Windows, no conectividad institucional. La matriz UAT añade doce escenarios por roles y canales, todos pendientes; valida firma/fecha/SHA/referencias al aprobar y bloquea --release incompleto. La revisión humana de evidencias y las puertas institucionales siguen siendo necesarias.

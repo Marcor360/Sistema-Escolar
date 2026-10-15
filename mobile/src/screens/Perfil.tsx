@@ -1,8 +1,9 @@
 import { activarPush, desactivarPush } from "../push";
 import { crearControlLectura } from "../api/lectura-vigente";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  AppState,
   Alert,
   ScrollView,
   StyleSheet,
@@ -15,6 +16,7 @@ import { api, mensajeDeError } from "../api/client";
 import { useSesion } from "../sesion";
 import { colores, radio, espacio, tipografia, textoSobreFondo } from "../theme";
 import { base, ErrorCarga, Tarjeta } from "./comunes";
+import { ocultarCurp } from "../utils/curp-privada";
 
 interface Perfil {
   matricula: string;
@@ -32,6 +34,16 @@ interface Perfil {
 export default function PerfilScreen({ abrirDocumentos }: { abrirDocumentos?: () => void } = {}) {
   const { sesion, cerrar, finalizarSesionLocal } = useSesion();
   const [perfil, setPerfil] = useState<Perfil | null>(null);
+  const [mostrarCurp, setMostrarCurp] = useState(false);
+  useEffect(() => {
+    if (!mostrarCurp) return;
+    const timer = setTimeout(() => setMostrarCurp(false), 30_000);
+    return () => clearTimeout(timer);
+  }, [mostrarCurp]);
+  useEffect(() => {
+    const listener = AppState.addEventListener("change", (estado) => { if (estado !== "active") setMostrarCurp(false); });
+    return () => listener.remove();
+  }, []);
   const [actual, setActual] = useState("");
   const [nueva, setNueva] = useState("");
   const [confirmacion, setConfirmacion] = useState("");
@@ -70,6 +82,7 @@ export default function PerfilScreen({ abrirDocumentos }: { abrirDocumentos?: ()
   };
 
   const cargarPerfil = useCallback(() => {
+    setMostrarCurp(false);
     setErrorPerfil("");
     setCargandoPerfil(true);
     void lectura.current.cargar(
@@ -126,7 +139,7 @@ export default function PerfilScreen({ abrirDocumentos }: { abrirDocumentos?: ()
   useFocusEffect(
     useCallback(() => {
       cargarPerfil();
-      return () => lectura.current.invalidar();
+      return () => { setMostrarCurp(false); lectura.current.invalidar(); };
     }, [cargarPerfil]),
   );
 
@@ -151,7 +164,15 @@ export default function PerfilScreen({ abrirDocumentos }: { abrirDocumentos?: ()
               Matrícula: {perfil.matricula}
             </Text>
             {perfil.curp && (
-              <Text style={base.secundario}>CURP: {perfil.curp}</Text>
+              <>
+                <Text style={base.secundario}>CURP: {mostrarCurp ? perfil.curp : ocultarCurp(perfil.curp)}</Text>
+                <TouchableOpacity style={base.botonAccesible} accessibilityRole="button"
+                  accessibilityLabel={mostrarCurp ? "Ocultar CURP" : "Mostrar CURP completa"}
+                  accessibilityState={{ expanded: mostrarCurp }}
+                  onPress={() => setMostrarCurp((actual) => !actual)}>
+                  <Text>{mostrarCurp ? "Ocultar CURP" : "Mostrar mi CURP"}</Text>
+                </TouchableOpacity>
+              </>
             )}
             {perfil.tutorNombre && (
               <Text style={base.secundario}>Tutor: {perfil.tutorNombre}</Text>
