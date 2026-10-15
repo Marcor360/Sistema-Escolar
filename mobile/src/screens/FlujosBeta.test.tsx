@@ -538,3 +538,13 @@ it("bloquea el envío si la consulta vence mientras el selector está abierto", 
     expect(Alert.alert).toHaveBeenCalledWith("Actualiza tus tareas", expect.any(String));
   } finally { reloj.mockRestore(); }
 });
+
+it("rechaza crear una copia temporal del adjunto cuando el preflight online falla", async () => {
+  const tarea = { id: 8, titulo: "Informe", tipo: "TAREA", parcial: 1, fechaEntrega: null, entrega: null };
+  vi.mocked(api.get).mockResolvedValueOnce({ data: [tarea] }).mockRejectedValueOnce(new Error("Sin red"));
+  await montar(<Tareas />);
+  await act(async () => vista.root.findByProps({ accessibilityLabel: "Entregar archivo: Informe" }).props.onPress());
+  expect(DocumentPicker.getDocumentAsync).not.toHaveBeenCalled();
+  expect(api.post).not.toHaveBeenCalled();
+  expect(Alert.alert).toHaveBeenCalledWith("No se pudo entregar", expect.any(String));
+});
