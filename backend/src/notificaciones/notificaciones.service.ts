@@ -41,7 +41,11 @@ export class NotificacionesService {
       this.transporter = nodemailer.createTransport({
         host,
         port,
-        secure: port === 465, connectionTimeout: 15000, greetingTimeout: 15000, socketTimeout: 30000,
+        secure: port === 465,
+        // En entornos desplegados, impedir SMTP en texto claro si el servidor no ofrece STARTTLS.
+        requireTLS: port !== 465 && (this.config.get<string>('NODE_ENV') === 'production' || this.config.get<string>('APP_ENV') === 'staging'),
+        tls: { rejectUnauthorized: true },
+        connectionTimeout: 15000, greetingTimeout: 15000, socketTimeout: 30000,
         ...(user && pass ? { auth: { user, pass } } : {}),
       });
     }
