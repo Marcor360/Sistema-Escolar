@@ -20,15 +20,17 @@ export class ActivacionService {
     if (!usuario) return RESPUESTA;
     const token = randomBytes(32).toString('hex');
     const hash = createHash('sha256').update(token).digest('hex');
-    await this.ds.transaction(async (manager) => {
+    const emitido = await this.ds.transaction(async (manager) => {
       const actual = await manager.getRepository(Usuario).findOne({ where: { id: usuario.id, activo: true, activacionPendiente: true }, lock: { mode: 'pessimistic_write' } });
-      if (!actual) return;
+      if (!actual) return false;
       await manager.getRepository(ActivacionToken).update({ usuarioId: actual.id, usado: false }, { usado: true });
       await manager.getRepository(ActivacionToken).insert({
         id: randomUUID(), usuarioId: actual.id, token: hash,
         expiraEn: new Date(Date.now() + VIGENCIA_MS), usado: false, intentos: 0,
       });
+      return true;
     });
+    if (!emitido) return RESPUESTA;
     const enviado = await this.notificaciones.enviarEmail(usuario.email,
       'Activación de tu cuenta escolar',
       '<p>Para activar tu cuenta, escribe este código de un solo uso en la pantalla de activación:</p>' +
@@ -44,8 +46,9 @@ export class ActivacionService {
   async activar(token: string, nueva: string) {
     const hash = createHash('sha256').update(token).digest('hex');
     const existente = await this.ds.getRepository(ActivacionToken).findOne({ where: { token: hash, usado: false } });
-    if (!existente) throw new BadRequestException('Código de activación inválido o vencido');
+    if (!existente || existente.expiraEn <= new Date()) throw new BadRequestException('Código de activación inválido o vencido');
     // Fuera de la transacción para mantener corto el bloqueo por usuario.
+    if (nueva.length < 8) throw new BadRequestException("La contraseña debe tener al menos 8 caracteres");
     const passwordHash = await hashPasswordNueva(nueva);
     await this.ds.transaction(async (manager) => {
       const usuarios = manager.getRepository(Usuario);
@@ -56,10 +59,11 @@ export class ActivacionService {
       if (!registro || registro.expiraEn <= new Date()) throw new BadRequestException('Código de activación inválido o vencido');
       const consumo = await tokens.update({ id: registro.id, usuarioId: usuario.id, usado: false }, { usado: true });
       if (consumo.affected !== 1) throw new BadRequestException('Código de activación inválido o vencido');
-      await usuarios.update({ id: usuario.id, activo: true, activacionPendiente: true }, {
+      const activado = await usuarios.update({ id: usuario.id, activo: true, activacionPendiente: true }, {
         passwordHash, activacionPendiente: false, passwordChangeRequired: false,
         sessionVersion: () => 'COALESCE(session_version, 0) + 1',
       });
+      if (activado.affected !== 1) throw new BadRequestException("Código de activación inválido o vencido");
       await tokens.update({ usuarioId: usuario.id, usado: false }, { usado: true });
     });
     return { mensaje: 'Cuenta activada. Inicia sesión con tu correo y contraseña.' };

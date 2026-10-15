@@ -40,7 +40,6 @@ export class AuthController {
   @ApiResponse({ status: 403, description: 'Rol, portal, alcance u origen no autorizado' })
   @ApiResponse({ status: 409, description: 'Conflicto con el estado actual' })
   @Post('refresh')
-  @Throttle(LIMITE_ESTRICTO)
   async refresh(@Body() dto: RefreshDto, @PortalActual() portal: Portal, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
     let token = dto.refreshToken;
     if (portal === 'WEB') {

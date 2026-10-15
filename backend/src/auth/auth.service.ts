@@ -211,7 +211,7 @@ export class AuthService {
       // Mismo orden de bloqueo que cambio de contraseña: usuario antes de tokens.
       const usuarios = manager.getRepository(Usuario);
       const usuario = await usuarios.findOne({
-        where: { id: registro.usuarioId, activo: true }, select: ['id'], lock: { mode: 'pessimistic_write' },
+        where: { id: registro.usuarioId, activo: true }, select: ['id', 'activacionPendiente'], lock: { mode: 'pessimistic_write' },
       });
       if (!usuario) throw new UnauthorizedException('La cuenta ya no está activa');
       if (usuario.activacionPendiente) throw new UnauthorizedException('Activa primero la cuenta');

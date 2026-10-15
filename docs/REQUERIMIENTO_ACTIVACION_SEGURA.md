@@ -1,6 +1,6 @@
 # Requisito del cliente: activación segura de cuentas nuevas
 
-Estado: confirmado en la conversación del 14 de octubre de 2026; especificación pendiente de implementación. No declara un cambio de comportamiento, una migración creada ni un canal de entrega ya aprobado.
+Estado: requisito confirmado; #60–#61 implementan estructura y API de activación con entrega por SMTP cuando esté configurado. La conexión de altas individuales/lotes y pantallas sigue pendiente de las siguientes etapas. Las altas existentes aún conservan su comportamiento: el requisito no se considera cerrado ni desplegado. La migración aditiva debe preceder al código; SMTP real requiere aceptación institucional.
 
 ## Situación actual
 
@@ -41,3 +41,9 @@ Pruebas necesarias: activación válida, expiración, token usado/reemitido, dos
 Se crean e importan cuentas sin contraseña basada en matrícula; solo el titular con invitación válida establece su contraseña. Tokens vencidos, consumidos o sustituidos se rechazan. Las cohortes existentes tienen un camino de acceso/recuperación comprobado y la documentación describe el comportamiento implementado.
 
 No marcar este requisito como terminado por escribir esta especificación o por aprobar CI sin sus regresiones.
+
+## Estructura y API incorporadas en #60–#61
+
+`usuarios.activacion_pendiente` tiene default false para conservar las cuentas históricas. `activacion_tokens` almacena únicamente SHA-256 de códigos aleatorios de 256 bits, vigencia de una hora y consumo único. La columna `intentos` queda reservada; no existe un contador por cuenta implementado. Los endpoints públicos `POST /auth/solicitar-activacion` y `POST /auth/activar-cuenta` tienen límite por IP (5 por minuto); la solicitud responde de forma genérica. El token viaja solo al correo del titular y no aparece en la respuesta ni en logs. Sin SMTP o con error de envío se conserva el estado pendiente y el titular puede solicitar otro código.
+
+Reemitir invalida códigos anteriores bajo bloqueo por usuario. Activar establece la contraseña validada, elimina el estado pendiente y aumenta `session_version`, invalidando sesiones previas. Login, refresh, JWT, restablecimiento y enlaces firmados bloquean cuentas pendientes. Las pruebas en ambos motores cubren reemisión, consumo concurrente, expiración, contraseña inválida, respuesta genérica y SMTP no disponible. La contraseña derivada de matrícula aún debe eliminarse al conectar las altas; no desplegar la serie como función completa antes de esa etapa y sus clientes.
