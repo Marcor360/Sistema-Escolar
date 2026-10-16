@@ -58,9 +58,12 @@ export default function App() {
             <Route path="/planteles" element={<PlantelesPage />} />
           </Route>
 
+          <Route element={<RutaProtegida roles={['ADMINISTRATIVO', 'FINANZAS']} />}>
+            <Route path="/operaciones" element={<OperacionesPage />} />
+          </Route>
+
           <Route element={<RutaProtegida roles={['ADMINISTRATIVO']} />}>
             <Route path="/biblioteca" element={<BibliotecaPage />} />
-            <Route path="/operaciones" element={<OperacionesPage />} />
             <Route path="/docentes" element={<DocentesPage />} />
             <Route path="/materias" element={<MateriasPage />} />
             <Route path="/grupos" element={<GruposPage />} />
