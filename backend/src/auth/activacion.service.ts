@@ -6,6 +6,7 @@ import { PasswordResetToken } from '../entities/password-reset-token.entity';
 import { Usuario } from '../entities/usuario.entity';
 import { hashPasswordNueva } from '../common/password-bcrypt';
 import { NotificacionesService } from '../notificaciones/notificaciones.service';
+import { plantillaInvitacion } from '../notificaciones/plantillas-correo';
 
 const RESPUESTA = { mensaje: 'Si la cuenta está pendiente y el correo está disponible, recibirás instrucciones. Si no llegan, contacta a Control escolar.' };
 const VIGENCIA_MS = 60 * 60 * 1000;
@@ -49,8 +50,7 @@ export class ActivacionService implements OnModuleDestroy {
       // SMTP tiene timeouts. Si falla, rollback conserva la invitación anterior.
       const enviado = await this.notificaciones.enviarEmail(actual.email,
         'Activación de tu cuenta escolar',
-        '<p>Para activar tu cuenta, escribe este código de un solo uso en la pantalla de activación:</p>' +
-        '<p><strong>' + token + '</strong></p><p>El código vence en una hora. Si no lo solicitaste, ignora este correo.</p>',
+        plantillaInvitacion(token),
       );
       if (enviado.simulado) throw new Error('Servicio de correo no disponible');
     });
