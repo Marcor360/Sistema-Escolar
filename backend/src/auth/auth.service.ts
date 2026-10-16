@@ -219,9 +219,13 @@ export class AuthService {
     const correos = [...new Set(administradores.filter((item) =>
       item.usuario.activo && item.usuario.roles.some((rol) => rol.clave === 'ADMINISTRATIVO'),
     ).map((item) => item.usuario.email))];
+    const correoSolicitante = usuario.email.replace(/[&<>"']/g, (caracter) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[caracter] ?? caracter,
+    );
     for (const correo of correos) {
       await this.notificaciones.enviarEmail(correo, 'IUA · Solicitud de apoyo para acceso',
         '<p>Se registró una solicitud de recuperación de acceso en uno de tus planteles.</p>' +
+        '<p>Cuenta institucional solicitante: <strong>' + correoSolicitante + '</strong></p>' +
         '<p>Ingresa al portal administrativo y consulta la sección Usuarios para identificar al titular y, si corresponde, emitir una contraseña temporal.</p>' +
         '<p>Esta notificación no incluye códigos ni contraseñas. Verifica la identidad del solicitante antes de realizar cambios.</p>');
     }
