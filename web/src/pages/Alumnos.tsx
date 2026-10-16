@@ -37,7 +37,9 @@ export default function AlumnosPage() {
   const [mensaje, setMensaje] = useState('');
   const { tieneRol } = useAuth();
   const puedeGestionar = tieneRol('ADMINISTRATIVO');
+  const puedeCrear = tieneRol('FINANZAS', 'SUPERADMIN');
   const [editando, setEditando] = useState<number | null>(null);
+  const mostrarFormulario = puedeCrear || (puedeGestionar && editando !== null);
   const [enviando, setEnviando] = useState(false);
   const [transferencia, setTransferencia] = useState<Alumno | null>(null);
   const [destino, setDestino] = useState('');
@@ -161,7 +163,7 @@ export default function AlumnosPage() {
       <Encabezado titulo="Alumnos" detalle="Alta, consulta, boletas y baja de expedientes" />
       {puedeGestionar && <p className="texto-ayuda">Recorrido recomendado: registra el expediente, después abre Grupos, elige el grupo del ciclo correspondiente e inscribe al alumno. La matrícula por sí sola no habilita materias ni calificaciones.</p>}
 
-      {puedeGestionar && <FormularioAlumno editando={editando} crear={crear} enviando={enviando} form={form} setForm={setForm} planteles={planteles} dar={dar} setEditando={setEditando} error={error} mensaje={mensaje} />}
+      {mostrarFormulario && <FormularioAlumno editando={editando} crear={crear} enviando={enviando} form={form} setForm={setForm} planteles={planteles} dar={dar} setEditando={setEditando} error={error} mensaje={mensaje} />}
       {!puedeGestionar && error && <p role="alert" className="mensaje-error">{error}</p>}
       {historial && <HistorialAlumno historial={historial} boleta={boleta} cargandoNotas={cargandoNotas} verNotas={verNotas} notas={notas} setHistorial={setHistorial} />}
       {transferencia && <TransferirAlumno transferencia={transferencia} transferir={transferir} destino={destino} setDestino={setDestino} planteles={planteles} enviando={enviando} setTransferencia={setTransferencia} />}
