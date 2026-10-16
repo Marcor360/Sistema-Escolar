@@ -21,6 +21,7 @@ export default function PlantelesPage() {
   const [planteles, setPlanteles] = useState<Plantel[]>([]);
   const [detalle, setDetalle] = useState<Detalle | null>(null);
   const [alta, setAlta] = useState({ clave: '', nombre: '', direccion: '', municipio: '', telefono: '' });
+  const [edicion, setEdicion] = useState<{ id: number; nombre: string; direccion: string; municipio: string; telefono: string; activo: boolean } | null>(null);
   const [directorEmail, setDirectorEmail] = useState('');
   const [personalEmail, setPersonalEmail] = useState('');
   const [error, setError] = useState('');
@@ -40,6 +41,7 @@ export default function PlantelesPage() {
     const actual = ++consultaDetalle.current;
     setError(''); setDetalle(null); setCargandoDetalle(true);
     setDirectorEmail(''); setPersonalEmail('');
+    setEdicion(null);
     try {
       const { data } = await api.get<Detalle>(`/planteles/${id}`);
       if (actual === consultaDetalle.current) setDetalle(data);
@@ -66,6 +68,39 @@ export default function PlantelesPage() {
       setMensaje('Plantel creado. Revisa el detalle y asigna director y personal.'); await cargar(); await seleccionar(data.id);
     } catch (err) { setError(mensajeDeError(err)); }
     finally { setGuardando(false); }
+  };
+
+  const comenzarEdicion = (plantel: Plantel) => {
+    if (!esSuperadmin || guardando) return;
+    setError(''); setMensaje('');
+    setEdicion({
+      id: plantel.id,
+      nombre: plantel.nombre,
+      direccion: plantel.direccion ?? '',
+      municipio: plantel.municipio ?? '',
+      telefono: plantel.telefono ?? '',
+      activo: plantel.activo,
+    });
+  };
+
+  const guardarEdicion = async (evento: FormEvent<HTMLFormElement>) => {
+    evento.preventDefault();
+    if (!edicion || !esSuperadmin || guardando) return;
+    setGuardando(true); setError(''); setMensaje('');
+    const { id, nombre, direccion, municipio, telefono, activo } = edicion;
+    try {
+      await api.patch(`/planteles/${id}`, {
+        nombre: nombre.trim(), direccion: direccion.trim(),
+        municipio: municipio.trim(), telefono: telefono.trim(), activo,
+      });
+      await cargar();
+      await seleccionar(id);
+      setMensaje('Datos del plantel actualizados.');
+    } catch (err) {
+      setError(mensajeDeError(err));
+    } finally {
+      setGuardando(false);
+    }
   };
 
   const operar = async (accion: () => Promise<unknown>, texto: string) => {
@@ -108,13 +143,27 @@ export default function PlantelesPage() {
               <td data-etiqueta="Nombre">{p.nombre}</td>
               <td data-etiqueta="Municipio">{p.municipio ?? '—'}</td>
               <td data-etiqueta="Estatus"><span className={`sello ${p.activo ? 'ok' : 'neutro'}`}>{p.activo ? 'Activo' : 'Inactivo'}</span></td>
-              <td data-etiqueta="Acciones" className="derecha"><span className="acciones-fila"><button className="boton secundario chico" disabled={guardando} onClick={() => seleccionar(p.id)}>Ver detalle</button></span></td>
+              <td data-etiqueta="Acciones" className="derecha"><span className="acciones-fila"><button className="boton secundario chico" disabled={guardando} onClick={() => seleccionar(p.id)}>Ver detalle</button>{esSuperadmin && <button type="button" className="boton secundario chico" disabled={guardando} onClick={() => comenzarEdicion(p)}>Editar</button>}</span></td>
             </tr>)}
             {!cargando && planteles.length === 0 && <tr><td colSpan={6} className="vacio">No hay planteles disponibles para tu cuenta. Si tienes permisos de superadministración, puedes registrar el primero.</td></tr>}
           </tbody>
         </table>
       </div>
     </section>
+
+    {esSuperadmin && edicion && <section className="panel" aria-labelledby="titulo-editar-plantel">
+      <h2 id="titulo-editar-plantel">Editar plantel: {planteles.find((p) => p.id === edicion.id)?.clave}</h2>
+      <p className="texto-ayuda">Puedes corregir nombre, ubicación, teléfono y estatus. La clave institucional y el ID no se modifican. Para desactivar un plantel primero deben liberarse sus alumnos, grupos y personal activos.</p>
+      <form className="fila" onSubmit={guardarEdicion} aria-busy={guardando}>
+        <div className="campo"><label htmlFor="editar-plantel-nombre">Nombre del plantel</label><input id="editar-plantel-nombre" required minLength={3} maxLength={120} disabled={guardando} value={edicion.nombre} onChange={(e) => setEdicion({ ...edicion, nombre: e.target.value })} /></div>
+        <div className="campo"><label htmlFor="editar-plantel-direccion">Dirección</label><input id="editar-plantel-direccion" maxLength={200} disabled={guardando} value={edicion.direccion} onChange={(e) => setEdicion({ ...edicion, direccion: e.target.value })} /></div>
+        <div className="campo"><label htmlFor="editar-plantel-municipio">Municipio</label><input id="editar-plantel-municipio" maxLength={80} disabled={guardando} value={edicion.municipio} onChange={(e) => setEdicion({ ...edicion, municipio: e.target.value })} /></div>
+        <div className="campo"><label htmlFor="editar-plantel-telefono">Teléfono</label><input id="editar-plantel-telefono" maxLength={20} disabled={guardando} value={edicion.telefono} onChange={(e) => setEdicion({ ...edicion, telefono: e.target.value })} /></div>
+        <div className="campo"><label htmlFor="editar-plantel-activo">Estatus</label><select id="editar-plantel-activo" disabled={guardando} value={edicion.activo ? 'activo' : 'inactivo'} onChange={(e) => setEdicion({ ...edicion, activo: e.target.value === 'activo' })}><option value="activo">Activo</option><option value="inactivo">Inactivo</option></select></div>
+        <button type="submit" className="boton" disabled={guardando}>{guardando ? 'Guardando…' : 'Guardar cambios'}</button>
+        <button type="button" className="boton secundario" disabled={guardando} onClick={() => setEdicion(null)}>Cancelar</button>
+      </form>
+    </section>}
 
     {cargandoDetalle && <p role="status">Cargando detalle del plantel…</p>}
     {detalle && <section className="panel">
