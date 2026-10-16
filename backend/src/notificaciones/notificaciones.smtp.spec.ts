@@ -34,6 +34,16 @@ describe('SMTP seguro en entornos desplegados', () => {
 
   beforeEach(() => jest.clearAllMocks());
 
+  it.each(['0', '-1', '65536', 'abc', '587abc', 'NaN'])(
+    'rechaza SMTP_PORT mal configurado: %s',
+    (puerto) => {
+      expect(() => crear(puerto, 'production')).toThrow('SMTP_PORT debe ser un puerto valido');
+      expect(nodemailer.createTransport).not.toHaveBeenCalled();
+    },
+  );
+
+
+
   it.each<[string, string, string | undefined, boolean, boolean]>([
     ['587', 'production', undefined, true, false],
     ['587', 'development', 'staging', true, false],
