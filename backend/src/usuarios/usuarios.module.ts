@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AuthModule } from '../auth/auth.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Usuario } from '../entities/usuario.entity';
 import { Rol } from '../entities/rol.entity';
@@ -13,7 +14,7 @@ import { PasswordResetToken } from '../entities/password-reset-token.entity';
 import { ActivacionToken } from '../entities/activacion-token.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Usuario, Rol, Alumno, Docente, UsuarioPlantel, BitacoraActividad, PasswordResetToken, ActivacionToken]), PlantelesModule],
+  imports: [TypeOrmModule.forFeature([Usuario, Rol, Alumno, Docente, UsuarioPlantel, BitacoraActividad, PasswordResetToken, ActivacionToken]), PlantelesModule, AuthModule],
   providers: [UsuariosService],
   controllers: [UsuariosController],
   exports: [UsuariosService],
