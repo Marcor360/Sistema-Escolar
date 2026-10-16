@@ -51,7 +51,7 @@ export class ListadoUsuariosDto extends PaginacionDto {
   @IsOptional() @IsString() buscar?: string;
 }
 
-export class ActualizarPersonalDto extends ActualizarUsuarioDto {
+export class ActualizarPersonalDto extends OmitType(ActualizarUsuarioDto, ['password'] as const) {
   @IsArray() @Type(() => Number) @IsInt({ each: true }) @Min(1, { each: true }) plantelIds!: number[];
 }
 
