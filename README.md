@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma
 
-**Versión candidata: `1.24.0-beta.2`** · Estado revisado el 13 de octubre de 2026.
+**Versión candidata: `1.25.0-beta.1`** · Consolidación de `main` revisada el 16 de octubre de 2026; aceptación de piloto y despliegue pendientes.
 
 API, portal administrativo/docente y app del alumno para gestión académica y financiera con alcance por plantel. Las versiones de backend, web, móvil, lockfiles y Expo están alineadas. Este README describe una única versión actual; los informes históricos permanecen en `docs/`.
 
@@ -11,7 +11,7 @@ API, portal administrativo/docente y app del alumno para gestión académica y f
 | Base de datos | Baseline v1 y ocho migraciones incrementales espejo; MySQL 8.4 / SQL Server 2022 probados en CI |
 | ETL de legado | Prototipo parcial; no listo para migración institucional general |
 
-Esta candidata incorpora las 30 mejoras de beta.1 y las entregas de la auditoría de recorridos: guía de configuración, tablas adaptables, importación de notas, edición de eventos, biblioteca privada, boleta móvil y caché de lectura. Consulte el [estado de ejecución y las puertas de aceptación de beta.2](docs/EJECUCION_BETA_1.24.0-beta.2.md). La aceptación de beta requiere un piloto controlado; todavía no se declara primera versión estable de producción. La versión numérica no certifica despliegue, aceptación institucional ni publicación de la app. Consulte las [30 mejoras y condiciones de beta](docs/PREPARACION_BETA_1.24.0-beta.1.md), la [auditoría base](docs/AUDITORIA_ESTADO_1.23.5_2026-10-13.md) y su [inventario de 495 archivos](docs/auditoria/INVENTARIO_1.23.5_2026-10-13.csv).
+Esta candidata parte de 1.24.0-beta.2 y consolida los PR #71–#74 (controles visuales, diagnóstico de logotipos, URL HTTPS móvil y edición de planteles); estos cambios no certifican por sí solos la recuperación de imágenes ni un despliegue en staging. La base anterior incorpora las 30 mejoras de beta.1 y las entregas de la auditoría de recorridos: guía de configuración, tablas adaptables, importación de notas, edición de eventos, biblioteca privada, boleta móvil y caché de lectura. Consulte el [estado de ejecución y las puertas de aceptación de beta.2](docs/EJECUCION_BETA_1.24.0-beta.2.md). La aceptación de beta requiere un piloto controlado; todavía no se declara primera versión estable de producción. La versión numérica no certifica despliegue, aceptación institucional ni publicación de la app. Consulte las [30 mejoras y condiciones de beta](docs/PREPARACION_BETA_1.24.0-beta.1.md), la [auditoría base](docs/AUDITORIA_ESTADO_1.23.5_2026-10-13.md) y su [inventario de 495 archivos](docs/auditoria/INVENTARIO_1.23.5_2026-10-13.csv).
 
 ## Funcionalidad actual
 
@@ -72,11 +72,29 @@ El dispositivo debe poder alcanzar la API; `localhost` del teléfono no apunta a
 
 ## Base de datos y seguridad
 
-Los esquemas de ambos motores documentan 39 tablas, con baseline `v1` y ocho migraciones incrementales pendientes ordenadas en el manifiesto de cada motor. Su estado en un servidor existente debe consultarse: no se certificó la base productiva. Los últimos PR de interfaz no cambian el esquema. [Procedimiento y manifiestos](docs/MIGRACIONES.md).
+Los esquemas de ambos motores documentan 39 tablas, con baseline `v1` y diez migraciones incrementales pendientes ordenadas en el manifiesto de cada motor. Su estado en un servidor existente debe consultarse: no se certificó la base productiva. Los últimos PR de interfaz no cambian el esquema. [Procedimiento y manifiestos](docs/MIGRACIONES.md).
 
 La API aplica autorización centralizada, validación de datos, límites de solicitudes, contraseñas con hash, acceso de corta duración y refresh rotativo con revocación. El portal usa refresh en cookie HttpOnly/SameSite Strict y acceso en memoria; la app usa SecureStore. Producción exige configuración TLS y secretos adecuados. El portal dispone de CSP y cabeceras de seguridad. Uploads no se publican como carpeta estática; las descargas verifican firma, sesión y permisos. La configuración y operación siguen siendo responsabilidad del despliegue.
 
 La auditoría de dependencias no informó vulnerabilidades conocidas en npm ni en la resolución Python revisada. Esto no constituye certificación de seguridad. La biblioteca privada exige antivirus ClamAV y cuota configurable por plantel; se requieren pruebas del escáner real y políticas institucionales de conservación. Las cargas de otros módulos no están cubiertas por la cuota de la biblioteca. Los parches de dependencias incluidas localmente necesitan mantenimiento.
+
+## Sesiones y cierre por inactividad (API, web y app del alumno)
+
+La sesión vence después de **30 minutos sin interacción humana**: la API comprueba `Sesion.ultimaActividadEn` al autenticar JWT, rechaza la renovación de refresh caducada y admite actividad explícita autenticada por `POST /api/auth/actividad`. Web y Expo mantienen temporizadores locales y el cierre local no depende de la red. El access JWT dura 15 minutos, pero la validez criptográfica del refresh no permite eludir el límite por inactividad. Los procesos automáticos no deben prolongar la sesión.
+
+En web, el login anuncia el cierre por inactividad. La aplicación del alumno muestra un aviso y elimina sus tokens locales; no implementa funciones administrativas. Estas capacidades y sus pruebas de regresión ya estaban implementadas y fusionadas previamente, **no fueron introducidas por el cambio de versión**.
+
+**Comprobación obligatoria en staging:** verificar la versión de backend y web desplegada, el historial de `migracion_sesiones_inactividad.sql` en la base, y probar cierre local y rechazo HTTP 401 pasados 30 minutos, pestañas, suspensión de Android, cierre manual, refresh caducado, reconexión y cambio de usuario. Tener el código en `main` no demuestra que esté instalado en el VPS. No aplicar migraciones sobre la base existente sin respaldo y revisión de estado.
+
+## Consolidación 1.25.0-beta.1
+
+- PR #71: controles visuales y formulario responsive de conceptos financieros.
+- PR #72: error accesible y diagnóstico de entrega del logo. **La causa del fallo de imágenes en IIS/almacenamiento sigue por verificar**.
+- PR #73: ejemplo de URL `https://api-sistema-staging.iua.edu.mx/api` para el APK preview; disponibilidad externa y build firmada pendientes.
+- PR #74: edición web de nombre, dirección, municipio, teléfono y estado del plantel, usando el PATCH de API ya existente.
+- La existencia de ramas históricas no implica cambios pendientes; no se fusionan ramas no revisadas por el simple hecho de existir.
+
+Esta es una **versión candidata**, no un lanzamiento estable ni certificación de producción.
 
 ## Validación y límites actuales
 
