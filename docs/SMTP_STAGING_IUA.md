@@ -1,41 +1,48 @@
-# Correo SMTP de staging (IUA)
+# SMTP institucional de IUA (staging)
 
-Remitente previsto: `plataforma-stagin@iua.edu.mx`. No debe configurarse un host SMTP por conjetura.
+## Configuración confirmada en cPanel
 
-## Verificar proveedor
+El titular proporcionó los ajustes de **Secure SSL/TLS Settings (Recommended)** desde cPanel para `plataforma-stagin@iua.edu.mx`:
 
-- **GoDaddy cPanel:** abrir cPanel → Cuentas de correo → Connect Devices / Configurar cliente de correo → parámetros manuales. El servidor saliente suele ser `mail.<dominio>`, 465 TLS implícito o 587 STARTTLS; usar el host que aparezca y cuyo certificado sea válido.
-- **GoDaddy Professional Email / Titan:** según documentación del proveedor, `smtpout.secureserver.net`, puerto 465 SSL/TLS.
-- **GoDaddy Microsoft 365:** confirmar autenticación SMTP habilitada y método admitido por el tenant. Si está deshabilitada o se requiere OAuth2, no usar contraseñas SMTP tradicionales ni desactivar controles; preparar integración específica antes de habilitar el envío.
+| Campo | Valor |
+| --- | --- |
+| SMTP host | `mail.iua.edu.mx` |
+| SMTP puerto | `465` |
+| Seguridad | TLS implícito (SSL/TLS) |
+| Autenticación | Requerida, cuenta completa |
+| Usuario | `plataforma-stagin@iua.edu.mx` |
 
-Fuente oficial cPanel: https://www.godaddy.com/en-ca/help/configuring-mail-clients-with-cpanel-email-8861
+Servidor IMAP `mail.iua.edu.mx:993` y POP3 `mail.iua.edu.mx:995` aparecen también en cPanel, pero **no se utilizan** para enviar correos desde la API.
 
-## Configuración privada del VPS
-
-En el `.env` **privado** efectivo de la API:
+## Variables del entorno privado del VPS
 
 ```dotenv
-SMTP_HOST=SERVIDOR_CONFIRMADO_POR_EL_PROVEEDOR
+SMTP_HOST=mail.iua.edu.mx
 SMTP_PORT=465
 SMTP_USER=plataforma-stagin@iua.edu.mx
-SMTP_PASS=SECRETO_EXCLUSIVO_FUERA_DEL_REPOSITORIO
+SMTP_PASS=CONTRASENA_CONFIGURADA_SOLO_EN_VPS
 SMTP_FROM="IUA Plataforma Staging <plataforma-stagin@iua.edu.mx>"
 SMTP_REQUIRED=true
 ```
 
-El puerto 465 es solo ejemplo; use 587 si el proveedor indica STARTTLS. Nunca copiar una contraseña real a esta documentación, a GitHub, a un ticket ni a logs. El transportador Nodemailer existente verifica certificados y exige TLS en staging.
+En la plantilla versionada, `SMTP_REQUIRED=false` y `SMTP_PASS` vacío evitan distribuir secretos o impedir el arranque antes de la configuración. Cambiar ambas variables **solo en el archivo .env real del servidor**. Usar una contraseña de aplicación si el servidor la ofrece. Nunca incluir credenciales en GitHub, logs, issues o chats.
 
-`SMTP_REQUIRED=true` impide iniciar la API cuando falta una variable SMTP esencial. Inicialmente mantener `false` hasta completar el alta del buzón y una prueba de conectividad. Con `false`, el código aún puede simular envíos si falta el host: **no considerar entregadas invitaciones o recuperaciones hasta comprobar recepción real.**
+El transporte Nodemailer existente interpreta el puerto 465 como TLS implícito (`secure: true`) y exige validación del certificado (`rejectUnauthorized: true`). No deshabilitar TLS para resolver fallas de nombre o certificado.
 
-Verificar además SPF, DKIM y DMARC de `iua.edu.mx` con quien administre DNS, sin reemplazar registros existentes a ciegas. Comprobar que el puerto de salida esté permitido por firewall/hosting Windows Server.
+## Verificación de conexión y entrega
 
-## Aceptación antes de fusionar/desplegar
+1. Comprobar desde el servidor Windows acceso TCP de salida: `Test-NetConnection mail.iua.edu.mx -Port 465`. Esto solo demuestra conectividad, no autenticación ni entrega.
+2. Confirmar que el certificado TLS del servidor sea válido para `mail.iua.edu.mx`.
+3. Establecer credenciales privadas y `SMTP_REQUIRED=true` en el entorno efectivo de la API. Reiniciar el servicio de manera controlada.
+4. Enviar invitación a una cuenta de prueba pendiente mediante el flujo existente; verificar llegada, caducidad de una hora y consumo único.
+5. Solicitar recuperación de una cuenta de prueba activa; verificar entrega del código, uso único y revocación de sesiones.
+6. Comprobar SPF, DKIM y DMARC con el administrador DNS sin sobrescribir entradas existentes.
+7. Verificar errores de transporte y rebotes sin almacenar ni registrar contraseña, códigos o información personal sensible.
 
-1. `npm run typecheck && npm run lint && npm test -- --runInBand && npm run build` en backend.
-2. Configurar SMTP privado en staging y comprobar conexión TLS/autenticación sin imprimir secretos.
-3. Solicitar activación de cuenta de prueba pendiente y verificar llegada, vigencia y uso único; nunca enviar códigos de prueba a menores reales.
-4. Solicitar recuperación de cuenta de prueba activa y verificar recepción, expiración y revocación de sesiones.
-5. Confirmar que la API informa fallos de entrega en logs sin destinatarios, códigos ni contraseñas, y revisar SPF/DKIM/DMARC recibidos.
-6. Validar procedimiento de rollback: restaurar `SMTP_REQUIRED=false` y configuración previa si el proveedor falla, sin revertir datos.
+**No se ha confirmado la conectividad del VPS, autenticación SMTP, firma DNS ni recepción efectiva de mensajes.** El proveedor configurado puede aplicar límites de envío y restricciones de conexiones desde un VPS externo.
 
-Este cambio no implementa OAuth2 para Microsoft 365 ni confirma una conexión SMTP real.
+## Validación y despliegue
+
+Antes de fusionar, ejecutar en `backend/`: `npm run lint`, `npm run typecheck`, `npm test -- --runInBand` y `npm run build`. Las pruebas automatizadas de configuración no equivalen a una prueba de correo real.
+
+La falla SMTP se comunica en los flujos existentes según cada servicio; se debe supervisar operativamente. No habilitar envíos masivos sin observar entregas, rate limiting y disponibilidad.
