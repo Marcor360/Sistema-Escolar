@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma
 
-**Versión candidata: `1.25.0-beta.1`** · Consolidación de `main` revisada el 16 de octubre de 2026; aceptación de piloto y despliegue pendientes.
+**Versión candidata: `1.26.0`** · API, web y app del alumno alineadas. Aceptación institucional y despliegue pendientes.
 
 API, portal administrativo/docente y app del alumno para gestión académica y financiera con alcance por plantel. Las versiones de backend, web, móvil, lockfiles y Expo están alineadas. Este README describe una única versión actual; los informes históricos permanecen en `docs/`.
 
@@ -11,7 +11,28 @@ API, portal administrativo/docente y app del alumno para gestión académica y f
 | Base de datos | Baseline v1 y diez migraciones incrementales espejo; MySQL 8.4 / SQL Server 2022 probados en CI |
 | ETL de legado | Prototipo parcial; no listo para migración institucional general |
 
-Esta candidata parte de 1.24.0-beta.2 y consolida los PR #71–#74 (controles visuales, diagnóstico de logotipos, URL HTTPS móvil y edición de planteles); estos cambios no certifican por sí solos la recuperación de imágenes ni un despliegue en staging. La base anterior incorpora las 30 mejoras de beta.1 y las entregas de la auditoría de recorridos: guía de configuración, tablas adaptables, importación de notas, edición de eventos, biblioteca privada, boleta móvil y caché de lectura. Consulte el [estado de ejecución y las puertas de aceptación de beta.2](docs/EJECUCION_BETA_1.24.0-beta.2.md). La aceptación de beta requiere un piloto controlado; todavía no se declara primera versión estable de producción. La versión numérica no certifica despliegue, aceptación institucional ni publicación de la app. Consulte las [30 mejoras y condiciones de beta](docs/PREPARACION_BETA_1.24.0-beta.1.md), la [auditoría base](docs/AUDITORIA_ESTADO_1.23.5_2026-10-13.md) y su [inventario de 495 archivos](docs/auditoria/INVENTARIO_1.23.5_2026-10-13.csv).
+La versión 1.26.0 consolida las altas y activación segura, mejoras de navegación, configuración SMTP y eliminación definitiva protegida. La versión del repositorio identifica el código; la disponibilidad en el VPS o en un APK depende del despliegue correspondiente. La evidencia histórica conserva su versión y fecha originales.
+
+## Novedades de 1.26.0
+
+- Inicio del alumno con accesos explicados a materias y tareas, calificaciones, estado de cuenta, perfil y documentos, disponibles aunque el resumen tarde en cargar.
+- Menú web organizado por áreas de trabajo; la agenda distingue carga, error y ausencia de eventos y permite reintentar.
+- Alta de alumnos sin contraseñas basadas en matrícula: activación privada, invitaciones automáticas y orientación para recuperar acceso. Restablecimiento de acceso administrativo sujeto a permisos.
+- Plantillas de correo institucional, entrega SMTP en staging con TLS y rechazo de puertos inválidos.
+- **Eliminar definitivamente** en Alumnos, Docentes, Planteles y Personal, solo para SUPERADMIN y con confirmación. Alumnos y docentes se eliminan junto con su cuenta del sistema. Los registros con historial vinculado se conservan mediante baja/desactivación; la eliminación no modifica cuentas ni buzones de GoDaddy. [Reglas y endpoints](docs/ELIMINACION-REGISTROS.md).
+- Diagnóstico de staging de solo lectura y regresiones de permisos por plantel e importación según rol.
+
+### Qué puede hacer cada perfil
+
+| Perfil | Recorrido principal |
+|---|---|
+| SUPERADMIN | Configurar institución y planteles, gestionar personal y eliminar registros sin vínculos |
+| Administrativo | Administrar expedientes, grupos, inscripciones, calendario, biblioteca y comunicaciones dentro de su alcance |
+| Finanzas | Dar de alta alumnos y dar seguimiento a cargos, pagos y cobranza de sus planteles |
+| Maestro | Trabajar con sus clases, materiales, entregas, calificaciones y actividades permitidas |
+| Alumno | Activar su cuenta y consultar únicamente sus materias, tareas, notas, documentos y estado de cuenta desde la app |
+
+Los permisos se verifican en la API; una cuenta con varios roles combina únicamente las funciones autorizadas.
 
 ## Funcionalidad actual
 
@@ -24,7 +45,7 @@ Esta candidata parte de 1.24.0-beta.2 y consolida los PR #71–#74 (controles vi
 - Archivos con descargas firmadas y validación de alcance; marca institucional mediante `/api/configuracion/marca`.
 - App del alumno para inicio, materias, tareas, calificaciones, boleta propia con enlace revocable, perfil y estado de cuenta. Materias y notas ofrecen copia de lectura durante cinco minutos en memoria de la sesión; no persisten expedientes en disco.
 
-La interfaz incorpora modales con gestión de foco, navegación con iconos, listados adaptables y protección contra respuestas tardías. El inicio móvil conserva información cuando falla parcialmente un servicio; cambiar contraseña exige reautenticación. Materias y tareas se actualizan al cambiar usuario o recuperar foco. Grupos y docentes no conservan detalles obsoletos. Alumnos mantiene los filtros confirmados al paginar y finalizar mutaciones, incluso si cambió la consulta durante la operación. Calendario muestra la baja según creador, plantel y roles combinados, incluyendo la excepción de SUPERADMIN. La candidata añade guías de propósito en web y móvil, confirmaciones de entrega/pago/contraseña, contraste según la marca y bloqueo de envíos duplicados. La aceptación con usuarios sigue pendiente.
+La interfaz usa confirmaciones con gestión de foco, tablas adaptables y protección frente a respuestas tardías. La app conserva las consultas disponibles ante fallos parciales; materias y notas ofrecen una copia temporal de lectura. La aceptación con usuarios y dispositivos físicos sigue pendiente.
 
 ## Arquitectura y versiones
 
@@ -95,15 +116,11 @@ En web, el login anuncia el cierre por inactividad. La aplicación del alumno mu
 
 **Comprobación obligatoria en staging:** verificar la versión de backend y web desplegada, el historial de `migracion_sesiones_inactividad.sql` en la base, y probar cierre local y rechazo HTTP 401 pasados 30 minutos, pestañas, suspensión de Android, cierre manual, refresh caducado, reconexión y cambio de usuario. Tener el código en `main` no demuestra que esté instalado en el VPS. No aplicar migraciones sobre la base existente sin respaldo y revisión de estado.
 
-## Consolidación 1.25.0-beta.1
+## Estado de las ramas y consolidación
 
-- PR #71: controles visuales y formulario responsive de conceptos financieros.
-- PR #72: error accesible y diagnóstico de entrega del logo. **La causa del fallo de imágenes en IIS/almacenamiento sigue por verificar**.
-- PR #73: ejemplo de URL `https://api-sistema-staging.iua.edu.mx/api` para el APK preview; disponibilidad externa y build firmada pendientes.
-- PR #74: edición web de nombre, dirección, municipio, teléfono y estado del plantel, usando el PATCH de API ya existente.
-- La existencia de ramas históricas no implica cambios pendientes; no se fusionan ramas no revisadas por el simple hecho de existir.
+Se auditaron las 89 ramas remotas de trabajo existentes, además de `main`. Los PR ya fusionados y las variantes sustituidas por entregas consolidadas quedan reconocidos en el historial de esta versión. Los cambios vigentes se concentran en `main`; las ramas históricas se conservan como referencias. [Inventario de ramas y criterio de reconciliación](docs/CONSOLIDACION_1.26.0.md).
 
-Esta es una **versión candidata**, no un lanzamiento estable ni certificación de producción.
+La numeración 1.26.0 no declara aprobadas las puertas institucionales de piloto, SMTP real, dispositivos físicos ni restauración. Su estado verificable permanece en [BETA_ACEPTACION.json](docs/BETA_ACEPTACION.json).
 
 ## Validación y límites actuales
 
@@ -144,7 +161,7 @@ La edición de eventos y la biblioteca administrativa privada están implementad
 
 ## Documentación operativa
 
-[Índice de documentación vigente e histórica](docs/README.md) · [Estado beta.2](docs/ESTADO_IMPLEMENTACION.md) · [Requisito de activación segura pendiente](docs/REQUERIMIENTO_ACTIVACION_SEGURA.md).
+[Índice de documentación vigente e histórica](docs/README.md) · [Estado beta.2](docs/ESTADO_IMPLEMENTACION.md) · [Contrato de activación segura](docs/REQUERIMIENTO_ACTIVACION_SEGURA.md).
 
 - [Preparación de beta, guía de uso y 30 mejoras](docs/PREPARACION_BETA_1.24.0-beta.1.md)
 - [Auditoría base e inventario](docs/AUDITORIA_ESTADO_1.23.5_2026-10-13.md)
