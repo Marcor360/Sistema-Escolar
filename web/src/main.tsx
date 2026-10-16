@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { AuthProvider } from './auth/AuthContext';
 import './styles.css';
+import './styles/controles-modernizados.css';
 import { MarcaProvider } from './marca/MarcaContext';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
