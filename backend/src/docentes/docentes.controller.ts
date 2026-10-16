@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ActivacionService } from '../auth/activacion.service';
 import { DocentesService } from './docentes.service';
 import { ActualizarDocenteDto, CrearDocenteDto, ListarDocentesDto, PlantelesDocenteDto, ReactivarDocenteDto } from './docentes.dto';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
@@ -13,7 +14,7 @@ import { CurrentUser, JwtUser } from '../common/current-user.decorator';
 @Roles('ADMINISTRATIVO')
 @Controller('docentes')
 export class DocentesController {
-  constructor(private readonly service: DocentesService) {}
+  constructor(private readonly service: DocentesService, private readonly activacion: ActivacionService) {}
 
   @Get() listar(@CurrentUser() user: JwtUser, @Query() query: ListarDocentesDto) {
     return this.service.listar(user, query);
@@ -21,7 +22,13 @@ export class DocentesController {
   @Get(':id') obtener(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) {
     return this.service.obtenerParaApi(id, user);
   }
-  @Post() crear(@Body() dto: CrearDocenteDto, @CurrentUser() user: JwtUser) { return this.service.crear(dto, user); }
+  @Post()
+  @ApiOperation({ summary: 'Registrar docente e invitarlo a activar su cuenta' })
+  async crear(@Body() dto: CrearDocenteDto, @CurrentUser() user: JwtUser) {
+    const docente = await this.service.crear(dto, user);
+    await this.activacion.solicitar(dto.email);
+    return docente;
+  }
   @Patch(':id') actualizar(
     @Param('id', ParseIntPipe) id: number, @Body() dto: ActualizarDocenteDto, @CurrentUser() user: JwtUser,
   ) {
