@@ -252,7 +252,7 @@ describe('Integración de flujos críticos (base aislada)', () => {
       let codigo = '';
       const correo = jest.spyOn(app.get(NotificacionesService), 'enviarEmail')
         .mockImplementation(async (_to, _subject, html) => {
-          codigo = /<strong>([0-9a-f]{64})<\/strong>/.exec(html)?.[1] ?? '';
+          codigo = /<strong[^>]*>([0-9a-f]{64})<\/strong>/.exec(html)?.[1] ?? '';
           return { simulado: false };
         });
       try {

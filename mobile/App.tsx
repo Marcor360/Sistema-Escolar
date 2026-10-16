@@ -35,7 +35,6 @@ import CambioPasswordInicial from "./src/screens/CambioPasswordInicial";
 import LoginScreen from "./src/screens/Login";
 import InicioScreen from "./src/screens/Inicio";
 import MateriasScreen from "./src/screens/Materias";
-import TareasScreen from "./src/screens/Tareas";
 import CalificacionesScreen from "./src/screens/Calificaciones";
 import EstadoCuentaScreen from "./src/screens/EstadoCuenta";
 import PerfilScreen from "./src/screens/Perfil";
@@ -53,7 +52,6 @@ import {
 const navegacion = createNavigationContainerRef<{
   Inicio: undefined;
   Materias: undefined;
-  Tareas: undefined;
   Calificaciones: undefined;
   Pagos: undefined;
   Perfil: undefined;
@@ -79,7 +77,6 @@ function PerfilConDocumentos() {
 const iconos: Record<string, string> = {
   Inicio: "🏠",
   Materias: "📚",
-  Tareas: "📝",
   Calificaciones: "🎓",
   Pagos: "💳",
   Perfil: "👤",
@@ -436,7 +433,6 @@ function AppInterna() {
             >
               <Tab.Screen name="Inicio" component={InicioScreen} />
               <Tab.Screen name="Materias" component={MateriasScreen} />
-              <Tab.Screen name="Tareas" component={TareasScreen} />
               <Tab.Screen
                 name="Calificaciones"
                 component={CalificacionesScreen}

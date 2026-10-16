@@ -1,7 +1,8 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { UsuariosService } from './usuarios.service';
-import { ActualizarPersonalDto, ActualizarUsuarioDto, CrearUsuarioDto, ListadoUsuariosDto } from './usuarios.dto';
+import { ActualizarPersonalDto, ActualizarUsuarioDto, CrearUsuarioDto, ListadoUsuariosDto, RestablecerPasswordAdministrativoDto } from './usuarios.dto';
 import { PaginacionDto } from '../common/paginacion.dto';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { RolesGuard } from '../common/roles.guard';
@@ -22,6 +23,14 @@ export class UsuariosController {
   listado(@Query() query: ListadoUsuariosDto, @CurrentUser() user: JwtUser) {
     return this.service.listado(query, user);
   }
+  @Post(':id/restablecer-password')
+  @Roles('ADMINISTRATIVO')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Restablecer contraseña con alcance de plantel, sin contraseña anterior; revoca todas las sesiones' })
+  restablecerPassword(@Param('id', ParseIntPipe) id: number, @Body() dto: RestablecerPasswordAdministrativoDto, @CurrentUser() user: JwtUser) {
+    return this.service.restablecerPasswordAdministrativo(id, dto.nueva, user);
+  }
+
   @Get(':id/personal') detallePersonal(@Param('id', ParseIntPipe) id: number) { return this.service.detallePersonal(id); }
   @Patch(':id/personal') actualizarPersonal(@Param('id', ParseIntPipe) id: number, @Body() dto: ActualizarPersonalDto, @CurrentUser() user: JwtUser) { return this.service.actualizarPersonal(id, dto, user); }
   @Get(':id') obtener(@Param('id', ParseIntPipe) id: number) { return this.service.obtener(id); }

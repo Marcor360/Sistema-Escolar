@@ -9,6 +9,10 @@ describe('validación central antes de arrancar', () => {
     }
   });
   it.each([{ DB_PORT: '0' }, { DB_PORT: 'puerto' }, { DB_TYPE: 'sqlite' }, { NODE_ENV: ' production ' }, { DB_SSL: ' true ' }, { DB_SYNC: 'true' }, { PUSH_ENABLED: 'yes' }, { CORS_ORIGINS: '*' }, { SMTP_USER: 'test' }, { OPENPAY_MERCHANT_ID: 'test' }])('rechaza configuración mal formada %j', (cambio) => expect(() => validarEntorno({ ...desarrollo, ...cambio })).toThrow());
+  it('exige SMTP completo cuando staging habilita correo real', () => {
+    expect(() => validarEntorno({ ...desarrollo, SMTP_REQUIRED: 'true' })).toThrow('SMTP_HOST');
+    expect(() => validarEntorno({ ...desarrollo, SMTP_REQUIRED: 'true', SMTP_HOST: 'smtp.example.test', SMTP_USER: 'cuenta@example.test', SMTP_PASS: 'secreto', SMTP_FROM: 'cuenta@example.test' })).not.toThrow();
+  });
   it('exige TLS, secreto y CORS HTTPS incluso en staging; permite proveedores deshabilitados en staging', () => {
     const staging = { ...desarrollo, NODE_ENV: 'production', APP_ENV: 'staging', JWT_SECRET: 'a'.repeat(40), DB_SSL: 'true', CORS_ORIGINS: 'https://portal.example.invalid' };
     expect(() => validarEntorno(staging)).not.toThrow();

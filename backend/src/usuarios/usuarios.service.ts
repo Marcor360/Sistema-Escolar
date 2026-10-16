@@ -11,6 +11,9 @@ import { Plantel } from '../entities/plantel.entity';
 import { Alumno } from '../entities/alumno.entity';
 import { Docente } from '../entities/docente.entity';
 import { UsuarioPlantel } from '../entities/usuario-plantel.entity';
+import { PasswordResetToken } from '../entities/password-reset-token.entity';
+import { ActivacionToken } from '../entities/activacion-token.entity';
+import { BitacoraActividad } from '../entities/bitacora-actividad.entity';
 import { JwtUser } from '../common/current-user.decorator';
 import { ScopeService } from '../planteles/scope.service';
 import { ListadoUsuariosDto } from './usuarios.dto';
@@ -30,6 +33,47 @@ export class UsuariosService {
     @InjectRepository(UsuarioPlantel) private readonly asignaciones: Repository<UsuarioPlantel>,
     private readonly scope: ScopeService,
   ) {}
+
+  /** Solo administradores del plantel y superadministradores pueden restablecer credenciales. */
+  async restablecerPasswordAdministrativo(id: number, nueva: string, actor: JwtUser) {
+    if (!actor.roles.includes('SUPERADMIN') && !actor.roles.includes('ADMINISTRATIVO')) {
+      throw new ForbiddenException('No tienes permiso para restablecer contraseñas');
+    }
+    if (id === actor.sub) throw new ForbiddenException('Utiliza el cambio de contraseña de tu propia cuenta');
+    const passwordHash = await hashPasswordNueva(nueva);
+    return this.usuarios.manager.transaction(async (manager) => {
+      const usuarios = manager.getRepository(Usuario);
+      const usuario = await usuarios.findOne({ where: { id, activo: true }, lock: { mode: 'pessimistic_write' } });
+      if (!usuario) throw new NotFoundException('Usuario activo no encontrado');
+      const claves = usuario.roles.map((rol) => rol.clave);
+      if (usuario.activacionPendiente) throw new ConflictException('La cuenta requiere activación antes de restablecer la contraseña');
+      if (!actor.roles.includes('SUPERADMIN')) {
+        if (claves.some((rol) => rol !== 'ALUMNO' && rol !== 'MAESTRO')) {
+          throw new ForbiddenException('Solo puedes restablecer cuentas de alumnos y docentes');
+        }
+        const permitidos = await this.scope.plantelesDe(actor);
+        if (!permitidos?.length) throw new ForbiddenException('No tienes planteles autorizados');
+        const alumno = await manager.getRepository(Alumno).findOne({ where: { usuarioId: id } });
+        const docente = await manager.getRepository(Docente).findOne({ where: { usuarioId: id } });
+        const asignaciones = docente ? await manager.getRepository(UsuarioPlantel).find({ where: { usuarioId: id, activo: true } }) : [];
+        const plantelesDestino = [
+          ...(alumno ? [alumno.plantelId] : []),
+          ...asignaciones.map((asignacion) => asignacion.plantelId),
+        ];
+        if (!plantelesDestino.length || plantelesDestino.some((plantelId) => !permitidos.includes(plantelId))) {
+          throw new ForbiddenException('La cuenta está fuera de tus planteles autorizados');
+        }
+      }
+      usuario.passwordHash = passwordHash;
+      usuario.passwordChangeRequired = true;
+      usuario.sessionVersion = (usuario.sessionVersion ?? 0) + 1;
+      await usuarios.save(usuario);
+      await manager.getRepository(PasswordResetToken).update({ usuarioId: id, usado: false }, { usado: true });
+      await manager.getRepository(ActivacionToken).update({ usuarioId: id, usado: false }, { usado: true });
+      await manager.getRepository(BitacoraActividad).insert({ usuarioId: actor.sub, metodo: 'POST', ruta: '/api/usuarios/:id/restablecer-password', entidad: 'Usuario', entidadId: id, resultado: 'EXITO', statusCode: 201 });
+      return { mensaje: 'Contraseña restablecida. El usuario deberá cambiarla al iniciar sesión.' };
+    });
+  }
 
   async listar(query: PaginacionDto) {
     const pagina = query.pagina || 1;

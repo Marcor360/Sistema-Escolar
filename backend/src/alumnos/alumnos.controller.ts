@@ -51,7 +51,7 @@ export class AlumnosController {
   @ApiResponse({ status: 400, description: 'Campos obligatorios o CURP inválidos' })
   @ApiResponse({ status: 409, description: 'Correo o matrícula ya registrados' })
   @Post()
-  @Roles('ADMINISTRATIVO')
+  @Roles('FINANZAS')
   async crear(@Body() dto: CrearAlumnoDto, @CurrentUser() user: JwtUser) {
     const alumno = await this.service.crear(dto, user);
     // Encolar solo después del commit: la cuenta no debe recibir invitación si el alta falló.

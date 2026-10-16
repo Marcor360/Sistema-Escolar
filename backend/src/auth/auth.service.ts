@@ -13,6 +13,7 @@ import { Usuario } from '../entities/usuario.entity';
 import { PasswordResetToken } from '../entities/password-reset-token.entity';
 import { BitacoraActividad } from '../entities/bitacora-actividad.entity';
 import { NotificacionesService } from '../notificaciones/notificaciones.service';
+import { plantillaRecuperacion } from '../notificaciones/plantillas-correo';
 import { JwtUser } from '../common/current-user.decorator';
 import { MENSAJES_PORTAL, Portal, ROLES_POR_PORTAL } from '../common/portales';
 
@@ -195,7 +196,7 @@ export class AuthService {
     await this.notificaciones.enviarEmail(
       usuario.email,
       'Recuperación de contraseña',
-      `<p>Hola ${usuario.nombre}:</p><p>Tu código de recuperación es: <b>${token}</b></p><p>Vence en 1 hora.</p>`,
+      plantillaRecuperacion(token),
     ).catch(() => {
       this.logger.error('No se pudo entregar el correo de recuperacion de contrasena');
     });

@@ -18,6 +18,7 @@ const FORM_INICIAL = { email: '', password: '', nombre: '', apellidoPaterno: '',
 export default function UsuariosPage() {
   const { sesion } = useAuth();
   const esSuperadmin = sesion?.roles.includes('SUPERADMIN') ?? false;
+  const puedeRestablecer = esSuperadmin || (sesion?.roles.includes('ADMINISTRATIVO') ?? false);
   const maestroPuro = sesion?.roles.includes('MAESTRO') &&
     !sesion.roles.some((r) => ['SUPERADMIN', 'ADMINISTRATIVO'].includes(r));
   const tituloFormRef = useRef<HTMLHeadingElement>(null);
@@ -36,6 +37,8 @@ export default function UsuariosPage() {
   const [rolesElegidos, setRolesElegidos] = useState<string[]>(['ADMINISTRATIVO']);
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
+  const [cuentaRestablecer, setCuentaRestablecer] = useState<Fila | null>(null);
+  const [passwordTemporal, setPasswordTemporal] = useState('');
 
   const cargar = useCallback(async (pagina = 1, tipoActual: Tipo = 'ALUMNO', plantelActual = '', termino = '') => {
     const actual = ++consulta.current; setCargando(true); setError('');
@@ -51,6 +54,19 @@ export default function UsuariosPage() {
     api.get<Plantel[]>('/planteles/mios').then((r) => setPlanteles(r.data)).catch((err) => setError(mensajeDeError(err)));
     cargar(1, 'ALUMNO', '', '');
   }, [cargar]);
+
+  const restablecer = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!cuentaRestablecer || enviando) return;
+    if (passwordTemporal.length < 8) { setError('La contraseña debe cumplir los requisitos de seguridad.'); return; }
+    setEnviando(true); setError(''); setMensaje('');
+    try {
+      const { data } = await api.post<{ mensaje: string }>(`/usuarios/${cuentaRestablecer.id}/restablecer-password`, { nueva: passwordTemporal });
+      setMensaje(data.mensaje);
+      setCuentaRestablecer(null); setPasswordTemporal('');
+    } catch (err) { setError(mensajeDeError(err)); }
+    finally { setEnviando(false); }
+  };
 
   const cambiarTipo = (nuevo: Tipo) => {
     setTipo(nuevo); setResultado({ datos: [], total: 0, pagina: 1, porPagina: 20 });
@@ -84,6 +100,8 @@ export default function UsuariosPage() {
     </section>}
     {error && <p className="mensaje-error" role="alert">{error}</p>}{mensaje && <p className="mensaje-ok" role="status">{mensaje}</p>}
 
+    {cuentaRestablecer && <section className="panel" aria-label="Restablecimiento de contraseña"><h2>Restablecer acceso: {cuentaRestablecer.nombre}</h2><p>La cuenta cerrará sus sesiones y deberá cambiar la contraseña temporal al ingresar.</p><form onSubmit={restablecer}><div className="campo"><label htmlFor="password-temporal-cuenta">Nueva contraseña temporal</label><input id="password-temporal-cuenta" type="password" autoComplete="new-password" required minLength={8} value={passwordTemporal} onChange={(e) => setPasswordTemporal(e.target.value)} /></div><div className="fila"><button className="boton" disabled={enviando}>{enviando ? 'Actualizando…' : 'Restablecer contraseña'}</button><button type="button" className="boton secundario" onClick={() => { setCuentaRestablecer(null); setPasswordTemporal(''); }} disabled={enviando}>Cancelar</button></div></form></section>}
+
     <div className="fila" style={{ marginBottom: 14 }}>
       {(['ALUMNO', ...(maestroPuro ? [] : ['DOCENTE', 'ADMINISTRATIVO'])] as Tipo[]).map((t) => <button key={t} className={`boton ${tipo === t ? '' : 'secundario'}`} onClick={() => cambiarTipo(t)}>{t === 'ADMINISTRATIVO' ? 'Personal' : t === 'DOCENTE' ? 'Docentes' : 'Alumnos'}</button>)}
     </div>
@@ -95,7 +113,7 @@ export default function UsuariosPage() {
 
     {cargando && <p role="status">Cargando usuarios…</p>}
     <div className="tabla-contenedor" role="region" aria-label="Listado de usuarios" tabIndex={0}><table className="tabla tabla-adaptable" aria-busy={cargando}><caption className="solo-lector">Identificador, nombre, correo, planteles y estatus de las cuentas visibles</caption><thead><tr><th scope="col">Identificador</th><th scope="col">Nombre</th><th scope="col">Correo</th><th scope="col">Plantel(es)</th><th scope="col">Roles/Estatus</th></tr></thead><tbody>
-      {resultado.datos.map((fila) => <tr key={fila.id}><td data-etiqueta="Identificador">{fila.matricula ?? fila.numEmpleado ?? fila.id}</td><td data-etiqueta="Nombre">{fila.nombre}</td><td data-etiqueta="Correo">{fila.correo ?? 'Restringido'}</td><td data-etiqueta="Plantel(es)">{fila.plantel ?? fila.planteles?.join(', ') ?? '—'}</td><td data-etiqueta="Roles/Estatus">{fila.roles?.join(', ') ?? fila.estatus ?? (fila.activo ? 'ACTIVO' : 'INACTIVO')}{esSuperadmin && tipo === 'ADMINISTRATIVO' && <button disabled={enviando} onClick={async () => { try { const { data } = await api.get(`/usuarios/${fila.id}/personal`); setEditarId(data.id); setActivo(data.activo); setPlantelIds(data.plantelIds); setRolesElegidos(data.roles.map((r: { clave: string }) => r.clave)); setForm({ email: data.email, password: '', nombre: data.nombre, apellidoPaterno: data.apellidoPaterno, apellidoMaterno: data.apellidoMaterno ?? '', telefono: data.telefono ?? '' }); } catch (err) { setError(mensajeDeError(err)); } }}>Corregir cuenta</button>}</td></tr>)}
+      {resultado.datos.map((fila) => <tr key={fila.id}><td data-etiqueta="Identificador">{fila.matricula ?? fila.numEmpleado ?? fila.id}</td><td data-etiqueta="Nombre">{fila.nombre}</td><td data-etiqueta="Correo">{fila.correo ?? 'Restringido'}</td><td data-etiqueta="Plantel(es)">{fila.plantel ?? fila.planteles?.join(', ') ?? '—'}</td><td data-etiqueta="Roles/Estatus">{fila.roles?.join(', ') ?? fila.estatus ?? (fila.activo ? 'ACTIVO' : 'INACTIVO')}{puedeRestablecer && (esSuperadmin || tipo !== 'ADMINISTRATIVO') && fila.id !== sesion?.sub && <button type="button" className="boton secundario chico" disabled={enviando} onClick={() => { setCuentaRestablecer(fila); setPasswordTemporal(''); setError(''); }}>Restablecer contraseña</button>}{esSuperadmin && tipo === 'ADMINISTRATIVO' && <button disabled={enviando} onClick={async () => { try { const { data } = await api.get(`/usuarios/${fila.id}/personal`); setEditarId(data.id); setActivo(data.activo); setPlantelIds(data.plantelIds); setRolesElegidos(data.roles.map((r: { clave: string }) => r.clave)); setForm({ email: data.email, password: '', nombre: data.nombre, apellidoPaterno: data.apellidoPaterno, apellidoMaterno: data.apellidoMaterno ?? '', telefono: data.telefono ?? '' }); } catch (err) { setError(mensajeDeError(err)); } }}>Corregir cuenta</button>}</td></tr>)}
       {!cargando && !resultado.datos.length && <tr><td className="vacio" colSpan={5}>Sin resultados.</td></tr>}
     </tbody></table></div>
     <Paginador total={resultado.total} pagina={resultado.pagina} porPagina={resultado.porPagina} deshabilitado={cargando} onCambio={(pagina) => cargar(pagina, tipo, plantelId, buscar)} />
