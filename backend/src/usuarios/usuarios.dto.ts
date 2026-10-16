@@ -1,3 +1,4 @@
+import { OmitType } from '@nestjs/swagger';
 import { PasswordNuevaValida } from '../common/password-bcrypt';
 import { OpcionalNoNulo } from '../common/opcional-no-nulo';
 import { MaxLength, Min, MinLength as LongitudMinima } from 'class-validator';
@@ -25,6 +26,9 @@ export class CrearUsuarioDto {
   @IsOptional() @IsString() @MaxLength(20) telefono?: string | null;
   @IsArray() @ArrayNotEmpty() @IsIn(ROLES, { each: true }) roles!: RolClave[];
 }
+
+/** El personal recibe un enlace privado para definir su contraseña; nunca se solicita una temporal en el alta. */
+export class CrearPersonalDto extends OmitType(CrearUsuarioDto, ['password'] as const) {}
 
 export class ActualizarUsuarioDto {
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
