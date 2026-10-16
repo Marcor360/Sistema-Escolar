@@ -1,3 +1,4 @@
+import { EliminarRegistro } from '../components/EliminarRegistro';
 import { useConfirmacion } from '../components/useConfirmacion';
 import { useDialogoMotivo } from '../components/useDialogoMotivo';
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
@@ -173,7 +174,7 @@ export default function DocentesPage() {
               <td data-etiqueta="Especialidad">{d.especialidad ?? '—'}</td>
               <td data-etiqueta="Correo">{d.usuario.email}</td>
               <td data-etiqueta="Estatus"><span className={`sello ${d.estatus === 'ACTIVO' ? 'ok' : 'neutro'}`}>{d.estatus}</span></td>
-              <td data-etiqueta="Acciones" className="derecha"><span className="acciones-fila"><button disabled={enviando} className="boton secundario chico" onClick={() => editar(d)}>Editar</button> <button disabled={enviando} className="boton secundario chico" onClick={() => verClases(d)}>Planteles y clases</button> {d.estatus === 'ACTIVO' && <button disabled={enviando} className="boton peligro chico" onClick={() => baja(d)}>Dar de baja</button>}</span></td>
+              <td data-etiqueta="Acciones" className="derecha"><span className="acciones-fila"><EliminarRegistro ruta={`/docentes/${d.id}`} nombre={`docente ${d.numEmpleado}`} deshabilitado={enviando} alEliminar={() => { consultaDetalle.current++; setDetalle(null); setEditando(null); setForm(FORM_INICIAL); setMensaje('Docente y cuenta eliminados definitivamente'); cargar(1, filtroPlantel); }} /><button disabled={enviando} className="boton secundario chico" onClick={() => editar(d)}>Editar</button> <button disabled={enviando} className="boton secundario chico" onClick={() => verClases(d)}>Planteles y clases</button> {d.estatus === 'ACTIVO' && <button disabled={enviando} className="boton peligro chico" onClick={() => baja(d)}>Dar de baja</button>}</span></td>
             </tr>
           ))}
           {!cargando && resultado.datos.length === 0 && <tr><td className="vacio" colSpan={7}>Sin docentes registrados.</td></tr>}

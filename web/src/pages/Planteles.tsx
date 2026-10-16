@@ -1,3 +1,4 @@
+import { EliminarRegistro } from '../components/EliminarRegistro';
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
@@ -143,7 +144,7 @@ export default function PlantelesPage() {
               <td data-etiqueta="Nombre">{p.nombre}</td>
               <td data-etiqueta="Municipio">{p.municipio ?? '—'}</td>
               <td data-etiqueta="Estatus"><span className={`sello ${p.activo ? 'ok' : 'neutro'}`}>{p.activo ? 'Activo' : 'Inactivo'}</span></td>
-              <td data-etiqueta="Acciones" className="derecha"><span className="acciones-fila"><button className="boton secundario chico" disabled={guardando} onClick={() => seleccionar(p.id)}>Ver detalle</button>{esSuperadmin && <button type="button" className="boton secundario chico" disabled={guardando} onClick={() => comenzarEdicion(p)}>Editar</button>}</span></td>
+              <td data-etiqueta="Acciones" className="derecha"><span className="acciones-fila"><EliminarRegistro ruta={`/planteles/${p.id}`} nombre={`plantel ${p.clave}`} deshabilitado={guardando} alEliminar={async () => { consultaDetalle.current++; setDetalle(null); setEdicion(null); setCargandoDetalle(false); setMensaje('Plantel eliminado definitivamente'); await cargar(); }} /><button className="boton secundario chico" disabled={guardando} onClick={() => seleccionar(p.id)}>Ver detalle</button>{esSuperadmin && <button type="button" className="boton secundario chico" disabled={guardando} onClick={() => comenzarEdicion(p)}>Editar</button>}</span></td>
             </tr>)}
             {!cargando && planteles.length === 0 && <tr><td colSpan={6} className="vacio">No hay planteles disponibles para tu cuenta. Si tienes permisos de superadministración, puedes registrar el primero.</td></tr>}
           </tbody>
