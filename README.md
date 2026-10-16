@@ -43,16 +43,21 @@ Node 24 es la referencia de CI. Los lockfiles fijan las dependencias JavaScript;
 
 ## Desarrollo y configuración
 
-Instalar dependencias en cada componente con `npm ci`. Crear configuración local a partir de los ejemplos versionados del componente, completar valores propios y no publicar secretos. No reutilizar credenciales de producción para pruebas. Mantener `DB_SYNC=false`.
+Requisitos: Node 24, npm y una base MySQL 8.4 o SQL Server 2022 preparada según [Migraciones](docs/MIGRACIONES.md). Para desarrollo local se puede iniciar uno de los motores con Docker Compose: copiar `.env.docker.example` a `.env`, cambiar sus contraseñas y ejecutar `docker compose up -d mysql` o `docker compose --profile mssql up -d sqlserver`. Compose crea volúmenes persistentes; no borres ni recrees una base existente para actualizarla.
+
+En cada componente, copiar su `.env.example` a `.env`, ajustar los valores locales e instalar dependencias con `npm ci`. Ejecutar los bloques siguientes desde la raíz del repositorio, en terminales separadas. No publicar secretos ni reutilizar credenciales de producción. Mantener `DB_SYNC=false`. En `backend/.env`, configurar `DB_TYPE`, conexión a la base y `JWT_SECRET`; si se usa Compose, las credenciales deben coincidir con las del `.env` de la raíz. El ejemplo del backend contiene contraseñas de demostración y no debe usarse tal cual en un entorno compartido.
+
+Antes de iniciar la API, comprobar el historial de migraciones. Sobre una base nueva, seguir el procedimiento de baseline, adopción y migración de la guía; sobre una base existente, auditar el esquema y el historial antes de aplicar cambios. Nunca ejecutar `schema.sql` completo ni usar `DROP` o `TRUNCATE`.
 
 ```sh
 cd backend
 npm ci
 npm run build
+npm run db:migrate:status
 npm run start:dev
 ```
 
-La API necesita una base previamente preparada conforme a [MIGRACIONES](docs/MIGRACIONES.md). No ejecutar el esquema completo sobre una base existente ni recrearla. Tras compilar, `npm run db:migrate:status` permite consultar su historial; cualquier adopción o aplicación requiere verificar baseline y seguir ese procedimiento.
+La API local escucha en `http://localhost:3000` con el `PORT` de ejemplo. El comando `db:migrate:status` consulta el historial; no aplica cambios.
 
 ```sh
 cd web
@@ -60,7 +65,9 @@ npm ci
 npm run dev
 ```
 
-Configurar la URL de API según los ejemplos del portal. Para móvil:
+El portal de desarrollo usa `VITE_API_URL=http://localhost:3000/api` en `web/.env`. Para compilarlo, establecer una URL HTTPS absoluta terminada en `/api` mediante el entorno o `web/.env.production`; el valor local del ejemplo sirve solo para `npm run dev`.
+
+Para la app del alumno:
 
 ```sh
 cd mobile
@@ -68,7 +75,7 @@ npm ci
 npm start
 ```
 
-El dispositivo debe poder alcanzar la API; `localhost` del teléfono no apunta al ordenador. Preview y producción exigen HTTPS. EAS incluye perfiles de desarrollo, preview y producción, pero hacen falta firma, proyecto Expo y credenciales FCM/APNs para distribución y push nativos. La exportación Expo no equivale a un APK/IPA instalado o aprobado.
+Configurar `EXPO_PUBLIC_API_URL` en `mobile/.env`. El dispositivo debe poder alcanzar la API; `localhost` del teléfono no apunta al ordenador. Preview y producción exigen HTTPS. EAS incluye perfiles de desarrollo, preview y producción, pero hacen falta firma, proyecto Expo y credenciales FCM/APNs para distribución y push nativos. La exportación Expo no equivale a un APK/IPA instalado o aprobado.
 
 Para generar un APK directamente en Windows con Android SDK y Gradle, consultar [Compilar el APK en Windows](docs/COMPILAR_APK_WINDOWS.md).
 
@@ -100,13 +107,13 @@ Esta es una **versión candidata**, no un lanzamiento estable ni certificación 
 
 ## Validación y límites actuales
 
-La revisión de la candidata beta.2 registró 202 pruebas unitarias de backend, 94 web, 68 móviles y 11 pruebas Node de configuración/auditoría; nuevas modificaciones requieren repetir las suites. El ETL conserva sus siete pruebas. La integración y compilación se exigen en CI antes de publicar cada commit. La validación de beta.2 registró 80 pruebas MySQL, 77 SQL Server y verificaciones de navegador/responsive entre 320 y 3840 px. Tipos, builds y exportación Android Expo aprobaron. Backend lint tiene cero errores y 527 advertencias que deben reducirse. [Evidencia y alcance de la candidata](docs/PREPARACION_BETA_1.24.0-beta.1.md#validación).
+Ejecutar las verificaciones siguientes después de cambiar código. La integración de base de datos requiere bases aisladas para pruebas; los resultados de cortes anteriores están en el [estado de implementación](docs/ESTADO_IMPLEMENTACION.md) y la [evidencia de beta.2](docs/EJECUCION_BETA_1.24.0-beta.2.md). Esos resultados no sustituyen la CI del commit que se vaya a integrar o desplegar.
 
 ```sh
 # Desde backend/
 npm run lint
 npm run typecheck
-npm test -- --runInBand
+npm test
 node ../scripts/check-project-consistency.cjs
 
 # Desde web/
@@ -124,7 +131,7 @@ npx tsc --noEmit
 python -m unittest discover -s tests
 ```
 
-Las integraciones requieren bases aisladas configuradas para pruebas. Los ocho jobs de la [CI de la candidata fusionada #42](https://github.com/Marcor360/Sistema-Escolar/pull/42/checks) aprobaron; cualquier PR posterior debe superar su propia CI antes de integrar. Revisar también la CI del commit que se vaya a desplegar.
+Para cambios de esquema, revisar además la entidad TypeORM, la migración incremental MySQL, su espejo SQL Server y la paridad documental de `schema.sql`. Confirmar autorización por plantel en el servidor con `ScopeService`; las opciones visibles en web o móvil no son una barrera de acceso.
 
 Antes del piloto:
 
