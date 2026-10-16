@@ -50,7 +50,7 @@ export class AlumnosController {
   @ApiResponse({ status: 400, description: 'Campos obligatorios o CURP inválidos' })
   @ApiResponse({ status: 409, description: 'Correo o matrícula ya registrados' })
   @Post()
-  @Roles('ADMINISTRATIVO')
+  @Roles('FINANZAS')
   crear(@Body() dto: CrearAlumnoDto, @CurrentUser() user: JwtUser) {
     return this.service.crear(dto, user);
   }
