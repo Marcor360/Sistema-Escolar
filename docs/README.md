@@ -1,6 +1,6 @@
 # Documentación de Sistema Escolar
 
-Entrada de lectura para main 1.24.0-beta.2. Revisión documental: 14 de octubre de 2026, sobre 54a5759cb098a856774e897c4f88dcccebfd2a4b. Las guías vigentes describen el comportamiento actual; las auditorías/versiones antiguas conservan evidencia de su propio corte. Ante diferencias, contrastar estado vigente, controladores/DTO y manifiesto; no ejecutar un procedimiento histórico como si fuera la guía actual.
+Entrada de lectura para main 1.25.0-beta.1. Revisión documental: 14 de octubre de 2026, sobre 54a5759cb098a856774e897c4f88dcccebfd2a4b. Las guías vigentes describen el comportamiento actual; las auditorías/versiones antiguas conservan evidencia de su propio corte. Ante diferencias, contrastar estado vigente, controladores/DTO y manifiesto; no ejecutar un procedimiento histórico como si fuera la guía actual.
 
 ## Leer según la tarea
 

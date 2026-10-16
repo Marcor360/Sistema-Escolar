@@ -1,4 +1,4 @@
-# Estado de implementación — 1.24.0-beta.2
+# Estado de implementación — 1.25.0-beta.1
 
 Corte documental: 14 de octubre de 2026. Código de referencia: main, commit 54a5759cb098a856774e897c4f88dcccebfd2a4b, tras integrar #42, #43 y #44. Esta revisión no modifica funcionalidades, contraseñas ni bases institucionales.
 
@@ -91,3 +91,9 @@ Push omite sesiones inactivas y cuentas pendientes. El preflight de entregas com
 Expo muestra la CURP enmascarada por defecto, con revelación explícita por hasta 30 segundos y ocultación al recargar, salir del perfil o pasar a segundo plano. No cambia el alcance de la API ni bloquea capturas de pantalla del sistema operativo. Requiere QA física.
 
 El diagnóstico Windows valida live/ready y, si se indica, la versión; rechaza contratos incompletos y redirecciones, no modifica datos ni despliega y crea informes sin sobrescritura. CI comprueba comportamiento con transporte simulado en Windows, no conectividad institucional. La matriz UAT añade doce escenarios por roles y canales, todos pendientes; valida firma/fecha/SHA/referencias al aprobar y bloquea --release incompleto. La revisión humana de evidencias y las puertas institucionales siguen siendo necesarias.
+
+### Consolidación 1.25.0-beta.1 (#75)
+
+Se alinean backend, web, Expo y sus lockfiles en 1.25.0-beta.1, conservando las mejoras ya integradas en main, incluida la preparación de APK Windows. Las puertas de beta y la matriz UAT corresponden a esta candidata y mantienen todas sus aceptaciones pendientes. La documentación distingue la versión del código del estado del despliegue; no acredita recuperación de logos en IIS ni ensayo físico de treinta minutos de inactividad.
+
+Sin cambios de esquema ni aplicación de migraciones: baseline v1, diez incrementales espejo y 42 tablas documentales por motor. CI con bases aisladas valida el esquema de prueba; el historial real de un servidor institucional debe consultarse por separado, tras respaldo y conforme al runbook.

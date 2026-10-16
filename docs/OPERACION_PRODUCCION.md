@@ -11,7 +11,7 @@ Antes de intervenir: auditar el host con Audit-StagingHost.ps1, identificar moto
 Para comprobar de forma **no destructiva** que una API de staging responde con la versión prevista, ejecutar desde PowerShell (sin escribir credenciales ni consultas institucionales):
 
 ```powershell
-.\scripts\windows\Test-PilotReadiness.ps1 -ApiBaseUrl 'https://api.staging.ejemplo.mx' -ExpectedVersion '1.24.0-beta.2' -OutputPath '.\pilot-readiness.json'
+.\scripts\windows\Test-PilotReadiness.ps1 -ApiBaseUrl 'https://api.staging.ejemplo.mx' -ExpectedVersion '1.25.0-beta.1' -OutputPath '.\pilot-readiness.json'
 ```
 
 Este diagnóstico consulta únicamente `/api/health/live` y `/api/health/ready`; no valida antivirus, pagos, correo, respaldo o UAT. Nunca se aceptan certificados TLS sin validación y no sobrescribe el informe existente.
