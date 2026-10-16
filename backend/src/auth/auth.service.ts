@@ -3,12 +3,13 @@ import { BadRequestException, ForbiddenException, Injectable, Logger, Unauthoriz
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { createHash, randomUUID } from 'crypto';
 import { Sesion } from '../entities/sesion.entity';
 import { LIMITE_INACTIVIDAD_MS, sesionInactiva, instanteActividad } from './sesion-inactividad';
 import { Alumno } from '../entities/alumno.entity';
 import { Docente } from '../entities/docente.entity';
+import { UsuarioPlantel } from '../entities/usuario-plantel.entity';
 import { Usuario } from '../entities/usuario.entity';
 import { PasswordResetToken } from '../entities/password-reset-token.entity';
 import { BitacoraActividad } from '../entities/bitacora-actividad.entity';
@@ -182,6 +183,9 @@ export class AuthService {
     // Respuesta idéntica exista o no el correo (no revelar cuentas)
     if (!usuario || usuario.activacionPendiente) return { mensaje: 'Solicitud recibida. Si la cuenta existe y el correo está disponible, recibirás instrucciones. Si no llegan, contacta a Control escolar.' };
 
+    // Evita multiplicar avisos al responsable durante la vigencia de otro código.
+    const pendiente = await this.tokens.findOne({ where: { usuarioId: usuario.id, usado: false } });
+    const notificarResponsable = !pendiente || pendiente.expiraEn <= new Date();
     const token = randomUUID().replace(/-/g, '');
     const emitido = await this.dataSource.transaction(async (manager) => {
       const actual = await manager.getRepository(Usuario).findOne({ where: { id: usuario.id, activo: true }, lock: { mode: 'pessimistic_write' } });
@@ -199,7 +203,28 @@ export class AuthService {
     ).catch(() => {
       this.logger.error('No se pudo entregar el correo de recuperacion de contrasena');
     });
+    if (notificarResponsable) {
+      await this.notificarAyudaPlantel(usuario).catch(() =>
+        this.logger.warn('No fue posible notificar al responsable del plantel'));
+    }
     return { mensaje: 'Solicitud recibida. Si la cuenta existe y el correo está disponible, recibirás instrucciones. Si no llegan, contacta a Control escolar.' };
+  }
+
+  private async notificarAyudaPlantel(usuario: Usuario): Promise<void> {
+    const alumno = await this.dataSource.getRepository(Alumno).findOne({ where: { usuarioId: usuario.id } });
+    const asignaciones = alumno ? [] : await this.dataSource.getRepository(UsuarioPlantel).find({ where: { usuarioId: usuario.id, activo: true } });
+    const plantelIds = alumno ? [alumno.plantelId] : asignaciones.map((item) => item.plantelId);
+    if (!plantelIds.length) return;
+    const administradores = await this.dataSource.getRepository(UsuarioPlantel).find({ where: { plantelId: In(plantelIds), activo: true }, relations: { usuario: true } });
+    const correos = [...new Set(administradores.filter((item) =>
+      item.usuario.activo && item.usuario.roles.some((rol) => rol.clave === 'ADMINISTRATIVO'),
+    ).map((item) => item.usuario.email))];
+    for (const correo of correos) {
+      await this.notificaciones.enviarEmail(correo, 'IUA · Solicitud de apoyo para acceso',
+        '<p>Se registró una solicitud de recuperación de acceso en uno de tus planteles.</p>' +
+        '<p>Ingresa al portal administrativo y consulta la sección Usuarios para identificar al titular y, si corresponde, emitir una contraseña temporal.</p>' +
+        '<p>Esta notificación no incluye códigos ni contraseñas. Verifica la identidad del solicitante antes de realizar cambios.</p>');
+    }
   }
 
   async resetPassword(token: string, password: string) {
