@@ -1,3 +1,4 @@
+import { AuthModule } from '../auth/auth.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Docente } from '../entities/docente.entity';
@@ -8,7 +9,7 @@ import { UsuarioPlantel } from '../entities/usuario-plantel.entity';
 import { PlantelesModule } from '../planteles/planteles.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Docente, UsuarioPlantel]), UsuariosModule, PlantelesModule],
+  imports: [TypeOrmModule.forFeature([Docente, UsuarioPlantel]), UsuariosModule, PlantelesModule, AuthModule],
   providers: [DocentesService],
   controllers: [DocentesController],
   exports: [DocentesService],
