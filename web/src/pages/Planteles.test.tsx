@@ -102,3 +102,39 @@ it('expone el ID numérico de plantel requerido por las plantillas masivas', asy
   expect(within(listado).getByRole('columnheader', { name: 'ID' })).toBeTruthy();
   expect(within(listado).getByText('1')).toBeTruthy();
 });
+
+it('permite a SUPERADMIN corregir datos y estatus mediante el PATCH existente', async () => {
+  contexto.roles = ['SUPERADMIN'];
+  const patch = vi.spyOn(api, 'patch').mockResolvedValue({ data: {} });
+  render(<PlantelesPage />);
+  const listado = await screen.findByRole('region', { name: 'Listado de planteles' });
+  await within(listado).findByText('Plantel A');
+  fireEvent.click(within(listado).getAllByRole('button', { name: 'Editar' })[0]);
+  fireEvent.change(screen.getByLabelText('Nombre del plantel'), { target: { value: 'Plantel Corregido' } });
+  fireEvent.change(screen.getByLabelText('Municipio', { selector: '#editar-plantel-municipio' }), { target: { value: 'Chalco' } });
+  fireEvent.change(screen.getByLabelText('Estatus'), { target: { value: 'inactivo' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+  await screen.findByText('Datos del plantel actualizados.');
+  expect(patch).toHaveBeenCalledWith('/planteles/1', expect.objectContaining({
+    nombre: 'Plantel Corregido', municipio: 'Chalco', activo: false,
+  }));
+});
+
+it('conserva la edición al fallar el guardado y oculta editar a otros roles', async () => {
+  contexto.roles = ['SUPERADMIN'];
+  vi.spyOn(api, 'patch').mockRejectedValue(new Error('Sin conexión'));
+  const { unmount } = render(<PlantelesPage />);
+  const listado = await screen.findByRole('region', { name: 'Listado de planteles' });
+  await within(listado).findByText('Plantel A');
+  fireEvent.click(within(listado).getAllByRole('button', { name: 'Editar' })[0]);
+  fireEvent.change(screen.getByLabelText('Nombre del plantel'), { target: { value: 'Cambio pendiente' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+  await screen.findByRole('alert');
+  expect((screen.getByLabelText('Nombre del plantel') as HTMLInputElement).value).toBe('Cambio pendiente');
+  unmount();
+  contexto.roles = ['ADMINISTRATIVO'];
+  render(<PlantelesPage />);
+  const otroListado = await screen.findByRole('region', { name: 'Listado de planteles' });
+  await within(otroListado).findByText('Plantel A');
+  expect(within(otroListado).queryByRole('button', { name: 'Editar' })).toBeNull();
+});
