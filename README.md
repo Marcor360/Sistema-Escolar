@@ -32,7 +32,7 @@ La interfaz incorpora modales con gestión de foco, navegación con iconos, list
 |---|---|
 | `backend/` | NestJS 11.2.7, TypeORM 0.3.31, TypeScript 5.9.3; API y reglas de negocio |
 | `web/` | React 18.3.1, Vite 6.4.3, TypeScript 5.9.3; portal administrativo/docente |
-| `mobile/` | Expo 57.0.27, React Native 0.86.3, React 19.2.3, TypeScript 6.0.3; app del alumno |
+| `mobile/` | Expo 57.0.30, React Native 0.86.3, React 19.2.3, TypeScript 6.0.3; app del alumno |
 | `database/` | Baseline, esquema documental y migraciones MySQL / SQL Server |
 | `etl/` | Python 3.11; extracción y carga parcial del legado |
 | `scripts/` | Consistencia, parches, staging, respaldo y restauración |
@@ -69,6 +69,8 @@ npm start
 ```
 
 El dispositivo debe poder alcanzar la API; `localhost` del teléfono no apunta al ordenador. Preview y producción exigen HTTPS. EAS incluye perfiles de desarrollo, preview y producción, pero hacen falta firma, proyecto Expo y credenciales FCM/APNs para distribución y push nativos. La exportación Expo no equivale a un APK/IPA instalado o aprobado.
+
+Para generar un APK directamente en Windows con Android SDK y Gradle, consultar [Compilar el APK en Windows](docs/COMPILAR_APK_WINDOWS.md).
 
 ## Base de datos y seguridad
 

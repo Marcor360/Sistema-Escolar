@@ -39,6 +39,8 @@ lerna-debug.log*
 web-build/
 
 # Native mobile build output
+mobile/android/
+mobile/apk/
 android/.gradle/
 android/app/build/
 ios/build/
