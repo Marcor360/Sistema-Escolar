@@ -1,3 +1,5 @@
+import { randomBytes } from 'crypto';
+import { Usuario } from '../entities/usuario.entity';
 import { BitacoraAcademica } from '../entities/bitacora-academica.entity';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -126,18 +128,19 @@ export class DocentesService {
       }
       const usuario = await this.usuarios.crear({
         email: dto.email,
-        password: dto.password,
+        password: randomBytes(32).toString('base64url'),
         nombre: dto.nombre,
         apellidoPaterno: dto.apellidoPaterno,
         apellidoMaterno: dto.apellidoMaterno,
         telefono: dto.telefono,
         roles: ['MAESTRO'],
       }, manager);
+      await manager.getRepository(Usuario).update({ id: usuario.id }, { activacionPendiente: true });
       const docentes = manager.getRepository(Docente);
       const docente = await docentes.save(docentes.create({
         usuarioId: usuario.id,
         numEmpleado: dto.numEmpleado,
-        cedulaProfesional: dto.cedulaProfesional ?? null,
+        cedulaProfesional: dto.cedulaPendiente ? null : dto.cedulaProfesional,
         especialidad: dto.especialidad ?? null,
       }));
       const asignaciones = manager.getRepository(UsuarioPlantel);
