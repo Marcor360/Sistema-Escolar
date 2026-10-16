@@ -27,7 +27,11 @@ export class NotificacionesService {
     @Optional() private readonly push?: PushService,
   ) {
     const host = this.config.get<string>('SMTP_HOST');
-    const port = Number(this.config.get('SMTP_PORT')) || 587;
+    const puertoConfigurado = this.config.get<string>('SMTP_PORT') || '587';
+    const port = Number(puertoConfigurado);
+    if (!/^\d+$/.test(puertoConfigurado) || !Number.isInteger(port) || port < 1 || port > 65535) {
+      throw new Error('SMTP_PORT debe ser un puerto valido entre 1 y 65535');
+    }
     const user = this.config.get<string>('SMTP_USER');
     const pass = this.config.get<string>('SMTP_PASS');
     const from = this.config.get<string>('SMTP_FROM');
