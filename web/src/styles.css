@@ -1054,3 +1054,13 @@ dialog button { max-width: 100%; min-height: 44px; white-space: normal; overflow
 .paginador-acciones > span { overflow-wrap: anywhere; }
 .fila > label { min-width: 0; max-width: 100%; flex: 1 1 200px; }
 .fila > label :is(input:not([type='checkbox'], [type='radio']), select, textarea) { display: block; width: 100%; min-width: 0; }
+
+/* Agrupar las tareas conserva el mismo orden en escritorio y móvil. */
+.menu-grupo + .menu-grupo { margin-top: 16px; }
+.lateral .menu-grupo-titulo {
+  margin: 0 12px 6px;
+  color: #c8d2cd;
+  font-size: .75rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+}

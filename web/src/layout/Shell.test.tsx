@@ -175,3 +175,12 @@ it('avisa de desconexión y retira aviso al reconectar', () => {
   expect(screen.queryByText(/Tu dispositivo está sin conexión/)).toBeNull();
   estado.mockRestore();
 });
+
+it('agrupa las tareas en orden y oculta áreas sin opciones permitidas', () => {
+  contexto.roles = ['MAESTRO'];
+  abrirMenu();
+  const nav = screen.getByRole('navigation', { name: 'Navegación principal' });
+  expect(within(nav).queryByRole('group', { name: 'Control escolar' })).toBeNull();
+  expect(within(within(nav).getByRole('group', { name: 'Docencia' })).getByRole('link', { name: 'Mis clases' })).toBeTruthy();
+  expect(within(nav).getAllByRole('link')[0].getAttribute('href')).toBe('/');
+});

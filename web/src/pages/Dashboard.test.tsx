@@ -106,3 +106,17 @@ it('ignora resumen tardío y reintenta el plantel seleccionado', async () => {
   expect(screen.queryByText('999')).toBeNull();
   expect(screen.getByText('222')).toBeTruthy();
 });
+
+it('distingue una agenda sin respuesta de una agenda vacía y permite reintentar', async () => {
+  let fallo = true;
+  vi.spyOn(api, 'get').mockImplementation(async (ruta) => {
+    if (ruta === '/calendario' && fallo) throw new Error('Sin conexión');
+    return { data: [] };
+  });
+  render(<MemoryRouter><DashboardPage /></MemoryRouter>);
+  await screen.findByText(/No se pudo consultar la agenda/);
+  expect(screen.queryByText('Tu agenda está despejada')).toBeNull();
+  fallo = false;
+  fireEvent.click(screen.getByRole('button', { name: 'Reintentar agenda' }));
+  await screen.findByText('Tu agenda está despejada');
+});

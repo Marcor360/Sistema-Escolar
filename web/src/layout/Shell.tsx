@@ -27,6 +27,14 @@ const secciones = [
   { destino: '/configuracion', etiqueta: 'Configuración', roles: ['SUPERADMIN'] },
 ];
 
+const gruposMenu = [
+  { titulo: 'Inicio y seguimiento', rutas: ['/', '/calendario', '/avisos'] },
+  { titulo: 'Control escolar', rutas: ['/alumnos', '/docentes', '/materias', '/grupos', '/operaciones'] },
+  { titulo: 'Docencia', rutas: ['/maestro', '/calificaciones', '/conducta'] },
+  { titulo: 'Finanzas e informes', rutas: ['/finanzas', '/analitica'] },
+  { titulo: 'Administración', rutas: ['/planteles', '/biblioteca', '/usuarios', '/configuracion'] },
+];
+
 const iconosPorRuta: Record<string, NombreIcono> = {
   '/': 'layout-dashboard',
   '/biblioteca': 'book',
@@ -184,14 +192,23 @@ export function Shell() {
         </p>
         <div className="menu-panel">
           <nav id="navegacion-escolar" aria-label="Navegación principal">
-            {secciones
-              .filter((s) => tieneRol(...s.roles))
-              .map((s) => (
-                <NavLink key={s.destino} to={s.destino} end={s.destino === '/'} onClick={navegarDesdeMenu}>
-                  <IconoTabler nombre={iconosPorRuta[s.destino]} />
-                  <span>{s.etiqueta}</span>
-                </NavLink>
-              ))}
+            {gruposMenu.map((grupo) => {
+              const opciones = grupo.rutas
+                .map((ruta) => secciones.find((seccion) => seccion.destino === ruta)!)
+                .filter((seccion) => tieneRol(...seccion.roles));
+              if (!opciones.length) return null;
+              return (
+                <div className="menu-grupo" key={grupo.titulo} role="group" aria-label={grupo.titulo}>
+                  <p className="menu-grupo-titulo">{grupo.titulo}</p>
+                  {opciones.map((s) => (
+                    <NavLink key={s.destino} to={s.destino} end={s.destino === '/'} onClick={navegarDesdeMenu}>
+                      <IconoTabler nombre={iconosPorRuta[s.destino]} />
+                      <span>{s.etiqueta}</span>
+                    </NavLink>
+                  ))}
+                </div>
+              );
+            })}
           </nav>
           <div className="lateral-pie">
             <p>{sesion?.nombre}</p>
