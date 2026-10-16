@@ -33,5 +33,6 @@ import { NotificacionesModule } from '../notificaciones/notificaciones.module';
   ],
   providers: [AuthService, ActivacionService, JwtStrategy, SesionesLimpiezaService],
   controllers: [AuthController],
+  exports: [ActivacionService],
 })
 export class AuthModule {}
