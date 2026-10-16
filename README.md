@@ -8,7 +8,7 @@ API, portal administrativo/docente y app del alumno para gestión académica y f
 |---|---|
 | API y web | Candidata técnica a primera beta funcional; aceptación del piloto pendiente |
 | App del alumno | Candidata a beta del alumno; arranque corregido, pruebas físicas pendientes |
-| Base de datos | Baseline v1 y ocho migraciones incrementales espejo; MySQL 8.4 / SQL Server 2022 probados en CI |
+| Base de datos | Baseline v1 y diez migraciones incrementales espejo; MySQL 8.4 / SQL Server 2022 probados en CI |
 | ETL de legado | Prototipo parcial; no listo para migración institucional general |
 
 Esta candidata parte de 1.24.0-beta.2 y consolida los PR #71–#74 (controles visuales, diagnóstico de logotipos, URL HTTPS móvil y edición de planteles); estos cambios no certifican por sí solos la recuperación de imágenes ni un despliegue en staging. La base anterior incorpora las 30 mejoras de beta.1 y las entregas de la auditoría de recorridos: guía de configuración, tablas adaptables, importación de notas, edición de eventos, biblioteca privada, boleta móvil y caché de lectura. Consulte el [estado de ejecución y las puertas de aceptación de beta.2](docs/EJECUCION_BETA_1.24.0-beta.2.md). La aceptación de beta requiere un piloto controlado; todavía no se declara primera versión estable de producción. La versión numérica no certifica despliegue, aceptación institucional ni publicación de la app. Consulte las [30 mejoras y condiciones de beta](docs/PREPARACION_BETA_1.24.0-beta.1.md), la [auditoría base](docs/AUDITORIA_ESTADO_1.23.5_2026-10-13.md) y su [inventario de 495 archivos](docs/auditoria/INVENTARIO_1.23.5_2026-10-13.csv).
@@ -74,7 +74,7 @@ Para generar un APK directamente en Windows con Android SDK y Gradle, consultar 
 
 ## Base de datos y seguridad
 
-Los esquemas de ambos motores documentan 39 tablas, con baseline `v1` y diez migraciones incrementales pendientes ordenadas en el manifiesto de cada motor. Su estado en un servidor existente debe consultarse: no se certificó la base productiva. Los últimos PR de interfaz no cambian el esquema. [Procedimiento y manifiestos](docs/MIGRACIONES.md).
+Los esquemas de ambos motores documentan 42 tablas, con baseline `v1` y diez migraciones incrementales posteriores al baseline, ordenadas en el manifiesto de cada motor. Su estado en un servidor existente debe consultarse: no se certificó la base productiva. Los últimos PR de interfaz no cambian el esquema. [Procedimiento y manifiestos](docs/MIGRACIONES.md).
 
 La API aplica autorización centralizada, validación de datos, límites de solicitudes, contraseñas con hash, acceso de corta duración y refresh rotativo con revocación. El portal usa refresh en cookie HttpOnly/SameSite Strict y acceso en memoria; la app usa SecureStore. Producción exige configuración TLS y secretos adecuados. El portal dispone de CSP y cabeceras de seguridad. Uploads no se publican como carpeta estática; las descargas verifican firma, sesión y permisos. La configuración y operación siguen siendo responsabilidad del despliegue.
 
