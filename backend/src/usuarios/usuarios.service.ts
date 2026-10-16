@@ -13,6 +13,7 @@ import { Docente } from '../entities/docente.entity';
 import { UsuarioPlantel } from '../entities/usuario-plantel.entity';
 import { PasswordResetToken } from '../entities/password-reset-token.entity';
 import { ActivacionToken } from '../entities/activacion-token.entity';
+import { BitacoraActividad } from '../entities/bitacora-actividad.entity';
 import { JwtUser } from '../common/current-user.decorator';
 import { ScopeService } from '../planteles/scope.service';
 import { ListadoUsuariosDto } from './usuarios.dto';
@@ -69,6 +70,7 @@ export class UsuariosService {
       await usuarios.save(usuario);
       await manager.getRepository(PasswordResetToken).update({ usuarioId: id, usado: false }, { usado: true });
       await manager.getRepository(ActivacionToken).update({ usuarioId: id, usado: false }, { usado: true });
+      await manager.getRepository(BitacoraActividad).insert({ usuarioId: actor.sub, metodo: 'POST', ruta: '/api/usuarios/:id/restablecer-password', entidad: 'Usuario', entidadId: id, resultado: 'EXITO', statusCode: 201 });
       return { mensaje: 'Contraseña restablecida. El usuario deberá cambiarla al iniciar sesión.' };
     });
   }
