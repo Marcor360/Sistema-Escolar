@@ -38,8 +38,8 @@ export default function AlumnosPage() {
   const { tieneRol } = useAuth();
   const puedeGestionar = tieneRol('ADMINISTRATIVO');
   const puedeCrear = tieneRol('FINANZAS', 'SUPERADMIN');
-  const mostrarFormulario = puedeCrear || (puedeGestionar && editando !== null);
   const [editando, setEditando] = useState<number | null>(null);
+  const mostrarFormulario = puedeCrear || (puedeGestionar && editando !== null);
   const [enviando, setEnviando] = useState(false);
   const [transferencia, setTransferencia] = useState<Alumno | null>(null);
   const [destino, setDestino] = useState('');
