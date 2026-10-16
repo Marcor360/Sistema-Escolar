@@ -79,6 +79,13 @@ export default function InicioScreen() {
     }
   };
 
+  const accesos = [
+    { ruta: 'Materias', titulo: 'Materias y tareas', detalle: 'Abre una materia para ver materiales, actividades y entregas.' },
+    { ruta: 'Calificaciones', titulo: 'Ver últimas calificaciones', detalle: 'Consulta tus parciales y promedios por materia.' },
+    { ruta: 'Pagos', titulo: 'Estado de cuenta', detalle: 'Revisa tus cargos, pagos registrados y saldo pendiente.' },
+    { ruta: 'Perfil', titulo: 'Perfil y documentos', detalle: 'Consulta tus datos y los documentos de tu expediente.' },
+  ];
+
   const nombre = sesion?.nombre.split(" ")[0] ?? "";
 
   return (
@@ -94,7 +101,7 @@ export default function InicioScreen() {
           Hola, {nombre}
         </Text>
         <Text style={estilos.introduccion}>
-          Consulta tu saldo, tus calificaciones y las novedades del plantel.
+          Elige qué necesitas consultar. Tus avisos y próximos eventos aparecen más abajo.
         </Text>
       </View>
       {error !== "" && (
@@ -133,20 +140,33 @@ export default function InicioScreen() {
             >
               Saldo pendiente
             </Text>
+            <Text style={{ color: textoSobreFondo(colores.pizarra), marginTop: espacio.sm }}>
+              {saldo === null
+                ? 'No se pudo consultar tu saldo. Abre Estado de cuenta para reintentar.'
+                : saldo > 0
+                  ? 'Consulta el detalle de los cargos en Estado de cuenta.'
+                  : saldo === 0
+                    ? 'No tienes saldo pendiente en esta consulta.'
+                    : 'Consulta el detalle de tu saldo a favor en Estado de cuenta.'}
+            </Text>
           </View>
         </View>
       )}
 
-      {cargaInicialCompleta && (
+      <Text accessibilityRole="header" style={estilos.subtitulo}>¿Qué necesitas hacer?</Text>
+      {accesos.map((acceso) => (
         <TouchableOpacity
+          key={acceso.ruta}
           accessibilityRole="button"
-          accessibilityLabel="Ver últimas calificaciones"
-          style={estilos.botonCalificaciones}
-          onPress={() => navigation.navigate('Calificaciones' as never)}
+          accessibilityLabel={acceso.titulo}
+          accessibilityHint={acceso.detalle}
+          style={estilos.acceso}
+          onPress={() => navigation.navigate(acceso.ruta as never)}
         >
-          <Text style={estilos.botonCalificacionesTexto}>Ver últimas calificaciones →</Text>
+          <Text style={base.tituloTarjeta}>{acceso.titulo} →</Text>
+          <Text style={base.secundario}>{acceso.detalle}</Text>
         </TouchableOpacity>
-      )}
+      ))}
       {cargaInicialCompleta && <Text style={estilos.subtitulo}>Avisos</Text>}
       {cargaInicialCompleta && avisos === null && (
         <Text style={base.secundario}>
@@ -211,8 +231,7 @@ export default function InicioScreen() {
 const estilos = StyleSheet.create({
   encabezado: { backgroundColor: colores.pizarra, borderRadius: radio.md, padding: espacio.xl, marginBottom: espacio.xl, borderBottomWidth: 3, borderBottomColor: colores.dorado },
   distintivo: { color: colores.dorado, fontSize: 11, fontWeight: '700', letterSpacing: 1.2, marginBottom: espacio.md },
-  botonCalificaciones: { minHeight: 48, backgroundColor: colores.pizarra, borderRadius: radio.md, padding: espacio.md, justifyContent: "center", marginBottom: espacio.lg },
-  botonCalificacionesTexto: { color: textoSobreFondo(colores.pizarra), fontWeight: "700", textAlign: "center" },
+  acceso: { backgroundColor: "#fff", borderWidth: 1, borderColor: colores.linea, borderRadius: radio.md, padding: espacio.lg, marginBottom: espacio.md, minHeight: 64 },
   error: {
     borderWidth: 1,
     borderColor: colores.peligro,

@@ -1,3 +1,4 @@
+import Inicio from "./Inicio";
 import ActivarCuenta from "./ActivarCuenta";
 import Calificaciones from "./Calificaciones";
 import React, { useEffect, type ReactElement, type ReactNode } from "react";
@@ -13,6 +14,7 @@ import { Alert, AppState, Linking, ScrollView, Text, TouchableOpacity } from "re
 import * as DocumentPicker from "expo-document-picker";
 const sesion = vi.hoisted(() => ({
   sub: 1 as number | null,
+  navegar: vi.fn(),
   iniciar: vi.fn(),
   cerrar: vi.fn(),
   finalizarSesionLocal: vi.fn(),
@@ -42,6 +44,7 @@ vi.mock("../marca", () => ({
 vi.mock("../push", () => ({ activarPush: vi.fn(), desactivarPush: vi.fn() }));
 vi.mock("expo-document-picker", () => ({ getDocumentAsync: vi.fn() }));
 vi.mock("@react-navigation/native", () => ({
+  useNavigation: () => ({ navigate: sesion.navegar }),
   useFocusEffect: (efecto: () => void | (() => void)) =>
     useEffect(efecto, [efecto]),
 }));
@@ -608,4 +611,30 @@ it("CURP se oculta por defecto y vuelve a ocultarse tras 30 segundos", async () 
     await act(async () => { vi.advanceTimersByTime(30_000); });
     expect(texto()).not.toContain(curp);
   } finally { vi.useRealTimers(); }
+});
+
+
+it("inicio permite abrir las secciones aunque el resumen siga cargando", async () => {
+  vi.mocked(api.get).mockImplementation(() => new Promise(() => {}));
+  await montar(<Inicio />);
+  for (const [titulo, ruta] of [
+    ["Materias y tareas", "Materias"],
+    ["Ver últimas calificaciones", "Calificaciones"],
+    ["Estado de cuenta", "Pagos"],
+    ["Perfil y documentos", "Perfil"],
+  ]) {
+    await act(async () => vista.root.findByProps({ accessibilityLabel: titulo }).props.onPress());
+    expect(sesion.navegar).toHaveBeenLastCalledWith(ruta);
+  }
+});
+
+it("inicio no confunde un saldo no disponible con no tener adeudos", async () => {
+  vi.mocked(api.get).mockImplementation(async (ruta) => {
+    if (ruta === "/finanzas/me/estado-cuenta") throw new Error("Sin respuesta");
+    return { data: [] };
+  });
+  await montar(<Inicio />);
+  const textos = vista.root.findAllByType(Text).map((nodo) => nodo.props.children).flat().join(" ");
+  expect(textos).toContain("No se pudo consultar tu saldo");
+  expect(textos).not.toContain("No tienes saldo pendiente");
 });

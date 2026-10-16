@@ -92,7 +92,7 @@ export default function DashboardPage() {
   };
   const hoy = new Date();
   const en30dias = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-  const { datos: eventos } = useDatos<Evento[]>(
+  const { datos: eventos, cargando: cargandoEventos, error: errorEventos, recargar: recargarEventos } = useDatos<Evento[]>(
     () =>
       api
         .get('/calendario', {
@@ -234,7 +234,14 @@ export default function DashboardPage() {
             </div>
             <span className="rango-eventos">Próximos 30 días</span>
           </div>
-          {eventos.length > 0 ? (
+          {cargandoEventos ? (
+            <p className="estado-dashboard" role="status">Cargando próximos eventos…</p>
+          ) : errorEventos ? (
+            <div className="mensaje-error" role="alert">
+              <p>No se pudo consultar la agenda. {errorEventos}</p>
+              <button className="boton secundario chico" onClick={recargarEventos}>Reintentar agenda</button>
+            </div>
+          ) : eventos.length > 0 ? (
             <div className="lista-eventos">
               {eventos.slice(0, 5).map((ev) => (
                 <article className="evento" key={ev.id}>
