@@ -88,12 +88,15 @@ export default function InicioScreen() {
         <RefreshControl refreshing={cargando} onRefresh={cargar} />
       }
     >
-      <Text style={estilos.saludo} accessibilityRole="header">
-        Hola, {nombre}
-      </Text>
-      <Text style={estilos.introduccion}>
-        Consulta tu saldo, tus calificaciones y las novedades del plantel.
-      </Text>
+      <View style={estilos.encabezado}>
+        <Text style={estilos.distintivo}>IUA · TU ESPACIO ESCOLAR</Text>
+        <Text style={estilos.saludo} accessibilityRole="header">
+          Hola, {nombre}
+        </Text>
+        <Text style={estilos.introduccion}>
+          Consulta tu saldo, tus calificaciones y las novedades del plantel.
+        </Text>
+      </View>
       {error !== "" && (
         <View accessibilityRole="alert" style={estilos.error}>
           <Text style={estilos.errorTexto}>{error}</Text>
@@ -206,6 +209,8 @@ export default function InicioScreen() {
 }
 
 const estilos = StyleSheet.create({
+  encabezado: { backgroundColor: colores.pizarra, borderRadius: radio.md, padding: espacio.xl, marginBottom: espacio.xl, borderBottomWidth: 3, borderBottomColor: colores.dorado },
+  distintivo: { color: colores.dorado, fontSize: 11, fontWeight: '700', letterSpacing: 1.2, marginBottom: espacio.md },
   botonCalificaciones: { minHeight: 48, backgroundColor: colores.pizarra, borderRadius: radio.md, padding: espacio.md, justifyContent: "center", marginBottom: espacio.lg },
   botonCalificacionesTexto: { color: textoSobreFondo(colores.pizarra), fontWeight: "700", textAlign: "center" },
   error: {
@@ -223,14 +228,14 @@ const estilos = StyleSheet.create({
   },
   saludo: {
     fontSize: tipografia.titulo,
-    color: colores.tinta,
+    color: textoSobreFondo(colores.pizarra),
     marginBottom: 4,
     fontWeight: "700",
   },
   introduccion: {
     fontSize: tipografia.secundaria,
-    color: colores.gris,
-    marginBottom: espacio.xl,
+    color: textoSobreFondo(colores.pizarra),
+    marginBottom: 0,
   },
   resumen: {
     flexDirection: "row",
