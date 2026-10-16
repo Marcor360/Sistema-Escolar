@@ -111,7 +111,7 @@ it('permite a SUPERADMIN corregir datos y estatus mediante el PATCH existente', 
   await within(listado).findByText('Plantel A');
   fireEvent.click(within(listado).getAllByRole('button', { name: 'Editar' })[0]);
   fireEvent.change(screen.getByLabelText('Nombre del plantel'), { target: { value: 'Plantel Corregido' } });
-  fireEvent.change(screen.getByLabelText('Municipio'), { target: { value: 'Chalco' } });
+  fireEvent.change(screen.getByLabelText('Municipio', { selector: '#editar-plantel-municipio' }), { target: { value: 'Chalco' } });
   fireEvent.change(screen.getByLabelText('Estatus'), { target: { value: 'inactivo' } });
   fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
   await screen.findByText('Datos del plantel actualizados.');
