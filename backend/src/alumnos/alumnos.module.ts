@@ -7,9 +7,10 @@ import { AlumnosService } from './alumnos.service';
 import { AlumnosController } from './alumnos.controller';
 import { UsuariosModule } from '../usuarios/usuarios.module';
 import { PlantelesModule } from '../planteles/planteles.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Alumno, Inscripcion, GrupoMateria]), UsuariosModule, PlantelesModule],
+  imports: [TypeOrmModule.forFeature([Alumno, Inscripcion, GrupoMateria]), UsuariosModule, PlantelesModule, AuthModule],
   providers: [AlumnosService],
   controllers: [AlumnosController],
   exports: [AlumnosService],

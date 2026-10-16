@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AlumnosService } from './alumnos.service';
+import { ActivacionService } from '../auth/activacion.service';
 import { ActualizarAlumnoDto, CrearAlumnoDto, ListarAlumnosDto, TransferirAlumnoDto, ReactivarAlumnoDto } from './alumnos.dto';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { RolesGuard } from '../common/roles.guard';
@@ -12,7 +13,7 @@ import { CurrentUser, JwtUser } from '../common/current-user.decorator';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('alumnos')
 export class AlumnosController {
-  constructor(private readonly service: AlumnosService) {}
+  constructor(private readonly service: AlumnosService, private readonly activacion: ActivacionService) {}
 
   // --- Portal/app del alumno ---
   @Get('me/materias')
@@ -51,8 +52,11 @@ export class AlumnosController {
   @ApiResponse({ status: 409, description: 'Correo o matrícula ya registrados' })
   @Post()
   @Roles('FINANZAS')
-  crear(@Body() dto: CrearAlumnoDto, @CurrentUser() user: JwtUser) {
-    return this.service.crear(dto, user);
+  async crear(@Body() dto: CrearAlumnoDto, @CurrentUser() user: JwtUser) {
+    const alumno = await this.service.crear(dto, user);
+    // Encolar solo después del commit: la cuenta no debe recibir invitación si el alta falló.
+    await this.activacion.solicitar(dto.email);
+    return alumno;
   }
 
   @ApiOperation({ summary: 'Corregir datos de alumno; estatus y plantel requieren acciones explícitas' })
