@@ -1,4 +1,4 @@
-# Estado de implementación — 1.24.0-beta.2
+# Estado de implementación — 1.25.0-beta.1
 
 Corte documental: 14 de octubre de 2026. Código de referencia: main, commit 54a5759cb098a856774e897c4f88dcccebfd2a4b, tras integrar #42, #43 y #44. Esta revisión no modifica funcionalidades, contraseñas ni bases institucionales.
 
