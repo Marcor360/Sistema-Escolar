@@ -15,7 +15,7 @@ import {
   View,
 } from "react-native";
 import { Text } from "../components/Texto";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { api, mensajeDeError } from "../api/client";
 import { useSesion } from "../sesion";
 import { colores, radio, espacio, tipografia, textoSobreFondo } from "../theme";
@@ -24,7 +24,7 @@ import { base, Tarjeta } from "./comunes";
 
 export default function InicioScreen() {
   const { sesion } = useSesion();
-  const [pendientes, setPendientes] = useState<number | null>(null);
+  const navigation = useNavigation();
   const [saldo, setSaldo] = useState<number | null>(null);
   const [avisos, setAvisos] = useState<AvisoInicio[] | null>(null);
   const [eventos, setEventos] = useState<EventoInicio[] | null>(null);
@@ -41,7 +41,6 @@ export default function InicioScreen() {
     void lectura.current.cargar(
       () => obtenerResumenInicio(hoy, en30),
       (datos) => {
-        setPendientes(datos.pendientes);
         setSaldo(datos.saldo);
         setAvisos(datos.avisos);
         setEventos(datos.eventos);
@@ -93,7 +92,7 @@ export default function InicioScreen() {
         Hola, {nombre}
       </Text>
       <Text style={estilos.introduccion}>
-        Aquí encontrarás tus actividades, avisos y próximos eventos.
+        Consulta tu saldo, tus calificaciones y las novedades del plantel.
       </Text>
       {error !== "" && (
         <View accessibilityRole="alert" style={estilos.error}>
@@ -121,24 +120,6 @@ export default function InicioScreen() {
                 { color: textoSobreFondo(colores.pizarra) },
               ]}
             >
-              {pendientes ?? "—"}
-            </Text>
-            <Text
-              style={[
-                estilos.kpiEtiqueta,
-                { color: textoSobreFondo(colores.pizarra) },
-              ]}
-            >
-              Tareas por entregar
-            </Text>
-          </View>
-          <View style={estilos.kpi}>
-            <Text
-              style={[
-                estilos.kpiValor,
-                { color: textoSobreFondo(colores.pizarra) },
-              ]}
-            >
               {saldo === null ? "—" : pesos(saldo)}
             </Text>
             <Text
@@ -153,6 +134,16 @@ export default function InicioScreen() {
         </View>
       )}
 
+      {cargaInicialCompleta && (
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Ver últimas calificaciones"
+          style={estilos.botonCalificaciones}
+          onPress={() => navigation.navigate('Calificaciones' as never)}
+        >
+          <Text style={estilos.botonCalificacionesTexto}>Ver últimas calificaciones →</Text>
+        </TouchableOpacity>
+      )}
       {cargaInicialCompleta && <Text style={estilos.subtitulo}>Avisos</Text>}
       {cargaInicialCompleta && avisos === null && (
         <Text style={base.secundario}>
@@ -215,6 +206,8 @@ export default function InicioScreen() {
 }
 
 const estilos = StyleSheet.create({
+  botonCalificaciones: { minHeight: 48, backgroundColor: colores.pizarra, borderRadius: radio.md, padding: espacio.md, justifyContent: "center", marginBottom: espacio.lg },
+  botonCalificacionesTexto: { color: textoSobreFondo(colores.pizarra), fontWeight: "700", textAlign: "center" },
   error: {
     borderWidth: 1,
     borderColor: colores.peligro,
