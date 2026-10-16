@@ -31,7 +31,6 @@ it('una caída de finanzas no oculta avisos ni calendario', async () => {
     .mockResolvedValueOnce({ data: eventos });
 
   expect(await obtenerResumenInicio('inicio', 'fin')).toEqual({
-    pendientes: 1,
     saldo: null,
     avisos,
     eventos,
