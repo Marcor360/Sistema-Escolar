@@ -1,3 +1,4 @@
+import { EliminarRegistro } from '../components/EliminarRegistro';
 import { FORM_INICIAL } from '../features/alumnos/tipos';
 import { FormularioAlumno } from '../features/alumnos/FormularioAlumno';
 import { HistorialAlumno } from '../features/alumnos/HistorialAlumno';
@@ -206,7 +207,7 @@ export default function AlumnosPage() {
               <td data-etiqueta="Correo">{a.usuario.email}</td>
               <td data-etiqueta="Estatus"><span className={`sello ${a.estatus === 'ACTIVO' ? 'ok' : 'neutro'}`}>{a.estatus}</span></td>
               <td data-etiqueta="Acciones" className="derecha">
-                <span className="acciones-fila">
+                <span className="acciones-fila"><EliminarRegistro ruta={`/alumnos/${a.id}`} nombre={`alumno ${a.matricula}`} deshabilitado={enviando} alEliminar={() => { setEditando(null); setForm(FORM_INICIAL); setHistorial(null); setTransferencia(null); setMensaje('Alumno y cuenta eliminados definitivamente'); recargarListado(); }} />
                   {puedeGestionar && <button className="boton secundario chico" onClick={() => verHistorial(a)}>Historial y boleta</button>}
                   {puedeGestionar && <>
                     <button disabled={enviando} className="boton secundario chico" onClick={() => editar(a)}>Editar</button>

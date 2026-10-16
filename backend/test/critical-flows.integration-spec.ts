@@ -1,3 +1,4 @@
+import { registrarEliminacion } from './integration/eliminacion.cases';
 import { registrarBeta } from './integration/beta.cases';
 import { registrarRebarrido } from './integration/rebarrido.cases';
 import { registrarBarrido } from './integration/barrido.cases';
@@ -436,6 +437,7 @@ Object.keys(casos).map(Number).sort((a,b) => a-b).forEach((id) => casos[id](cont
   registrarRecorridoFinanciero(contexto);
   registrarBarrido(contexto);
   registrarRebarrido(contexto);
+  registrarEliminacion(contexto);
 
   afterAll(async () => {
     if (archivoPrueba) {
