@@ -32,7 +32,14 @@ export const CABECERAS: Record<TipoImportacion, string[]> = {
 export class ImportacionesService {
   private readonly cifrado: PreviewCifrado;
   constructor(private readonly ds: DataSource, private readonly scope: ScopeService, config: ConfigService) { this.cifrado = new PreviewCifrado(config.getOrThrow<string>('JWT_SECRET')); }
-  private autorizar(tipo: TipoImportacion, user: JwtUser) { if (tipo === 'CALIFICACIONES') throw new BadRequestException('Utiliza la importación desde Calificaciones'); if (tipo === 'PERSONAL' && !user.roles.includes('SUPERADMIN')) throw new ForbiddenException('Importar personal corresponde a Superadmin'); }
+  private autorizar(tipo: TipoImportacion, user: JwtUser) {
+    if (tipo === 'CALIFICACIONES') throw new BadRequestException('Utiliza la importación desde Calificaciones');
+    if (user.roles.includes('SUPERADMIN')) return;
+    if (tipo === 'ALUMNOS' && user.roles.includes('FINANZAS')) return;
+    if (tipo !== 'ALUMNOS' && tipo !== 'PERSONAL' && user.roles.includes('ADMINISTRATIVO')) return;
+    throw new ForbiddenException('No tienes permiso para importar este tipo de registros');
+  }
+  validarTipo(tipo: TipoImportacion, user: JwtUser) { this.autorizar(tipo, user); }
   private preparar(tipo: TipoImportacion, fila: Fila) {
     const datos: Record<string, unknown> = Object.fromEntries(Object.entries(fila).filter(([, v]) => v !== ''));
     if (Object.keys(fila).some((k) => !CABECERAS[tipo].includes(k))) throw new BadRequestException('Hay columnas no admitidas; descarga la plantilla');
