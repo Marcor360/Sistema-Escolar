@@ -12,12 +12,13 @@ import { CurrentUser, JwtUser } from '../common/current-user.decorator';
 import { ConfirmarImportacionDto, TipoImportacionDto } from './importaciones.dto';
 import { ImportacionesService } from './importaciones.service';
 @ApiTags('importaciones') @ApiBearerAuth() @ApiErroresOperacion()
-@UseGuards(JwtAuthGuard, RolesGuard) @Roles('ADMINISTRATIVO') @Controller('importaciones')
+@UseGuards(JwtAuthGuard, RolesGuard) @Roles('ADMINISTRATIVO', 'FINANZAS') @Controller('importaciones')
 export class ImportacionesController {
   constructor(private readonly service: ImportacionesService) {}
   @ApiOperation({ summary: 'Plantilla XLSX por tipo; personal reservado a Superadmin al confirmar' })
   @ApiOkResponse({ content: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': { schema: { type: 'string', format: 'binary' } } } })
-  @Get('plantilla') async plantilla(@Query() dto: TipoImportacionDto, @Res() res: Response) {
+  @Get('plantilla') async plantilla(@Query() dto: TipoImportacionDto, @CurrentUser() user: JwtUser, @Res() res: Response) {
+    this.service.validarTipo(dto.tipo, user);
     const libro = crearPlantillaImportacion(dto.tipo);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); res.setHeader('Content-Disposition', `attachment; filename="plantilla_${dto.tipo.toLowerCase()}.xlsx"`);
     res.send(Buffer.from(await libro.xlsx.writeBuffer()));
