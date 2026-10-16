@@ -148,7 +148,7 @@ describe('AuthService.forgotPassword / resetPassword', () => {
 
     expect(tokens.save).toHaveBeenCalledTimes(1);
     const guardado = tokens.save.mock.calls[0][0];
-    const tokenEnClaro = notificaciones.enviarEmail.mock.calls[0][2].match(/<b>(.*)<\/b>/)?.[1];
+    const tokenEnClaro = notificaciones.enviarEmail.mock.calls[0][2].match(/<strong[^>]*>([a-f0-9]{32})<\/strong>/)?.[1];
     expect(guardado.token).toMatch(/^[0-9a-f]{64}$/);
     expect(guardado.token).not.toBe(tokenEnClaro);
     expect(guardado.token).toBe(createHash('sha256').update(tokenEnClaro).digest('hex'));
