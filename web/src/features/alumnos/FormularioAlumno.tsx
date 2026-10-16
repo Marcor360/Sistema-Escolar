@@ -56,15 +56,15 @@ export function FormularioAlumno({
               <small id="ayuda-matricula">Identificador único de hasta 20 caracteres.</small>
             </div>
             <div className="campo">
-              <label htmlFor="alumno-nombre">Nombre(s) *</label>
+              <label htmlFor="alumno-nombre">Nombre *</label>
               <input id="alumno-nombre" required maxLength={80} autoComplete="given-name" {...dar('nombre')} />
             </div>
             <div className="campo">
-              <label htmlFor="alumno-paterno">Apellido paterno *</label>
+              <label htmlFor="alumno-paterno">Primer apellido *</label>
               <input id="alumno-paterno" required maxLength={80} autoComplete="family-name" {...dar('apellidoPaterno')} />
             </div>
             <div className="campo">
-              <label htmlFor="alumno-materno">Apellido materno</label>
+              <label htmlFor="alumno-materno">Segundo apellido</label>
               <input id="alumno-materno" maxLength={80} {...dar('apellidoMaterno')} />
             </div>
             <div className="campo">
