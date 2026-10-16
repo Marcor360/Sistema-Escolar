@@ -34,6 +34,7 @@ export class EliminacionService {
 
   async eliminar(tipo: TipoEliminacion, id: number, actor: JwtUser) {
     if (!actor.roles.includes('SUPERADMIN')) throw new ForbiddenException('Solo SUPERADMIN puede eliminar definitivamente');
+    for (let intento = 0; ; intento++) {
     try {
       return await this.dataSource.transaction('SERIALIZABLE', async (manager) => {
         // Serializa estas operaciones y vuelve a comprobar al actor en la base.
@@ -96,12 +97,24 @@ export class EliminacionService {
       });
     } catch (error) {
       if (error instanceof QueryFailedError) {
-        const driver = error.driverError as { code?: string; number?: number; errno?: number };
-        if (driver.errno === 1451 || driver.number === 547 || driver.code === 'ER_ROW_IS_REFERENCED_2') {
+        const driver = error.driverError as {
+          code?: string; number?: number; errno?: number;
+          originalError?: { info?: { number?: number } };
+        };
+        const numero = driver.number ?? driver.originalError?.info?.number;
+        // El motor ya revirtió la transacción víctima: repetirla completa conserva atomicidad.
+        const interbloqueo = numero === 1205 || driver.errno === 1213 || driver.code === 'ER_LOCK_DEADLOCK';
+        if (interbloqueo) {
+          if (intento >= 2) throw new ConflictException('El registro está siendo modificado. Reintenta la eliminación');
+          await new Promise((resolver) => setTimeout(resolver, 25 * (intento + 1)));
+          continue;
+        }
+        if (driver.errno === 1451 || numero === 547 || driver.code === 'ER_ROW_IS_REFERENCED_2') {
           throw new ConflictException('No se puede eliminar: existen registros vinculados. Conserva el historial usando la baja o desactivación');
         }
       }
       throw error;
+    }
     }
   }
 
