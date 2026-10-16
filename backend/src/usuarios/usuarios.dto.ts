@@ -50,3 +50,8 @@ export class ListadoUsuariosDto extends PaginacionDto {
 export class ActualizarPersonalDto extends ActualizarUsuarioDto {
   @IsArray() @Type(() => Number) @IsInt({ each: true }) @Min(1, { each: true }) plantelIds!: number[];
 }
+
+/** Restablecimiento por personal autorizado: nunca solicita la contraseña anterior del titular. */
+export class RestablecerPasswordAdministrativoDto {
+  @IsString() @MinLength(8) @PasswordNuevaValida() nueva!: string;
+}

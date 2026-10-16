@@ -8,9 +8,12 @@ import { Alumno } from '../entities/alumno.entity';
 import { Docente } from '../entities/docente.entity';
 import { UsuarioPlantel } from '../entities/usuario-plantel.entity';
 import { PlantelesModule } from '../planteles/planteles.module';
+import { BitacoraActividad } from '../entities/bitacora-actividad.entity';
+import { PasswordResetToken } from '../entities/password-reset-token.entity';
+import { ActivacionToken } from '../entities/activacion-token.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Usuario, Rol, Alumno, Docente, UsuarioPlantel]), PlantelesModule],
+  imports: [TypeOrmModule.forFeature([Usuario, Rol, Alumno, Docente, UsuarioPlantel, BitacoraActividad, PasswordResetToken, ActivacionToken]), PlantelesModule],
   providers: [UsuariosService],
   controllers: [UsuariosController],
   exports: [UsuariosService],
