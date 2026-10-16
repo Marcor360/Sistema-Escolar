@@ -11,6 +11,7 @@ export default function ConfiguracionPage() {
   const [archivo, setArchivo] = useState<File | null>(null);
   const [vistaPrevia, setVistaPrevia] = useState<string | null>(null);
   const [mensaje, setMensaje] = useState('');
+  const [logoNoDisponible, setLogoNoDisponible] = useState(false);
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState(false);
   const mutando = useRef(false);
@@ -27,6 +28,7 @@ export default function ConfiguracionPage() {
   const seleccionarLogo = (evento: ChangeEvent<HTMLInputElement>) => {
     if (vistaPrevia) URL.revokeObjectURL(vistaPrevia);
     const seleccionado = evento.target.files?.[0] ?? null;
+    setLogoNoDisponible(false);
     setArchivo(seleccionado);
     setVistaPrevia(seleccionado ? URL.createObjectURL(seleccionado) : null);
   };
@@ -44,6 +46,7 @@ export default function ConfiguracionPage() {
       }
       await recargar();
       setArchivo(null); setVistaPrevia(null);
+      setLogoNoDisponible(false);
       setMensaje('Identidad institucional actualizada.');
     } catch (err) {
       setError(mensajeDeError(err));
@@ -68,6 +71,7 @@ export default function ConfiguracionPage() {
   };
 
   const logoVisible = vistaPrevia || (marca.logoUrl ? archivosBase + marca.logoUrl : null);
+  useEffect(() => { setLogoNoDisponible(false); }, [logoVisible]);
   return <>
     <header className="encabezado"><h1>Configuración institucional</h1><p className="detalle">Nombre, logo y colores de los clientes.</p></header>
     <form className="panel" onSubmit={guardar} aria-busy={guardando}>
@@ -80,7 +84,8 @@ export default function ConfiguracionPage() {
       <div className="campo configuracion-logo">
         <label htmlFor="logo">Logo (PNG, JPG o WebP; máximo 2 MB)</label>
         <input id="logo" type="file" accept=".png,.jpg,.jpeg,.webp" onChange={seleccionarLogo} />
-        {logoVisible && <img className="logo-marca vista-logo" src={logoVisible} alt="Vista previa del logo" />}
+        {logoVisible && !logoNoDisponible && <img className="logo-marca vista-logo" src={logoVisible} alt="Vista previa del logo" onError={() => setLogoNoDisponible(true)} />}
+        {logoNoDisponible && <p role="alert" className="mensaje-error">El logo no se puede mostrar. Verifica que la URL pública de archivos responda correctamente y que UPLOADS_DIR conserve los archivos tras los despliegues.</p>}
       </div>
       {error && <p role="alert" className="mensaje-error">{error}</p>}
       {mensaje && <p role="status" className="mensaje-ok">{mensaje}</p>}
