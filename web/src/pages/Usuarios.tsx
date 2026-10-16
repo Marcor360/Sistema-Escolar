@@ -80,8 +80,8 @@ export default function UsuariosPage() {
     setEnviando(true); setError(''); setMensaje('');
     try {
       if (editarId) await api.patch(`/usuarios/${editarId}/personal`, { nombre: form.nombre, apellidoPaterno: form.apellidoPaterno, apellidoMaterno: form.apellidoMaterno, telefono: form.telefono, ...(form.password ? { password: form.password } : {}), roles: rolesElegidos, plantelIds, activo });
-      else await api.post('/usuarios', { ...form, roles: rolesElegidos, plantelIds: plantelIds.length ? plantelIds : undefined });
-      setMensaje(`Cuenta ${form.email} ${editarId ? 'actualizada' : 'creada'}`); setForm(FORM_INICIAL); setEditarId(null); await cargar(1, tipo, plantelId, buscar);
+      else await api.post('/usuarios', { email: form.email, nombre: form.nombre, apellidoPaterno: form.apellidoPaterno, apellidoMaterno: form.apellidoMaterno, telefono: form.telefono, roles: rolesElegidos, plantelIds: plantelIds.length ? plantelIds : undefined });
+      setMensaje(editarId ? `Cuenta ${form.email} actualizada` : 'Cuenta creada. Si el correo está disponible, recibirá instrucciones para activarla.'); setForm(FORM_INICIAL); setEditarId(null); await cargar(1, tipo, plantelId, buscar);
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
@@ -92,12 +92,12 @@ export default function UsuariosPage() {
         <div className="campo"><label htmlFor="personal-nombre">Nombre</label><input id="personal-nombre" required value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} /></div>
         <div className="campo"><label htmlFor="personal-paterno">Apellido paterno</label><input id="personal-paterno" required value={form.apellidoPaterno} onChange={(e) => setForm({ ...form, apellidoPaterno: e.target.value })} /></div>
         <div className="campo"><label htmlFor="personal-correo">Correo</label><input id="personal-correo" type="email" disabled={editarId !== null} required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-        <div className="campo"><label htmlFor="personal-password">{editarId ? 'Nueva contraseña temporal (opcional)' : 'Contraseña temporal'}</label><input id="personal-password" type="password" autoComplete="new-password" required={editarId === null} minLength={8} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></div>
+        {editarId && <div className="campo"><label htmlFor="personal-password">Nueva contraseña temporal (opcional)</label><input id="personal-password" type="password" autoComplete="new-password" minLength={8} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></div>}
         <div className="campo"><label htmlFor="personal-materno">Apellido materno</label><input id="personal-materno" maxLength={80} value={form.apellidoMaterno} onChange={(e) => setForm({ ...form, apellidoMaterno: e.target.value })} /></div>
         <div className="campo"><label htmlFor="personal-telefono">Teléfono</label><input id="personal-telefono" type="tel" maxLength={20} value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} /></div>
       </div><div className="fila" style={{ marginTop: 12 }}>{ROLES_PERSONAL.map((rol) => <label className="casilla" key={rol}><input type="checkbox" checked={rolesElegidos.includes(rol)} onChange={() => alternarRol(rol)} />{rol}</label>)}<button disabled={enviando} className="boton">{enviando ? 'Guardando…' : editarId ? 'Guardar corrección' : 'Crear'}</button></div><fieldset><legend>Planteles de alcance</legend>{planteles.map((p) => <label key={p.id} className="casilla">
         <input type="checkbox" checked={plantelIds.includes(p.id)} onChange={() => setPlantelIds((ids) => ids.includes(p.id) ? ids.filter((id) => id !== p.id) : [...ids, p.id])} />{p.nombre}
-      </label>)}</fieldset>{editarId && <><label><input type="checkbox" checked={activo} onChange={(e) => setActivo(e.target.checked)} />Cuenta activa</label><button type="button" onClick={() => { setEditarId(null); setForm(FORM_INICIAL); }}>Cancelar edición</button></>}<p>La contraseña temporal exige cambio al ingresar. Las correcciones de roles, planteles o acceso revocan las sesiones anteriores.</p></fieldset></form>
+      </label>)}</fieldset>{editarId && <><label><input type="checkbox" checked={activo} onChange={(e) => setActivo(e.target.checked)} />Cuenta activa</label><button type="button" onClick={() => { setEditarId(null); setForm(FORM_INICIAL); }}>Cancelar edición</button></>}<p>{editarId ? 'La contraseña temporal exige cambio al ingresar.' : 'La cuenta se activa mediante una invitación enviada al correo institucional.'} Las correcciones de roles, planteles o acceso revocan las sesiones anteriores.</p></fieldset></form>
     </section>}
     {error && <p className="mensaje-error" role="alert">{error}</p>}{mensaje && <p className="mensaje-ok" role="status">{mensaje}</p>}
 
