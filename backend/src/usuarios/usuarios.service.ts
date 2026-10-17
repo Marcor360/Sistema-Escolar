@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto';
 import { hashPasswordNueva } from '../common/password-bcrypt';
 import { esMaestroRestringido } from '../common/politica-acceso';
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
@@ -5,7 +6,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, In, Repository, SelectQueryBuilder } from 'typeorm';
 import { Usuario } from '../entities/usuario.entity';
 import { Rol } from '../entities/rol.entity';
-import { ActualizarPersonalDto, ActualizarUsuarioDto, CrearUsuarioDto } from './usuarios.dto';
+import { ActualizarPersonalDto, ActualizarUsuarioDto, CrearUsuarioDto, CrearPersonalDto } from './usuarios.dto';
 import { RolClave } from '../common/roles.decorator';
 import { Plantel } from '../entities/plantel.entity';
 import { Alumno } from '../entities/alumno.entity';
@@ -214,7 +215,7 @@ export class UsuariosService {
     });
   }
 
-  async crearPersonal(dto: CrearUsuarioDto, user: JwtUser) {
+  async crearPersonal(dto: CrearPersonalDto, user: JwtUser) {
     if (dto.roles.some((rol) => rol === 'ALUMNO' || rol === 'MAESTRO')) throw new ConflictException('Crea la cuenta desde Alumnos o Docentes');
     if (!dto.roles.includes('SUPERADMIN') && !dto.plantelIds?.length) throw new ConflictException('Asigna al menos un plantel al personal');
     const ids = [...new Set(dto.plantelIds ?? [])];
@@ -223,7 +224,8 @@ export class UsuariosService {
       for (const id of ids) {
         if (!await manager.getRepository(Plantel).findOne({ where: { id, activo: true } })) throw new ConflictException('Selecciona planteles activos');
       }
-      const usuario = await this.crear(dto, manager);
+      const usuario = await this.crear({ ...dto, password: randomBytes(32).toString('base64url') }, manager);
+      await manager.getRepository(Usuario).update({ id: usuario.id }, { activacionPendiente: true });
       const asignaciones = manager.getRepository(UsuarioPlantel);
       await asignaciones.save(ids.map((plantelId) => asignaciones.create({ usuarioId: usuario.id, plantelId, activo: true })));
       return usuario;
