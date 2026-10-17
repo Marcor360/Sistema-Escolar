@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma
 
-**Versión candidata: `1.26.0`** · API, web y app del alumno alineadas. Aceptación institucional y despliegue pendientes.
+**Versión candidata: `1.26.1`** · API, web y app del alumno alineadas. Aceptación institucional y despliegue pendientes.
 
 API, portal administrativo/docente y app del alumno para gestión académica y financiera con alcance por plantel. Las versiones de backend, web, móvil, lockfiles y Expo están alineadas. Este README describe una única versión actual; los informes históricos permanecen en `docs/`.
 
@@ -11,9 +11,9 @@ API, portal administrativo/docente y app del alumno para gestión académica y f
 | Base de datos | Baseline v1 y diez migraciones incrementales espejo; MySQL 8.4 / SQL Server 2022 probados en CI |
 | ETL de legado | Prototipo parcial; no listo para migración institucional general |
 
-La versión 1.26.0 consolida las altas y activación segura, mejoras de navegación, configuración SMTP y eliminación definitiva protegida. La versión del repositorio identifica el código; la disponibilidad en el VPS o en un APK depende del despliegue correspondiente. La evidencia histórica conserva su versión y fecha originales.
+La versión 1.26.1 consolida las altas y activación segura, mejoras de navegación, configuración SMTP y eliminación definitiva protegida. La versión del repositorio identifica el código; la disponibilidad en el VPS o en un APK depende del despliegue correspondiente. La evidencia histórica conserva su versión y fecha originales.
 
-## Novedades de 1.26.0
+## Novedades de 1.26.1
 
 - Inicio del alumno con accesos explicados a materias y tareas, calificaciones, estado de cuenta, perfil y documentos, disponibles aunque el resumen tarde en cargar.
 - Menú web organizado por áreas de trabajo; la agenda distingue carga, error y ausencia de eventos y permite reintentar.
