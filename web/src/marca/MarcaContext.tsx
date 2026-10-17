@@ -52,15 +52,11 @@ function aplicarMarca(marca: Marca) {
 export function MarcaProvider({ children }: { children: ReactNode }) {
   const [marca, setMarca] = useState(MARCA_POR_DEFECTO);
   const recargar = useCallback(async () => {
-    try {
-      const { data } = await api.get<Marca>('/configuracion/marca');
-      setMarca(data);
-      aplicarMarca(data);
-    } catch {
-      aplicarMarca(MARCA_POR_DEFECTO);
-    }
+    const { data } = await api.get<Marca>('/configuracion/marca');
+    setMarca(data);
+    aplicarMarca(data);
   }, []);
-  useEffect(() => { void recargar(); }, [recargar]);
+  useEffect(() => { void recargar().catch(() => aplicarMarca(MARCA_POR_DEFECTO)); }, [recargar]);
   return <MarcaContext.Provider value={{ marca, recargar }}>{children}</MarcaContext.Provider>;
 }
 
