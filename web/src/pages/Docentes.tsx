@@ -128,10 +128,10 @@ export default function DocentesPage() {
           <div className="fila">
             <div className="campo"><label htmlFor="docentes-campo-1">Núm. empleado</label><input id="docentes-campo-1" disabled={editando !== null} required {...dar('numEmpleado')} /></div>
             <div className="campo"><label htmlFor="docentes-campo-2">Nombre</label><input id="docentes-campo-2" required {...dar('nombre')} /></div>
-            <div className="campo"><label htmlFor="docentes-campo-3">Apellido paterno</label><input id="docentes-campo-3" required {...dar('apellidoPaterno')} /></div>
+            <div className="campo"><label htmlFor="docentes-campo-3">Primer apellido</label><input id="docentes-campo-3" required {...dar('apellidoPaterno')} /></div>
             <div className="campo"><label htmlFor="docentes-campo-4">Especialidad</label><input id="docentes-campo-4" {...dar('especialidad')} /></div>
             <div className="campo"><label htmlFor="docentes-campo-5">Correo</label><input id="docentes-campo-5" disabled={editando !== null} type="email" required {...dar('email')} /></div>
-            <div className="campo"><label htmlFor="docente-materno">Apellido materno</label><input id="docente-materno" maxLength={80} {...dar('apellidoMaterno')} /></div>
+            <div className="campo"><label htmlFor="docente-materno">Segundo apellido</label><input id="docente-materno" maxLength={80} {...dar('apellidoMaterno')} /></div>
             <div className="campo"><label htmlFor="docente-telefono">Teléfono</label><input id="docente-telefono" type="tel" maxLength={20} {...dar('telefono')} /></div>
             <div className="campo"><label htmlFor="docente-cedula">Cédula profesional {!form.cedulaPendiente && '*'}</label><input id="docente-cedula" required={!form.cedulaPendiente} disabled={form.cedulaPendiente} maxLength={20} {...dar('cedulaProfesional')} /></div>
             <label className="casilla"><input type="checkbox" checked={form.cedulaPendiente} onChange={(e) => setForm((previo) => ({ ...previo, cedulaPendiente: e.target.checked, cedulaProfesional: e.target.checked ? '' : previo.cedulaProfesional }))} />Cédula pendiente de capturar</label>
