@@ -36,7 +36,7 @@ Los intentos fallidos se registran sin almacenar contraseñas ni tokens.
 
 ## Paginación
 Los listados paginados responden `{ datos, total, pagina, porPagina }` (`pagina` inicia
-en 1, `porPagina` por defecto 20, máximo 100). Aplica a: `GET /usuarios`, `GET /usuarios/listado`,
+en 1, `porPagina` por defecto 10, máximo 100). Aplica a: `GET /usuarios`, `GET /usuarios/listado`,
 `GET /alumnos`, `GET /academico/grupos`, `GET /docentes`, `GET /finanzas/cargos` y
 `GET /finanzas/pagos`, `GET /finanzas/adeudos` y `GET /academico/clases-seleccion`. No aplica a `/calendario` (acotado por rango de fechas), a
 los endpoints móviles; el dashboard calcula su resumen en servidor. Conciliación y envíos de cobranza también responden con páginas.

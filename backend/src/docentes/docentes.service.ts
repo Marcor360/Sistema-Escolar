@@ -26,7 +26,7 @@ export class DocentesService {
 
   async listar(user: JwtUser, query: ListarDocentesDto) {
     const pagina = query.pagina || 1;
-    const porPagina = query.porPagina || 20;
+    const porPagina = query.porPagina || 10;
     const planteles = await this.scope.resolverFiltro(user, query.plantelId);
     const qb = this.docentes.createQueryBuilder('d').innerJoinAndSelect('d.usuario', 'u');
     if (planteles !== null) qb.andWhere(

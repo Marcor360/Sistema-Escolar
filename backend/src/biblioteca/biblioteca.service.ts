@@ -46,11 +46,11 @@ export class BibliotecaService {
           creadoAt: true,
         },
         order: { id: 'DESC' },
-        skip: (dto.pagina - 1) * 20,
-        take: 20,
+        skip: (dto.pagina - 1) * 10,
+        take: 10,
       });
     const bytes = (await this.ds.getRepository(BibliotecaArchivo).sum('bytes', { plantelId: dto.plantelId })) ?? 0;
-    return { carpetas, archivos, total, pagina: dto.pagina, porPagina: 20, bytes, cuota: this.cuota() };
+    return { carpetas, archivos, total, pagina: dto.pagina, porPagina: 10, bytes, cuota: this.cuota() };
   }
   private async carpeta(id: number, user: JwtUser, plantelId?: number) {
     const c = await this.ds.getRepository(BibliotecaCarpeta).findOneBy({ id });
