@@ -16,6 +16,7 @@ export default function ConfiguracionPage() {
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState(false);
   const mutando = useRef(false);
+  const selectorLogo = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setNombreInstitucion(marca.nombreInstitucion);
@@ -51,9 +52,10 @@ export default function ConfiguracionPage() {
 
   const guardar = async (evento: FormEvent) => {
     evento.preventDefault();
-    if (mutando.current || archivoRechazado) return; mutando.current = true;
+    if (mutando.current || archivoRechazado || (archivo && logoNoDisponible)) return; mutando.current = true;
     setError(''); setMensaje(''); setGuardando(true);
     let datosInstitucionalesGuardados = false;
+    let logoGuardado = false;
     try {
       await api.put('/configuracion/marca', { nombreInstitucion, nombreCorto, colorPrimario, colorAcento });
       datosInstitucionalesGuardados = true;
@@ -61,9 +63,11 @@ export default function ConfiguracionPage() {
         const datos = new FormData();
         datos.append('logo', archivo);
         await api.post('/configuracion/marca/logo', datos);
+        logoGuardado = true;
       }
       await recargar();
       setArchivo(null); setVistaPrevia(null);
+      if (selectorLogo.current) selectorLogo.current.value = '';
       setArchivoRechazado(false);
       setLogoNoDisponible(false);
       setMensaje('Identidad institucional actualizada.');
@@ -72,7 +76,9 @@ export default function ConfiguracionPage() {
       const mensaje = detalle === 'File too large'
         ? 'El logotipo supera los 2 MB permitidos. Selecciona una imagen más ligera.'
         : detalle;
-      setError(datosInstitucionalesGuardados && archivo
+      setError(logoGuardado
+        ? `Los datos y el logotipo se guardaron, pero no se pudo actualizar la vista: ${mensaje}`
+        : datosInstitucionalesGuardados && archivo
         ? `Los datos institucionales se guardaron, pero el logotipo no: ${mensaje}`
         : mensaje);
     } finally {
@@ -87,6 +93,8 @@ export default function ConfiguracionPage() {
       await api.delete('/configuracion/marca/logo');
       await recargar();
       setArchivo(null); setVistaPrevia(null);
+      if (selectorLogo.current) selectorLogo.current.value = '';
+      setArchivoRechazado(false); setLogoNoDisponible(false);
       setMensaje('Logo eliminado; se mostrará el monograma.');
     } catch (err) {
       setError(mensajeDeError(err));
@@ -108,7 +116,7 @@ export default function ConfiguracionPage() {
       </div>
       <div className="campo configuracion-logo">
         <label htmlFor="logo">Logo (PNG, JPG o WebP; máximo 2 MB)</label>
-        <input id="logo" type="file" accept=".png,.jpg,.jpeg,.webp" onChange={seleccionarLogo} />
+        <input ref={selectorLogo} disabled={guardando} id="logo" type="file" accept=".png,.jpg,.jpeg,.webp" onChange={seleccionarLogo} />
         {logoVisible && !logoNoDisponible && <img className="logo-marca vista-logo" src={logoVisible} alt="Vista previa del logo" onError={() => setLogoNoDisponible(true)} />}
         {logoNoDisponible && <p role="alert" className="mensaje-error">{vistaPrevia
           ? 'La imagen seleccionada no se puede mostrar. Revisa que sea un archivo de imagen válido.'
@@ -117,7 +125,7 @@ export default function ConfiguracionPage() {
       {error && <p role="alert" className="mensaje-error">{error}</p>}
       {mensaje && <p role="status" className="mensaje-ok">{mensaje}</p>}
       <div className="fila">
-        <button className="boton" disabled={guardando || archivoRechazado}>{guardando ? 'Guardando…' : 'Guardar cambios'}</button>
+        <button className="boton" disabled={guardando || archivoRechazado || Boolean(archivo && logoNoDisponible)}>{guardando ? 'Guardando…' : 'Guardar cambios'}</button>
         {marca.logoUrl && <button type="button" className="boton peligro" onClick={quitarLogo} disabled={guardando}>Quitar logo</button>}
       </div>
     </form>
