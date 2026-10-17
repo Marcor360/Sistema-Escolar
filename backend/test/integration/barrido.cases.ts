@@ -108,8 +108,11 @@ export function registrarBarrido(ctx: ContextoIntegracion) {
     const root = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.superadminId })).email);
     const alta = await ctx.api('/usuarios',{ method: 'POST',token: root,body: { email: `barridoauth_${ctx.sufijo}@example.invalid`,nombre: 'Carrera',apellidoPaterno: 'Sesión',password: 'Integracion_Segura_42!',roles: ['FINANZAS'],plantelIds: [ctx.plantelId] } }); expect(alta.response.status).toBe(201);
     const auth = ctx.app.get(AuthService);
-    await Promise.all([auth.cambiarPassword(alta.data.id,'Integracion_Segura_42!','Nueva_Carrera_Uno_42!'),auth.cambiarPassword(alta.data.id,'Integracion_Segura_42!','Nueva_Carrera_Dos_42!')]);
-    expect((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: alta.data.id })).sessionVersion).toBe(2);
+    await ctx.emitirToken(alta.data.email);
+    const actual = ctx.passwords.get(alta.data.email)!;
+    const version = (await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: alta.data.id })).sessionVersion;
+    await Promise.all([auth.cambiarPassword(alta.data.id,actual,'Nueva_Carrera_Uno_42!'),auth.cambiarPassword(alta.data.id,actual,'Nueva_Carrera_Dos_42!')]);
+    expect((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: alta.data.id })).sessionVersion).toBe(version + 2);
   });
   it('editar contraseña mientras se da de baja no reactiva el usuario',async () => {
     const root = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.superadminId })).email);
