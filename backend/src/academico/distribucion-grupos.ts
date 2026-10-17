@@ -4,6 +4,9 @@ export interface PlanGruposRegulares {
 }
 
 /**
+ * Planifica una cohorte nueva y homogénea; no recibe ni modifica grupos vivos.
+ * El llamador debe validar compatibilidad y excluir especiales/recursamiento.
+ * El resultado no autoriza traslados ni cambios de cupo sobre grupos existentes.
  * Un remanente de uno a cuatro alumnos se incorpora a un grupo completo
  * para no crear grupos regulares por debajo del mínimo institucional.
  */
