@@ -248,8 +248,8 @@ describe('Integración de flujos críticos (base aislada)', () => {
     });
     const alumno = usuario.roles.some((r) => r.clave === 'ALUMNO')
       ? await dataSource.getRepository(Alumno).findOneBy({ usuarioId: usuario.id }) : null;
-    if (alumno && usuario.activacionPendiente) {
-      // Fixture sintético: ejercitar la activación real, sin dependencia de SMTP externo.
+    if (usuario.activacionPendiente) {
+      // Fixture sintético: activar cualquier rol por código real, sin SMTP externo.
       let codigo = '';
       const correo = jest.spyOn(app.get(NotificacionesService), 'enviarEmail')
         .mockImplementation(async (_to, _subject, html) => {
@@ -451,7 +451,7 @@ Object.keys(casos).map(Number).sort((a,b) => a-b).forEach((id) => casos[id](cont
     it(`navegador real: recorrido ${tipo} completo con API y DB reales`, async () => {
       const root = await emitirToken((await dataSource.getRepository(Usuario).findOneByOrFail({ id: superadminId })).email);
       const usuario = await dataSource.getRepository(Usuario).findOneByOrFail({ id: tipo === 'altas' ? superadminId : adminId }); await emitirToken(usuario.email);
-      const docente = await api('/docentes', { method: 'POST', token: root, body: { email: `browserdoc_${tipo}_${sufijo}@example.invalid`, password: 'Integracion_Segura_42!', nombre: 'Docente', apellidoPaterno: 'Navegador', numEmpleado: `BW${tipo.slice(0,2)}${sufijo}`, plantelIds: [plantelId] } }); expect(docente.response.status).toBe(201);
+      const docente = await api('/docentes', { method: 'POST', token: root, body: { email: `browserdoc_${tipo}_${sufijo}@example.invalid`, password: 'Integracion_Segura_42!', nombre: 'Docente', apellidoPaterno: 'Navegador', cedulaPendiente: true, numEmpleado: `BW${tipo.slice(0,2)}${sufijo}`, plantelIds: [plantelId] } }); expect(docente.response.status).toBe(201);
       const clase = await dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: grupoMateriaIdMaestro });
       const concepto = await dataSource.getRepository(ConceptoPago).findOneByOrFail({ clave: `CW${sufijo}` });
       await (await import('./recorridos-web')).recorridoWeb({ baseUrl, email: usuario.email, password: passwords.get(usuario.email) ?? 'Integracion_Segura_42!', sufijo, plantelId, cicloId: clase.grupo.cicloId, materiaId: clase.materiaId, docenteId: docente.data.id, conceptoId: concepto.id }, tipo);

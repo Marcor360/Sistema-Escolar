@@ -218,3 +218,8 @@ El alta individual y por lote de ALUMNO genera una contraseña aleatoria no entr
 POST /auth/actividad, autenticado, sin hora enviada por el cliente; límite 12 por minuto. Los clientes notifican como máximo una vez por minuto tras interacción. GET, polling y refresh no extienden la actividad. La API rechaza JWT/refresh y descargas firmadas sin señal vigente de los últimos 30 minutos; sesiones históricas NULL deben iniciar de nuevo.
 
 Hora y umbral del servidor; escritura atómica sobre sesión/version/expiración vigente. La señal no prueba actividad humana frente a un cliente modificado. Requiere migracion_sesiones_inactividad.sql y despliegue coordinado de API/web/Expo. [Contrato y límites](SESIONES_INACTIVIDAD_PLAN.md).
+
+
+### Alta docente por invitación
+
+El alta individual de docente no recibe contraseña inicial: solicita una invitación después de confirmar la transacción. Requiere `cedulaProfesional` o `cedulaPendiente: true`. La plantilla de importación docente también admite `cedulaPendiente` con texto `true` o `false`; cuando es `true` guarda la cédula como NULL. Las columnas de contraseña no están permitidas en archivos. La importación conserva su contrato de recuperación de acceso por correo.

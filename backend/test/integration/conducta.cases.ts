@@ -18,7 +18,7 @@ it('mantiene incidencias exclusivamente internas y restringidas por clase/plante
     expect((await ctx.api(`/conducta/incidencias/${creada.data.id}`, { token: alumno })).response.status).toBe(403);
     expect((await ctx.api('/conducta/incidencias', { token: finanzas })).response.status).toBe(403);
     expect((await ctx.api(`/conducta/incidencias/${creada.data.id}/seguimientos`, { method: 'POST', token: maestro, body: { nota: 'Seguimiento', motivo: 'Verificación', estado: 'CERRADA' } })).response.status).toBe(403);
-    const otroDocente = await ctx.api('/docentes', { method: 'POST', token: admin, body: { email: `interno_${ctx.sufijo}@example.invalid`, password: 'Integracion_Segura_42!', nombre: 'Interno', apellidoPaterno: 'Otro', numEmpleado: `I${ctx.sufijo}`, plantelIds: [ctx.plantelId] } });
+    const otroDocente = await ctx.api('/docentes', { method: 'POST', token: admin, body: { email: `interno_${ctx.sufijo}@example.invalid`, password: 'Integracion_Segura_42!', nombre: 'Interno', apellidoPaterno: 'Otro', cedulaPendiente: true, numEmpleado: `I${ctx.sufijo}`, plantelIds: [ctx.plantelId] } });
     expect(otroDocente.response.status).toBe(201);
     const otroMaestro = await ctx.emitirToken(`interno_${ctx.sufijo}@example.invalid`);
     expect((await ctx.api(`/conducta/incidencias/${creada.data.id}`, { token: otroMaestro })).response.status).toBe(403);

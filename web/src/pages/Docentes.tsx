@@ -19,7 +19,7 @@ interface Plantel { id: number; nombre: string }
 interface Resultado { datos: Docente[]; total: number; pagina: number; porPagina: number }
 
 const FORM_INICIAL = {
-  numEmpleado: '', nombre: '', apellidoPaterno: '', apellidoMaterno: '', telefono: '', cedulaProfesional: '', email: '', password: '', especialidad: '',
+  numEmpleado: '', nombre: '', apellidoPaterno: '', apellidoMaterno: '', telefono: '', cedulaProfesional: '', email: '', cedulaPendiente: false, especialidad: '',
 };
 
 export default function DocentesPage() {
@@ -68,7 +68,7 @@ export default function DocentesPage() {
     setDetalle(null);
     setEditando(d.id); setForm({ ...FORM_INICIAL, numEmpleado: d.numEmpleado,
       nombre: d.usuario.nombre, apellidoPaterno: d.usuario.apellidoPaterno,
-      apellidoMaterno: d.usuario.apellidoMaterno ?? '', telefono: d.usuario.telefono ?? '', cedulaProfesional: d.cedulaProfesional ?? '', email: d.usuario.email, especialidad: d.especialidad ?? '' });
+      apellidoMaterno: d.usuario.apellidoMaterno ?? '', telefono: d.usuario.telefono ?? '', cedulaProfesional: d.cedulaProfesional ?? '', cedulaPendiente: !d.cedulaProfesional, email: d.usuario.email, especialidad: d.especialidad ?? '' });
     document.getElementById('form-docente')?.scrollIntoView();
   };
 
@@ -97,16 +97,16 @@ export default function DocentesPage() {
     if (enviando) return;
     setEnviando(true); setError(''); setMensaje('');
     try {
-      if (editando) await api.patch(`/docentes/${editando}`, { nombre: form.nombre, apellidoPaterno: form.apellidoPaterno, apellidoMaterno: form.apellidoMaterno, telefono: form.telefono, cedulaProfesional: form.cedulaProfesional, especialidad: form.especialidad });
-      else await api.post('/docentes', { ...form, plantelIds, especialidad: form.especialidad || undefined });
-      setMensaje(editando ? 'Docente actualizado' : 'Docente registrado'); setEditando(null);
+      if (editando) await api.patch(`/docentes/${editando}`, { nombre: form.nombre, apellidoPaterno: form.apellidoPaterno, apellidoMaterno: form.apellidoMaterno, telefono: form.telefono, cedulaProfesional: form.cedulaPendiente ? null : form.cedulaProfesional, especialidad: form.especialidad });
+      else await api.post('/docentes', { ...form, cedulaProfesional: form.cedulaPendiente ? undefined : form.cedulaProfesional, plantelIds, especialidad: form.especialidad || undefined });
+      setMensaje(editando ? 'Docente actualizado' : 'Docente registrado. Se solicitó invitación a su correo institucional.'); setEditando(null);
       setForm(FORM_INICIAL);
       setPlantelIds([]);
       cargar(1, filtroPlantel);
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
-  const dar = (campo: keyof typeof FORM_INICIAL) => ({
+  const dar = (campo: Exclude<keyof typeof FORM_INICIAL, 'cedulaPendiente'>) => ({
     value: form[campo],
     onChange: (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [campo]: e.target.value }),
   });
@@ -131,10 +131,10 @@ export default function DocentesPage() {
             <div className="campo"><label htmlFor="docentes-campo-3">Primer apellido</label><input id="docentes-campo-3" required {...dar('apellidoPaterno')} /></div>
             <div className="campo"><label htmlFor="docentes-campo-4">Especialidad</label><input id="docentes-campo-4" {...dar('especialidad')} /></div>
             <div className="campo"><label htmlFor="docentes-campo-5">Correo</label><input id="docentes-campo-5" disabled={editando !== null} type="email" required {...dar('email')} /></div>
-            {!editando && <div className="campo"><label htmlFor="docentes-campo-6">Contraseña inicial</label><input id="docentes-campo-6" type="password" autoComplete="new-password" required minLength={8} {...dar('password')} /></div>}
             <div className="campo"><label htmlFor="docente-materno">Segundo apellido</label><input id="docente-materno" maxLength={80} {...dar('apellidoMaterno')} /></div>
             <div className="campo"><label htmlFor="docente-telefono">Teléfono</label><input id="docente-telefono" type="tel" maxLength={20} {...dar('telefono')} /></div>
-            <div className="campo"><label htmlFor="docente-cedula">Cédula profesional</label><input id="docente-cedula" maxLength={20} {...dar('cedulaProfesional')} /></div>
+            <div className="campo"><label htmlFor="docente-cedula">Cédula profesional {!form.cedulaPendiente && '*'}</label><input id="docente-cedula" required={!form.cedulaPendiente} disabled={form.cedulaPendiente} maxLength={20} {...dar('cedulaProfesional')} /></div>
+            <label className="casilla"><input type="checkbox" checked={form.cedulaPendiente} onChange={(e) => setForm((previo) => ({ ...previo, cedulaPendiente: e.target.checked, cedulaProfesional: e.target.checked ? '' : previo.cedulaProfesional }))} />Cédula pendiente de capturar</label>
             <button disabled={enviando} className="boton">{enviando ? 'Guardando…' : 'Guardar docente'}</button>
             {editando && <button type="button" onClick={() => { setEditando(null); setForm(FORM_INICIAL); }}>Cancelar edición</button>}
           </div>

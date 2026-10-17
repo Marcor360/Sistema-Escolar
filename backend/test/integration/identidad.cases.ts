@@ -46,7 +46,7 @@ it('no serializa hashes en login, perfil, alumnos, docentes ni usuarios', async 
       method: 'POST', token: tokenAdmin,
       body: {
         email: `docente_visible_${ctx.sufijo}@example.invalid`, password: 'Integracion_Segura_42!',
-        nombre: 'Docente', apellidoPaterno: 'Visible', numEmpleado: `V${ctx.sufijo}`, plantelIds: [ctx.plantelId],
+        nombre: 'Docente', apellidoPaterno: 'Visible', cedulaPendiente: true, numEmpleado: `V${ctx.sufijo}`, plantelIds: [ctx.plantelId],
       },
     });
     expect(nuevoDocente.response.status).toBe(201);
@@ -167,7 +167,7 @@ it('revoca JWT anteriores tras bajas de alumno/docente y cambio de contraseña',
       method: 'POST', token: tokenAdmin,
       body: {
         email: `baja_docente_${ctx.sufijo}@example.invalid`, password: 'Integracion_Segura_42!',
-        nombre: 'Baja', apellidoPaterno: 'Docente', numEmpleado: `BD${ctx.sufijo}`, plantelIds: [ctx.plantelId],
+        nombre: 'Baja', apellidoPaterno: 'Docente', cedulaPendiente: true, numEmpleado: `BD${ctx.sufijo}`, plantelIds: [ctx.plantelId],
       },
     });
     const tokenDocente = await ctx.emitirToken(`baja_docente_${ctx.sufijo}@example.invalid`);
@@ -280,19 +280,20 @@ it('desactiva al docente y deja sus clases disponibles para reasignación', asyn
   });
   },
   27: (ctx) => {
-it('obliga cambio inicial y evita personal sin plantel o roles de expediente sin expediente', async () => {
+it('exige activación del personal y evita cuentas sin plantel o expediente', async () => {
     const token = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.superadminId })).email);
     const datos = { email: `nuevo_staff_${ctx.sufijo}@example.invalid`, nombre: 'Personal', apellidoPaterno: 'Nuevo', password: 'Integracion_Segura_42!' };
     for (const rol of ['ALUMNO', 'MAESTRO', 'FINANZAS']) expect((await ctx.api('/usuarios', { method: 'POST', token, body: { ...datos, roles: [rol] } })).response.status).toBe(409);
     const alta = await ctx.api('/usuarios', { method: 'POST', token, body: { ...datos, roles: ['ADMINISTRATIVO'], plantelIds: [ctx.plantelId] } });
     expect(alta.response.status).toBe(201);
     const auth = ctx.app.get(AuthService);
-    const temporal = await auth.login(datos.email, datos.password, 'WEB');
-    expect(temporal.usuario.passwordChangeRequired).toBe(true);
-    expect((await ctx.api('/alumnos', { token: temporal.accessToken })).response.status).toBe(403);
-    expect((await ctx.api('/auth/cambiar-password', { method: 'POST', token: temporal.accessToken,
-      body: { actual: datos.password, nueva: 'Nueva_Institucional_42!' } })).response.status).toBe(201);
-    expect((await ctx.api('/auth/me', { token: temporal.accessToken })).response.status).toBe(401);
+    await expect(auth.login(datos.email, datos.password, 'WEB')).rejects.toThrow();
+    expect((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: alta.data.id })).activacionPendiente).toBe(true);
+    const activado = await ctx.emitirToken(datos.email);
+    expect((await ctx.api('/alumnos', { token: activado })).response.status).toBe(200);
+    expect((await ctx.api('/auth/cambiar-password', { method: 'POST', token: activado,
+      body: { actual: 'Integracion_Renovada_42!', nueva: 'Nueva_Institucional_42!' } })).response.status).toBe(201);
+    expect((await ctx.api('/auth/me', { token: activado })).response.status).toBe(401);
     const definitiva = await auth.login(datos.email, 'Nueva_Institucional_42!', 'WEB');
     expect((await ctx.api('/alumnos', { token: definitiva.accessToken })).response.status).toBe(200);
   });
@@ -386,7 +387,7 @@ export function registrarAltasInstitucionales(ctx: ContextoIntegracion) {
     expect((await ctx.api(`/alumnos/${alumno.data.id}`,{ method: 'PATCH',token: root,body: { telefono: '',apellidoMaterno: '',fechaNacimiento: null } })).response.status).toBe(200);
     const corregida = await ctx.api(`/alumnos/${alumno.data.id}`,{ token: root }); expect(corregida.data).toMatchObject({ fechaNacimiento: null,direccion: 'Calle institucional 12',usuario: { apellidoMaterno: '',telefono: '' } });
     expect((await ctx.api(`/alumnos/${alumno.data.id}`,{ method: 'PATCH',token: root,body: { fechaNacimiento: '2009-01-02T00:00:00Z' } })).response.status).toBe(400);
-    const docente = await ctx.api('/docentes',{ method: 'POST',token: root,body: { ...datos,email: `insdoc_${ctx.sufijo}@example.invalid`,numEmpleado: `ID${ctx.sufijo}`,plantelIds: [ctx.plantelId],cedulaProfesional: 'CED123456',especialidad: 'Matemáticas' } }); expect(docente.response.status).toBe(201);
+    const docente = await ctx.api('/docentes',{ method: 'POST',token: root,body: { ...datos,email: `insdoc_${ctx.sufijo}@example.invalid`,numEmpleado: `ID${ctx.sufijo}`,plantelIds: [ctx.plantelId],cedulaPendiente: false, cedulaProfesional: 'CED123456',especialidad: 'Matemáticas' } }); expect(docente.response.status).toBe(201);
     expect((await ctx.api(`/docentes/${docente.data.id}`,{ token: root })).data).toMatchObject({ cedulaProfesional: 'CED123456',usuario: { apellidoMaterno: 'Materno',telefono: '5550001111' } });
     expect((await ctx.api(`/docentes/${docente.data.id}`,{ method: 'PATCH',token: root,body: { telefono: '',apellidoMaterno: '' } })).response.status).toBe(200);
     expect((await ctx.api(`/docentes/${docente.data.id}`,{ token: root })).data.usuario).toMatchObject({ apellidoMaterno: '',telefono: '' });
@@ -400,10 +401,10 @@ export function registrarAltasInstitucionales(ctx: ContextoIntegracion) {
     for (const id of cuentas) {
       const u = await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id }); expect(u.passwordChangeRequired).toBe(true); expect(u.roles).toHaveLength(1);
       const portal = u.roles[0].clave === 'ALUMNO' ? 'MOVIL' : 'WEB';
-      if (portal === 'MOVIL') {
+      if (u.activacionPendiente) {
         expect(u.activacionPendiente).toBe(true);
-        await expect(ctx.app.get(AuthService).login(u.email, `IA${ctx.sufijo}`.toUpperCase(), 'MOVIL')).rejects.toThrow();
-        const token = await ctx.emitirToken(u.email); // Activación por código real del alumno.
+        await expect(ctx.app.get(AuthService).login(u.email, datos.password, portal)).rejects.toThrow();
+        const token = await ctx.emitirToken(u.email); // Activación por código real del titular.
         expect(token).toBeTruthy();
         continue;
       }

@@ -23,7 +23,7 @@ interface Catalogos {
 const trozos = <T>(filas: T[]) => Array.from({ length: Math.ceil(filas.length / 100) }, (_, i) => filas.slice(i*100,(i+1)*100));
 export const CABECERAS: Record<TipoImportacion, string[]> = {
   ALUMNOS: ['email', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'matricula', 'plantelId', 'curp', 'fechaNacimiento', 'telefono', 'tutorNombre', 'tutorTelefono', 'direccion'],
-  DOCENTES: ['email', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'numEmpleado', 'plantelIds', 'cedulaProfesional', 'especialidad', 'telefono'],
+  DOCENTES: ['email', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'numEmpleado', 'plantelIds', 'cedulaProfesional', 'cedulaPendiente', 'especialidad', 'telefono'],
   PERSONAL: ['email', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'roles', 'plantelIds', 'telefono'],
   INSCRIPCIONES: ['matricula', 'grupoId'],
   CALIFICACIONES: ['grupoMateriaId', 'parcial', 'alumnoId', 'matricula', 'grado', 'calificacion', 'observaciones'],
@@ -43,7 +43,12 @@ export class ImportacionesService {
   private preparar(tipo: TipoImportacion, fila: Fila) {
     const datos: Record<string, unknown> = Object.fromEntries(Object.entries(fila).filter(([, v]) => v !== ''));
     if (Object.keys(fila).some((k) => !CABECERAS[tipo].includes(k))) throw new BadRequestException('Hay columnas no admitidas; descarga la plantilla');
-    if (tipo === 'DOCENTES' || tipo === 'PERSONAL') datos.password = randomBytes(24).toString('base64url');
+    if (tipo === 'PERSONAL') datos.password = randomBytes(24).toString('base64url');
+    if (tipo === 'DOCENTES' && datos.cedulaPendiente !== undefined) {
+      const valor = String(datos.cedulaPendiente).trim().toLowerCase();
+      if (!['true', 'false'].includes(valor)) throw new BadRequestException('cedulaPendiente debe ser true o false');
+      datos.cedulaPendiente = valor === 'true';
+    }
     if (tipo === 'PERSONAL') datos.roles = String(datos.roles ?? '').split(';').filter(Boolean);
     if (tipo === 'DOCENTES' || tipo === 'PERSONAL') datos.plantelIds = String(datos.plantelIds ?? '').split(';').filter(Boolean).map(Number);
     return datos;
@@ -178,7 +183,7 @@ export class ImportacionesService {
           const guardados = await repo.find({ where: { usuarioId: In(nuevos.map((u) => u.id)) }, select: { id: true, plantelId: true }, loadEagerRelations: false }); guardados.forEach((a) => auditar(a.id,a.plantelId));
         } else {
           if (p.tipo === 'DOCENTES') {
-            const docentes = cuentas.map((v) => { const d = v.instancia as CrearDocenteDto; return { usuarioId: usuarios.get(d.email)!, numEmpleado: d.numEmpleado, cedulaProfesional: d.cedulaProfesional ?? null, especialidad: d.especialidad ?? null }; });
+            const docentes = cuentas.map((v) => { const d = v.instancia as CrearDocenteDto; return { usuarioId: usuarios.get(d.email)!, numEmpleado: d.numEmpleado, cedulaProfesional: d.cedulaPendiente ? null : d.cedulaProfesional ?? null, especialidad: d.especialidad ?? null }; });
             const repo = manager.getRepository(Docente); for (const lote of trozos(docentes)) await repo.createQueryBuilder().insert().values(lote).updateEntity(false).execute();
             const guardados = await repo.find({ where: { usuarioId: In(nuevos.map((u) => u.id)) }, select: { id: true, usuarioId: true }, loadEagerRelations: false }); const planteles = new Map(cuentas.map((v) => [usuarios.get(v.instancia.email)!,v.ids[0]])); guardados.forEach((d) => auditar(d.id,planteles.get(d.usuarioId)!));
           } else cuentas.forEach((v) => auditar(usuarios.get(v.instancia.email)!,v.ids[0]));
