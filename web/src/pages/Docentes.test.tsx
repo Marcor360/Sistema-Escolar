@@ -36,6 +36,7 @@ it('mostrar clases del segundo docente no permite que una respuesta anterior sob
   });
 
   render(<DocentesPage />);
+  fireEvent.click(screen.getByRole('button', { name: /Consultar docentes/i }));
   await screen.findByText('EMP-1');
   const acciones = screen.getAllByRole('button', { name: 'Planteles y clases' });
   fireEvent.click(acciones[0]);
@@ -53,4 +54,11 @@ it('mostrar clases del segundo docente no permite que una respuesta anterior sob
   expect(screen.getByText(/Segunda materia/)).toBeTruthy();
   expect(screen.queryByText(/Materia antigua/)).toBeNull();
   expect(screen.queryByText('Cargando planteles y clases del docente…')).toBeNull();
+});
+
+it('no consulta el directorio completo antes de elegir una acción', async () => {
+  const get = vi.spyOn(api, 'get').mockResolvedValue({ data: [] });
+  render(<DocentesPage />);
+  expect(screen.getByRole('button', { name: /Consultar docentes/i })).toBeTruthy();
+  expect(get.mock.calls.filter(([ruta]) => ruta === '/docentes')).toHaveLength(0);
 });
