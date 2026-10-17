@@ -79,7 +79,7 @@ export function registrarBarrido(ctx: ContextoIntegracion) {
   it('el filtro de plantel de conducta se respeta para docentes con clases en dos planteles',async () => {
     const root = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.superadminId })).email);
     const post = (ruta: string,body: unknown,token = root) => ctx.api(ruta,{ method: 'POST',token,body });
-    const docente = await post('/docentes',{ email: `barridocon_${ctx.sufijo}@example.invalid`,nombre: 'Docente',apellidoPaterno: 'Dos planteles',numEmpleado: `BCON${ctx.sufijo}`,password: 'Integracion_Segura_42!',plantelIds: [ctx.plantelId,ctx.otroPlantelId] }); expect(docente.response.status).toBe(201);
+    const docente = await post('/docentes',{ email: `barridocon_${ctx.sufijo}@example.invalid`,nombre: 'Docente',apellidoPaterno: 'Dos planteles',cedulaPendiente: true, numEmpleado: `BCON${ctx.sufijo}`,password: 'Integracion_Segura_42!',plantelIds: [ctx.plantelId,ctx.otroPlantelId] }); expect(docente.response.status).toBe(201);
     const clase = await ctx.dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: ctx.grupoMateriaIdMaestro });
     const maestro = await ctx.emitirToken(`barridocon_${ctx.sufijo}@example.invalid`), ids: number[] = [];
     for (const [pos,plantelId] of [ctx.plantelId,ctx.otroPlantelId].entries()) {

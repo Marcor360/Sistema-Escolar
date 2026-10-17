@@ -16,7 +16,7 @@ it('aísla eventos de dos grupos y planteles para alumnos, maestros y administra
     const tokenMaestroA = await ctx.emitirToken(`maestro_scope_${ctx.sufijo}@example.invalid`);
     const altaB = await ctx.api('/docentes', { method: 'POST', token: tokenAdmin, body: {
       email: `maestro_b_${ctx.sufijo}@example.invalid`, password: 'Integracion_Segura_42!',
-      nombre: 'Maestro', apellidoPaterno: 'B', numEmpleado: `B${ctx.sufijo}`, plantelIds: [ctx.plantelId],
+      nombre: 'Maestro', apellidoPaterno: 'B', cedulaPendiente: true, numEmpleado: `B${ctx.sufijo}`, plantelIds: [ctx.plantelId],
     } });
     expect(altaB.response.status).toBe(201);
     const materia = await ctx.dataSource.getRepository(Materia).findOneByOrFail({ clave: `MAT${ctx.sufijo}` });

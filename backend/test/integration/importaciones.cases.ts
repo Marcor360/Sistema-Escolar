@@ -94,7 +94,7 @@ it('revierte el lote completo si surge un duplicado después del preview', async
         expect((await servicio.confirmar(p.previewId!,true,user)).insertados).toBe(1);
       };
       const email = `docimp_${ctx.sufijo}@example.invalid`;
-      await importar('DOCENTES',`email,nombre,apellidoPaterno,numEmpleado,plantelIds\n${email},Docente,Importado,DI${ctx.sufijo},${ctx.plantelId}`);
+      await importar('DOCENTES',`email,nombre,apellidoPaterno,numEmpleado,plantelIds,cedulaPendiente\n${email},Docente,Importado,DI${ctx.sufijo},${ctx.plantelId},true`);
       const docenteUsuario = await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ email });
       expect(docenteUsuario.roles.map((r) => r.clave)).toEqual(['MAESTRO']); expect(await ctx.dataSource.getRepository(Docente).countBy({ usuarioId: docenteUsuario.id })).toBe(1);
       expect(await ctx.dataSource.getRepository(UsuarioPlantel).countBy({ usuarioId: docenteUsuario.id,plantelId: ctx.plantelId,activo: true })).toBe(1);

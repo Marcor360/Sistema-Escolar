@@ -69,7 +69,7 @@ it('MAESTRO solo lista y consulta alumnos de sus grupos, aunque compartan plante
       method: 'POST', token: tokenAdmin,
       body: {
         email: `maestro_scope_${ctx.sufijo}@example.invalid`, password: 'Integracion_Segura_42!',
-        nombre: 'Maestro', apellidoPaterno: 'Scope', numEmpleado: `S${ctx.sufijo}`, plantelIds: [ctx.plantelId],
+        nombre: 'Maestro', apellidoPaterno: 'Scope', cedulaPendiente: true, numEmpleado: `S${ctx.sufijo}`, plantelIds: [ctx.plantelId],
       },
     });
     expect(altaDocente.response.status).toBe(201);
