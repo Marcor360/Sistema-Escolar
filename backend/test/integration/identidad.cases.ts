@@ -46,7 +46,7 @@ it('no serializa hashes en login, perfil, alumnos, docentes ni usuarios', async 
       method: 'POST', token: tokenAdmin,
       body: {
         email: `docente_visible_${ctx.sufijo}@example.invalid`, password: 'Integracion_Segura_42!',
-        nombre: 'Docente', apellidoPaterno: 'Visible', numEmpleado: `V${ctx.sufijo}`, plantelIds: [ctx.plantelId],
+        nombre: 'Docente', apellidoPaterno: 'Visible', cedulaPendiente: true, numEmpleado: `V${ctx.sufijo}`, plantelIds: [ctx.plantelId],
       },
     });
     expect(nuevoDocente.response.status).toBe(201);
@@ -167,7 +167,7 @@ it('revoca JWT anteriores tras bajas de alumno/docente y cambio de contraseña',
       method: 'POST', token: tokenAdmin,
       body: {
         email: `baja_docente_${ctx.sufijo}@example.invalid`, password: 'Integracion_Segura_42!',
-        nombre: 'Baja', apellidoPaterno: 'Docente', numEmpleado: `BD${ctx.sufijo}`, plantelIds: [ctx.plantelId],
+        nombre: 'Baja', apellidoPaterno: 'Docente', cedulaPendiente: true, numEmpleado: `BD${ctx.sufijo}`, plantelIds: [ctx.plantelId],
       },
     });
     const tokenDocente = await ctx.emitirToken(`baja_docente_${ctx.sufijo}@example.invalid`);
@@ -387,7 +387,7 @@ export function registrarAltasInstitucionales(ctx: ContextoIntegracion) {
     expect((await ctx.api(`/alumnos/${alumno.data.id}`,{ method: 'PATCH',token: root,body: { telefono: '',apellidoMaterno: '',fechaNacimiento: null } })).response.status).toBe(200);
     const corregida = await ctx.api(`/alumnos/${alumno.data.id}`,{ token: root }); expect(corregida.data).toMatchObject({ fechaNacimiento: null,direccion: 'Calle institucional 12',usuario: { apellidoMaterno: '',telefono: '' } });
     expect((await ctx.api(`/alumnos/${alumno.data.id}`,{ method: 'PATCH',token: root,body: { fechaNacimiento: '2009-01-02T00:00:00Z' } })).response.status).toBe(400);
-    const docente = await ctx.api('/docentes',{ method: 'POST',token: root,body: { ...datos,email: `insdoc_${ctx.sufijo}@example.invalid`,numEmpleado: `ID${ctx.sufijo}`,plantelIds: [ctx.plantelId],cedulaProfesional: 'CED123456',especialidad: 'Matemáticas' } }); expect(docente.response.status).toBe(201);
+    const docente = await ctx.api('/docentes',{ method: 'POST',token: root,body: { ...datos,email: `insdoc_${ctx.sufijo}@example.invalid`,numEmpleado: `ID${ctx.sufijo}`,plantelIds: [ctx.plantelId],cedulaPendiente: false, cedulaProfesional: 'CED123456',especialidad: 'Matemáticas' } }); expect(docente.response.status).toBe(201);
     expect((await ctx.api(`/docentes/${docente.data.id}`,{ token: root })).data).toMatchObject({ cedulaProfesional: 'CED123456',usuario: { apellidoMaterno: 'Materno',telefono: '5550001111' } });
     expect((await ctx.api(`/docentes/${docente.data.id}`,{ method: 'PATCH',token: root,body: { telefono: '',apellidoMaterno: '' } })).response.status).toBe(200);
     expect((await ctx.api(`/docentes/${docente.data.id}`,{ token: root })).data.usuario).toMatchObject({ apellidoMaterno: '',telefono: '' });

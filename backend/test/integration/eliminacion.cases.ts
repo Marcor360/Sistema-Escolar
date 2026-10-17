@@ -33,7 +33,7 @@ export function registrarEliminacion(ctx: ContextoIntegracion) {
 
     const docente = await ctx.api('/docentes', { method: 'POST', token: root, body: {
       email: `del_doc_${ctx.sufijo}@example.invalid`, password: 'Integracion_Segura_42!',
-      nombre: 'Eliminar', apellidoPaterno: 'Docente', numEmpleado: `DEL${ctx.sufijo}`, plantelIds: [ctx.plantelId],
+      nombre: 'Eliminar', apellidoPaterno: 'Docente', cedulaPendiente: true, numEmpleado: `DEL${ctx.sufijo}`, plantelIds: [ctx.plantelId],
     } });
     expect(docente.response.status).toBe(201);
     const perfil = await ctx.dataSource.getRepository(Docente).findOneByOrFail({ id: docente.data.id });
