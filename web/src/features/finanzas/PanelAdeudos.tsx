@@ -34,5 +34,5 @@ export function PanelAdeudos({ enviando, enviarAvisos, descargarExcel, adeudos, 
               {adeudos.length === 0 && <tr><td className="vacio" colSpan={7}>Sin adeudos: todos los cargos están cubiertos.</td></tr>}
             </tbody>
           </table></div>
-          <SeguimientoCobranza /><Paginador total={totalAdeudos} pagina={paginaAdeudos} porPagina={20} onCambio={cargarAdeudos} />
+          <SeguimientoCobranza /><Paginador total={totalAdeudos} pagina={paginaAdeudos} porPagina={10} onCambio={cargarAdeudos} />
         </div>); }

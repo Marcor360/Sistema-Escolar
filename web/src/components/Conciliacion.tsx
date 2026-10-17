@@ -38,13 +38,13 @@ export function Conciliacion() {
       {resultado.datos.map((i) => <tr key={i.id}><td>{i.referencia}</td><td>{i.matricula}</td><td>{pesos(i.monto)}</td><td>{new Date(i.fecha).toLocaleString('es-MX')}</td><td>{i.estatus} · {i.motivo}</td>
         <td><button disabled={enviando} onClick={() => { setSeleccion(i); setMotivo(''); setCargoId(''); }}>Revisar</button></td></tr>)}
       {!resultado.datos.length && <tr><td colSpan={6}>Sin incidencias pendientes.</td></tr>}
-    </tbody></table></div><Paginador total={resultado.total} pagina={pagina} porPagina={20} onCambio={setPagina} />
+    </tbody></table></div><Paginador total={resultado.total} pagina={pagina} porPagina={10} onCambio={setPagina} />
     {seleccion && <form onSubmit={resolver}><h3>Resolver {seleccion.referencia}</h3>
       {tipo === 'pagos' && <SelectorBuscable<Cargo> ruta="/finanzas/cargos" valor={cargoId} cambiar={setCargoId} etiqueta="Cargo de destino"
         filtros={{ alumnoId: seleccion.alumnoId }} texto={(c) => `${c.descripcion} · ${c.estatus}`} />}
       <label htmlFor="motivo-conciliacion">Motivo de resolución</label><input id="motivo-conciliacion" required minLength={3} maxLength={400} value={motivo} onChange={(e) => setMotivo(e.target.value)} />
       <button disabled={enviando}>{enviando ? 'Verificando…' : tipo === 'ordenes' ? 'Verificar con Openpay' : 'Aplicar pago'}</button><button type="button" onClick={() => setSeleccion(null)}>Cancelar</button>
     </form>}
-    <h3>Resoluciones auditadas</h3>{auditoria.slice(0, 20).map((a) => <p key={a.id}>{new Date(a.createdAt).toLocaleString('es-MX')} · Actor {a.usuarioId} · {a.accion} #{a.entidadId} · {a.detalle}</p>)}
+    <h3>Resoluciones auditadas</h3>{auditoria.slice(0, 10).map((a) => <p key={a.id}>{new Date(a.createdAt).toLocaleString('es-MX')} · Actor {a.usuarioId} · {a.accion} #{a.entidadId} · {a.detalle}</p>)}
   </section></>;
 }

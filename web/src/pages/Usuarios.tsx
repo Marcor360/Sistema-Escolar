@@ -27,7 +27,7 @@ export default function UsuariosPage() {
   useEffect(() => { if (editarId !== null) tituloFormRef.current?.focus(); }, [editarId]);
 
   const [tipo, setTipo] = useState<Tipo>('ALUMNO');
-  const [resultado, setResultado] = useState<Resultado>({ datos: [], total: 0, pagina: 1, porPagina: 20 });
+  const [resultado, setResultado] = useState<Resultado>({ datos: [], total: 0, pagina: 1, porPagina: 10 });
   const [planteles, setPlanteles] = useState<Plantel[]>([]);
   const [plantelId, setPlantelId] = useState('');
   const [plantelIds, setPlantelIds] = useState<number[]>([]);
@@ -45,7 +45,7 @@ export default function UsuariosPage() {
     const actual = ++consulta.current; setCargando(true); setError('');
     try {
       const { data } = await api.get<Resultado>('/usuarios/listado', {
-        params: { tipo: tipoActual, pagina, porPagina: 20, ...(plantelActual ? { plantelId: plantelActual } : {}), ...(termino ? { buscar: termino } : {}) },
+        params: { tipo: tipoActual, pagina, porPagina: 10, ...(plantelActual ? { plantelId: plantelActual } : {}), ...(termino ? { buscar: termino } : {}) },
       });
       if (actual === consulta.current) setResultado(data);
     } catch (err) { if (actual === consulta.current) setError(mensajeDeError(err)); }
@@ -70,7 +70,7 @@ export default function UsuariosPage() {
   };
 
   const cambiarTipo = (nuevo: Tipo) => {
-    setTipo(nuevo); setResultado({ datos: [], total: 0, pagina: 1, porPagina: 20 });
+    setTipo(nuevo); setResultado({ datos: [], total: 0, pagina: 1, porPagina: 10 });
     cargar(1, nuevo, plantelId, buscar);
   };
   const alternarRol = (rol: string) => setRolesElegidos((r) => r.includes(rol) ? r.filter((x) => x !== rol) : [...r, rol]);

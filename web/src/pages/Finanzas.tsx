@@ -19,8 +19,8 @@ export default function FinanzasPage() {
   const [tab, setTab] = useState<'cargos' | 'pagos' | 'adeudos'>('cargos');
   const [conceptos, setConceptos] = useState<Concepto[]>([]);
   const [ciclos, setCiclos] = useState<Ciclo[]>([]);
-  const [resultadoCargos, setResultadoCargos] = useState<ResultadoCargos>({ datos: [], total: 0, pagina: 1, porPagina: 20 });
-  const [resultadoPagos, setResultadoPagos] = useState<ResultadoPagos>({ datos: [], total: 0, pagina: 1, porPagina: 20 });
+  const [resultadoCargos, setResultadoCargos] = useState<ResultadoCargos>({ datos: [], total: 0, pagina: 1, porPagina: 10 });
+  const [resultadoPagos, setResultadoPagos] = useState<ResultadoPagos>({ datos: [], total: 0, pagina: 1, porPagina: 10 });
   const [adeudos, setAdeudos] = useState<Adeudo[]>([]);
   const [paginaAdeudos, setPaginaAdeudos] = useState(1); const [totalAdeudos, setTotalAdeudos] = useState(0);
   const cargarAdeudos = async (pagina = 1) => {
