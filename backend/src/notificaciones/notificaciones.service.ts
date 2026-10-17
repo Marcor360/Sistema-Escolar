@@ -47,6 +47,9 @@ export class NotificacionesService {
         host,
         port,
         secure: port === 465,
+        pool: true,
+        maxConnections: 1,
+        maxMessages: 100,
         // En entornos desplegados, impedir SMTP en texto claro si el servidor no ofrece STARTTLS.
         requireTLS: port !== 465 && (this.config.get<string>('NODE_ENV') === 'production' || this.config.get<string>('APP_ENV') === 'staging'),
         tls: { rejectUnauthorized: true },

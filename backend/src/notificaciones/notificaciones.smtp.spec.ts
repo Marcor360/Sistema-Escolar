@@ -54,6 +54,9 @@ describe('SMTP seguro en entornos desplegados', () => {
     expect(nodemailer.createTransport).toHaveBeenCalledWith(expect.objectContaining({
       requireTLS,
       secure,
+      pool: true,
+      maxConnections: 1,
+      maxMessages: 100,
       tls: { rejectUnauthorized: true },
     }));
   });
