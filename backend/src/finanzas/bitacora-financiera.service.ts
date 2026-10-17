@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, In, Repository } from 'typeorm';
 import { BitacoraFinanciera } from '../entities/bitacora-financiera.entity';
 import { ScopeService } from '../planteles/scope.service';
+import { PaginacionDto } from '../common/paginacion.dto';
 import { JwtUser } from '../common/current-user.decorator';
 
 /** Única responsabilidad: registrar y consultar movimientos financieros. */
@@ -29,4 +30,17 @@ export class BitacoraFinancieraService {
       order: { createdAt: 'DESC' }, take: 300,
     });
   }
+  async resoluciones(user: JwtUser, query: PaginacionDto) {
+    const planteles = await this.scope.resolverFiltro(user);
+    const [datos, total] = await this.repo.findAndCount({
+      where: {
+        accion: In(['CONCILIAR_ORDEN', 'CONCILIAR_PAGO']),
+        ...(planteles === null ? {} : { plantelId: In(planteles) }),
+      },
+      order: { createdAt: 'DESC', id: 'DESC' },
+      skip: (query.pagina - 1) * query.porPagina, take: query.porPagina,
+    });
+    return { datos, total, pagina: query.pagina, porPagina: query.porPagina };
+  }
+
 }
