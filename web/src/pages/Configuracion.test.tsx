@@ -22,3 +22,15 @@ it('preserva la edición después de un fallo y permite reintentar', async () =>
   await waitFor(() => expect((screen.getByText('Guardar cambios') as HTMLButtonElement).disabled).toBe(false));
   fireEvent.submit(input.closest('form')!); await screen.findByRole('status'); expect(put).toHaveBeenLastCalledWith('/configuracion/marca',expect.objectContaining({ nombreInstitucion: 'Nombre corregido' }));
 });
+
+it('rechaza localmente logos de más de 2 MB sin modificar la marca ni enviar el archivo', () => {
+  const put = vi.spyOn(api, 'put');
+  const post = vi.spyOn(api, 'post');
+  render(<ConfiguracionPage />);
+  const archivo = new File([new Uint8Array(2 * 1024 * 1024 + 1)], 'logo.png', { type: 'image/png' });
+  fireEvent.change(screen.getByLabelText(/Logo \(PNG, JPG o WebP/), { target: { files: [archivo] } });
+  expect(screen.getByRole('alert').textContent).toContain('supera los 2 MB');
+  expect((screen.getByRole('button', { name: 'Guardar cambios' }) as HTMLButtonElement).disabled).toBe(true);
+  expect(put).not.toHaveBeenCalled();
+  expect(post).not.toHaveBeenCalled();
+});
