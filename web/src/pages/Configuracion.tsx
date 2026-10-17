@@ -12,6 +12,7 @@ export default function ConfiguracionPage() {
   const [vistaPrevia, setVistaPrevia] = useState<string | null>(null);
   const [mensaje, setMensaje] = useState('');
   const [logoNoDisponible, setLogoNoDisponible] = useState(false);
+  const [archivoRechazado, setArchivoRechazado] = useState(false);
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState(false);
   const mutando = useRef(false);
@@ -26,19 +27,36 @@ export default function ConfiguracionPage() {
   useEffect(() => () => { if (vistaPrevia) URL.revokeObjectURL(vistaPrevia); }, [vistaPrevia]);
 
   const seleccionarLogo = (evento: ChangeEvent<HTMLInputElement>) => {
-    if (vistaPrevia) URL.revokeObjectURL(vistaPrevia);
     const seleccionado = evento.target.files?.[0] ?? null;
+    setError('');
     setLogoNoDisponible(false);
+    setArchivoRechazado(false);
+    if (seleccionado && seleccionado.size > 2 * 1024 * 1024) {
+      setArchivo(null);
+      setVistaPrevia(null);
+      setArchivoRechazado(true);
+      setError('El logotipo supera los 2 MB permitidos. Selecciona una imagen más ligera.');
+      return;
+    }
+    if (seleccionado && (!/\.(png|jpe?g|webp)$/i.test(seleccionado.name) || seleccionado.size === 0)) {
+      setArchivo(null);
+      setVistaPrevia(null);
+      setArchivoRechazado(true);
+      setError('Selecciona una imagen PNG, JPG o WebP válida.');
+      return;
+    }
     setArchivo(seleccionado);
     setVistaPrevia(seleccionado ? URL.createObjectURL(seleccionado) : null);
   };
 
   const guardar = async (evento: FormEvent) => {
     evento.preventDefault();
-    if (mutando.current) return; mutando.current = true;
+    if (mutando.current || archivoRechazado) return; mutando.current = true;
     setError(''); setMensaje(''); setGuardando(true);
+    let datosInstitucionalesGuardados = false;
     try {
       await api.put('/configuracion/marca', { nombreInstitucion, nombreCorto, colorPrimario, colorAcento });
+      datosInstitucionalesGuardados = true;
       if (archivo) {
         const datos = new FormData();
         datos.append('logo', archivo);
@@ -46,10 +64,17 @@ export default function ConfiguracionPage() {
       }
       await recargar();
       setArchivo(null); setVistaPrevia(null);
+      setArchivoRechazado(false);
       setLogoNoDisponible(false);
       setMensaje('Identidad institucional actualizada.');
     } catch (err) {
-      setError(mensajeDeError(err));
+      const detalle = mensajeDeError(err);
+      const mensaje = detalle === 'File too large'
+        ? 'El logotipo supera los 2 MB permitidos. Selecciona una imagen más ligera.'
+        : detalle;
+      setError(datosInstitucionalesGuardados && archivo
+        ? `Los datos institucionales se guardaron, pero el logotipo no: ${mensaje}`
+        : mensaje);
     } finally {
       mutando.current = false; setGuardando(false);
     }
@@ -85,12 +110,14 @@ export default function ConfiguracionPage() {
         <label htmlFor="logo">Logo (PNG, JPG o WebP; máximo 2 MB)</label>
         <input id="logo" type="file" accept=".png,.jpg,.jpeg,.webp" onChange={seleccionarLogo} />
         {logoVisible && !logoNoDisponible && <img className="logo-marca vista-logo" src={logoVisible} alt="Vista previa del logo" onError={() => setLogoNoDisponible(true)} />}
-        {logoNoDisponible && <p role="alert" className="mensaje-error">El logo no se puede mostrar. Verifica que la URL pública de archivos responda correctamente y que UPLOADS_DIR conserve los archivos tras los despliegues.</p>}
+        {logoNoDisponible && <p role="alert" className="mensaje-error">{vistaPrevia
+          ? 'La imagen seleccionada no se puede mostrar. Revisa que sea un archivo de imagen válido.'
+          : 'El logotipo guardado no se puede mostrar. Contacta al administrador para verificar el archivo en el servidor.'}</p>}
       </div>
       {error && <p role="alert" className="mensaje-error">{error}</p>}
       {mensaje && <p role="status" className="mensaje-ok">{mensaje}</p>}
       <div className="fila">
-        <button className="boton" disabled={guardando}>{guardando ? 'Guardando…' : 'Guardar cambios'}</button>
+        <button className="boton" disabled={guardando || archivoRechazado}>{guardando ? 'Guardando…' : 'Guardar cambios'}</button>
         {marca.logoUrl && <button type="button" className="boton peligro" onClick={quitarLogo} disabled={guardando}>Quitar logo</button>}
       </div>
     </form>
