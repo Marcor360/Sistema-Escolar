@@ -4,6 +4,7 @@ import { useDialogoMotivo } from '../components/useDialogoMotivo';
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { Encabezado } from '../components/Encabezado';
+import { PanelAccionesModulo } from '../components/PanelAccionesModulo';
 import { Paginador } from '../components/Paginador';
 import '../components/tabla-adaptable.css';
 
@@ -30,6 +31,8 @@ export default function DocentesPage() {
   const [plantelIds, setPlantelIds] = useState<number[]>([]);
   const [filtroPlantel, setFiltroPlantel] = useState('');
   const [form, setForm] = useState(FORM_INICIAL);
+  const [formBase, setFormBase] = useState(FORM_INICIAL);
+  const [vista, setVista] = useState<'panel' | 'consulta' | 'formulario'>('panel');
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [editando, setEditando] = useState<number | null>(null);
@@ -66,10 +69,10 @@ export default function DocentesPage() {
     consultaDetalle.current += 1;
     setCargandoDetalle(false);
     setDetalle(null);
-    setEditando(d.id); setForm({ ...FORM_INICIAL, numEmpleado: d.numEmpleado,
+    const datos = { ...FORM_INICIAL, numEmpleado: d.numEmpleado,
       nombre: d.usuario.nombre, apellidoPaterno: d.usuario.apellidoPaterno,
-      apellidoMaterno: d.usuario.apellidoMaterno ?? '', telefono: d.usuario.telefono ?? '', cedulaProfesional: d.cedulaProfesional ?? '', cedulaPendiente: !d.cedulaProfesional, email: d.usuario.email, especialidad: d.especialidad ?? '' });
-    document.getElementById('form-docente')?.scrollIntoView();
+      apellidoMaterno: d.usuario.apellidoMaterno ?? '', telefono: d.usuario.telefono ?? '', cedulaProfesional: d.cedulaProfesional ?? '', cedulaPendiente: !d.cedulaProfesional, email: d.usuario.email, especialidad: d.especialidad ?? '' };
+    setEditando(d.id); setForm(datos); setFormBase(datos); setVista('formulario');
   };
 
   const cargar = useCallback((pagina = 1, plantelId = '') => {
@@ -80,7 +83,6 @@ export default function DocentesPage() {
       .finally(() => { if (actual === consulta.current) setCargando(false); });
   }, []);
   useEffect(() => {
-    cargar(1, '');
     let activo = true;
     api.get<Plantel[]>('/planteles/mios')
       .then((r) => { if (activo) setPlanteles(r.data); })
@@ -90,7 +92,27 @@ export default function DocentesPage() {
       consulta.current += 1;
       consultaDetalle.current += 1;
     };
-  }, [cargar]);
+  }, []);
+
+  useEffect(() => {
+    if (vista === 'consulta') cargar(1, filtroPlantel);
+  }, [vista, filtroPlantel, cargar]);
+
+  const volver = async () => {
+    if (enviando) return;
+    if (vista === 'formulario' && JSON.stringify(form) !== JSON.stringify(formBase)) {
+      if (!await confirmacion.solicitar('¿Salir sin guardar los cambios del docente?')) return;
+    }
+    setEditando(null);
+    setForm(FORM_INICIAL);
+    setFormBase(FORM_INICIAL);
+    setVista('panel');
+  };
+
+  const abrirAlta = () => {
+    setEditando(null); setForm(FORM_INICIAL); setFormBase(FORM_INICIAL);
+    setPlantelIds([]); setError(''); setMensaje(''); setVista('formulario');
+  };
 
   const crear = async (e: FormEvent) => {
     e.preventDefault();
@@ -101,8 +123,9 @@ export default function DocentesPage() {
       else await api.post('/docentes', { ...form, cedulaProfesional: form.cedulaPendiente ? undefined : form.cedulaProfesional, plantelIds, especialidad: form.especialidad || undefined });
       setMensaje(editando ? 'Docente actualizado' : 'Docente registrado. Se solicitó invitación a su correo institucional.'); setEditando(null);
       setForm(FORM_INICIAL);
+      setFormBase(FORM_INICIAL);
       setPlantelIds([]);
-      cargar(1, filtroPlantel);
+      setVista('consulta');
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
@@ -121,8 +144,15 @@ export default function DocentesPage() {
   return (
     <>{confirmacion.elemento}{dialogoMotivo.elemento}
       <Encabezado titulo="Docentes" detalle="Plantilla docente y cuentas de acceso" />
+      {vista === 'panel' && <PanelAccionesModulo titulo="Gestión de docentes" acciones={[
+        { titulo: 'Registrar docente', detalle: 'Crear expediente e invitar por correo', ejecutar: abrirAlta },
+        { titulo: 'Consultar docentes', detalle: 'Buscar por plantel y revisar clases', ejecutar: () => setVista('consulta') },
+        { titulo: 'Editar o dar de baja', detalle: 'Buscar primero el expediente que deseas gestionar', ejecutar: () => setVista('consulta') },
+      ]} />}
+      {vista !== 'panel' && <button type="button" className="boton secundario" onClick={() => { void volver(); }}>Volver a opciones</button>}
+      {vista === 'consulta' && mensaje && <p role="status" className="mensaje-ok">{mensaje}</p>}
 
-      <section className="panel" id="form-docente">
+      {vista === 'formulario' && <section className="panel" id="form-docente">
         <h2>{editando ? 'Editar docente' : 'Registrar docente'}</h2>
         <form onSubmit={crear} aria-busy={enviando}><fieldset disabled={enviando} style={{ border: 0, padding: 0 }}><legend>Datos del docente</legend>
           <div className="fila">
@@ -136,7 +166,7 @@ export default function DocentesPage() {
             <div className="campo"><label htmlFor="docente-cedula">Cédula profesional {!form.cedulaPendiente && '*'}</label><input id="docente-cedula" required={!form.cedulaPendiente} disabled={form.cedulaPendiente} maxLength={20} {...dar('cedulaProfesional')} /></div>
             <label className="casilla"><input type="checkbox" checked={form.cedulaPendiente} onChange={(e) => setForm((previo) => ({ ...previo, cedulaPendiente: e.target.checked, cedulaProfesional: e.target.checked ? '' : previo.cedulaProfesional }))} />Cédula pendiente de capturar</label>
             <button disabled={enviando} className="boton">{enviando ? 'Guardando…' : 'Guardar docente'}</button>
-            {editando && <button type="button" onClick={() => { setEditando(null); setForm(FORM_INICIAL); }}>Cancelar edición</button>}
+            {editando && <button type="button" onClick={() => { void volver(); }}>Cancelar edición</button>}
           </div>
           <div className="fila" style={{ marginTop: 12 }}>
             <span className="campo">Planteles para el alta (obligatorios)</span>
@@ -145,9 +175,9 @@ export default function DocentesPage() {
         </fieldset></form>
         {error && <p role="alert" className="mensaje-error">{error}</p>}
         {mensaje && <p role="status" className="mensaje-ok">{mensaje}</p>}
-      </section>
+      </section>}
 
-      <div className="fila" style={{ marginBottom: 12 }}><div className="campo"><label htmlFor="docentes-campo-7">Filtrar por plantel</label><select id="docentes-campo-7" value={filtroPlantel} onChange={(e) => setFiltroPlantel(e.target.value)}><option value="">Todos</option>{planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div><button className="boton secundario" disabled={cargando} onClick={() => cargar(1, filtroPlantel)}>Aplicar</button></div>
+      {vista === 'consulta' && <><div className="fila" style={{ marginBottom: 12 }}><div className="campo"><label htmlFor="docentes-campo-7">Filtrar por plantel</label><select id="docentes-campo-7" value={filtroPlantel} onChange={(e) => setFiltroPlantel(e.target.value)}><option value="">Todos</option>{planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div><button className="boton secundario" disabled={cargando} onClick={() => cargar(1, filtroPlantel)}>Aplicar</button></div>
 
       {cargandoDetalle && <p role="status">Cargando planteles y clases del docente…</p>}
       {detalle && <section className="panel"><h2>Planteles y clases</h2><fieldset><legend>Planteles del docente</legend>
@@ -181,6 +211,7 @@ export default function DocentesPage() {
         </tbody>
       </table></div>
       <Paginador total={resultado.total} pagina={resultado.pagina} porPagina={resultado.porPagina} deshabilitado={cargando} onCambio={(pagina) => cargar(pagina, filtroPlantel)} />
+      </>}
     </>
   );
 }
