@@ -1,3 +1,4 @@
+import { Equals } from 'class-validator';
 import { OmitType } from '@nestjs/swagger';
 import { PasswordNuevaValida } from '../common/password-bcrypt';
 import { OpcionalNoNulo } from '../common/opcional-no-nulo';
@@ -52,6 +53,7 @@ export class ListadoUsuariosDto extends PaginacionDto {
 }
 
 export class ActualizarPersonalDto extends OmitType(ActualizarUsuarioDto, ['password'] as const) {
+  @Equals(undefined, { message: 'Usa la acción de restablecimiento de contraseña' }) password?: never;
   @IsArray() @Type(() => Number) @IsInt({ each: true }) @Min(1, { each: true }) plantelIds!: number[];
 }
 
