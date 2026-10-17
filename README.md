@@ -15,6 +15,15 @@ La versión 1.26.1 consolida las altas y activación segura, mejoras de navegaci
 
 ## Novedades de 1.26.1
 
+Esta actualización integra los PR #90–94 sobre la consolidación 1.26.0:
+
+- Personal y docentes reciben una invitación privada para activar su cuenta, sin introducir una contraseña manual al darlos de alta.
+- Los docentes requieren cédula profesional o una declaración explícita de cédula pendiente, también en la importación.
+- SUPERADMIN puede restablecer el acceso de cuentas pendientes; se invalidan los enlaces anteriores y se exige cambiar la contraseña.
+- SMTP reutiliza una conexión con límites de envío; los formularios distinguen nombre, primer apellido y segundo apellido.
+
+### Funciones consolidadas desde 1.26.0
+
 - Inicio del alumno con accesos explicados a materias y tareas, calificaciones, estado de cuenta, perfil y documentos, disponibles aunque el resumen tarde en cargar.
 - Menú web organizado por áreas de trabajo; la agenda distingue carga, error y ausencia de eventos y permite reintentar.
 - Alta de alumnos sin contraseñas basadas en matrícula: activación privada, invitaciones automáticas y orientación para recuperar acceso. Restablecimiento de acceso administrativo sujeto a permisos.
@@ -118,9 +127,9 @@ En web, el login anuncia el cierre por inactividad. La aplicación del alumno mu
 
 ## Estado de las ramas y consolidación
 
-Se auditaron las 89 ramas remotas de trabajo existentes, además de `main`. Los PR ya fusionados y las variantes sustituidas por entregas consolidadas quedan reconocidos en el historial de esta versión. Los cambios vigentes se concentran en `main`; las ramas históricas se conservan como referencias. [Inventario de ramas y criterio de reconciliación](docs/CONSOLIDACION_1.26.0.md).
+En la consolidación 1.26.0 se auditaron las 89 ramas remotas de trabajo existentes, además de `main`. Los PR ya fusionados y las variantes sustituidas por entregas consolidadas quedan reconocidos en el historial de esta versión. Los cambios vigentes se concentran en `main`; las ramas históricas se conservan como referencias. [Inventario de ramas y criterio de reconciliación](docs/CONSOLIDACION_1.26.0.md).
 
-La numeración 1.26.0 no declara aprobadas las puertas institucionales de piloto, SMTP real, dispositivos físicos ni restauración. Su estado verificable permanece en [BETA_ACEPTACION.json](docs/BETA_ACEPTACION.json).
+La numeración 1.26.1 no declara aprobadas las puertas institucionales de piloto, SMTP real, dispositivos físicos ni restauración. Su estado verificable permanece en [BETA_ACEPTACION.json](docs/BETA_ACEPTACION.json).
 
 ## Validación y límites actuales
 

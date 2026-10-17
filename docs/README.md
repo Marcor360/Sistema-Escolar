@@ -1,12 +1,12 @@
 # Documentación de Sistema Escolar
 
-Entrada de lectura para main 1.26.0. Revisión documental: 16 de octubre de 2026. Las guías vigentes describen el código consolidado; las auditorías anteriores conservan su propio corte. El README principal resume las funciones y los requisitos de desarrollo, operación y validación.
+Entrada de lectura para main 1.26.1. Revisión documental: 16 de octubre de 2026. Las guías vigentes describen el código consolidado; las auditorías anteriores conservan su propio corte. El README principal resume las funciones y los requisitos de desarrollo, operación y validación.
 
 ## Leer según la tarea
 
 | Tarea | Fuente vigente |
 |---|---|
-| Versión y ramas consolidadas | [Consolidación 1.26.0](CONSOLIDACION_1.26.0.md) |
+| Auditoría histórica de ramas en 1.26.0 | [Consolidación 1.26.0](CONSOLIDACION_1.26.0.md) |
 | Baja y eliminación definitiva | [Reglas de eliminación](ELIMINACION-REGISTROS.md) |
 | Barrido responsivo, matriz y límites | [Revisión del 15 de octubre](BARRIDO_RESPONSIVO_2026-10-15.md) |
 | Aceptación por rol y canal | [Matriz UAT pendiente](UAT_MATRIZ_2026-10-15.json) y [operación](OPERACION_PRODUCCION.md) |
