@@ -2,7 +2,8 @@ import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query,
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { UsuariosService } from './usuarios.service';
-import { ActualizarPersonalDto, ActualizarUsuarioDto, CrearUsuarioDto, ListadoUsuariosDto, RestablecerPasswordAdministrativoDto } from './usuarios.dto';
+import { ActivacionService } from '../auth/activacion.service';
+import { ActualizarPersonalDto, ActualizarUsuarioDto, CrearPersonalDto, ListadoUsuariosDto, RestablecerPasswordAdministrativoDto } from './usuarios.dto';
 import { PaginacionDto } from '../common/paginacion.dto';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { RolesGuard } from '../common/roles.guard';
@@ -15,7 +16,7 @@ import { CurrentUser, JwtUser } from '../common/current-user.decorator';
 @Roles('SUPERADMIN')
 @Controller('usuarios')
 export class UsuariosController {
-  constructor(private readonly service: UsuariosService) {}
+  constructor(private readonly service: UsuariosService, private readonly activacion: ActivacionService) {}
 
   @Get() listar(@Query() query: PaginacionDto) { return this.service.listar(query); }
   @Get('listado')
@@ -34,7 +35,13 @@ export class UsuariosController {
   @Get(':id/personal') detallePersonal(@Param('id', ParseIntPipe) id: number) { return this.service.detallePersonal(id); }
   @Patch(':id/personal') actualizarPersonal(@Param('id', ParseIntPipe) id: number, @Body() dto: ActualizarPersonalDto, @CurrentUser() user: JwtUser) { return this.service.actualizarPersonal(id, dto, user); }
   @Get(':id') obtener(@Param('id', ParseIntPipe) id: number) { return this.service.obtener(id); }
-  @Post() crear(@Body() dto: CrearUsuarioDto, @CurrentUser() user: JwtUser) { return this.service.crearPersonal(dto, user); }
+  @Post()
+  @ApiOperation({ summary: 'Crear personal con cuenta pendiente de activación e invitar después de confirmar el alta' })
+  async crear(@Body() dto: CrearPersonalDto, @CurrentUser() user: JwtUser) {
+    const cuenta = await this.service.crearPersonal(dto, user);
+    await this.activacion.solicitar(cuenta.email);
+    return cuenta;
+  }
   @Patch(':id') actualizar(@Param('id', ParseIntPipe) id: number, @Body() dto: ActualizarUsuarioDto) {
     return this.service.actualizar(id, dto);
   }

@@ -248,8 +248,8 @@ describe('Integración de flujos críticos (base aislada)', () => {
     });
     const alumno = usuario.roles.some((r) => r.clave === 'ALUMNO')
       ? await dataSource.getRepository(Alumno).findOneBy({ usuarioId: usuario.id }) : null;
-    if (alumno && usuario.activacionPendiente) {
-      // Fixture sintético: ejercitar la activación real, sin dependencia de SMTP externo.
+    if (usuario.activacionPendiente) {
+      // Fixture sintético: activar cualquier rol por código real, sin SMTP externo.
       let codigo = '';
       const correo = jest.spyOn(app.get(NotificacionesService), 'enviarEmail')
         .mockImplementation(async (_to, _subject, html) => {

@@ -1,3 +1,5 @@
+import { Equals } from 'class-validator';
+import { OmitType } from '@nestjs/swagger';
 import { PasswordNuevaValida } from '../common/password-bcrypt';
 import { OpcionalNoNulo } from '../common/opcional-no-nulo';
 import { MaxLength, Min, MinLength as LongitudMinima } from 'class-validator';
@@ -26,6 +28,9 @@ export class CrearUsuarioDto {
   @IsArray() @ArrayNotEmpty() @IsIn(ROLES, { each: true }) roles!: RolClave[];
 }
 
+/** El personal recibe un enlace privado para definir su contraseña; nunca se solicita una temporal en el alta. */
+export class CrearPersonalDto extends OmitType(CrearUsuarioDto, ['password'] as const) {}
+
 export class ActualizarUsuarioDto {
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @OpcionalNoNulo() @IsString() @LongitudMinima(1) @MaxLength(80) nombre?: string;
@@ -47,7 +52,8 @@ export class ListadoUsuariosDto extends PaginacionDto {
   @IsOptional() @IsString() buscar?: string;
 }
 
-export class ActualizarPersonalDto extends ActualizarUsuarioDto {
+export class ActualizarPersonalDto extends OmitType(ActualizarUsuarioDto, ['password'] as const) {
+  @Equals(undefined, { message: 'Usa la acción de restablecimiento de contraseña' }) password?: never;
   @IsArray() @Type(() => Number) @IsInt({ each: true }) @Min(1, { each: true }) plantelIds!: number[];
 }
 
