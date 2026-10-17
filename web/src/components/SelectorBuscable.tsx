@@ -16,7 +16,7 @@ export function SelectorBuscable<T extends { id: number }>({ ruta, valor, cambia
     setCargando(true); setError('');
     const timer = setTimeout(() => {
       setCargando(true); setError('');
-      api.get(ruta, { signal: controller.signal, params: { ...JSON.parse(params), buscar, pagina, porPagina: 20 } })
+      api.get(ruta, { signal: controller.signal, params: { ...JSON.parse(params), buscar, pagina, porPagina: 10 } })
         .then(({ data }) => { if (activa) setResultado(data); })
         .catch((err) => { if (activa) setError(mensajeDeError(err)); })
         .finally(() => { if (activa) setCargando(false); });
@@ -32,6 +32,6 @@ export function SelectorBuscable<T extends { id: number }>({ ruta, valor, cambia
       {valor && !resultado.datos.some((i) => String(i.id) === valor) && <option value={valor}>{seleccion.current?.id === valor ? seleccion.current.texto : `Seleccionado ${valor}`}</option>}
       {resultado.datos.map((i) => <option key={i.id} value={i.id}>{texto(i)}</option>)}
     </select>{cargando && <span role="status">Buscando…</span>}{error && <span role="alert">{error}</span>}
-    <Paginador total={resultado.total} pagina={pagina} porPagina={20} onCambio={setPagina} deshabilitado={deshabilitado || cargando} />
+    <Paginador total={resultado.total} pagina={pagina} porPagina={10} onCambio={setPagina} deshabilitado={deshabilitado || cargando} />
   </div>;
 }

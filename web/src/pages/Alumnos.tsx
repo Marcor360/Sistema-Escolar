@@ -24,7 +24,7 @@ import '../components/tabla-adaptable.css';
 export default function AlumnosPage() {
   const confirmacion = useConfirmacion();
   const dialogoMotivo = useDialogoMotivo();
-  const [resultado, setResultado] = useState<Resultado>({ datos: [], total: 0, pagina: 1, porPagina: 20 });
+  const [resultado, setResultado] = useState<Resultado>({ datos: [], total: 0, pagina: 1, porPagina: 10 });
   const [planteles, setPlanteles] = useState<Plantel[]>([]);
   const [plantelId, setPlantelId] = useState('');
   const [cargando, setCargando] = useState(true);
