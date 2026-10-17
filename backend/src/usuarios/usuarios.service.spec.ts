@@ -87,3 +87,39 @@ describe('UsuariosService.actualizar revoca sesiones', () => {
     expect(respuesta.datos[0]).not.toHaveProperty('passwordHash');
   });
 });
+
+
+describe('UsuariosService — restablecimiento de cuentas pendientes', () => {
+  it('SUPERADMIN puede restablecer una cuenta pendiente y revoca el token de activación', async () => {
+    const cuenta = { id: 17, activo: true, activacionPendiente: true,
+      roles: [{ clave: 'ADMINISTRATIVO' }], sessionVersion: 0 };
+    const usuarios = { findOne: jest.fn().mockResolvedValue(cuenta), save: jest.fn(async (v) => v) };
+    const invalidaciones = { update: jest.fn().mockResolvedValue({ affected: 1 }) };
+    const bitacora = { insert: jest.fn().mockResolvedValue({}) };
+    const manager = { getRepository: jest.fn((entity: { name: string }) => {
+      if (entity.name === 'Usuario') return usuarios;
+      if (entity.name === 'BitacoraActividad') return bitacora;
+      return invalidaciones;
+    }) };
+    const repo = { manager: { transaction: jest.fn(async (fn: (m: typeof manager) => Promise<unknown>) => fn(manager)) } };
+    const service = new UsuariosService(repo as any, {} as any, {} as any, {} as any, {} as any, {} as any);
+    await service.restablecerPasswordAdministrativo(17, 'NuevaClave-Segura-2026!', {
+      sub: 1, email: 'super@example.test', nombre: 'Super', roles: ['SUPERADMIN'],
+    });
+    expect(usuarios.save).toHaveBeenCalledWith(expect.objectContaining({
+      activacionPendiente: false, passwordChangeRequired: true, sessionVersion: 1,
+    }));
+    expect(invalidaciones.update).toHaveBeenCalledTimes(2);
+  });
+
+  it('ADMINISTRATIVO no puede saltar la activación pendiente', async () => {
+    const usuarios = { findOne: jest.fn().mockResolvedValue({ id: 17, activo: true,
+      activacionPendiente: true, roles: [{ clave: 'MAESTRO' }] }) };
+    const manager = { getRepository: jest.fn(() => usuarios) };
+    const repo = { manager: { transaction: jest.fn(async (fn: (m: typeof manager) => Promise<unknown>) => fn(manager)) } };
+    const service = new UsuariosService(repo as any, {} as any, {} as any, {} as any, {} as any, {} as any);
+    await expect(service.restablecerPasswordAdministrativo(17, 'NuevaClave-Segura-2026!', {
+      sub: 2, email: 'admin@example.test', nombre: 'Admin', roles: ['ADMINISTRATIVO'],
+    })).rejects.toThrow('La cuenta requiere activación');
+  });
+});

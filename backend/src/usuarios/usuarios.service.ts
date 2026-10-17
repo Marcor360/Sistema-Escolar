@@ -47,7 +47,7 @@ export class UsuariosService {
       const usuario = await usuarios.findOne({ where: { id, activo: true }, lock: { mode: 'pessimistic_write' } });
       if (!usuario) throw new NotFoundException('Usuario activo no encontrado');
       const claves = usuario.roles.map((rol) => rol.clave);
-      if (usuario.activacionPendiente) throw new ConflictException('La cuenta requiere activación antes de restablecer la contraseña');
+      if (usuario.activacionPendiente && !actor.roles.includes('SUPERADMIN')) throw new ConflictException('La cuenta requiere activación antes de restablecer la contraseña');
       if (!actor.roles.includes('SUPERADMIN')) {
         if (claves.some((rol) => rol !== 'ALUMNO' && rol !== 'MAESTRO')) {
           throw new ForbiddenException('Solo puedes restablecer cuentas de alumnos y docentes');
@@ -66,6 +66,7 @@ export class UsuariosService {
         }
       }
       usuario.passwordHash = passwordHash;
+      usuario.activacionPendiente = false;
       usuario.passwordChangeRequired = true;
       usuario.sessionVersion = (usuario.sessionVersion ?? 0) + 1;
       await usuarios.save(usuario);
