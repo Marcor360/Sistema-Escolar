@@ -34,7 +34,10 @@ export class ProgramasEspecialesService {
     await this.scope.validarGestion(user, anterior.plantelId);
     const plantel = await m.getRepository(Plantel).findOne({ where: { id: anterior.plantelId }, lock: { mode: 'pessimistic_write' } });
     const programa = await m.getRepository(ProgramaEspecial).findOneOrFail({ where: { id }, lock: { mode: 'pessimistic_write' } });
-    if (exigirActivo && (!plantel?.activo || programa.estado !== 'ACTIVO')) throw new ConflictException('El programa y plantel deben estar activos');
+    if (exigirActivo) {
+      const ciclo = await m.getRepository(CicloEscolar).findOneBy({ id: programa.cicloId });
+      if (!plantel?.activo || programa.estado !== 'ACTIVO' || !ciclo || !['PREPARACION', 'ACTIVO'].includes(ciclo.estado)) throw new ConflictException('El programa y plantel deben estar activos y el ciclo en preparación o activo');
+    }
     return programa;
   }
   private auditar(m: EntityManager, u: JwtUser, plantelId: number, accion: string, entidadId: number, detalle: string) {
