@@ -1,3 +1,6 @@
+import { ClavesCorreoAcceso } from '../src/auth/correo-acceso-claves';
+import { ConfigService } from '@nestjs/config';
+import { AuthCorreoOutbox } from '../src/entities/auth-correo-outbox.entity';
 import { registrarOutbox } from './integration/outbox.cases';
 import { CorreoAccesoOutboxService } from '../src/auth/correo-acceso-outbox.service';
 import { registrarRecursamientos } from './integration/recursamientos.cases';
@@ -257,19 +260,19 @@ describe('Integración de flujos críticos (base aislada)', () => {
     const alumno = usuario.roles.some((r) => r.clave === 'ALUMNO')
       ? await dataSource.getRepository(Alumno).findOneBy({ usuarioId: usuario.id }) : null;
     if (usuario.activacionPendiente) {
-      // Fixture sintético: activar cualquier rol por código real, sin SMTP externo.
-      let codigo = '';
-      const correo = jest.spyOn(app.get(NotificacionesService), 'enviarEmail')
-        .mockImplementation(async (to, _subject, html) => {
-          if (to === email) codigo = /<strong[^>]*>([0-9a-f]{64})<\/strong>/.exec(html)?.[1] ?? '';
-          return { simulado: false };
-        });
-      try {
-        await app.get(ActivacionService).solicitar(email);
-        for (let i = 0; !codigo && i < 20; i++) { if (!await app.get(CorreoAccesoOutboxService).procesar()) break; }
-        expect(codigo).toMatch(/^[0-9a-f]{64}$/);
-        await app.get(ActivacionService).activar(codigo, 'Integracion_Renovada_42!');
-      } finally { correo.mockRestore(); }
+      // Fixture sintético: reconstruir el código real con la clave SOLO de integración.
+      // No interceptar un transporte global: varios fixtures pueden activarse concurrentemente.
+      await app.get(ActivacionService).solicitar(email);
+      let trabajo: AuthCorreoOutbox | null = null;
+      for (let i = 0; i < 20; i++) {
+        await app.get(CorreoAccesoOutboxService).procesar();
+        trabajo = await dataSource.getRepository(AuthCorreoOutbox).findOne({ where: { usuarioId: usuario.id, tipo: 'ACTIVACION', version: usuario.sessionVersion }, order: { createdAt: 'DESC' } });
+        if (trabajo?.tokenHash) break;
+      }
+      expect(trabajo?.tokenHash).toMatch(/^[0-9a-f]{64}$/);
+      const codigo = new ClavesCorreoAcceso(app.get(ConfigService)).token(trabajo!);
+      await app.get(ActivacionService).activar(codigo, 'Integracion_Renovada_42!');
+      await app.get(CorreoAccesoOutboxService).procesar();
       passwords.set(email, 'Integracion_Renovada_42!');
     }
     const passwordInicial = passwords.get(email) ?? alumno?.matricula ?? 'Integracion_Segura_42!';
