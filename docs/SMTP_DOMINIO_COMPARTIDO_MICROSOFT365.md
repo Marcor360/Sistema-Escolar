@@ -13,7 +13,7 @@ El buzón emisor `plataforma-stagin@iua.edu.mx` envía códigos/invitaciones con
 3. Si cPanel muestra **Local** para una cuenta que vive únicamente en Microsoft 365, investigar enrutamiento dividido; el hecho de que SMTP acepte el mensaje no significa entrega al buzón correcto.
 4. Si cPanel muestra **Remote**, usar Exchange Admin Center → **Mail flow → Message trace** para buscar la misma hora, remitente y destinatario. Si Microsoft 365 no muestra rastro, revisar el destino real y respuesta del servidor SMTP saliente. Si lo muestra, examinar estado y motivos.
 5. Si Exchange recibió el correo, comprobar **Microsoft Defender → Email & collaboration → Review → Quarantine**, junk mail, reglas de flujo, antispam y políticas antiphishing. No permitir de forma global todo el dominio ni deshabilitar protecciones.
-6. Registrar estado actual de MX, SPF, DKIM y DMARC antes de proponer cambios. Un mismo dominio debe tener un solo registro TXT SPF efectivo, que incluya todos los emisores autorizados y esté alineado con From y DKIM cuando corresponda.
+6. Registrar estado actual de MX, SPF, DKIM y DMARC antes de proponer cambios. Un mismo dominio debe tener un solo registro TXT SPF efectivo que autorice los emisores necesarios. SPF valida el dominio del envelope sender (MAIL FROM); DKIM valida el dominio d= de la firma. DMARC requiere que al menos uno de ellos pase y esté alineado con el dominio del From visible. Un SPF correcto por sí solo no demuestra alineación DMARC.
 
 ### Consultas DNS opcionales desde PowerShell (solo lectura)
 
@@ -24,6 +24,30 @@ Resolve-DnsName -Name _dmarc.iua.edu.mx -Type TXT
 ```
 
 **Limitación:** estos comandos no pueden demostrar cómo enruta mensajes *internamente* cPanel o Microsoft 365; esa información proviene de sus trazas y configuraciones.
+
+## Evidencia mínima y correlación
+
+Usar identificadores de caso y custodiar los destinatarios reales solo en el
+registro operativo privado. Registrar por cada prueba: hora UTC con zona,
+versión/SHA desplegado, flujo (invitación/recuperación), proveedor de destino,
+Message-ID si está disponible, identificador de cola de cPanel, host siguiente,
+respuesta SMTP, identificador/estado de Message Trace y resultado en el buzón.
+Correlacionar Message-ID, destinatario y ventana horaria; un reintento es otro
+caso. No pegar cuerpos, códigos, enlaces de activación, cookies, credenciales ni
+cabeceras completas en GitHub. Sanitizar también los mensajes de rebote.
+
+| Etapa | Lo que demuestra | Lo que falta comprobar |
+| --- | --- | --- |
+| Conexión TLS/SMTP autenticada | Acceso al servidor emisor | Aceptación del mensaje y ruta |
+| sendMail sin error / respuesta 250 | Aceptación SMTP en esa etapa | Entrega posterior; puede existir rebote diferido |
+| Track Delivery entregado a otro host | Transferencia al siguiente servidor | Recepción/filtrado en el destino |
+| Message Trace entregado | Resultado de transporte en Exchange | Buzón/alias correcto, reglas, junk y cuarentena |
+| Mensaje visible y código utilizable una sola vez | Recorrido funcional del caso | Repetir la matriz de proveedores y recuperación |
+
+El servicio actual no expone una traza de entrega por destinatario ni conserva
+el resultado completo de Nodemailer. No habilitar debug SMTP con cuerpos o
+credenciales para obtenerla: usar las trazas del proveedor y una cuenta sintética.
+No enviar una nueva invitación masiva como procedimiento de diagnóstico.
 
 ## Solución posterior según hallazgo
 
@@ -42,6 +66,17 @@ Si el mismo dominio tiene buzones reales en los dos proveedores, la modificació
 - Confirmar entrega de un correo legítimo desde SMTP cPanel a: buzón cPanel propio del dominio, buzón M365 propio del dominio y destinatario externo de prueba.
 - Confirmar invitación y recuperación desde la plataforma sin cambiar expiración de códigos, contenido sensible o flujos de activación.
 - Si algún buzón deja de recibir, revertir la configuración de enrutamiento afectada con el administrador responsable.
+
+## Estado de cierre
+
+Este documento completa el procedimiento del PR #111; no acredita que #107 esté
+resuelta. Este entorno no tiene identidades ni credenciales de cPanel/Microsoft
+365 ni del servidor SMTP. Las trazas, la entrega real y cualquier cambio de
+correo quedan a cargo del operador autorizado. No se ha cambiado DNS, routing,
+conectores, SMTP ni la expiración de códigos.
+
+Cerrar la incidencia solo con la matriz de tres destinos correcta, invitación y
+recuperación verificadas, evidencia sanitizada y plan de reversión comprobado.
 
 ## Fuentes operativas oficiales
 
