@@ -194,6 +194,10 @@ export class FinanzasController {
   @ApiBearerAuth() @UseGuards(JwtAuthGuard, RolesGuard) @Roles('FINANZAS')
   avisos(@CurrentUser() user: JwtUser, @Body() dto: CobranzaDto) { return this.cobranza.enviarAvisos(user, dto.plantelId, false, dto.confirmado); }
 
+  @Get('conciliacion/resoluciones')
+  @ApiBearerAuth() @UseGuards(JwtAuthGuard, RolesGuard) @Roles('FINANZAS')
+  resolucionesConciliacion(@CurrentUser() user: JwtUser, @Query() query: ListarPagosDto) { return this.bitacora.resoluciones(user, query); }
+
   @Get('bitacora')
   @ApiBearerAuth() @UseGuards(JwtAuthGuard, RolesGuard) @Roles('FINANZAS')
   bitacoraFinanciera(@CurrentUser() user: JwtUser) { return this.bitacora.listar(user); }
