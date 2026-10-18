@@ -1,3 +1,5 @@
+import { ParticipacionAsignatura } from '../entities/participacion-asignatura.entity';
+import { limiteRegulares } from '../recursamientos/acceso-recursamiento';
 import { BitacoraAcademica } from '../entities/bitacora-academica.entity';
 import { exigirGrupoConfigurable } from '../common/contexto-academico';
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
@@ -39,6 +41,8 @@ async inscribirAlumno(grupoId: number, alumnoId: number, user: JwtUser) {
         const inscripciones = manager.getRepository(Inscripcion);
         const otra = await inscripciones.findOne({ where: { alumnoId, estatus: 'ACTIVA', grupo: { cicloId: grupo.cicloId, tipo: 'REGULAR' } } });
         if (otra) throw new ConflictException('El alumno ya tiene una inscripción activa en este ciclo; corrige la inscripción anterior');
+        const limite = await limiteRegulares(manager, grupoId);
+        if (await inscripciones.countBy({ grupoId, estatus: 'ACTIVA' }) >= limite) throw new ConflictException('El cupo total autorizado de una clase con recursantes está completo');
         const duplicada = await inscripciones.findOne({ where: { grupoId, alumnoId } });
         if (duplicada) {
           duplicada.estatus = 'ACTIVA';
@@ -88,6 +92,7 @@ async bajaInscripcion(id: number, user: JwtUser) {
       if (!actual) throw new NotFoundException('Inscripción no encontrada');
       await this.scope.validarGestion(user, actual.grupo.plantelId);
       await repo.update(id, { estatus: 'BAJA' });
+      await manager.getRepository(ParticipacionAsignatura).update({ inscripcionPrincipalId: id, estado: 'ACTIVA' }, { estado: 'BAJA', activoClave: null });
       await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId: actual.grupo.plantelId, accion: 'INSCRIPCION_BAJA', entidadId: id, detalle: `alumnoId=${actual.alumnoId}; grupoId=${actual.grupoId}`, fecha: new Date() });
       return { ok: true };
     });

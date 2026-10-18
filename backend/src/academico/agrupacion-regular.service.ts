@@ -1,3 +1,4 @@
+import { limiteRegulares } from '../recursamientos/acceso-recursamiento';
 import { ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { EntityManager } from 'typeorm';
@@ -46,7 +47,7 @@ export class AgrupacionRegularService {
     if (d.grupoId) {
       const g = compatibles.find(g => g.id === d.grupoId)!;
       const total = await inscripciones.countBy({ grupoId: g.id, estatus: 'ACTIVA' });
-      if (!activa && total >= 50) throw new ConflictException('Grupo seleccionado completo; usa planificación automática o resolución administrativa');
+      if (!activa && total >= Math.min(50, await limiteRegulares(m, g.id))) throw new ConflictException('Grupo seleccionado completo; usa planificación automática o resolución administrativa');
       await asignar(solicitud, g);
     } else {
       const pendientes = await solicitudes.find({ where: { ...contexto, estado: 'PENDIENTE' }, relations: { alumno: { usuario: true } }, order: { id: 'ASC' } });
@@ -59,7 +60,8 @@ export class AgrupacionRegularService {
       }
       for (const g of compatibles) {
         let total = await inscripciones.countBy({ grupoId: g.id, estatus: 'ACTIVA' });
-        while (validas.length && total < 50) { await asignar(validas.shift()!, g); total++; }
+        const limite = Math.min(50, await limiteRegulares(m, g.id));
+        while (validas.length && total < limite) { await asignar(validas.shift()!, g); total++; }
       }
       const plan = planificarGruposRegulares(validas.length);
       for (const cantidad of plan.grupos) {
@@ -69,7 +71,8 @@ export class AgrupacionRegularService {
       // Solo el remanente de 1–4 puede usar la excepción; nunca se toca historial.
       for (const g of compatibles) {
         let total = await inscripciones.countBy({ grupoId: g.id, estatus: 'ACTIVA' });
-        while (validas.length && total >= 50 && total < 54) { await asignar(validas.shift()!, g); total++; }
+        const limite = Math.min(54, await limiteRegulares(m, g.id));
+        while (validas.length && total >= 50 && total < limite) { await asignar(validas.shift()!, g); total++; }
       }
     }
     return { solicitud: await solicitudes.findOneByOrFail({ id: solicitud.id }), asignadas };

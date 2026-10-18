@@ -1,3 +1,4 @@
+import { registrarRecursamientos } from './integration/recursamientos.cases';
 import { registrarCartera } from './integration/cartera.cases';
 import { registrarAgrupacion } from './integration/agrupacion.cases';
 import { registrarProgramasEspeciales } from './integration/programas-especiales.cases';
@@ -447,6 +448,7 @@ Object.keys(casos).map(Number).sort((a,b) => a-b).forEach((id) => casos[id](cont
   registrarProgramasEspeciales(contexto);
   registrarCartera(contexto);
   registrarAgrupacion(contexto);
+  registrarRecursamientos(contexto);
   registrarEliminacion(contexto);
 
   afterAll(async () => {

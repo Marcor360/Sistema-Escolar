@@ -1,3 +1,4 @@
+import { RecursamientosPropios } from "../components/RecursamientosPropios";
 import { leerConCache } from "../api/cache-academica";
 import { resolverEnlacePrivado } from "../api/enlaces-privados";
 import { crearControlLectura } from "../api/lectura-vigente";
@@ -194,10 +195,10 @@ export default function MateriasScreen() {
       )}
       <FlatList
         ListHeaderComponent={
-          <GuiaPantalla
+          <><RecursamientosPropios /><GuiaPantalla
             titulo="Mis materias"
             detalle="Toca una materia para ver al docente y abrir sus materiales de clase."
-          />
+          /></>
         }
         data={materias}
         keyExtractor={(m) => String(m.id)}

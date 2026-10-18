@@ -7,6 +7,7 @@ import { Shell } from './layout/Shell';
 
 // Cada página se descarga solo cuando se visita (code splitting)
 const AperturaCarteraPage = lazy(() => import('./pages/AperturaCartera'));
+const RecursamientosPage = lazy(() => import('./pages/Recursamientos'));
 const ProgramasEspecialesPage = lazy(() => import('./pages/ProgramasEspeciales'));
 const CatalogosAcademicosPage = lazy(() => import('./pages/CatalogosAcademicos'));
 const BibliotecaPage = lazy(() => import('./pages/Biblioteca'));
@@ -82,6 +83,7 @@ export default function App() {
             <Route path="/grupos" element={<GruposPage />} />
           </Route>
 
+          <Route element={<RutaProtegida roles={['ADMINISTRATIVO', 'MAESTRO']} />}><Route path="/recursamientos" element={<RecursamientosPage />} /><Route path="/recursamientos/:id" element={<RecursamientosPage />} /></Route>
           <Route element={<RutaProtegida roles={['MAESTRO']} />}>
             <Route path="/maestro" element={<MaestroPage />} />
           </Route>
