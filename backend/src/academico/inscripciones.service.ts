@@ -1,3 +1,4 @@
+import { ParticipacionAsignatura } from '../entities/participacion-asignatura.entity';
 import { limiteRegulares } from '../recursamientos/acceso-recursamiento';
 import { BitacoraAcademica } from '../entities/bitacora-academica.entity';
 import { exigirGrupoConfigurable } from '../common/contexto-academico';
@@ -91,6 +92,7 @@ async bajaInscripcion(id: number, user: JwtUser) {
       if (!actual) throw new NotFoundException('Inscripción no encontrada');
       await this.scope.validarGestion(user, actual.grupo.plantelId);
       await repo.update(id, { estatus: 'BAJA' });
+      await manager.getRepository(ParticipacionAsignatura).update({ inscripcionPrincipalId: id, estado: 'ACTIVA' }, { estado: 'BAJA', activoClave: null });
       await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId: actual.grupo.plantelId, accion: 'INSCRIPCION_BAJA', entidadId: id, detalle: `alumnoId=${actual.alumnoId}; grupoId=${actual.grupoId}`, fecha: new Date() });
       return { ok: true };
     });
