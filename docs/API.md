@@ -240,3 +240,7 @@ id en `/academico/catalogos/niveles`, `/carreras`, `/periodos`; escritura
 ADMINISTRATIVO/SUPERADMIN por plantel y consulta adicional FINANZAS/MAESTRO en su
 alcance. Paginación 10/100. Grupo acepta contexto completo opcional y filtros por
 nivel/carrera/periodo académico, sin reclasificar históricos.
+
+### Programas especiales
+
+Administración con alcance de plantel: `GET/POST /programas-especiales`, `GET/PATCH /programas-especiales/:id` (nombre), `POST /:id/cerrar` y `/:id/cancelar` (confirmado=true y motivo). `GET/POST /:id/grupos` crea grupos manuales con cupoManual, materiaId y docenteId obligatorios; contexto académico opcional completo. `GET/PATCH /programas-especiales/grupos/:id` consulta o cambia cupo; `/asignaturas` permite GET/POST y `PATCH /asignaturas/:claseId` reasigna docente. `GET/POST /grupos/:id/inscripciones` consulta/inscribe alumnos existentes; `POST /inscripciones/:inscripcionId/baja` requiere confirmación y motivo. Los listados admiten pagina/porPagina (10 por defecto). `GET /programas-especiales/me` está reservado al alumno autenticado y solo devuelve lo propio. Ver [operación y migración](PROGRAMAS_ESPECIALES.md).

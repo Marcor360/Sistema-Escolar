@@ -1,3 +1,5 @@
+import { ProgramasEspecialesController } from '../programas-especiales/programas.controller';
+import { ProgramasEspecialesService } from '../programas-especiales/programas.service';
 import { CatalogosAcademicosController } from '../catalogos-academicos/catalogos.controller';
 import { CatalogosAcademicosService } from '../catalogos-academicos/catalogos.service';
 import { MateriasService } from './materias.service';
@@ -31,8 +33,8 @@ import { PlantelesModule } from '../planteles/planteles.module';
     DocentesModule,
     PlantelesModule,
   ],
-  providers: [CatalogosAcademicosService, AcademicoService, CiclosService, PromocionService, MateriasService, GruposService, InscripcionesService],
-  controllers: [CatalogosAcademicosController, AcademicoController],
+  providers: [ProgramasEspecialesService, CatalogosAcademicosService, AcademicoService, CiclosService, PromocionService, MateriasService, GruposService, InscripcionesService],
+  controllers: [ProgramasEspecialesController, CatalogosAcademicosController, AcademicoController],
   exports: [AcademicoService],
 })
 export class AcademicoModule {}
