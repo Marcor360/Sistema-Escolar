@@ -44,7 +44,10 @@ export class ProgramasEspecialesService {
     return m.getRepository(BitacoraAcademica).insert({ usuarioId: u.sub, plantelId, accion, entidadId, detalle, fecha: new Date() });
   }
   private async transaccion<T>(fn: (m: EntityManager) => Promise<T>) {
-    try { return await this.ds.transaction(fn); } catch (error) {
+    // En MySQL REPEATABLE READ, la lectura inicial anterior al bloqueo puede fijar
+    // una instantánea antigua. El conteo posterior debe ver el commit del dueño
+    // anterior del bloqueo para respetar el último cupo también en concurrencia.
+    try { return await this.ds.transaction('READ COMMITTED', fn); } catch (error) {
       if (esConflictoUnico(error)) throw new ConflictException('El registro ya existe; vuelve a consultar');
       if (esConflictoTransaccional(error)) throw new ConflictException('La operación cambió concurrentemente; vuelve a consultar');
       throw error;
