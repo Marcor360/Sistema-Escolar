@@ -48,7 +48,9 @@ export class CorreoAccesoOutboxService implements OnModuleInit, OnModuleDestroy 
       if (await repo.findOne({ where: { usuarioId: actual.id, tipo, version: actual.sessionVersion ?? 0, expiraEn: MoreThan(new Date()) } })) return;
       const ahora = new Date();
       await repo.insert({ id: randomUUID(), usuarioId: actual.id, tipo, version: actual.sessionVersion ?? 0,
-        estado: 'PENDIENTE', intentos: 0, proximoIntento: ahora, expiraEn: new Date(ahora.getTime() + VIGENCIA_MS),
+        // DATETIME sin fracciones puede redondear hacia el segundo siguiente en MySQL.
+        // Una solicitud nueva debe ser elegible desde el commit, sin retraso por redondeo.
+        estado: 'PENDIENTE', intentos: 0, proximoIntento: new Date(Math.floor(ahora.getTime() / 1000) * 1000), expiraEn: new Date(ahora.getTime() + VIGENCIA_MS),
         claveId: null, tokenHash: null, claim: null, leaseHasta: null, errorCodigo: null });
     });
   }
