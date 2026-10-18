@@ -17,7 +17,7 @@ interface Pagina<T> { datos: T[]; total: number; pagina: number; porPagina: numb
 function useRecurso<T>(ruta: string | null, params: Record<string, string | number> = {}) {
   const [data, setData] = useState<T | null>(null), [error, setError] = useState(''), [cargando, setCargando] = useState(false), [intento, setIntento] = useState(0);
   const clave = JSON.stringify(params);
-  useEffect(() => { if (!ruta) return; let activo = true; setCargando(true); setError('');
+  useEffect(() => { setData(null); if (!ruta) return; let activo = true; setCargando(true); setError('');
     api.get<T>(ruta, { params: JSON.parse(clave) }).then((r) => { if (activo) setData(r.data); }).catch((e) => { if (activo) setError(mensajeDeError(e)); }).finally(() => { if (activo) setCargando(false); });
     return () => { activo = false; };
   }, [ruta, clave, intento]);
@@ -38,7 +38,7 @@ function Directorio() {
   const consulta = q.get('vista') === 'consulta', pagina = Math.max(1, Number(q.get('pagina')) || 1), buscar = q.get('buscar') || '';
   const [termino, setTermino] = useState(buscar);
   const r = useRecurso<Pagina<Programa>>(consulta ? '/programas-especiales' : null, { pagina, porPagina: 10, buscar, ...(q.get('estado') ? { estado: q.get('estado')! } : {}) });
-  useEffect(() => { if (termino === buscar) return; const timer = setTimeout(() => setQ((p) => { const n = new URLSearchParams(p); n.set('buscar', termino.trim()); n.delete('pagina'); return n; }, { replace: true }), 300); return () => clearTimeout(timer); }, [termino, buscar, setQ]);
+  useEffect(() => { if (termino.trim() === buscar) return; const timer = setTimeout(() => setQ((p) => { const n = new URLSearchParams(p); n.set('buscar', termino.trim()); n.delete('pagina'); return n; }, { replace: true }), 300); return () => clearTimeout(timer); }, [termino, buscar, setQ]);
   return <><header className="encabezado"><h1>Programas especiales</h1><p>Grupos e inscripciones manuales, independientes de la apertura de cartera ordinaria.</p></header>
     {!consulta ? <PanelAccionesModulo titulo="Gestionar programas" acciones={[
       { titulo: 'Registrar programa especial', detalle: 'Diplomado, certificación, especialización o curso extracurricular', ejecutar: () => navigate('/programas-especiales/nuevo') },
