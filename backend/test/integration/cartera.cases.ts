@@ -27,7 +27,8 @@ export function registrarCartera(ctx: ContextoIntegracion) {
     expect((await ctx.api('/cartera/confirmar', { method: 'POST', token, body: cambiado })).response.status).toBe(409);
     await ctx.dataSource.getRepository(ConceptoPago).update(concepto.id, { montoBase: 125 });
     const primero = await confirmado(0);
-    expect((await ctx.api('/cartera/confirmar', { method: 'POST', token, body: { ...primero, monto: 1 } })).response.status).toBe(400);
+    const manipulado = await ctx.api('/cartera/confirmar', { method: 'POST', token, body: { ...primero, monto: 1 } });
+    expect(manipulado.response.status).toBe(201); expect(manipulado.data.conceptos[0].monto).toBe(125);
     const dobles = await Promise.all([0,1].map(() => ctx.api('/cartera/confirmar', { method: 'POST', token, body: primero })));
     expect(dobles.map(r=>r.response.status)).toEqual([201,201]); expect(dobles[0].data.id).toBe(dobles[1].data.id);
     expect(dobles[0].data.estado).toBe('PENDIENTE');
