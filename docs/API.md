@@ -75,7 +75,7 @@ CRUD en `/usuarios`. Regla de dominio: `ALUMNO` no se combina con roles de perso
 CRUD en `/docentes`. `GET /docentes?plantelId=&pagina=&porPagina=` está paginado.
 
 ## Académico
-- `/academico/ciclos`, `/academico/materias`: catálogos (escritura: ADMINISTRATIVO).
+- `/academico/ciclos`, `/academico/materias`: catálogos (creación y edición: ADMINISTRATIVO; desactivación de materia: SOLO SUPERADMIN, con historial conservado).
 - `/academico/grupos` (+ `/:id/materias`, `/:id/alumnos`): grupos, asignación de
   materias/docentes e inscripciones. `GET /academico/grupos?cicloId=&plantelId=&pagina=&porPagina=&inactivos=`
   está paginado; excluye grupos dados de baja (`activo=false`) salvo que se pida
