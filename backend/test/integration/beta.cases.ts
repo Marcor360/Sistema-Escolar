@@ -37,7 +37,7 @@ export function registrarBeta(ctx: ContextoIntegracion) {
     expect((await ctx.api('/auth/me', { token: previa.accessToken })).response.status).toBe(401);
     const correo = jest.spyOn(ctx.app.get(NotificacionesService), 'enviarEmail');
     const codigos: string[] = [];
-    correo.mockImplementation(async (_email, _asunto, html) => { codigos.push(html.match(/<strong[^>]*>([a-f0-9]{64})<\/strong>/)![1]); return { simulado: false }; });
+    correo.mockImplementation(async (_email, _asunto, html) => { if (_email === nuevo.email) codigos.push(html.match(/<strong[^>]*>([a-f0-9]{64})<\/strong>/)![1]); return { simulado: false }; });
     try {
       const generica = await activacion.solicitar('inexistente@example.invalid');
       expect(await activacion.solicitar(nuevo.email)).toEqual(generica);
