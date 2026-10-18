@@ -7,6 +7,10 @@ import { IsBoolean, IsIn, IsInt, IsOptional, IsString } from 'class-validator';
 import { PaginacionDto } from '../common/paginacion.dto';
 
 export class ListarGruposDto extends PaginacionDto {
+  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() @Min(1) nivelId?: number;
+  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() @Min(1) carreraId?: number;
+  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() @Min(1) periodoAcademicoId?: number;
+
   @ApiPropertyOptional({ type: String })
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsOptional() @IsString() @MaxLength(80) buscar?: string;
@@ -80,7 +84,13 @@ export class ActualizarMateriaDto {
   @OpcionalNoNulo() @IsInt() @Min(0) creditos?: number;
 }
 
-export class GrupoDto {
+export class ContextoAcademicoOpcionalDto {
+  @ApiPropertyOptional({ type: Number }) @IsOptional() @Type(() => Number) @IsInt() @Min(1) nivelId?: number | null;
+  @ApiPropertyOptional({ type: Number }) @IsOptional() @Type(() => Number) @IsInt() @Min(1) carreraId?: number | null;
+  @ApiPropertyOptional({ type: Number }) @IsOptional() @Type(() => Number) @IsInt() @Min(1) periodoAcademicoId?: number | null;
+}
+
+export class GrupoDto extends ContextoAcademicoOpcionalDto {
   @ApiProperty({ type: Number, minimum: 1 })
   @Type(() => Number) @IsInt() @Min(1) cicloId!: number;
   @ApiProperty({ type: Number, minimum: 1 })
@@ -95,7 +105,7 @@ export class GrupoDto {
   @IsOptional() @IsIn(['MATUTINO', 'VESPERTINO']) turno?: 'MATUTINO' | 'VESPERTINO';
 }
 
-export class ActualizarGrupoDto {
+export class ActualizarGrupoDto extends ContextoAcademicoOpcionalDto {
   @ApiPropertyOptional({ type: Number, minimum: 1 })
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) cicloId?: number;
   @ApiPropertyOptional({ type: String })

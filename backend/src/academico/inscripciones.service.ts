@@ -26,6 +26,7 @@ async inscribirAlumno(grupoId: number, alumnoId: number, user: JwtUser) {
         });
         if (!grupo) throw new NotFoundException('Grupo no encontrado');
         await this.scope.validarGestion(user, grupo.plantelId);
+        if (grupo.tipo === 'ESPECIAL') throw new ConflictException('Usa la inscripción manual de programas especiales');
         if (!grupo.activo) throw new ConflictException('No se puede inscribir en un grupo inactivo');
         const alumno = await manager.getRepository(Alumno).findOne({ where: { id: alumnoId }, lock: { mode: 'pessimistic_write' } });
         if (!alumno) throw new NotFoundException('Alumno no encontrado');
@@ -36,7 +37,7 @@ async inscribirAlumno(grupoId: number, alumnoId: number, user: JwtUser) {
           throw new ForbiddenException('El alumno no pertenece al plantel del grupo');
         }
         const inscripciones = manager.getRepository(Inscripcion);
-        const otra = await inscripciones.findOne({ where: { alumnoId, estatus: 'ACTIVA', grupo: { cicloId: grupo.cicloId } } });
+        const otra = await inscripciones.findOne({ where: { alumnoId, estatus: 'ACTIVA', grupo: { cicloId: grupo.cicloId, tipo: 'REGULAR' } } });
         if (otra) throw new ConflictException('El alumno ya tiene una inscripción activa en este ciclo; corrige la inscripción anterior');
         const duplicada = await inscripciones.findOne({ where: { grupoId, alumnoId } });
         if (duplicada) {
@@ -80,6 +81,7 @@ async bajaInscripcion(id: number, user: JwtUser) {
     const inscripcion = await this.inscripciones.findOne({ where: { id } });
     if (!inscripcion) throw new NotFoundException('Inscripción no encontrada');
     await this.gruposService.validarAccesoGrupo(inscripcion.grupoId, user);
+    if (inscripcion.grupo.tipo === 'ESPECIAL') throw new ConflictException('Usa la baja con motivo de programas especiales');
     return this.dataSource.transaction(async (manager) => {
       const repo = manager.getRepository(Inscripcion);
       const actual = await repo.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
