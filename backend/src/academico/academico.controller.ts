@@ -1,3 +1,4 @@
+import { ListarMateriasDto } from './listar-materias.dto';
 import { ApiErroresOperacion } from '../common/api-operacion';
 import { PreviewPromocionRespuestaDto, ConfirmacionPromocionRespuestaDto, CicloRespuestaDto, ResumenCierreRespuestaDto } from './respuestas.dto';
 import { PromocionService } from './promocion.service';
@@ -66,6 +67,9 @@ export class AcademicoController {
   cerrar(@Param('id', ParseIntPipe) id: number, @Body() dto: TransicionCicloDto, @CurrentUser() user: JwtUser) { return this.ciclos.transicion(id, 'cerrar', dto.confirmado, user); }
 
   // ---- Materias ----
+  @ApiOperation({ summary: 'Catálogo global activo paginado y búsqueda literal por clave o nombre; conserva el endpoint de arreglo' })
+  @Get('materias/listado') @Roles('ADMINISTRATIVO', 'FINANZAS', 'MAESTRO')
+  consultarMaterias(@Query() query: ListarMateriasDto) { return this.service.consultarMaterias(query); }
   @Get('materias') @Roles('ADMINISTRATIVO', 'FINANZAS', 'MAESTRO')
   listarMaterias() { return this.service.listarMaterias(); }
   @Post('materias') @Roles('ADMINISTRATIVO') crearMateria(@Body() dto: MateriaDto) {

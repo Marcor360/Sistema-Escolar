@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { AuthCorreoOutbox } from '../src/entities/auth-correo-outbox.entity';
 import { registrarOutbox } from './integration/outbox.cases';
 import { CorreoAccesoOutboxService } from '../src/auth/correo-acceso-outbox.service';
+import { registrarMateriasPaginadas } from './integration/materias-paginadas.cases';
 import { registrarRecursamientos } from './integration/recursamientos.cases';
 import { registrarCartera } from './integration/cartera.cases';
 import { registrarAgrupacion } from './integration/agrupacion.cases';
@@ -448,6 +449,7 @@ Object.keys(casos).map(Number).sort((a,b) => a-b).forEach((id) => casos[id](cont
 
   registrarBeta(contexto);
   registrarOutbox(contexto);
+  registrarMateriasPaginadas(contexto);
   registrarCapturaSinCambios(contexto);
   registrarAltasInstitucionales(contexto);
   registrarRecorridoFinanciero(contexto);
