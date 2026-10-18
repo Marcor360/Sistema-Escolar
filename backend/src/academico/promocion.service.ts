@@ -31,6 +31,7 @@ export class PromocionService {
     if (origen.cicloId === destino.cicloId || ciclos.find((c) => c.id === origen.cicloId)?.estado !== 'CERRADO' || ciclos.find((c) => c.id === destino.cicloId)?.estado !== 'PREPARACION') throw new ConflictException('La promoción requiere origen cerrado y destino en preparación');
     if (destino.ciclo.fechaInicio <= origen.ciclo.fechaFin) throw new ConflictException('El ciclo de destino debe ser posterior al de origen');
     if (origen.plantelId !== destino.plantelId || !destino.activo || !plantel?.activo) throw new ConflictException('El destino debe estar activo en el mismo plantel; usa transferencia para cambiar plantel');
+    if ((origen.nivelId ?? null) !== (destino.nivelId ?? null) || (origen.carreraId ?? null) !== (destino.carreraId ?? null)) throw new ConflictException('La promoción requiere nivel y carrera/plan compatibles');
     return { origen, destino };
   }
   async preview(dto: PromocionDto, user: JwtUser) {

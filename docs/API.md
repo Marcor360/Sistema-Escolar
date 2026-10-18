@@ -232,3 +232,11 @@ antes de paginar. Usa PaginacionDto: 10 por defecto, máximo 100 y orden estable
 por createdAt/id descendentes. Devuelve `{ datos, total, pagina, porPagina }`.
 La ruta histórica `/finanzas/bitacora` conserva su contrato; la pantalla de
 conciliación usa el nuevo listado sin descargar ni recortar 300 movimientos.
+
+### Catálogos académicos (#97)
+
+Ver [modelo, permisos y contrato](CATALOGOS_ACADEMICOS.md). GET/POST y GET/PATCH por
+id en `/academico/catalogos/niveles`, `/carreras`, `/periodos`; escritura
+ADMINISTRATIVO/SUPERADMIN por plantel y consulta adicional FINANZAS/MAESTRO en su
+alcance. Paginación 10/100. Grupo acepta contexto completo opcional y filtros por
+nivel/carrera/periodo académico, sin reclasificar históricos.
