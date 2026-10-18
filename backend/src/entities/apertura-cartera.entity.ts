@@ -24,6 +24,6 @@ export class AperturaCartera {
   @Column() creadoPorId!: number;
   @ManyToOne(() => Usuario) @JoinColumn({ name: 'creado_por_id' }) creadoPor!: Usuario;
   @Column({ type: String, length: 12, default: 'PENDIENTE' }) estado!: 'PENDIENTE' | 'ABIERTA';
-  @Column({ type: 'simple-json' }) conceptos!: ConceptoApertura[];
+  @Column({ type: 'text', transformer: { to: (v: ConceptoApertura[]) => JSON.stringify(v), from: (v: string) => JSON.parse(v) as ConceptoApertura[] } }) conceptos!: ConceptoApertura[];
   @CreateDateColumn() createdAt!: Date;
 }
