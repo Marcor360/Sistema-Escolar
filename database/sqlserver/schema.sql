@@ -729,7 +729,7 @@ CREATE TABLE aperturas_cartera (
  creado_por_id INT NOT NULL,
  estado NVARCHAR(12) NOT NULL DEFAULT 'PENDIENTE',
  conceptos NVARCHAR(MAX) NOT NULL,
- created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ created_at DATETIME2 NOT NULL DEFAULT CURRENT_TIMESTAMP,
  CONSTRAINT uq_apertura_idempotencia UNIQUE (idempotencia),
  CONSTRAINT uq_apertura_alumno_ciclo UNIQUE (alumno_id,ciclo_id),
  CONSTRAINT ck_apertura_estado CHECK (estado IN ('PENDIENTE','ABIERTA')),
