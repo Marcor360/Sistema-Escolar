@@ -20,3 +20,18 @@ it('invalida la confirmación al cambiar datos después de cotizar y no envía m
   fireEvent.change(screen.getByLabelText('Fecha de vencimiento'),{target:{value:'2054-02-05'}});
   expect(screen.queryByRole('button',{name:'Confirmar inscripción y cargos'})).toBeNull();
 });
+
+it('distingue la vigencia del ciclo del mes de cobro y del vencimiento',async()=>{
+  vi.spyOn(api,'get').mockImplementation(async ruta=>({data:
+    ruta==='/planteles/mios'?[{id:1,nombre:'Centro'}]
+    :ruta==='/academico/ciclos'?[{id:7,clave:'2027-C',nombre:'Ciclo 2027',estado:'PREPARACION',fechaInicio:'2027-01-01',fechaFin:'2027-12-31'}]
+    :[{id:3,clave:'INS',nombre:'Inscripción',montoBase:125,tipo:'INSCRIPCION',activo:true}]
+  }));
+  montar('/apertura-cartera/nueva');
+  const ciclo=await screen.findByLabelText('Ciclo');
+  fireEvent.change(ciclo,{target:{value:'7'}});
+  expect(screen.getByLabelText('Vigencia del ciclo').textContent).toContain('2027-01-01');
+  expect(screen.getByLabelText('Vigencia del ciclo').textContent).toContain('2027-12-31');
+  expect((screen.getByLabelText('Mes de cobro') as HTMLInputElement).value).toBe('');
+  expect((screen.getByLabelText('Fecha de vencimiento') as HTMLInputElement).value).toBe('');
+});
