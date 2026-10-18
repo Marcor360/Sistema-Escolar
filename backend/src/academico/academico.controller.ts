@@ -75,7 +75,7 @@ export class AcademicoController {
   actualizarMateria(@Param('id', ParseIntPipe) id: number, @Body() dto: ActualizarMateriaDto) {
     return this.service.actualizarMateria(id, dto);
   }
-  @Delete('materias/:id') @Roles('ADMINISTRATIVO')
+  @Delete('materias/:id') @Roles('SUPERADMIN')
   desactivarMateria(@Param('id', ParseIntPipe) id: number) {
     return this.service.desactivarMateria(id);
   }
