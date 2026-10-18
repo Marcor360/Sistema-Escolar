@@ -121,7 +121,8 @@ export class NotificacionesService {
       from: this.config.get<string>('SMTP_FROM') || 'no-reply@escolar.mx',
       to,
       subject,
-      html, ...(messageId ? { messageId: `<${messageId}>` } : {}),
+      html, messageId: `<${messageId || `${correlacion}@escolar.invalid`}>`,
+      headers: { 'X-Sistema-Correlacion': correlacion },
     });
     if (!resultado || !Array.isArray(resultado.accepted) || resultado.accepted.length === 0 || resultado.rejected?.length) {
       this.logger.warn(`SMTP_RECHAZADO correlacion=${correlacion}`);

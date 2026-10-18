@@ -71,6 +71,10 @@ describe('SMTP seguro en entornos desplegados', () => {
     const transporte = (nodemailer.createTransport as jest.Mock).mock.results.at(-1)!.value;
     transporte.sendMail.mockResolvedValue({ accepted: ['privado@example.invalid'], rejected: [] });
     await expect(servicio.enviarEmail('privado@example.invalid', 'Asunto privado', '<p>secreto</p>')).resolves.toEqual({ simulado: false });
+    const opciones = transporte.sendMail.mock.calls[0][0];
+    const correlacion = opciones.headers['X-Sistema-Correlacion'];
+    expect(correlacion).toMatch(/^[a-f0-9-]{36}$/);
+    expect(opciones.messageId).toBe(`<${correlacion}@escolar.invalid>`);
   });
 
 });
