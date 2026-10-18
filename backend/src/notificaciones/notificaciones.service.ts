@@ -117,11 +117,14 @@ export class NotificacionesService {
       return { simulado: true };
     }
     const correlacion = randomUUID();
+    const from = this.config.get<string>('SMTP_FROM') || 'no-reply@escolar.mx';
+    const dominio = from.trim().match(/@([a-z0-9.-]+)>?$/i)?.[1];
+    const idMensaje = messageId || (dominio ? `${correlacion}@${dominio}` : undefined);
     const resultado = await this.transporter.sendMail({
-      from: this.config.get<string>('SMTP_FROM') || 'no-reply@escolar.mx',
+      from,
       to,
       subject,
-      html, messageId: `<${messageId || `${correlacion}@escolar.invalid`}>`,
+      html, ...(idMensaje ? { messageId: `<${idMensaje}>` } : {}),
       headers: { 'X-Sistema-Correlacion': correlacion },
     });
     if (!resultado || !Array.isArray(resultado.accepted) || resultado.accepted.length === 0 || resultado.rejected?.length) {

@@ -74,7 +74,7 @@ describe('SMTP seguro en entornos desplegados', () => {
     const opciones = transporte.sendMail.mock.calls[0][0];
     const correlacion = opciones.headers['X-Sistema-Correlacion'];
     expect(correlacion).toMatch(/^[a-f0-9-]{36}$/);
-    expect(opciones.messageId).toBe(`<${correlacion}@escolar.invalid>`);
+    expect(opciones.messageId).toBe(`<${correlacion}@example.test>`);
   });
 
 });
