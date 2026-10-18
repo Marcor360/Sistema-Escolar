@@ -12,7 +12,7 @@ export function registrarAgrupacion(ctx: ContextoIntegracion) {
     const carrera = await post('/academico/catalogos/carreras', { plantelId: ctx.plantelId, nivelId: nivel.id, clave: `AG${ctx.sufijo}`, nombre: 'Plan agrupación', versionPlan: 'QA' });
     const periodo = await post('/academico/catalogos/periodos', { plantelId: ctx.plantelId, carreraId: carrera.id, cicloId: ciclo.id, clave: 'P1', nombre: 'Primer periodo', tipo: 'ANUAL', numero: 1 });
     const d = { plantelId: ctx.plantelId, cicloId: ciclo.id, nivelId: nivel.id, carreraId: carrera.id, periodoAcademicoId: periodo.id, turno: 'MATUTINO' as const };
-    const alumnos = [];
+    const alumnos: { id: number }[] = [];
     for (let n = 0; n < 7; n++) alumnos.push(await post('/alumnos', { email: `ag${n}${ctx.sufijo}@example.invalid`, matricula: `AG${n}${ctx.sufijo}`, nombre: 'Alumno', apellidoPaterno: `Agrupación ${n}`, curp: 'GODE561231HDFRRN09', plantelId: ctx.plantelId }));
     const service = ctx.app.get(AgrupacionRegularService);
     const solicitar = (alumnoId: number, turno = d.turno) => ctx.dataSource.transaction('READ COMMITTED', m => service.solicitar(m, { ...d, alumnoId, turno }, user));
