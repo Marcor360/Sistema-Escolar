@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma
 
-**Versión candidata: `1.26.1`** · API, web y app del alumno alineadas. Aceptación institucional y despliegue pendientes.
+**Versión candidata: `1.26.2`** · API, web y app del alumno alineadas. Aceptación institucional y despliegue pendientes.
 
 API, portal administrativo/docente y app del alumno para gestión académica y financiera con alcance por plantel. Las versiones de backend, web, móvil, lockfiles y Expo están alineadas. Este README describe una única versión actual; los informes históricos permanecen en `docs/`.
 
@@ -11,9 +11,16 @@ API, portal administrativo/docente y app del alumno para gestión académica y f
 | Base de datos | Baseline v1 y diez migraciones incrementales espejo; MySQL 8.4 / SQL Server 2022 probados en CI |
 | ETL de legado | Prototipo parcial; no listo para migración institucional general |
 
-La versión 1.26.1 consolida las altas y activación segura, mejoras de navegación, configuración SMTP y eliminación definitiva protegida. La versión del repositorio identifica el código; la disponibilidad en el VPS o en un APK depende del despliegue correspondiente. La evidencia histórica conserva su versión y fecha originales.
+La versión 1.26.2 añade una política verificable de numeración por PR y el contrato de las referencias académicas. Conserva las funciones integradas en 1.26.1; no equivale a despliegue en el VPS. La versión del repositorio identifica el código; la disponibilidad en el VPS o en un APK depende del despliegue correspondiente. La evidencia histórica conserva su versión y fecha originales.
 
-## Novedades de 1.26.1
+## Novedades de 1.26.2
+
+- Comparación automática en PR de la versión propuesta contra la rama base y pruebas para evitar repetir números.
+- Estructura propuesta para ciclo, materia, contenido temático, asignación docente y apertura de cartera a partir de las referencias, distinguiendo lo ya integrado de lo pendiente.
+
+[Política de versiones](docs/VERSIONADO_PR.md) · [Contrato de referencias y barrido funcional](docs/CONTRATO_ACADEMICO_REFERENCIAS_2026-10-18.md).
+
+### Funciones consolidadas previamente en 1.26.1
 
 Esta actualización integra los PR #90–94 sobre la consolidación 1.26.0:
 
