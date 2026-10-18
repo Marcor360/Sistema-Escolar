@@ -1,3 +1,5 @@
+import { registrarOutbox } from './integration/outbox.cases';
+import { CorreoAccesoOutboxService } from '../src/auth/correo-acceso-outbox.service';
 import { registrarRecursamientos } from './integration/recursamientos.cases';
 import { registrarCartera } from './integration/cartera.cases';
 import { registrarAgrupacion } from './integration/agrupacion.cases';
@@ -264,10 +266,10 @@ describe('Integración de flujos críticos (base aislada)', () => {
         });
       try {
         await app.get(ActivacionService).solicitar(email);
-        await app.get(ActivacionService).onModuleDestroy();
+        await app.get(CorreoAccesoOutboxService).procesar();
         expect(codigo).toMatch(/^[0-9a-f]{64}$/);
         await app.get(ActivacionService).activar(codigo, 'Integracion_Renovada_42!');
-      } finally { await app.get(ActivacionService).onModuleDestroy(); correo.mockRestore(); }
+      } finally { await app.get(CorreoAccesoOutboxService).procesar(); correo.mockRestore(); }
       passwords.set(email, 'Integracion_Renovada_42!');
     }
     const passwordInicial = passwords.get(email) ?? alumno?.matricula ?? 'Integracion_Segura_42!';
@@ -300,6 +302,10 @@ describe('Integración de flujos críticos (base aislada)', () => {
       throw new Error('La integración exige DB_SYNC=false y una base aislada con baseline instalado');
     }
     process.env.NODE_ENV = 'test';
+    process.env.AUTH_OUTBOX_KEYS = JSON.stringify({ prueba: '42'.repeat(32) });
+    process.env.AUTH_OUTBOX_ACTIVE_KEY = 'prueba';
+    process.env.SMTP_FROM = 'Integración <no-reply@example.invalid>';
+    process.env.AUTH_OUTBOX_WORKER = 'false';
     process.env.PUSH_ENABLED = 'false'; process.env.SMTP_HOST = '';
     process.env.JWT_SECRET = process.env.JWT_SECRET || 'solo-para-pruebas-integrales';
     process.env.UPLOADS_DIR = process.env.UPLOADS_DIR || 'uploads';
@@ -438,6 +444,7 @@ const casos = { ...casos_baseline, ...casos_identidad, ...casos_academico, ...ca
 Object.keys(casos).map(Number).sort((a,b) => a-b).forEach((id) => casos[id](contexto));
 
   registrarBeta(contexto);
+  registrarOutbox(contexto);
   registrarCapturaSinCambios(contexto);
   registrarAltasInstitucionales(contexto);
   registrarRecorridoFinanciero(contexto);
