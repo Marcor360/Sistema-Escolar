@@ -6,6 +6,7 @@ import { RutaProtegida } from './auth/RutaProtegida';
 import { Shell } from './layout/Shell';
 
 // Cada página se descarga solo cuando se visita (code splitting)
+const AperturaCarteraPage = lazy(() => import('./pages/AperturaCartera'));
 const ProgramasEspecialesPage = lazy(() => import('./pages/ProgramasEspeciales'));
 const CatalogosAcademicosPage = lazy(() => import('./pages/CatalogosAcademicos'));
 const BibliotecaPage = lazy(() => import('./pages/Biblioteca'));
@@ -71,6 +72,8 @@ export default function App() {
             <Route path="/docentes/nuevo" element={<DocenteFormulario />} />
             <Route path="/docentes/:id/editar" element={<DocenteFormulario />} />
             <Route path="/materias" element={<MateriasPage />} />
+            <Route path="/apertura-cartera" element={<AperturaCarteraPage />} />
+            <Route path="/apertura-cartera/nueva" element={<AperturaCarteraPage />} />
             <Route path="/programas-especiales" element={<ProgramasEspecialesPage />} />
             <Route path="/programas-especiales/:id" element={<ProgramasEspecialesPage />} />
             <Route path="/programas-especiales/:id/grupos/:grupo" element={<ProgramasEspecialesPage />} />

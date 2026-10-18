@@ -25,3 +25,10 @@ Catálogo nivel/carrera/periodo, política de grupos 54→55, tarifas/fechas y m
 
 ## Aceptación
 Alta simple, doble clic, dos administradores concurrentes, alumnos de planteles distintos, fallos de cargo, transferencia y rollback probados en MySQL y SQL Server; UI con carga/vacío/error/éxito.
+
+## Implementación y reglas confirmadas
+Módulo web visible `/apertura-cartera` y API `/cartera`, solo SUPERADMIN/ADMINISTRATIVO con alcance del plantel. Selecciona alumno existente, catálogos completos, ciclo y turno; grupo compatible opcional. La previsualización obtiene conceptos activos y montos exclusivamente del servidor. Confirmación mediante UUID, huella de petición y cotización que detecta tarifas modificadas; los reintentos conservan la misma apertura.
+
+La transacción READ COMMITTED comparte agrupación, inscripción, cargos y bitácoras. Una solicitud sin grupo queda PENDIENTE y sin cargos; la quinta solicitud válida activa las aperturas de la cohorte con los precios confirmados guardados por servidor, sin inventar tarifas. Los alumnos inactivos o trasladados antes de agrupar requieren revisión. No se mueven grupos existentes ni se incluyen especiales o recursantes. La colegiatura reutiliza la clave de generación vigente y bloquea cargos históricos incompatibles para evitar duplicados. No se crean cuentas ni se procesa un precio recibido del cliente.
+
+Pruebas de integración: cambio de tarifa, confirmación duplicada concurrente, autorización, cinco alumnos, fallo sintético de cargo con rollback de toda la cohorte, reintento, montos no aceptados y consulta paginada. Migraciones incrementales espejo; staging no desplegado.
