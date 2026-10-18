@@ -1064,3 +1064,7 @@ dialog button { max-width: 100%; min-height: 44px; white-space: normal; overflow
   font-weight: 600;
   letter-spacing: .04em;
 }
+
+/* Área completa para expedientes: sin directorio ni navegación lateral. */
+.edicion-enfocada { width: 100%; max-width: 1440px; min-height: 100dvh; margin: 0 auto; }
+.edicion-enfocada fieldset { min-width: 0; margin-block: 1rem; }

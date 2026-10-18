@@ -87,6 +87,7 @@ async function esperarServidor() {
             planteles: ['Plantel de Prueba con un Nombre Extenso'],
           }], total: 1, pagina: 1, porPagina: 10,
         };
+      if (path.endsWith('/docentes/1')) data = { id: 1, numEmpleado: 'DOC-QA-001', estatus: 'ACTIVO', usuario: { nombre: 'Docente con nombre extenso', apellidoPaterno: 'Prueba', email: 'docente.con.correo.extenso@example.test' }, plantelIds: [1], clases: [] };
       if (path.endsWith('/academico/grupos'))
         data = { datos: [{ id: 1, nombre: 'GR-QA-001', grado: 'Primero', turno: 'MATUTINO',
           ciclo: { id: 1, clave: '2026-2027', activo: true, estado: 'VIGENTE' },
@@ -256,6 +257,7 @@ async function esperarServidor() {
   for (const width of [320, 360, 700, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto(baseUrl + '/docentes');
+    await page.getByRole('button', { name: /Consultar docentes/ }).click();
     await expect(page.getByText('DOC-QA-001', { exact: true })).toBeVisible();
     const listado = page.getByRole('region', { name: 'Listado de docentes' });
     const geometry = await listado.evaluate((el) => ({
@@ -269,6 +271,21 @@ async function esperarServidor() {
     await listado.evaluate((el) => { el.scrollLeft = el.scrollWidth; });
     await expect(listado.getByRole('button', { name: 'Dar de baja', exact: true })).toBeInViewport();
     await expect(listado.getByRole('table')).toHaveCount(1);
+    await listado.getByRole('button', { name: 'Editar', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Editar docente' })).toBeVisible();
+    await expect(page.getByLabel('Nombre', { exact: true })).toHaveValue('Docente con nombre extenso');
+    await expect(page.getByRole('navigation', { name: 'Navegación principal' })).toHaveCount(0);
+    await expect(page.getByRole('region', { name: 'Listado de docentes' })).toHaveCount(0);
+    const ancho = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, width: innerWidth }));
+    if (ancho.scroll > ancho.width) throw Error('Formulario docente desborda ' + width);
+    await page.getByLabel('Nombre', { exact: true }).fill('Cambio pendiente');
+    await page.getByRole('button', { name: 'Cancelar y volver' }).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.getByRole('button', { name: 'Cancelar', exact: true }).click();
+    await expect(page.getByLabel('Nombre', { exact: true })).toHaveValue('Cambio pendiente');
+    await page.getByRole('button', { name: 'Cancelar y volver' }).click();
+    await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
+    await expect(page.getByText('DOC-QA-001', { exact: true })).toBeVisible();
     console.log('PASS docentes ' + width);
   }
   for (const width of [320, 360, 700, 768, 1440]) {

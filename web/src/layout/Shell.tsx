@@ -149,6 +149,11 @@ export function Shell() {
     return () => window.removeEventListener('keydown', manejarTeclado);
   }, [menuAbierto]);
 
+  // Alta y edición tienen el mismo control de sesión/rol y un área sin navegación lateral.
+  if (/^\/docentes\/(nuevo|\d+\/editar)\/?$/.test(location.pathname)) {
+    return <Suspense fallback={<Cargando />}><Outlet /></Suspense>;
+  }
+
   return (
     <div className="shell">
       <a ref={saltoContenido} className="skip-link" href="#contenido-principal">
