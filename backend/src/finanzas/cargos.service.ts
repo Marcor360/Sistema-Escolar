@@ -177,7 +177,7 @@ export class CargosService {
     const planteles = await this.scope.resolverFiltro(user, dto.plantelId);
     const gruposDelCiclo = await this.grupos.find({
       where: {
-        cicloId: dto.cicloId, ciclo: { activo: true }, plantel: { activo: true },
+        tipo: 'REGULAR', cicloId: dto.cicloId, ciclo: { activo: true }, plantel: { activo: true },
         activo: true,
         ...(planteles === null ? {} : { plantelId: this.scope.condicion(planteles) }),
       },
@@ -225,7 +225,7 @@ export class CargosService {
           const alumno = await manager.getRepository(Alumno).findOne({ where: { id: nuevo.alumnoId }, lock: { mode: 'pessimistic_write' } });
           if (!alumno || alumno.estatus !== 'ACTIVO' || !alumno.usuario.activo || (planteles !== null && !planteles.includes(alumno.plantelId))) return false;
           if (!await manager.getRepository(ConceptoPago).existsBy({ id: concepto.id, activo: true, tipo: 'COLEGIATURA' })) return false;
-          if (!await manager.getRepository(Inscripcion).existsBy({ alumnoId: alumno.id, estatus: 'ACTIVA', grupo: { cicloId: dto.cicloId, plantelId: alumno.plantelId, activo: true, plantel: { activo: true } } })) return false;
+          if (!await manager.getRepository(Inscripcion).existsBy({ alumnoId: alumno.id, estatus: 'ACTIVA', grupo: { tipo: 'REGULAR', cicloId: dto.cicloId, plantelId: alumno.plantelId, activo: true, plantel: { activo: true } } })) return false;
           nuevo.plantelId = alumno.plantelId;
           const cargo = await manager.getRepository(Cargo).save(nuevo);
           const plantelId = alumno.plantelId;
