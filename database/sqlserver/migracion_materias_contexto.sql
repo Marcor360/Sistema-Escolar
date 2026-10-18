@@ -1,5 +1,6 @@
 -- Sin clasificar ni duplicar materias históricas.
 ALTER TABLE materias ADD tipo NVARCHAR(16) NULL;
+GO
 ALTER TABLE materias ADD CONSTRAINT ck_materia_tipo CHECK (tipo IS NULL OR tipo IN ('OBLIGATORIA','OPTATIVA','ADICIONAL','COMPLEMENTARIA'));
 CREATE TABLE materia_contextos (
  id INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
