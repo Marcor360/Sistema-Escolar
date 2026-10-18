@@ -13,7 +13,7 @@ interface Registro { alumnoId: number; calificacion: number }
 interface EstadoPeriodo { estatus: 'ABIERTO' | 'CERRADO'; inscritos: number; capturados: number; faltantes: number }
 interface Cambio { id: number; alumnoId: number; valorAnterior: number | null; valorNuevo: number; usuarioId: number; fecha: string; motivo: string | null; observacionAnterior: string | null; observacionNueva: string | null }
 interface Historial { datos: Cambio[]; total: number; pagina: number; porPagina: number }
-const HISTORIAL_VACIO: Historial = { datos: [], total: 0, pagina: 1, porPagina: 20 };
+const HISTORIAL_VACIO: Historial = { datos: [], total: 0, pagina: 1, porPagina: 10 };
 const valida = (v: string) => /^(?:\d+|\d*\.\d{1,2})$/.test(v) && Number(v) >= 0 && Number(v) <= 100;
 export default function CalificacionesPage() {
   const { tieneRol } = useAuth(), confirmacion = useConfirmacion();

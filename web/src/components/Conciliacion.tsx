@@ -15,12 +15,13 @@ export function Conciliacion() {
   const [resultado, setResultado] = useState<{ datos: Incidencia[]; total: number }>({ datos: [], total: 0 });
   const [seleccion, setSeleccion] = useState<Incidencia | null>(null); const [cargoId, setCargoId] = useState('');
   const [motivo, setMotivo] = useState(''); const [error, setError] = useState(''); const [mensaje, setMensaje] = useState('');
-  const [enviando, setEnviando] = useState(false); const [auditoria, setAuditoria] = useState<Auditoria[]>([]);
+  const [enviando, setEnviando] = useState(false); const [auditoria, setAuditoria] = useState<{ datos: Auditoria[]; total: number }>({ datos: [], total: 0 });
+  const [paginaAuditoria, setPaginaAuditoria] = useState(1);
   const cargar = useCallback(async () => {
     try { const { data } = await api.get(`/finanzas/conciliacion/${tipo}`, { params: { pagina } }); setResultado(data);
-      const log = await api.get<Auditoria[]>('/finanzas/bitacora'); setAuditoria(log.data.filter((a) => a.accion.startsWith('CONCILIAR_')));
+      const log = await api.get('/finanzas/conciliacion/resoluciones', { params: { pagina: paginaAuditoria, porPagina: 10 } }); setAuditoria(log.data);
     } catch (err) { setError(mensajeDeError(err)); }
-  }, [tipo, pagina]);
+  }, [tipo, pagina, paginaAuditoria]);
   useEffect(() => { void cargar(); }, [cargar]);
   const resolver = async (e: FormEvent) => {
     e.preventDefault(); if (!seleccion || enviando || !await confirmacion.solicitar('¿Confirmar la conciliación? Se registrará tu usuario, la fecha y el motivo.')) return;
@@ -38,13 +39,14 @@ export function Conciliacion() {
       {resultado.datos.map((i) => <tr key={i.id}><td>{i.referencia}</td><td>{i.matricula}</td><td>{pesos(i.monto)}</td><td>{new Date(i.fecha).toLocaleString('es-MX')}</td><td>{i.estatus} · {i.motivo}</td>
         <td><button disabled={enviando} onClick={() => { setSeleccion(i); setMotivo(''); setCargoId(''); }}>Revisar</button></td></tr>)}
       {!resultado.datos.length && <tr><td colSpan={6}>Sin incidencias pendientes.</td></tr>}
-    </tbody></table></div><Paginador total={resultado.total} pagina={pagina} porPagina={20} onCambio={setPagina} />
+    </tbody></table></div><Paginador total={resultado.total} pagina={pagina} porPagina={10} onCambio={setPagina} />
     {seleccion && <form onSubmit={resolver}><h3>Resolver {seleccion.referencia}</h3>
       {tipo === 'pagos' && <SelectorBuscable<Cargo> ruta="/finanzas/cargos" valor={cargoId} cambiar={setCargoId} etiqueta="Cargo de destino"
         filtros={{ alumnoId: seleccion.alumnoId }} texto={(c) => `${c.descripcion} · ${c.estatus}`} />}
       <label htmlFor="motivo-conciliacion">Motivo de resolución</label><input id="motivo-conciliacion" required minLength={3} maxLength={400} value={motivo} onChange={(e) => setMotivo(e.target.value)} />
       <button disabled={enviando}>{enviando ? 'Verificando…' : tipo === 'ordenes' ? 'Verificar con Openpay' : 'Aplicar pago'}</button><button type="button" onClick={() => setSeleccion(null)}>Cancelar</button>
     </form>}
-    <h3>Resoluciones auditadas</h3>{auditoria.slice(0, 20).map((a) => <p key={a.id}>{new Date(a.createdAt).toLocaleString('es-MX')} · Actor {a.usuarioId} · {a.accion} #{a.entidadId} · {a.detalle}</p>)}
+    <h3>Resoluciones auditadas</h3>{auditoria.datos.map((a) => <p key={a.id}>{new Date(a.createdAt).toLocaleString('es-MX')} · Actor {a.usuarioId} · {a.accion} #{a.entidadId} · {a.detalle}</p>)}
+    <Paginador total={auditoria.total} pagina={paginaAuditoria} porPagina={10} onCambio={setPaginaAuditoria} />
   </section></>;
 }

@@ -28,7 +28,7 @@ export class AlumnosService {
 
   async listar(query: ListarAlumnosDto, user?: JwtUser) {
     const pagina = query.pagina || 1;
-    const porPagina = query.porPagina || 20;
+    const porPagina = query.porPagina || 10;
     const maestroPuro = user ? esMaestroRestringido(user) : false;
     const planteles = user && !maestroPuro ? await this.scope.resolverFiltro(user, query.plantelId) : null;
     const qb = this.alumnos.createQueryBuilder('a')

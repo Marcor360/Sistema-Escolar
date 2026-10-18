@@ -30,7 +30,7 @@ interface Listado {
   pagina: number;
   porPagina: number;
 }
-const VACIO: Listado = { carpetas: [], archivos: [], bytes: 0, cuota: 0, total: 0, pagina: 1, porPagina: 20 };
+const VACIO: Listado = { carpetas: [], archivos: [], bytes: 0, cuota: 0, total: 0, pagina: 1, porPagina: 10 };
 function invalidar(ref: { current: number }) {
   ref.current++;
 }
