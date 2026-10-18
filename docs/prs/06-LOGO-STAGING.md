@@ -22,3 +22,8 @@
 
 ## Estado
 No se dispone de la respuesta HTTP real en esta revisión, por lo que **no se modifica IIS ni se presenta una reparación no demostrada**. Ref. #106.
+
+## Verificación automatizada añadida
+La integración real comprueba carga PNG, lectura pública de bytes y MIME, sustitución, persistencia en nueva consulta, permisos exclusivos de SUPERADMIN, rechazo de imagen falsa y mayor a 2 MiB, conservación del logo previo al fallar y rechazo de documentos privados por la ruta pública. El script de Windows puede guardar evidencia HTTP acotada con `-EvidencePath`, sin tokens ni cuerpos.
+
+No hay todavía evidencia del host staging ni permiso de red al dominio en este entorno. No se modificaron IIS, ACL ni DNS. Continúa pendiente la reproducción HTTPS y la persistencia tras reinicio en staging; las pruebas aisladas no acreditan esa operación.
