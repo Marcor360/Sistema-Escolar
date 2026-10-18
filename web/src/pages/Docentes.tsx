@@ -25,7 +25,7 @@ const FORM_INICIAL = {
 export default function DocentesPage() {
   const confirmacion = useConfirmacion();
   const dialogoMotivo = useDialogoMotivo();
-  const [resultado, setResultado] = useState<Resultado>({ datos: [], total: 0, pagina: 1, porPagina: 20 });
+  const [resultado, setResultado] = useState<Resultado>({ datos: [], total: 0, pagina: 1, porPagina: 10 });
   const [planteles, setPlanteles] = useState<Plantel[]>([]);
   const [plantelIds, setPlantelIds] = useState<number[]>([]);
   const [filtroPlantel, setFiltroPlantel] = useState('');

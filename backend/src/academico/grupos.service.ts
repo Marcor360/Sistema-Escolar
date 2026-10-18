@@ -37,7 +37,7 @@ private readonly scope: ScopeService,
 private readonly dataSource: DataSource) {}
 async listarGrupos(user: JwtUser, query: ListarGruposDto) {
     const pagina = query.pagina || 1;
-    const porPagina = query.porPagina || 20;
+    const porPagina = query.porPagina || 10;
     const maestroPuro = esMaestroRestringido(user);
     const planteles = maestroPuro ? null : await this.scope.resolverFiltro(user, query.plantelId);
     const puedeVerInactivos = user.roles.includes('ADMINISTRATIVO') || user.roles.includes('SUPERADMIN');

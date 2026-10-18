@@ -24,7 +24,7 @@ export class PagosService {
 
   async listar(query: ListarPagosDto, user: JwtUser) {
     const pagina = query.pagina || 1;
-    const porPagina = query.porPagina || 20;
+    const porPagina = query.porPagina || 10;
     const planteles = await this.scope.resolverFiltro(user);
     const qb = this.pagos.createQueryBuilder('p')
       .innerJoinAndSelect('p.alumno', 'a')
@@ -126,9 +126,9 @@ export class PagosService {
     const qb = this.pagos.createQueryBuilder('p').innerJoinAndSelect('p.alumno', 'a').leftJoinAndSelect('a.usuario', 'u')
       .where('p.cargo_id IS NULL AND p.estatus = :estatus', { estatus: 'CONFIRMADO' });
     if (planteles !== null) qb.andWhere('p.plantel_id IN (:...planteles)', { planteles });
-    const [datos, total] = await qb.orderBy('p.fechaPago', 'DESC').addOrderBy('p.id', 'DESC').skip((pagina - 1) * 20).take(20).getManyAndCount();
+    const [datos, total] = await qb.orderBy('p.fechaPago', 'DESC').addOrderBy('p.id', 'DESC').skip((pagina - 1) * 10).take(10).getManyAndCount();
     return { datos: datos.map((p) => ({ id: p.id, monto: p.monto, referencia: p.referencia, metodo: p.metodo, fecha: p.fechaPago,
-      alumnoId: p.alumnoId, matricula: p.alumno.matricula, motivo: 'Pago confirmado sin aplicación a cargo', estatus: p.estatus })), total, pagina, porPagina: 20 };
+      alumnoId: p.alumnoId, matricula: p.alumno.matricula, motivo: 'Pago confirmado sin aplicación a cargo', estatus: p.estatus })), total, pagina, porPagina: 10 };
   }
 
   async aplicarNoAplicado(id: number, cargoId: number, motivo: string, user: JwtUser) {

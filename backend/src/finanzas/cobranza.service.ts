@@ -57,8 +57,8 @@ export class CobranzaService implements OnModuleInit, OnModuleDestroy {
   }
   async listar(user: JwtUser, pagina = 1) {
     const planteles = await this.scope.resolverFiltro(user);
-    const [datos, total] = await this.ds.getRepository(CobranzaEnvio).findAndCount({ where: planteles === null ? {} : { plantelId: In(planteles) }, order: { id: 'DESC' }, skip: (pagina - 1) * 20, take: 20 });
-    return { datos: datos.map(({ id, plantelId, usuarioId, saldo, estado, intentos, error, createdAt }) => ({ id, plantelId, usuarioId, saldo, estado, intentos, error, createdAt })), total, pagina, porPagina: 20 };
+    const [datos, total] = await this.ds.getRepository(CobranzaEnvio).findAndCount({ where: planteles === null ? {} : { plantelId: In(planteles) }, order: { id: 'DESC' }, skip: (pagina - 1) * 10, take: 10 });
+    return { datos: datos.map(({ id, plantelId, usuarioId, saldo, estado, intentos, error, createdAt }) => ({ id, plantelId, usuarioId, saldo, estado, intentos, error, createdAt })), total, pagina, porPagina: 10 };
   }
   async reintentar(id: number, motivo: string, confirmado: boolean, user: JwtUser) {
     if (!confirmado || motivo.trim().length < 3) throw new BadRequestException('Confirma el reintento y proporciona un motivo');

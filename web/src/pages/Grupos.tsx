@@ -26,7 +26,7 @@ export default function GruposPage() {
   const [filtroCiclo, setFiltroCiclo] = useState('');
   const [filtroPlantel, setFiltroPlantel] = useState('');
   const [plantelAplicado, setPlantelAplicado] = useState('');
-  const [resultado, setResultado] = useState<ResultadoGrupos>({ datos: [], total: 0, pagina: 1, porPagina: 20 });
+  const [resultado, setResultado] = useState<ResultadoGrupos>({ datos: [], total: 0, pagina: 1, porPagina: 10 });
   const [materias, setMaterias] = useState<Materia[]>([]);
   const [seleccionado, setSeleccionado] = useState<Grupo | null>(null);
   const [asignaciones, setAsignaciones] = useState<GrupoMateria[]>([]);

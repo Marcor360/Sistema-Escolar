@@ -70,7 +70,7 @@ export class CargosService {
 
   async listar(query: ListarCargosDto, user: JwtUser) {
     const pagina = query.pagina || 1;
-    const porPagina = query.porPagina || 20;
+    const porPagina = query.porPagina || 10;
     const planteles = await this.scope.resolverFiltro(user, query.plantelId);
     const qb = this.cargos.createQueryBuilder('c')
       .innerJoinAndSelect('c.alumno', 'a')
@@ -97,7 +97,7 @@ export class CargosService {
       .select(['a.id', 'a.matricula', 'u.id', 'u.nombre', 'u.apellidoPaterno']);
     if (planteles !== null) qb.where('(a.plantel_id IN (:...planteles) OR EXISTS (SELECT 1 FROM cargos c WHERE c.alumno_id = a.id AND c.plantel_id IN (:...planteles)) OR EXISTS (SELECT 1 FROM pagos p WHERE p.alumno_id = a.id AND p.plantel_id IN (:...planteles)))', { planteles });
     if (query.buscar?.trim()) qb.andWhere('(a.matricula LIKE :buscar OR u.nombre LIKE :buscar OR u.apellido_paterno LIKE :buscar)', { buscar: `%${query.buscar.trim()}%` });
-    const pagina = query.pagina || 1, porPagina = query.porPagina || 20;
+    const pagina = query.pagina || 1, porPagina = query.porPagina || 10;
     const [datos, total] = await qb.orderBy('a.matricula', 'ASC').skip((pagina - 1) * porPagina).take(porPagina).getManyAndCount();
     return { datos: datos.map((a) => ({ id: a.id, matricula: a.matricula, usuario: { nombre: a.usuario.nombre, apellidoPaterno: a.usuario.apellidoPaterno } })), total, pagina, porPagina };
   }
@@ -310,7 +310,7 @@ export class CargosService {
 
   async adeudosPaginados(user: JwtUser, query: ListarCargosDto) {
     const planteles = await this.scope.resolverFiltro(user, query.plantelId);
-    const pagina = query.pagina || 1; const porPagina = query.porPagina || 20;
+    const pagina = query.pagina || 1; const porPagina = query.porPagina || 10;
     const qb = this.cargos.createQueryBuilder('c').leftJoinAndSelect('c.alumno', 'a').leftJoinAndSelect('a.usuario', 'u')
       .where('c.estatus IN (:...estatus)', { estatus: ['PENDIENTE', 'PARCIAL', 'VENCIDO'] });
     if (planteles !== null) qb.andWhere('c.plantel_id IN (:...planteles)', { planteles });

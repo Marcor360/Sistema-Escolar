@@ -79,7 +79,7 @@ export class UsuariosService {
 
   async listar(query: PaginacionDto) {
     const pagina = query.pagina || 1;
-    const porPagina = Math.min(query.porPagina || 20, 100);
+    const porPagina = Math.min(query.porPagina || 10, 100);
     const [usuarios, total] = await this.usuarios.findAndCount({
       order: { id: 'DESC' }, skip: (pagina - 1) * porPagina, take: porPagina,
     });
@@ -88,7 +88,7 @@ export class UsuariosService {
 
   async listado(query: ListadoUsuariosDto, user: JwtUser) {
     const pagina = query.pagina || 1;
-    const porPagina = Math.min(query.porPagina || 20, 100);
+    const porPagina = Math.min(query.porPagina || 10, 100);
     const maestroPuro = esMaestroRestringido(user);
     if (maestroPuro && query.tipo !== 'ALUMNO') {
       throw new ForbiddenException('Un maestro solo puede consultar alumnos de sus grupos');

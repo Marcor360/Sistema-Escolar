@@ -76,7 +76,7 @@ async function esperarServidor() {
           ],
           total: 1,
           pagina: 1,
-          porPagina: 20,
+          porPagina: 10,
         };
       if (path.endsWith('/docentes'))
         data = {
@@ -85,13 +85,13 @@ async function esperarServidor() {
             usuario: { nombre: 'Docente con nombre extenso', apellidoPaterno: 'Prueba',
               email: 'docente.con.correo.extenso@example.test' },
             planteles: ['Plantel de Prueba con un Nombre Extenso'],
-          }], total: 1, pagina: 1, porPagina: 20,
+          }], total: 1, pagina: 1, porPagina: 10,
         };
       if (path.endsWith('/academico/grupos'))
         data = { datos: [{ id: 1, nombre: 'GR-QA-001', grado: 'Primero', turno: 'MATUTINO',
           ciclo: { id: 1, clave: '2026-2027', activo: true, estado: 'VIGENTE' },
           plantel: { id: 1, nombre: 'Plantel de Grupos con un Nombre Extenso de Prueba' } }],
-          total: 1, pagina: 1, porPagina: 20 };
+          total: 1, pagina: 1, porPagina: 10 };
       if (path.endsWith('/planteles'))
         data = [{ id: 1, clave: 'PL-QA-001', nombre: 'Plantel con un Nombre Extenso de Prueba',
           municipio: 'Municipio con un Nombre Extenso de Prueba', activo: true }];
@@ -142,20 +142,20 @@ async function esperarServidor() {
       if (/\/academico\/grupos\/\d+\/(materias|alumnos)$/.test(path)) data = [];
       const claseBeta = { id: 1, grupo: { id: 1, nombre: 'Grupo Beta', ciclo: { id: 1, nombre: '2026–2027', clave: '2026' }, plantel: { nombre: 'Plantel Beta' } }, materia: { clave: 'MAT', nombre: 'Matemáticas' } };
       if (path.endsWith('/planteles/mios')) data = [{ id: 1, nombre: 'Plantel Beta' }];
-      if (path.endsWith('/usuarios/listado')) data = { datos: [{ id: 1, matricula: 'US-QA-001', nombre: 'Usuario con nombre largo de prueba', correo: 'correo.extenso.de.prueba@example.invalid', plantel: 'Plantel Beta', estatus: 'ACTIVO' }], total: 1, pagina: 1, porPagina: 20 };
+      if (path.endsWith('/usuarios/listado')) data = { datos: [{ id: 1, matricula: 'US-QA-001', nombre: 'Usuario con nombre largo de prueba', correo: 'correo.extenso.de.prueba@example.invalid', plantel: 'Plantel Beta', estatus: 'ACTIVO' }], total: 1, pagina: 1, porPagina: 10 };
       if (path.endsWith('/academico/mis-grupos') || path.endsWith('/academico/grupo-materias')) data = [claseBeta];
       if (path.endsWith('/academico/clases-seleccion')) data = { datos: [claseBeta], total: 1 };
       if (path.endsWith('/academico/grupos/1/alumnos')) data = [{ id: 1, alumno: { id: 1, matricula: 'NO-QA-001', usuario: { nombre: 'Alumno Beta', apellidoPaterno: 'Prueba' } } }];
       if (path.endsWith('/calificaciones/periodos/1/1')) data = { estatus: 'ABIERTO', inscritos: 1, capturados: 0, faltantes: 1 };
-      if (path.endsWith('/calificaciones/periodos/1/1/historial')) data = { datos: [{ id: 1, alumnoId: 1, fecha: '2026-10-13T12:00:00Z', valorAnterior: 80, valorNuevo: 90, usuarioId: 1, motivo: 'Corrección autorizada de prueba' }], total: 1, pagina: 1, porPagina: 20 };
-      if (path.endsWith('/biblioteca')) data = { carpetas: [{ id: 1, nombre: 'Documentos Beta', padreId: null }], archivos: [{ id: 1, titulo: 'Calendario institucional de prueba para familias y docentes', archivoNombre: 'calendario-con-nombre-extenso.pdf', categoria: 'CALENDARIO', bytes: 512 }], total: 1, pagina: 1, porPagina: 20, bytes: 512, cuota: 104857600 };
+      if (path.endsWith('/calificaciones/periodos/1/1/historial')) data = { datos: [{ id: 1, alumnoId: 1, fecha: '2026-10-13T12:00:00Z', valorAnterior: 80, valorNuevo: 90, usuarioId: 1, motivo: 'Corrección autorizada de prueba' }], total: 1, pagina: 1, porPagina: 10 };
+      if (path.endsWith('/biblioteca')) data = { carpetas: [{ id: 1, nombre: 'Documentos Beta', padreId: null }], archivos: [{ id: 1, titulo: 'Calendario institucional de prueba para familias y docentes', archivoNombre: 'calendario-con-nombre-extenso.pdf', categoria: 'CALENDARIO', bytes: 512 }], total: 1, pagina: 1, porPagina: 10, bytes: 512, cuota: 104857600 };
       if (path.endsWith('/academico/bitacora')) data = { datos: [], total: 0, pagina: 1 };
       if (path.endsWith('/importaciones/preview')) data = { previewId: 'qa-preview', registros: 1, errores: [], regla: 'Confirmación atómica del lote', identificadores: [{ fila: 2, identificador: 'ALUMNO-QA-001' }] };
-      if (['/finanzas/cargos', '/finanzas/pagos', '/finanzas/adeudos', '/conducta/incidencias', '/finanzas/conciliacion/ordenes', '/finanzas/conciliacion/pagos'].some(p => path.endsWith(p)))
-        data = { datos: [], total: 0, pagina: 1, porPagina: 20 };
+      if (['/finanzas/cargos', '/finanzas/pagos', '/finanzas/adeudos', '/conducta/incidencias', '/finanzas/conciliacion/ordenes', '/finanzas/conciliacion/pagos', '/finanzas/conciliacion/resoluciones'].some(p => path.endsWith(p)))
+        data = { datos: [], total: 0, pagina: 1, porPagina: 10 };
       const cargoQA = { id: 1, descripcion: 'Colegiatura con descripción extensa para comprobar el ancho', periodo: '2026-10', monto: 123456.78, descuento: 0, recargo: 0, fechaVencimiento: '2026-10-31', estatus: 'PENDIENTE', total: 123456.78, pagado: 0, saldo: 123456.78, alumno: { id: 1, matricula: 'FIN-QA-001', usuario: { nombre: 'Alumno con nombre extenso de prueba', apellidoPaterno: 'Prueba' } } };
-      if (path.endsWith('/finanzas/cargos') || path.endsWith('/finanzas/adeudos')) data = { datos: [cargoQA], total: 1, pagina: 1, porPagina: 20 };
-      if (path.endsWith('/finanzas/pagos')) data = { datos: [{ id: 1, monto: 123456.78, metodo: 'TRANSFERENCIA', referencia: 'REFERENCIA_' + 'larga'.repeat(15), fechaPago: '2026-10-15T12:00:00Z', estatus: 'APLICADO', alumno: cargoQA.alumno }], total: 1, pagina: 1, porPagina: 20 };
+      if (path.endsWith('/finanzas/cargos') || path.endsWith('/finanzas/adeudos')) data = { datos: [cargoQA], total: 1, pagina: 1, porPagina: 10 };
+      if (path.endsWith('/finanzas/pagos')) data = { datos: [{ id: 1, monto: 123456.78, metodo: 'TRANSFERENCIA', referencia: 'REFERENCIA_' + 'larga'.repeat(15), fechaPago: '2026-10-15T12:00:00Z', estatus: 'APLICADO', alumno: cargoQA.alumno }], total: 1, pagina: 1, porPagina: 10 };
       if (path.endsWith('/auth/solicitar-activacion')) data = { mensaje: 'Si la cuenta está pendiente y el correo está disponible, recibirás instrucciones.' };
       if (path.endsWith('/auth/activar-cuenta')) data = { mensaje: 'Cuenta activada. Inicia sesión.' };
       if (path.endsWith('/auth/forgot-password')) data = { mensaje: 'Solicitud recibida' };

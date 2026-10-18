@@ -36,7 +36,7 @@ Los intentos fallidos se registran sin almacenar contraseñas ni tokens.
 
 ## Paginación
 Los listados paginados responden `{ datos, total, pagina, porPagina }` (`pagina` inicia
-en 1, `porPagina` por defecto 20, máximo 100). Aplica a: `GET /usuarios`, `GET /usuarios/listado`,
+en 1, `porPagina` por defecto 10, máximo 100). Aplica a: `GET /usuarios`, `GET /usuarios/listado`,
 `GET /alumnos`, `GET /academico/grupos`, `GET /docentes`, `GET /finanzas/cargos` y
 `GET /finanzas/pagos`, `GET /finanzas/adeudos` y `GET /academico/clases-seleccion`. No aplica a `/calendario` (acotado por rango de fechas), a
 los endpoints móviles; el dashboard calcula su resumen en servidor. Conciliación y envíos de cobranza también responden con páginas.
@@ -223,3 +223,12 @@ Hora y umbral del servidor; escritura atómica sobre sesión/version/expiración
 ### Alta docente por invitación
 
 El alta individual de docente no recibe contraseña inicial: solicita una invitación después de confirmar la transacción. Requiere `cedulaProfesional` o `cedulaPendiente: true`. La plantilla de importación docente también admite `cedulaPendiente` con texto `true` o `false`; cuando es `true` guarda la cédula como NULL. Las columnas de contraseña no están permitidas en archivos. La importación conserva su contrato de recuperación de acceso por correo.
+
+### Resoluciones de conciliación
+
+`GET /finanzas/conciliacion/resoluciones` requiere FINANZAS (o SUPERADMIN),
+aplica alcance por plantel y filtra las acciones CONCILIAR_ORDEN/CONCILIAR_PAGO
+antes de paginar. Usa PaginacionDto: 10 por defecto, máximo 100 y orden estable
+por createdAt/id descendentes. Devuelve `{ datos, total, pagina, porPagina }`.
+La ruta histórica `/finanzas/bitacora` conserva su contrato; la pantalla de
+conciliación usa el nuevo listado sin descargar ni recortar 300 movimientos.
