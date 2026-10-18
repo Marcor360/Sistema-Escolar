@@ -88,6 +88,7 @@ async function esperarServidor() {
           }], total: 1, pagina: 1, porPagina: 10,
         };
       if (path.endsWith('/docentes/1')) data = { id: 1, numEmpleado: 'DOC-QA-001', estatus: 'ACTIVO', usuario: { nombre: 'Docente con nombre extenso', apellidoPaterno: 'Prueba', email: 'docente.con.correo.extenso@example.test' }, plantelIds: [1], clases: [] };
+      if (path.endsWith('/recursamientos')) data = { datos: [], total: 0, pagina: 1, porPagina: 10 };
       if (path.endsWith('/programas-especiales')) data = { datos: [], total: 0, pagina: 1, porPagina: 10 };
       if (/\/academico\/catalogos\/(niveles|carreras|periodos)$/.test(path)) data = { datos: [{ id: 1, clave: 'NIV-QA', nombre: 'Catálogo institucional de prueba', activo: true }], total: 1, pagina: 1, porPagina: 10 };
       if (path.endsWith('/academico/grupos'))
@@ -285,6 +286,23 @@ async function esperarServidor() {
     await expect(page.getByText('Sin programas para esta consulta.')).toBeVisible();
     if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw Error('Programas desborda ' + width);
     console.log('PASS programas especiales ' + width);
+  }
+  for (const width of [320, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(baseUrl + '/recursamientos');
+    await page.getByRole('button', { name: /Consultar intentos/ }).click();
+    await expect(page.getByText('Sin intentos para esta consulta.')).toBeVisible();
+    await page.getByRole('link', { name: 'Nuevo recursamiento', exact: true }).click();
+    await expect(page.getByRole('navigation', { name: 'Navegación principal' })).toHaveCount(0);
+    const cupo = page.getByLabel('Cupo total manual de la clase');
+    await expect(cupo).toHaveValue('');
+    await cupo.fill('8');
+    await page.getByRole('button', { name: 'Cancelar y volver' }).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
+    await expect(page.getByText('Sin intentos para esta consulta.')).toBeVisible();
+    if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw Error('Recursamientos desborda ' + width);
+    console.log('PASS recursamientos ' + width);
   }
   for (const width of [320, 360, 700, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });

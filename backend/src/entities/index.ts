@@ -45,5 +45,7 @@ export * from './carrera-plan.entity';
 export * from './periodo-academico.entity';
 export * from './programa-especial.entity';
 
-
 export * from './solicitud-grupo-regular.entity';
+
+export * from './participacion-asignatura.entity';
+export * from './calificacion-recursamiento.entity';

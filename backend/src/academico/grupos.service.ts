@@ -1,3 +1,4 @@
+import { ParticipacionAsignatura, CupoRecursamiento } from '../entities/participacion-asignatura.entity';
 import { validarContextoGrupo } from '../catalogos-academicos/contexto-grupo';
 import { exigirCambios } from '../common/exigir-cambios';
 import { esMaestroRestringido, exigirConsultaAcademica } from '../common/politica-acceso';
@@ -130,6 +131,7 @@ async eliminarGrupo(id: number, user: JwtUser) {
       const inscripcionesActivas = await manager.getRepository(Inscripcion).count({
         where: { grupoId: id, estatus: 'ACTIVA' },
       });
+      if (await manager.getRepository(ParticipacionAsignatura).count({ where: { grupoMateria: { grupoId: id }, estado: 'ACTIVA' } })) throw new ConflictException('Da de baja los recursamientos activos antes de cerrar el grupo');
       if (inscripcionesActivas > 0) {
         throw new ConflictException(
           `El grupo tiene ${inscripcionesActivas} inscripción(es) activa(s); dalas de baja antes de eliminar el grupo`,
@@ -253,6 +255,7 @@ async eliminarGrupoMateria(id: number, user: JwtUser) {
     await this.scope.validarGestion(user, gm.grupo.plantelId);
     if (gm.grupo.tipo === 'ESPECIAL') throw new ConflictException('Las asignaturas especiales conservan su historial; gestiona el programa');
 
+    if (await this.dataSource.getRepository(ParticipacionAsignatura).countBy({ grupoMateriaId: id }) || await this.dataSource.getRepository(CupoRecursamiento).countBy({ grupoMateriaId: id })) throw new ConflictException('La clase tiene recursamientos o cupo autorizado; conserva su historial');
     const [calificaciones, actividades, materiales] = await Promise.all([
       this.calificaciones.count({ where: { grupoMateriaId: id } }),
       this.actividades.count({ where: { grupoMateriaId: id } }),

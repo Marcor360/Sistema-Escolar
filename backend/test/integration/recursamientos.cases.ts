@@ -47,6 +47,7 @@ export function registrarRecursamientos(ctx:ContextoIntegracion){
     expect((await ctx.api(`/grupo-materias/${matematicas.id}/materiales`,{token:propio})).response.status).toBe(403);
     const nuevo=await ctx.api('/recursamientos',{method:'POST',token:admin,body:{...body,idempotencia:randomUUID()}});expect(nuevo.response.status).toBe(201);expect(nuevo.data.intento).toBe(2);expect(nuevo.data.id).not.toBe(id);
     expect(await ctx.dataSource.getRepository(CalificacionRecursamiento).countBy({participacionId:id})).toBe(1);expect(await ctx.dataSource.getRepository(CalificacionRecursamiento).countBy({participacionId:nuevo.data.id})).toBe(0);
+    expect((await ctx.api(`/academico/grupo-materias/${matematicas.id}`,{method:'DELETE',token:admin})).response.status).toBe(409);
     expect(await ctx.dataSource.getRepository(HistorialRecursamiento).countBy({participacionId:id})).toBe(1);
     expect(await ctx.dataSource.getRepository(Inscripcion).countBy({alumnoId:alumnos[0].id,grupoId:receptor.id})).toBe(0);expect(await ctx.dataSource.getRepository(Inscripcion).countBy({alumnoId:alumnos[0].id,grupoId:principal.id,estatus:'ACTIVA'})).toBe(1);
   });

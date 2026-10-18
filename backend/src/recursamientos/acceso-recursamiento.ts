@@ -12,3 +12,15 @@ export async function clasesRecursadas(m: EntityManager, alumnoId: number): Prom
 export async function recursaClase(m: EntityManager, usuarioId: number, grupoMateriaId: number): Promise<boolean> {
   return (await vigentes(m).andWhere('a.usuario_id = :usuarioId AND r.grupo_materia_id = :grupoMateriaId', { usuarioId, grupoMateriaId }).getCount()) > 0;
 }
+
+/** Reserva de capacidad por clase: los nuevos regulares también deben respetarla. */
+export async function limiteRegulares(m: EntityManager, grupoId: number): Promise<number> {
+  const { CupoRecursamiento } = await import('../entities/participacion-asignatura.entity');
+  const cupos = await m.getRepository(CupoRecursamiento).find({ where: { grupoMateria: { grupoId } } });
+  let limite = Number.POSITIVE_INFINITY;
+  for (const c of cupos) {
+    const recursantes = await m.getRepository(ParticipacionAsignatura).countBy({ grupoMateriaId: c.grupoMateriaId, estado: 'ACTIVA' });
+    limite = Math.min(limite, c.cupoTotalManual - recursantes);
+  }
+  return limite;
+}
