@@ -31,7 +31,11 @@
         "migracion_activacion_alumnos.sql",
         "migracion_catalogos_academicos.sql",
         "migracion_programas_especiales.sql",
+<<<<<<< HEAD
         "migracion_recursamiento_asignatura.sql"
+=======
+        "migracion_agrupacion_ordinaria.sql"
+>>>>>>> origin/main
       ]
     },
     "sqlserver": {
@@ -63,7 +67,11 @@
         "migracion_activacion_alumnos.sql",
         "migracion_catalogos_academicos.sql",
         "migracion_programas_especiales.sql",
+<<<<<<< HEAD
         "migracion_recursamiento_asignatura.sql"
+=======
+        "migracion_agrupacion_ordinaria.sql"
+>>>>>>> origin/main
       ]
     }
   }
