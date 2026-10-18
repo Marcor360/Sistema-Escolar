@@ -140,9 +140,9 @@ export function registrarOutbox(ctx: ContextoIntegracion) {
     } finally { liberar(); await proceso; correo.mockRestore(); }
   });
 
-  it('outbox: cada ciclo limita el lote a diez trabajos y conserva el resto para el siguiente ciclo', async () => {
+  it('outbox: 112 solicitudes distintas sobreviven sin el antiguo tope de cien, en lotes de diez', async () => {
     const usuarios: Usuario[] = [];
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < 112; i++) {
       const usuario = await nuevo('lote' + i); usuarios.push(usuario);
       await ctx.app.get(ActivacionService).solicitar(usuario.email);
     }
@@ -150,9 +150,13 @@ export function registrarOutbox(ctx: ContextoIntegracion) {
     try {
       expect(await reiniciar().procesar()).toBe(10);
       expect(correo).toHaveBeenCalledTimes(10);
-      expect(await repo().countBy({ usuarioId: In(usuarios.map(u => u.id)), estado: 'PENDIENTE' })).toBe(2);
-      expect(await reiniciar().procesar()).toBe(2);
-      expect(correo).toHaveBeenCalledTimes(12);
+      expect(await repo().countBy({ usuarioId: In(usuarios.map(u => u.id)), estado: 'PENDIENTE' })).toBe(102);
+      let restantes = 102;
+      while (restantes > 0) {
+        const lote = await reiniciar().procesar();
+        expect(lote).toBe(Math.min(10, restantes)); restantes -= lote;
+      }
+      expect(correo).toHaveBeenCalledTimes(112);
     } finally { correo.mockRestore(); }
   });
 
