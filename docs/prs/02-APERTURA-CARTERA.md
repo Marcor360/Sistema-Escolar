@@ -1,7 +1,7 @@
 # Apertura de cartera — contrato de integración
 
-## Estado real
-`web/src/App.tsx` no registra actualmente una ruta independiente de apertura de cartera. Existen `Alumno`, `Inscripcion`, `Cargo`, `ConceptoPago` y operaciones financieras, pero no una transacción de apertura que las coordine. No se agregan rutas falsas en este PR.
+## Diagnóstico inicial (superado por la implementación)
+La revisión inicial encontró entidades académicas y financieras separadas, sin ruta de apertura ni transacción coordinada. La implementación descrita al final añade ambos recorridos; este diagnóstico conserva el origen del trabajo.
 
 ## Archivos a intervenir en la implementación
 - `backend/src/alumnos/`, `backend/src/academico/` y `backend/src/finanzas/`: orquestación en **backend** y validación de permisos por plantel.
@@ -20,8 +20,8 @@
 ## Exclusiones
 Ni recursamiento ni programas especiales abren cartera ordinaria. Preservar datos históricos, activación segura y recibos. No inventar catálogo de precios.
 
-## Bloqueos institucionales
-Catálogo nivel/carrera/periodo, política de grupos 54→55, tarifas/fechas y matriz exacta de responsables. Depende de #97 y del cierre funcional de #99.
+## Decisiones iniciales y resolución
+Se resolvieron mediante catálogos configurables (#97), agrupación conservadora sin mover historial (#99), tarifas existentes de Finanzas y gestión de SUPERADMIN/ADMINISTRATIVO. Las fechas se eligen explícitamente dentro del ciclo; no se inventan tarifas ni calendarios oficiales.
 
 ## Aceptación
 Alta simple, doble clic, dos administradores concurrentes, alumnos de planteles distintos, fallos de cargo, transferencia y rollback probados en MySQL y SQL Server; UI con carga/vacío/error/éxito.

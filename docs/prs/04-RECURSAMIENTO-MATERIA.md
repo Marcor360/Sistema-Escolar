@@ -3,10 +3,10 @@
 ## Problema existente
 `backend/src/entities/inscripcion.entity.ts` vincula un alumno a grupo completo. `backend/src/academico/inscripciones.service.ts:38-40` rechaza otra inscripción activa del alumno dentro del ciclo. Reutilizar ese flujo para recursar inscribiría materias ajenas o desplazaría su grupo principal.
 
-## Modelo a diseñar
+## Modelo de participación
 Una participación académica ligada a `GrupoMateria`, alumno e intento, con inscripción original intacta, historial de evaluación, estatus y bitácora. Debe permitir conservar más de un intento histórico de la misma asignatura sin duplicados **activos** en el mismo destino.
 
-## Archivos a modificar cuando #97 establezca el contexto
+## Zonas de integración con el contexto de #97
 - `backend/src/entities/`, `database/mysql/`, `database/sqlserver/`: entidad y migraciones aditivas; sin alterar notas históricas.
 - `backend/src/academico/inscripciones.service.ts`: operación manual propia, verificación por plantel, materia, periodo, estado de grupo, cupo e idempotencia.
 - `backend/src/calificaciones/`, `backend/src/actividades/`, `backend/src/reportes/`, `backend/src/alumnos/`: lectura y captura exclusivamente de la asignatura de recursamiento.
@@ -16,10 +16,10 @@ Una participación académica ligada a `GrupoMateria`, alumno e intento, con ins
 Alumno de 3A recursa Matemáticas en 2B: sigue en 3A, aparece solo en Matemáticas 2B, no en Inglés 2B, y mantiene su nota original e historial. Probar docentes de otro plantel, clases llenas, doble clic, bajas y descargas privadas.
 
 ## Decisiones pendientes
-Autoridad para aprobar, regla de cupo extraordinario, nota que acredita, periodo y tarifa (si existe). **No inferir** la excepción 51–54 de grupos automáticos para recursantes.
+Se confirmaron gestión por Control Escolar y cupo total manual explícito. La acreditación oficial de una nota anterior y una eventual tarifa requieren definición institucional; no se automatizan. **No inferir** la excepción 51–54 de grupos automáticos para recursantes.
 
 ## Estado
-Especificación en borrador; no añade ruta de recursamiento hasta validar datos y permisos.
+Implementación en #118 con rutas propias, intentos independientes y permisos por clase; los límites de acreditación y tarifas se conservan según la decisión anterior.
 
 ## Implementación y reglas confirmadas
 Se autoriza gestión por SUPERADMIN/ADMINISTRATIVO, con docente existente solo para captura en su clase y ALUMNO para sus consultas. Se reutiliza la clase receptora; no se crea otra `Inscripcion` ni se cambia la principal. Se requieren mismo plantel, ciclo, nivel y carrera/plan configurados, alumno/cuenta activos, clase regular vigente y docente activo.
