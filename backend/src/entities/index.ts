@@ -50,3 +50,5 @@ export * from './apertura-cartera.entity';
 
 export * from './participacion-asignatura.entity';
 export * from './calificacion-recursamiento.entity';
+
+export * from './auth-correo-outbox.entity';

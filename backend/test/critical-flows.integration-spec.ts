@@ -1,3 +1,8 @@
+import { ClavesCorreoAcceso } from '../src/auth/correo-acceso-claves';
+import { ConfigService } from '@nestjs/config';
+import { AuthCorreoOutbox } from '../src/entities/auth-correo-outbox.entity';
+import { registrarOutbox } from './integration/outbox.cases';
+import { CorreoAccesoOutboxService } from '../src/auth/correo-acceso-outbox.service';
 import { registrarMateriasPaginadas } from './integration/materias-paginadas.cases';
 import { registrarRecursamientos } from './integration/recursamientos.cases';
 import { registrarCartera } from './integration/cartera.cases';
@@ -256,19 +261,19 @@ describe('Integración de flujos críticos (base aislada)', () => {
     const alumno = usuario.roles.some((r) => r.clave === 'ALUMNO')
       ? await dataSource.getRepository(Alumno).findOneBy({ usuarioId: usuario.id }) : null;
     if (usuario.activacionPendiente) {
-      // Fixture sintético: activar cualquier rol por código real, sin SMTP externo.
-      let codigo = '';
-      const correo = jest.spyOn(app.get(NotificacionesService), 'enviarEmail')
-        .mockImplementation(async (_to, _subject, html) => {
-          codigo = /<strong[^>]*>([0-9a-f]{64})<\/strong>/.exec(html)?.[1] ?? '';
-          return { simulado: false };
-        });
-      try {
-        await app.get(ActivacionService).solicitar(email);
-        await app.get(ActivacionService).onModuleDestroy();
-        expect(codigo).toMatch(/^[0-9a-f]{64}$/);
-        await app.get(ActivacionService).activar(codigo, 'Integracion_Renovada_42!');
-      } finally { await app.get(ActivacionService).onModuleDestroy(); correo.mockRestore(); }
+      // Fixture sintético: reconstruir el código real con la clave SOLO de integración.
+      // No interceptar un transporte global: varios fixtures pueden activarse concurrentemente.
+      await app.get(ActivacionService).solicitar(email);
+      let trabajo: AuthCorreoOutbox | null = null;
+      for (let i = 0; i < 20; i++) {
+        await app.get(CorreoAccesoOutboxService).procesar();
+        trabajo = await dataSource.getRepository(AuthCorreoOutbox).findOne({ where: { usuarioId: usuario.id, tipo: 'ACTIVACION', version: usuario.sessionVersion }, order: { createdAt: 'DESC' } });
+        if (trabajo?.tokenHash) break;
+      }
+      expect(trabajo?.tokenHash).toMatch(/^[0-9a-f]{64}$/);
+      const codigo = new ClavesCorreoAcceso(app.get(ConfigService)).token(trabajo!);
+      await app.get(ActivacionService).activar(codigo, 'Integracion_Renovada_42!');
+      await app.get(CorreoAccesoOutboxService).procesar();
       passwords.set(email, 'Integracion_Renovada_42!');
     }
     const passwordInicial = passwords.get(email) ?? alumno?.matricula ?? 'Integracion_Segura_42!';
@@ -301,6 +306,10 @@ describe('Integración de flujos críticos (base aislada)', () => {
       throw new Error('La integración exige DB_SYNC=false y una base aislada con baseline instalado');
     }
     process.env.NODE_ENV = 'test';
+    process.env.AUTH_OUTBOX_KEYS = JSON.stringify({ prueba: '42'.repeat(32) });
+    process.env.AUTH_OUTBOX_ACTIVE_KEY = 'prueba';
+    process.env.SMTP_FROM = 'Integración <no-reply@example.invalid>';
+    process.env.AUTH_OUTBOX_WORKER = 'false';
     process.env.PUSH_ENABLED = 'false'; process.env.SMTP_HOST = '';
     process.env.JWT_SECRET = process.env.JWT_SECRET || 'solo-para-pruebas-integrales';
     process.env.UPLOADS_DIR = process.env.UPLOADS_DIR || 'uploads';
@@ -439,6 +448,7 @@ const casos = { ...casos_baseline, ...casos_identidad, ...casos_academico, ...ca
 Object.keys(casos).map(Number).sort((a,b) => a-b).forEach((id) => casos[id](contexto));
 
   registrarBeta(contexto);
+  registrarOutbox(contexto);
   registrarMateriasPaginadas(contexto);
   registrarCapturaSinCambios(contexto);
   registrarAltasInstitucionales(contexto);
