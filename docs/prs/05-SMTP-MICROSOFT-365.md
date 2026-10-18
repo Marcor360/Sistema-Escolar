@@ -23,3 +23,8 @@ Para cada intento registrar UTC, identificador SMTP no sensible, host emisor, es
 Acceso controlado a cPanel Track Delivery, Exchange Message Trace y DNS. **El PR no puede dar por resuelta la incidencia sin esas pruebas externas.**
 
 Relación: #107 y guía ya fusionada de #111.
+
+## Implementación y evidencia pendiente
+El servicio comprueba ahora que Nodemailer haya aceptado destinatarios y no haya rechazados; un rechazo parcial no se registra como éxito. Registra únicamente un UUID de correlación local y el estado ACEPTADO_SMTP, sin direcciones, respuesta SMTP, asunto, cuerpo ni tokens. Conserva el contrato simulado y los reintentos existentes. Una aceptación SMTP nunca acredita Inbox. Las pruebas usan transporte simulado y SMTP local, sin enviar correo institucional.
+
+La aceptación externa sigue pendiente de accesos y tres buzones consentidos. Registrar en evidencia privada: caso, UTC, SHA, flujo, proveedor, Message-ID del proveedor, Track Delivery, Message Trace, carpeta final y resultado de uso único. No cerrar #107 ni declarar resuelto este PR como incidencia operativa hasta disponer de las trazas.
