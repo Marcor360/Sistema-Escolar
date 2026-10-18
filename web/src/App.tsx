@@ -13,6 +13,7 @@ const AnaliticaPage = lazy(() => import('./pages/Analitica'));
 const LoginPage = lazy(() => import('./pages/Login'));
 const DashboardPage = lazy(() => import('./pages/Dashboard'));
 const AlumnosPage = lazy(() => import('./pages/Alumnos'));
+const DocenteFormulario = lazy(() => import('./pages/DocenteFormulario'));
 const DocentesPage = lazy(() => import('./pages/Docentes'));
 const MateriasPage = lazy(() => import('./pages/Materias'));
 const GruposPage = lazy(() => import('./pages/Grupos'));
@@ -65,6 +66,8 @@ export default function App() {
           <Route element={<RutaProtegida roles={['ADMINISTRATIVO']} />}>
             <Route path="/biblioteca" element={<BibliotecaPage />} />
             <Route path="/docentes" element={<DocentesPage />} />
+            <Route path="/docentes/nuevo" element={<DocenteFormulario />} />
+            <Route path="/docentes/:id/editar" element={<DocenteFormulario />} />
             <Route path="/materias" element={<MateriasPage />} />
             <Route path="/grupos" element={<GruposPage />} />
           </Route>

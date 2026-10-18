@@ -1,7 +1,8 @@
 import { EliminarRegistro } from '../components/EliminarRegistro';
 import { useConfirmacion } from '../components/useConfirmacion';
 import { useDialogoMotivo } from '../components/useDialogoMotivo';
-import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { api, mensajeDeError } from '../api/client';
 import { Encabezado } from '../components/Encabezado';
 import { PanelAccionesModulo } from '../components/PanelAccionesModulo';
@@ -19,23 +20,22 @@ interface Docente {
 interface Plantel { id: number; nombre: string }
 interface Resultado { datos: Docente[]; total: number; pagina: number; porPagina: number }
 
-const FORM_INICIAL = {
-  numEmpleado: '', nombre: '', apellidoPaterno: '', apellidoMaterno: '', telefono: '', cedulaProfesional: '', email: '', cedulaPendiente: false, especialidad: '',
-};
-
 export default function DocentesPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [params, setParams] = useSearchParams();
+  const vista = params.get('vista') === 'consulta' ? 'consulta' : 'panel';
+  const filtroPlantel = params.get('plantel') || '';
+  const buscar = params.get('buscar') || '';
+  const paginaActual = Math.max(1, Number.parseInt(params.get('pagina') || '1', 10) || 1);
+  const [termino, setTermino] = useState(buscar);
+  const tituloListado = useRef<HTMLHeadingElement>(null);
   const confirmacion = useConfirmacion();
   const dialogoMotivo = useDialogoMotivo();
   const [resultado, setResultado] = useState<Resultado>({ datos: [], total: 0, pagina: 1, porPagina: 10 });
   const [planteles, setPlanteles] = useState<Plantel[]>([]);
-  const [plantelIds, setPlantelIds] = useState<number[]>([]);
-  const [filtroPlantel, setFiltroPlantel] = useState('');
-  const [form, setForm] = useState(FORM_INICIAL);
-  const [formBase, setFormBase] = useState(FORM_INICIAL);
-  const [vista, setVista] = useState<'panel' | 'consulta' | 'formulario'>('panel');
   const [error, setError] = useState('');
-  const [mensaje, setMensaje] = useState('');
-  const [editando, setEditando] = useState<number | null>(null);
+  const [mensaje, setMensaje] = useState(location.state?.mensaje || '');
   const [enviando, setEnviando] = useState(false);
   const [cargando, setCargando] = useState(false); const consulta = useRef(0);
   const consultaDetalle = useRef(0);
@@ -65,23 +65,22 @@ export default function DocentesPage() {
     try { await guardar(); } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
-  const editar = (d: Docente) => {
-    consultaDetalle.current += 1;
-    setCargandoDetalle(false);
-    setDetalle(null);
-    const datos = { ...FORM_INICIAL, numEmpleado: d.numEmpleado,
-      nombre: d.usuario.nombre, apellidoPaterno: d.usuario.apellidoPaterno,
-      apellidoMaterno: d.usuario.apellidoMaterno ?? '', telefono: d.usuario.telefono ?? '', cedulaProfesional: d.cedulaProfesional ?? '', cedulaPendiente: !d.cedulaProfesional, email: d.usuario.email, especialidad: d.especialidad ?? '' };
-    setEditando(d.id); setForm(datos); setFormBase(datos); setVista('formulario');
-  };
+  const editar = (d: Docente) => navigate(`/docentes/${d.id}/editar${location.search}`);
+  const cambiarConsulta = (cambios: Record<string, string>) => setParams((previos) => {
+    const nuevos = new URLSearchParams(previos);
+    for (const [clave, valor] of Object.entries(cambios)) {
+      if (valor) nuevos.set(clave, valor); else nuevos.delete(clave);
+    }
+    return nuevos;
+  });
 
   const cargar = useCallback((pagina = 1, plantelId = '') => {
     const actual = ++consulta.current; setCargando(true); setError('');
-    api.get<Resultado>('/docentes', { params: { pagina, ...(plantelId ? { plantelId } : {}) } })
+    api.get<Resultado>('/docentes', { params: { pagina, porPagina: 10, ...(buscar ? { buscar } : {}), ...(plantelId ? { plantelId } : {}) } })
       .then((r) => { if (actual === consulta.current) setResultado(r.data); })
       .catch((err) => { if (actual === consulta.current) setError(mensajeDeError(err)); })
       .finally(() => { if (actual === consulta.current) setCargando(false); });
-  }, []);
+  }, [buscar]);
   useEffect(() => {
     let activo = true;
     api.get<Plantel[]>('/planteles/mios')
@@ -95,44 +94,21 @@ export default function DocentesPage() {
   }, []);
 
   useEffect(() => {
-    if (vista === 'consulta') cargar(1, filtroPlantel);
-  }, [vista, filtroPlantel, cargar]);
-
-  const volver = async () => {
-    if (enviando) return;
-    if (vista === 'formulario' && JSON.stringify(form) !== JSON.stringify(formBase)) {
-      if (!await confirmacion.solicitar('¿Salir sin guardar los cambios del docente?')) return;
-    }
-    setEditando(null);
-    setForm(FORM_INICIAL);
-    setFormBase(FORM_INICIAL);
-    setVista('panel');
-  };
-
-  const abrirAlta = () => {
-    setEditando(null); setForm(FORM_INICIAL); setFormBase(FORM_INICIAL);
-    setPlantelIds([]); setError(''); setMensaje(''); setVista('formulario');
-  };
-
-  const crear = async (e: FormEvent) => {
-    e.preventDefault();
-    if (enviando) return;
-    setEnviando(true); setError(''); setMensaje('');
-    try {
-      if (editando) await api.patch(`/docentes/${editando}`, { nombre: form.nombre, apellidoPaterno: form.apellidoPaterno, apellidoMaterno: form.apellidoMaterno, telefono: form.telefono, cedulaProfesional: form.cedulaPendiente ? null : form.cedulaProfesional, especialidad: form.especialidad });
-      else await api.post('/docentes', { ...form, cedulaProfesional: form.cedulaPendiente ? undefined : form.cedulaProfesional, plantelIds, especialidad: form.especialidad || undefined });
-      setMensaje(editando ? 'Docente actualizado' : 'Docente registrado. Se solicitó invitación a su correo institucional.'); setEditando(null);
-      setForm(FORM_INICIAL);
-      setFormBase(FORM_INICIAL);
-      setPlantelIds([]);
-      setVista('consulta');
-    } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
-  };
-
-  const dar = (campo: Exclude<keyof typeof FORM_INICIAL, 'cedulaPendiente'>) => ({
-    value: form[campo],
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [campo]: e.target.value }),
-  });
+    if (vista === 'consulta') cargar(paginaActual, filtroPlantel);
+    return () => { consulta.current++; };
+  }, [vista, paginaActual, filtroPlantel, cargar]);
+  useEffect(() => { setTermino(buscar); }, [buscar]);
+  useEffect(() => {
+    if (termino === buscar) return;
+    const timer = setTimeout(() => setParams((previos) => {
+      const nuevos = new URLSearchParams(previos);
+      if (termino.trim()) nuevos.set('buscar', termino.trim()); else nuevos.delete('buscar');
+      nuevos.delete('pagina');
+      return nuevos;
+    }, { replace: true }), 300);
+    return () => clearTimeout(timer);
+  }, [termino, buscar, setParams]);
+  useEffect(() => { if (vista === 'consulta') tituloListado.current?.focus(); }, [vista]);
 
   const baja = async (docente: Docente) => {
     if (!await confirmacion.solicitar(`¿Dar de baja al docente ${docente.numEmpleado}?`)) return;
@@ -145,39 +121,15 @@ export default function DocentesPage() {
     <>{confirmacion.elemento}{dialogoMotivo.elemento}
       <Encabezado titulo="Docentes" detalle="Plantilla docente y cuentas de acceso" />
       {vista === 'panel' && <PanelAccionesModulo titulo="Gestión de docentes" acciones={[
-        { titulo: 'Registrar docente', detalle: 'Crear expediente e invitar por correo', ejecutar: abrirAlta },
-        { titulo: 'Consultar docentes', detalle: 'Buscar por plantel y revisar clases', ejecutar: () => setVista('consulta') },
-        { titulo: 'Editar o dar de baja', detalle: 'Buscar primero el expediente que deseas gestionar', ejecutar: () => setVista('consulta') },
+        { titulo: 'Registrar docente', detalle: 'Crear expediente e invitar por correo', ejecutar: () => navigate('/docentes/nuevo') },
+        { titulo: 'Consultar docentes', detalle: 'Buscar por plantel y revisar clases', ejecutar: () => cambiarConsulta({ vista: 'consulta' }) },
+        { titulo: 'Editar o dar de baja', detalle: 'Buscar primero el expediente que deseas gestionar', ejecutar: () => cambiarConsulta({ vista: 'consulta' }) },
       ]} />}
-      {vista !== 'panel' && <button type="button" className="boton secundario" onClick={() => { void volver(); }}>Volver a opciones</button>}
+      {vista !== 'panel' && <button type="button" className="boton secundario" onClick={() => { consultaDetalle.current++; setDetalle(null); setCargandoDetalle(false); cambiarConsulta({ vista: '' }); }}>Volver a opciones</button>}
+      {error && <p role="alert" className="mensaje-error">{error}</p>}
       {vista === 'consulta' && mensaje && <p role="status" className="mensaje-ok">{mensaje}</p>}
 
-      {vista === 'formulario' && <section className="panel" id="form-docente">
-        <h2>{editando ? 'Editar docente' : 'Registrar docente'}</h2>
-        <form onSubmit={crear} aria-busy={enviando}><fieldset disabled={enviando} style={{ border: 0, padding: 0 }}><legend>Datos del docente</legend>
-          <div className="fila">
-            <div className="campo"><label htmlFor="docentes-campo-1">Núm. empleado</label><input id="docentes-campo-1" disabled={editando !== null} required {...dar('numEmpleado')} /></div>
-            <div className="campo"><label htmlFor="docentes-campo-2">Nombre</label><input id="docentes-campo-2" required {...dar('nombre')} /></div>
-            <div className="campo"><label htmlFor="docentes-campo-3">Primer apellido</label><input id="docentes-campo-3" required {...dar('apellidoPaterno')} /></div>
-            <div className="campo"><label htmlFor="docentes-campo-4">Especialidad</label><input id="docentes-campo-4" {...dar('especialidad')} /></div>
-            <div className="campo"><label htmlFor="docentes-campo-5">Correo</label><input id="docentes-campo-5" disabled={editando !== null} type="email" required {...dar('email')} /></div>
-            <div className="campo"><label htmlFor="docente-materno">Segundo apellido</label><input id="docente-materno" maxLength={80} {...dar('apellidoMaterno')} /></div>
-            <div className="campo"><label htmlFor="docente-telefono">Teléfono</label><input id="docente-telefono" type="tel" maxLength={20} {...dar('telefono')} /></div>
-            <div className="campo"><label htmlFor="docente-cedula">Cédula profesional {!form.cedulaPendiente && '*'}</label><input id="docente-cedula" required={!form.cedulaPendiente} disabled={form.cedulaPendiente} maxLength={20} {...dar('cedulaProfesional')} /></div>
-            <label className="casilla"><input type="checkbox" checked={form.cedulaPendiente} onChange={(e) => setForm((previo) => ({ ...previo, cedulaPendiente: e.target.checked, cedulaProfesional: e.target.checked ? '' : previo.cedulaProfesional }))} />Cédula pendiente de capturar</label>
-            <button disabled={enviando} className="boton">{enviando ? 'Guardando…' : 'Guardar docente'}</button>
-            {editando && <button type="button" onClick={() => { void volver(); }}>Cancelar edición</button>}
-          </div>
-          <div className="fila" style={{ marginTop: 12 }}>
-            <span className="campo">Planteles para el alta (obligatorios)</span>
-            {!editando && planteles.map((p) => <label className="casilla" key={p.id}><input type="checkbox" required={plantelIds.length === 0} checked={plantelIds.includes(p.id)} onChange={() => setPlantelIds((ids) => ids.includes(p.id) ? ids.filter((id) => id !== p.id) : [...ids, p.id])} />{p.nombre}</label>)}
-          </div>
-        </fieldset></form>
-        {error && <p role="alert" className="mensaje-error">{error}</p>}
-        {mensaje && <p role="status" className="mensaje-ok">{mensaje}</p>}
-      </section>}
-
-      {vista === 'consulta' && <><div className="fila" style={{ marginBottom: 12 }}><div className="campo"><label htmlFor="docentes-campo-7">Filtrar por plantel</label><select id="docentes-campo-7" value={filtroPlantel} onChange={(e) => setFiltroPlantel(e.target.value)}><option value="">Todos</option>{planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div><button className="boton secundario" disabled={cargando} onClick={() => cargar(1, filtroPlantel)}>Aplicar</button></div>
+      {vista === 'consulta' && <><div className="fila" style={{ marginBottom: 12 }}><div className="campo"><label htmlFor="buscar-docente">Buscar docentes</label><input id="buscar-docente" value={termino} onChange={(e) => setTermino(e.target.value)} placeholder="Nombre, apellido o número de empleado" /></div><div className="campo"><label htmlFor="docentes-campo-7">Filtrar por plantel</label><select id="docentes-campo-7" value={filtroPlantel} onChange={(e) => cambiarConsulta({ plantel: e.target.value, pagina: '' })}><option value="">Todos</option>{planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div><button className="boton secundario" disabled={cargando} onClick={() => cargar(paginaActual, filtroPlantel)}>Actualizar</button></div>
 
       {cargandoDetalle && <p role="status">Cargando planteles y clases del docente…</p>}
       {detalle && <section className="panel"><h2>Planteles y clases</h2><fieldset><legend>Planteles del docente</legend>
@@ -187,7 +139,7 @@ export default function DocentesPage() {
         {detalle.clases.map((c) => <p key={c.id}>{c.ciclo} · {c.plantel} · {c.grupo} · {c.materia} · {c.vigente ? 'Vigente' : 'Histórico'}</p>)}
         <a href="/grupos">Reasignar clases desde Grupos</a>
       </section>}
-      <div className="cabecera-listado"><h2>Directorio de docentes</h2><p>{resultado.total} registros</p></div>
+      <div className="cabecera-listado"><h2 ref={tituloListado} tabIndex={-1}>Directorio de docentes</h2><p>{resultado.total} registros</p></div>
       {cargando && <p role="status">Cargando docentes…</p>}
       <div className="tabla-contenedor" role="region" aria-label="Listado de docentes" tabIndex={0}>
       <table className="tabla tabla-adaptable" aria-busy={cargando}>
@@ -204,13 +156,13 @@ export default function DocentesPage() {
               <td data-etiqueta="Especialidad">{d.especialidad ?? '—'}</td>
               <td data-etiqueta="Correo">{d.usuario.email}</td>
               <td data-etiqueta="Estatus"><span className={`sello ${d.estatus === 'ACTIVO' ? 'ok' : 'neutro'}`}>{d.estatus}</span></td>
-              <td data-etiqueta="Acciones" className="derecha"><span className="acciones-fila"><EliminarRegistro ruta={`/docentes/${d.id}`} nombre={`docente ${d.numEmpleado}`} deshabilitado={enviando} alEliminar={() => { consultaDetalle.current++; setDetalle(null); setEditando(null); setForm(FORM_INICIAL); setMensaje('Docente y cuenta eliminados definitivamente'); cargar(1, filtroPlantel); }} /><button disabled={enviando} className="boton secundario chico" onClick={() => editar(d)}>Editar</button> <button disabled={enviando} className="boton secundario chico" onClick={() => verClases(d)}>Planteles y clases</button> {d.estatus === 'ACTIVO' && <button disabled={enviando} className="boton peligro chico" onClick={() => baja(d)}>Dar de baja</button>}</span></td>
+              <td data-etiqueta="Acciones" className="derecha"><span className="acciones-fila"><EliminarRegistro ruta={`/docentes/${d.id}`} nombre={`docente ${d.numEmpleado}`} deshabilitado={enviando} alEliminar={() => { consultaDetalle.current++; setDetalle(null); setMensaje('Docente y cuenta eliminados definitivamente'); cargar(1, filtroPlantel); }} /><button disabled={enviando} className="boton secundario chico" onClick={() => editar(d)}>Editar</button> <button disabled={enviando} className="boton secundario chico" onClick={() => verClases(d)}>Planteles y clases</button> {d.estatus === 'ACTIVO' && <button disabled={enviando} className="boton peligro chico" onClick={() => baja(d)}>Dar de baja</button>}</span></td>
             </tr>
           ))}
           {!cargando && resultado.datos.length === 0 && <tr><td className="vacio" colSpan={7}>Sin docentes registrados.</td></tr>}
         </tbody>
       </table></div>
-      <Paginador total={resultado.total} pagina={resultado.pagina} porPagina={resultado.porPagina} deshabilitado={cargando} onCambio={(pagina) => cargar(pagina, filtroPlantel)} />
+      <Paginador total={resultado.total} pagina={resultado.pagina} porPagina={resultado.porPagina} deshabilitado={cargando} onCambio={(pagina) => cambiarConsulta({ pagina: String(pagina) })} />
       </>}
     </>
   );
