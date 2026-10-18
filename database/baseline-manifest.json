@@ -32,6 +32,7 @@
         "migracion_catalogos_academicos.sql",
         "migracion_programas_especiales.sql",
         "migracion_agrupacion_ordinaria.sql",
+        "migracion_apertura_cartera.sql",
         "migracion_recursamiento_asignatura.sql"
       ]
     },
@@ -65,6 +66,7 @@
         "migracion_catalogos_academicos.sql",
         "migracion_programas_especiales.sql",
         "migracion_agrupacion_ordinaria.sql",
+        "migracion_apertura_cartera.sql",
         "migracion_recursamiento_asignatura.sql"
       ]
     }

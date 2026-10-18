@@ -16,6 +16,7 @@ const secciones = [
   { destino: '/alumnos', etiqueta: 'Alumnos', roles: ['ADMINISTRATIVO', 'FINANZAS'] },
   { destino: '/planteles', etiqueta: 'Planteles', roles: ['ADMINISTRATIVO', 'FINANZAS'] },
   { destino: '/docentes', etiqueta: 'Docentes', roles: ['ADMINISTRATIVO'] },
+  { destino: '/apertura-cartera', etiqueta: 'Apertura de cartera', roles: ['ADMINISTRATIVO'] },
   { destino: '/recursamientos', etiqueta: 'Recursamientos', roles: ['ADMINISTRATIVO'] },
   { destino: '/programas-especiales', etiqueta: 'Programas especiales', roles: ['ADMINISTRATIVO'] },
   { destino: '/catalogos-academicos', etiqueta: 'Catálogos académicos', roles: ['ADMINISTRATIVO'] },
@@ -32,7 +33,7 @@ const secciones = [
 
 const gruposMenu = [
   { titulo: 'Inicio y seguimiento', rutas: ['/', '/calendario', '/avisos'] },
-  { titulo: 'Control escolar', rutas: ['/alumnos', '/docentes', '/catalogos-academicos', '/recursamientos', '/programas-especiales', '/materias', '/grupos', '/operaciones'] },
+  { titulo: 'Control escolar', rutas: ['/alumnos', '/docentes', '/catalogos-academicos', '/apertura-cartera', '/recursamientos', '/programas-especiales', '/materias', '/grupos', '/operaciones'] },
   { titulo: 'Docencia', rutas: ['/maestro', '/calificaciones', '/conducta'] },
   { titulo: 'Finanzas e informes', rutas: ['/finanzas', '/analitica'] },
   { titulo: 'Administración', rutas: ['/planteles', '/biblioteca', '/usuarios', '/configuracion'] },
@@ -49,6 +50,7 @@ const iconosPorRuta: Record<string, NombreIcono> = {
   '/docentes': 'school',
   '/materias': 'book',
   '/catalogos-academicos': 'book',
+  '/apertura-cartera': 'coins',
   '/recursamientos': 'clipboard-check',
   '/programas-especiales': 'school',
   '/grupos': 'users',
@@ -156,7 +158,7 @@ export function Shell() {
   }, [menuAbierto]);
 
   // Alta y edición tienen el mismo control de sesión/rol y un área sin navegación lateral.
-  if (location.pathname === '/recursamientos/nuevo' || /^\/programas-especiales\/(nuevo|\d+\/grupos\/nuevo)\/?$/.test(location.pathname) || /^\/docentes\/(nuevo|\d+\/editar)\/?$/.test(location.pathname) || /^\/catalogos-academicos\/(niveles|carreras|periodos)\/(nuevo|\d+)\/?$/.test(location.pathname)) {
+  if (location.pathname === '/recursamientos/nuevo' || location.pathname === '/apertura-cartera/nueva' || /^\/programas-especiales\/(nuevo|\d+\/grupos\/nuevo)\/?$/.test(location.pathname) || /^\/docentes\/(nuevo|\d+\/editar)\/?$/.test(location.pathname) || /^\/catalogos-academicos\/(niveles|carreras|periodos)\/(nuevo|\d+)\/?$/.test(location.pathname)) {
     return <Suspense fallback={<Cargando />}><Outlet /></Suspense>;
   }
 
