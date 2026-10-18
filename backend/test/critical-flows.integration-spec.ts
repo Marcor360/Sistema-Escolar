@@ -1,3 +1,5 @@
+import { registrarProgramasEspeciales } from './integration/programas-especiales.cases';
+import { registrarCatalogos } from './integration/catalogos.cases';
 import { registrarBusquedaUsuarios } from './integration/usuarios-busqueda.cases';
 import { registrarEliminacion } from './integration/eliminacion.cases';
 import { registrarBeta } from './integration/beta.cases';
@@ -439,6 +441,8 @@ Object.keys(casos).map(Number).sort((a,b) => a-b).forEach((id) => casos[id](cont
   registrarBarrido(contexto);
   registrarRebarrido(contexto);
   registrarBusquedaUsuarios(contexto);
+  registrarCatalogos(contexto);
+  registrarProgramasEspeciales(contexto);
   registrarEliminacion(contexto);
 
   afterAll(async () => {
