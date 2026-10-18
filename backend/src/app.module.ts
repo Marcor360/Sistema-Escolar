@@ -1,3 +1,4 @@
+import { CarteraModule } from './cartera/cartera.module';
 import { EliminacionModule } from './eliminacion/eliminacion.module';
 import { ImportacionesModule } from './importaciones/importaciones.module';
 import { ConductaModule } from './conducta/conducta.module';
@@ -37,7 +38,7 @@ import { HealthModule } from './health/health.module';
     UsuariosModule,
     AlumnosModule,
     DocentesModule,
-    AcademicoModule,
+    AcademicoModule, CarteraModule,
     ActividadesModule,
     CalificacionesModule,
     CalendarioModule,
