@@ -1,3 +1,4 @@
+import { validarContextoGrupo } from '../catalogos-academicos/contexto-grupo';
 import { exigirCambios } from '../common/exigir-cambios';
 import { esMaestroRestringido, exigirConsultaAcademica } from '../common/politica-acceso';
 import { BitacoraAcademica } from '../entities/bitacora-academica.entity';
@@ -50,6 +51,9 @@ async listarGrupos(user: JwtUser, query: ListarGruposDto) {
     const [datos, total] = await this.grupos.findAndCount({
       where: {
         ...(maestroPuro ? { id: In(gruposDocente) } : {}),
+        ...(query.nivelId ? { nivelId: query.nivelId } : {}),
+        ...(query.carreraId ? { carreraId: query.carreraId } : {}),
+        ...(query.periodoAcademicoId ? { periodoAcademicoId: query.periodoAcademicoId } : {}),
         ...(query.buscar ? { nombre: Like(`%${query.buscar}%`) } : {}),
         ...(query.cicloId ? { cicloId: query.cicloId } : { ciclo: { activo: true }, plantel: { activo: true } }),
         ...(planteles === null ? {} : { plantelId: In(planteles) }),
@@ -69,7 +73,13 @@ async crearGrupo(dto: GrupoDto, user: JwtUser) {
     const plantel = await this.dataSource.getRepository(Plantel).findOne({ where: { id: dto.plantelId, activo: true } });
     if (!plantel) throw new ConflictException('El plantel no está activo');
     try {
-      return await this.grupos.save(this.grupos.create(dto));
+      return await this.dataSource.transaction(async (manager) => {
+        const sede = await manager.getRepository(Plantel).findOne({ where: { id: dto.plantelId }, lock: { mode: 'pessimistic_write' } });
+        if (!sede?.activo) throw new ConflictException('El plantel no está activo');
+        await validarContextoGrupo(manager, dto);
+        const repo = manager.getRepository(Grupo);
+        return repo.save(repo.create(dto));
+      });
     } catch (error) {
       if (esConflictoUnico(error)) throw new ConflictException('Ya existe un grupo con ese nombre en el ciclo');
       throw error;
@@ -87,6 +97,17 @@ async actualizarGrupo(id: number, dto: ActualizarGrupoDto, user: JwtUser) {
     if ((dto.grado !== undefined && dto.grado !== grupo.grado) || (dto.turno !== undefined && dto.turno !== grupo.turno)) {
       const inscritos = await this.inscripciones.count({ where: { grupoId: id } });
       if (inscritos) throw new ConflictException('No puedes cambiar grado o turno de un grupo con inscripciones');
+    }
+    if (['nivelId', 'carreraId', 'periodoAcademicoId'].some((campo) => Object.prototype.hasOwnProperty.call(dto, campo))) {
+      return this.dataSource.transaction(async (manager) => {
+        await manager.getRepository(Plantel).findOne({ where: { id: grupo.plantelId }, lock: { mode: 'pessimistic_write' } });
+        const repo = manager.getRepository(Grupo);
+        const actual = await repo.findOneOrFail({ where: { id }, lock: { mode: 'pessimistic_write' } });
+        if (await manager.getRepository(Inscripcion).existsBy({ grupoId: id })) throw new ConflictException('No puedes cambiar el contexto académico de un grupo con historial de inscripciones');
+        await validarContextoGrupo(manager, { ...actual, ...dto });
+        await repo.update(id, dto);
+        return repo.findOneBy({ id });
+      });
     }
     try {
       await this.grupos.update(id, dto);

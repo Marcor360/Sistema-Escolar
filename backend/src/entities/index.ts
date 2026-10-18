@@ -39,3 +39,7 @@ export { CobranzaEnvio } from './cobranza-envio.entity';
 export * from './importacion-preview.entity';
 
 export * from './biblioteca.entity';
+
+export * from './nivel-academico.entity';
+export * from './carrera-plan.entity';
+export * from './periodo-academico.entity';

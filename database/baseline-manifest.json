@@ -28,7 +28,8 @@
         "migracion_previews_importacion.sql",
         "migracion_biblioteca_privada.sql",
         "migracion_sesiones_inactividad.sql",
-        "migracion_activacion_alumnos.sql"
+        "migracion_activacion_alumnos.sql",
+        "migracion_catalogos_academicos.sql"
       ]
     },
     "sqlserver": {
@@ -57,7 +58,8 @@
         "migracion_previews_importacion.sql",
         "migracion_biblioteca_privada.sql",
         "migracion_sesiones_inactividad.sql",
-        "migracion_activacion_alumnos.sql"
+        "migracion_activacion_alumnos.sql",
+        "migracion_catalogos_academicos.sql"
       ]
     }
   }
