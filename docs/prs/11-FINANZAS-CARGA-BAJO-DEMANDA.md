@@ -14,3 +14,8 @@ Antes, `cargarDatos` hacía solicitudes simultáneas a `/finanzas/cargos`, `/fin
 
 ## Alcance deliberadamente limitado
 No cambia API, reglas financieras, idempotencia, cálculos, autorizaciones ni esquema. Si una operación requiere refrescar un panel distinto del activo, revisar ese caso al validar el flujo con usuarios. La paginación de diez registros sigue en API.
+
+## Implementación verificada
+Las consultas de cargos/pagos/adeudos se emiten solo para la pestaña visible, diez por página. Cada colección tiene un contador de consulta y se comprueba la pestaña actual antes de aplicar resultados, errores o estado de carga: una respuesta tardía no sobrescribe una consulta posterior. La recarga al terminar una operación usa la pestaña visible en ese momento. Los catálogos/planteles se cargan una vez por montaje; conciliación y edición de conceptos conservan sus contratos independientes.
+
+Pruebas RTL: secuencia de pestañas y solicitudes, errores tardíos, respuesta anterior de la misma colección y recarga tras una operación con cambio de pestaña. Se conserva paginación, seguridad API y operaciones financieras existentes. No se introducen reglas ni cobros nuevos.
