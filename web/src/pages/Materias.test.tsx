@@ -71,3 +71,14 @@ it('consulta diez por página, conserva la búsqueda al paginar y la reinicia al
   await waitFor(() => expect(get).toHaveBeenCalledWith('/academico/materias/listado', { params: { pagina: 1, porPagina: 10, buscar: 'Historia' } }));
   expect(get.mock.calls.some(c => c[0] === '/academico/materias')).toBe(false);
 });
+
+it('edita tipo sin sobrescribir la descripción histórica y mantiene la baja solo para Superadmin', async () => {
+  vi.spyOn(api, 'get').mockImplementation(async url => ({ data: url === '/academico/materias/listado' ? { datos: [{ id: 21, clave: 'LEG', nombre: 'Legada', creditos: 2, tipo: null, descripcion: 'Histórica' }], total: 1 } : [] }));
+  const patch = vi.spyOn(api, 'patch').mockResolvedValue({ data: {} });
+  render(<MemoryRouter><MateriasPage /></MemoryRouter>);
+  fireEvent.click(await screen.findByRole('button', { name: 'Editar' }));
+  expect(screen.queryByLabelText('Descripción')).toBeNull();
+  fireEvent.change(screen.getByLabelText('Tipo académico'), { target: { value: 'COMPLEMENTARIA' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Guardar materia' }));
+  await waitFor(() => expect(patch).toHaveBeenCalledWith('/academico/materias/21', { clave: 'LEG', nombre: 'Legada', creditos: 2, tipo: 'COMPLEMENTARIA' }));
+});

@@ -52,3 +52,5 @@ export * from './participacion-asignatura.entity';
 export * from './calificacion-recursamiento.entity';
 
 export * from './auth-correo-outbox.entity';
+
+export * from './materia-contexto.entity';

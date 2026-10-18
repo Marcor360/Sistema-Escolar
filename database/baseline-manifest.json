@@ -34,7 +34,8 @@
         "migracion_agrupacion_ordinaria.sql",
         "migracion_apertura_cartera.sql",
         "migracion_recursamiento_asignatura.sql",
-        "migracion_auth_correo_outbox.sql"
+        "migracion_auth_correo_outbox.sql",
+        "migracion_materias_contexto.sql"
       ]
     },
     "sqlserver": {
@@ -69,7 +70,8 @@
         "migracion_agrupacion_ordinaria.sql",
         "migracion_apertura_cartera.sql",
         "migracion_recursamiento_asignatura.sql",
-        "migracion_auth_correo_outbox.sql"
+        "migracion_auth_correo_outbox.sql",
+        "migracion_materias_contexto.sql"
       ]
     }
   }
