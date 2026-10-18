@@ -159,7 +159,7 @@ export class UsuariosService {
 
   private aplicarBusqueda<T extends object>(qb: SelectQueryBuilder<T>, buscar?: string, extra?: string) {
     if (!buscar?.trim()) return;
-    const campos = ['u.nombre', 'u.apellido_paterno', 'u.email', ...(extra ? [extra] : [])];
+    const campos = ['u.nombre', 'u.apellido_paterno', 'u.apellido_materno', 'u.email', ...(extra ? [extra] : [])];
     qb.andWhere(`(${campos.map((campo) => `${campo} LIKE :buscar`).join(' OR ')})`, { buscar: `%${buscar.trim()}%` });
   }
 
