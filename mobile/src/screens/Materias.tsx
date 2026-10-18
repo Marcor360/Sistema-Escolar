@@ -1,3 +1,4 @@
+import { RecursamientosPropios } from "../components/RecursamientosPropios";
 import { leerConCache } from "../api/cache-academica";
 import { resolverEnlacePrivado } from "../api/enlaces-privados";
 import { crearControlLectura } from "../api/lectura-vigente";
@@ -28,7 +29,7 @@ import {
 interface Materia {
   id: number;
   materia: { clave: string; nombre: string };
-  grupo: { nombre: string; ciclo: { clave: string } };
+  grupo: { nombre: string; tipo?: 'REGULAR' | 'ESPECIAL'; ciclo: { clave: string } };
   docente: { usuario: { nombre: string; apellidoPaterno: string } } | null;
 }
 interface Material {
@@ -194,10 +195,10 @@ export default function MateriasScreen() {
       )}
       <FlatList
         ListHeaderComponent={
-          <GuiaPantalla
+          <><RecursamientosPropios /><GuiaPantalla
             titulo="Mis materias"
             detalle="Toca una materia para ver al docente y abrir sus materiales de clase."
-          />
+          /></>
         }
         data={materias}
         keyExtractor={(m) => String(m.id)}
@@ -227,7 +228,7 @@ export default function MateriasScreen() {
                   {item.materia.clave} — {item.materia.nombre}
                 </Text>
                 <Text style={base.secundario}>
-                  Grupo {item.grupo.nombre} · Ciclo {item.grupo.ciclo.clave}
+                  {item.grupo.tipo === 'ESPECIAL' ? 'Programa especial · ' : ''}Grupo {item.grupo.nombre} · Ciclo {item.grupo.ciclo.clave}
                 </Text>
                 {item.docente ? (
                   <Text style={base.secundario}>

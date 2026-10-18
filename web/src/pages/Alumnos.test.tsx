@@ -1,3 +1,4 @@
+import { MemoryRouter } from 'react-router-dom';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { api } from '../api/client';
@@ -33,7 +34,7 @@ it('una búsqueda lenta no reemplaza los resultados de la búsqueda más recient
     return termino === 'ANTERIOR' ? anterior.promesa : termino === 'RECIENTE'
       ? reciente.promesa : Promise.resolve({ data: resultado('INICIAL') });
   });
-  render(<AlumnosPage />); await screen.findByText('INICIAL');
+  render(<MemoryRouter><AlumnosPage /></MemoryRouter>); await screen.findByText('INICIAL');
   buscar('ANTERIOR'); buscar('RECIENTE');
   await act(async () => { reciente.resolver({ data: resultado('RECIENTE') }); });
   expect(screen.getByText('RECIENTE')).toBeTruthy();
@@ -48,7 +49,7 @@ it('un error tardío no borra el estado de carga ni muestra errores de una búsq
   vi.spyOn(api, 'get').mockImplementation((url, config) => url !== '/alumnos'
     ? Promise.resolve({ data: [] }) : (config?.params as { buscar?: string } | undefined)?.buscar === 'RECIENTE'
       ? reciente.promesa : anterior.promesa);
-  render(<AlumnosPage />);
+  render(<MemoryRouter><AlumnosPage /></MemoryRouter>);
   buscar('RECIENTE');
   await act(async () => { anterior.rechazar(new Error('Fallo antiguo')); });
   expect(screen.queryByRole('alert')).toBeNull();
@@ -63,7 +64,7 @@ it('muestra el error de la búsqueda vigente y permite reintentar', async () => 
     if (url !== '/alumnos') return { data: [] };
     throw new Error('Sin conexión');
   });
-  render(<AlumnosPage />); await screen.findByRole('alert');
+  render(<MemoryRouter><AlumnosPage /></MemoryRouter>); await screen.findByRole('alert');
   await waitFor(() => expect((screen.getByRole('button', { name: /^Buscar$/ }) as HTMLButtonElement).disabled).toBe(false));
   get.mockResolvedValue({ data: resultado('RECUPERADO') });
   buscar('RECUPERADO');
@@ -75,9 +76,9 @@ it('al volver a la página usa una solicitud nueva aunque la anterior siga pendi
   const anterior = pendiente();
   const get = vi.spyOn(api, 'get').mockImplementation((url) => url === '/alumnos'
     ? anterior.promesa : Promise.resolve({ data: [] }));
-  const vista = render(<AlumnosPage />); vista.unmount();
+  const vista = render(<MemoryRouter><AlumnosPage /></MemoryRouter>); vista.unmount();
   get.mockImplementation(async (url) => ({ data: url === '/alumnos' ? resultado('NUEVO') : [] }));
-  render(<AlumnosPage />); await screen.findByText('NUEVO');
+  render(<MemoryRouter><AlumnosPage /></MemoryRouter>); await screen.findByText('NUEVO');
   await act(async () => { anterior.resolver({ data: resultado('ANTIGUO') }); });
   expect(screen.queryByText('ANTIGUO')).toBeNull();
   expect(screen.getByText('NUEVO')).toBeTruthy();
@@ -93,7 +94,7 @@ it('la página siguiente conserva los filtros aplicados aunque haya cambios sin 
     const params = (config?.params ?? {}) as { pagina?: number; buscar?: string; plantelId?: string };
     return { data: { ...resultado(params.buscar || 'INICIAL'), total: 45, pagina: params.pagina ?? 1 } };
   });
-  render(<AlumnosPage />);
+  render(<MemoryRouter><AlumnosPage /></MemoryRouter>);
   await screen.findByText('INICIAL');
 
   fireEvent.change(screen.getByLabelText('Filtrar por plantel'), { target: { value: '1' } });
@@ -116,7 +117,7 @@ it('una mutación pendiente refresca los filtros vigentes, sin restaurar la bús
     ? resultado((config?.params as { buscar?: string })?.buscar || 'INICIAL') : [] }));
   const guardado = pendiente();
   vi.spyOn(api, 'post').mockReturnValue(guardado.promesa);
-  render(<AlumnosPage />); await screen.findByText('INICIAL');
+  render(<MemoryRouter><AlumnosPage /></MemoryRouter>); await screen.findByText('INICIAL');
   buscar('ANTERIOR'); await screen.findByText('ANTERIOR');
   fireEvent.submit(screen.getByLabelText('Matrícula *').closest('form')!);
   buscar('VIGENTE'); await screen.findByText('VIGENTE');
@@ -128,7 +129,7 @@ it('una mutación pendiente refresca los filtros vigentes, sin restaurar la bús
 it('limpiar descarta el filtro aplicado y los cambios que todavía no se buscaron', async () => {
   const get = vi.spyOn(api, 'get').mockImplementation(async (url, config) => ({ data: url === '/alumnos'
     ? resultado((config?.params as { buscar?: string })?.buscar || 'TODOS') : [] }));
-  render(<AlumnosPage />); await screen.findByText('TODOS');
+  render(<MemoryRouter><AlumnosPage /></MemoryRouter>); await screen.findByText('TODOS');
   buscar('APLICADO'); await screen.findByText('APLICADO');
   fireEvent.change(screen.getByLabelText('Buscar por matrícula'), { target: { value: 'BORRADOR' } });
   fireEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }));

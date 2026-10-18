@@ -196,7 +196,7 @@ describe('CargosService.generarColegiaturas', () => {
       where: expect.objectContaining({ conceptoId: 5, cicloId: 3, periodo: '2026-09' }),
     }));
     expect(grupos.find).toHaveBeenCalledWith(expect.objectContaining({
-      where: expect.objectContaining({ cicloId: 3, activo: true }),
+      where: expect.objectContaining({ tipo: 'REGULAR', cicloId: 3, activo: true }),
     }));
     expect(guardar.mock.calls.map(([cargo]) => cargo.claveGeneracion)).toEqual([
       'COLEGIATURA:3:8:2026-09', 'COLEGIATURA:3:9:2026-09',
@@ -206,6 +206,21 @@ describe('CargosService.generarColegiaturas', () => {
       1, 'GENERAR_COLEGIATURA', 'cargo', 20,
       'periodo=2026-09 monto=100', 2, manager,
     );
+  });
+
+  it('no abre cartera cuando el ciclo no tiene grupos regulares', async () => {
+    const guardar = jest.fn();
+    const { service, grupos, inscripciones, bitacora } = crearServicio(guardar);
+    grupos.find.mockResolvedValue([]);
+    const resultado = await service.generarColegiaturas(
+      { cicloId: 3, periodo: '2026-09', plantelId: 2, confirmado: true },
+      { sub: 1, roles: ['FINANZAS'] } as any,
+    );
+    expect(resultado).toEqual({ generados: 0, omitidos: 0 });
+    expect(grupos.find).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ tipo: 'REGULAR' }) }));
+    expect(inscripciones.find).not.toHaveBeenCalled();
+    expect(guardar).not.toHaveBeenCalled();
+    expect(bitacora.registrar).not.toHaveBeenCalled();
   });
 
   it('cuenta un conflicto único de otra ejecución como omitido sin duplicar cargos', async () => {

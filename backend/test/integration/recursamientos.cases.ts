@@ -1,0 +1,60 @@
+import { expect, it } from '@jest/globals';
+import { randomUUID } from 'crypto';
+import { Calificacion, CalificacionRecursamiento, HistorialRecursamiento, GrupoMateria, Inscripcion, Usuario, Material } from '../../src/entities';
+import { ContextoIntegracion } from './contexto';
+export function registrarRecursamientos(ctx:ContextoIntegracion){
+  it('3A recursa solo Matemáticas en 2B: cupo, permisos, notas por intento y documentos privados',async()=>{
+    const tokenDe=async(id:number)=>ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({id})).email);
+    const root=await tokenDe(ctx.superadminId),admin=await tokenDe(ctx.adminId),actual=await ctx.dataSource.getRepository(GrupoMateria).findOneByOrFail({id:ctx.grupoMateriaIdMaestro});
+    const post=async(ruta:string,body:unknown)=>{const r=await ctx.api(ruta,{method:'POST',token:root,body});expect(r.response.status).toBe(201);return r.data;};
+    const nivel=await post('/academico/catalogos/niveles',{plantelId:ctx.plantelId,clave:`RC${ctx.sufijo}`,nombre:'Nivel recursamiento'});
+    const carrera=await post('/academico/catalogos/carreras',{plantelId:ctx.plantelId,nivelId:nivel.id,clave:`RC${ctx.sufijo}`,nombre:'Plan recursamiento',versionPlan:'QA'});
+    const periodo=await post('/academico/catalogos/periodos',{plantelId:ctx.plantelId,carreraId:carrera.id,cicloId:actual.grupo.cicloId,clave:'R1',nombre:'Periodo compatible',tipo:'SEMESTRAL',numero:1});
+    const contexto={plantelId:ctx.plantelId,cicloId:actual.grupo.cicloId,nivelId:nivel.id,carreraId:carrera.id,periodoAcademicoId:periodo.id};
+    const principal=await post('/academico/grupos',{...contexto,nombre:`R3A${ctx.sufijo}`}),receptor=await post('/academico/grupos',{...contexto,nombre:`R2B${ctx.sufijo}`});
+    const mat=await post('/academico/materias',{clave:`RM${ctx.sufijo}`,nombre:'Matemáticas recursamiento',creditos:1}),ing=await post('/academico/materias',{clave:`RI${ctx.sufijo}`,nombre:'Inglés receptor',creditos:1});
+    const matematicas=await post(`/academico/grupos/${receptor.id}/materias`,{materiaId:mat.id,docenteId:actual.docenteId});
+    const ingles=await post(`/academico/grupos/${receptor.id}/materias`,{materiaId:ing.id,docenteId:actual.docenteId});
+    const original=await post(`/academico/grupos/${principal.id}/materias`,{materiaId:mat.id,docenteId:actual.docenteId});
+    const alumnos:{id:number}[]=[];
+    for(let n=0;n<2;n++){const a=await post('/alumnos',{email:`rc${n}${ctx.sufijo}@example.invalid`,matricula:`RC${n}${ctx.sufijo}`,nombre:'Alumno',apellidoPaterno:`Recursamiento ${n}`,curp:'GODE561231HDFRRN09',plantelId:ctx.plantelId});alumnos.push(a);await post(`/academico/grupos/${principal.id}/alumnos`,{alumnoId:a.id});}
+    const notaOriginal=await ctx.dataSource.getRepository(Calificacion).save({alumnoId:alumnos[0].id,grupoMateriaId:original.id,parcial:1,calificacion:40});
+    const body={alumnoId:alumnos[0].id,grupoMateriaId:matematicas.id,cupoTotalManual:1,idempotencia:randomUUID(),confirmado:true};
+    const pares=await Promise.all([0,1].map(()=>ctx.api('/recursamientos',{method:'POST',token:admin,body})));expect(pares.map(r=>r.response.status)).toEqual([201,201]);expect(pares[0].data.id).toBe(pares[1].data.id);const id=pares[0].data.id;
+    expect((await ctx.api('/recursamientos',{method:'POST',token:admin,body:{...body,idempotencia:randomUUID()}})).response.status).toBe(409);
+    expect((await ctx.api('/recursamientos',{method:'POST',token:admin,body:{...body,alumnoId:alumnos[1].id,idempotencia:randomUUID()}})).response.status).toBe(409);
+    const propio=await ctx.emitirToken(`rc0${ctx.sufijo}@example.invalid`),otro=await ctx.emitirToken(`rc1${ctx.sufijo}@example.invalid`);
+    const clases=await ctx.api('/alumnos/me/materias',{token:propio});expect(clases.data.map((c:{id:number})=>c.id)).toContain(matematicas.id);expect(clases.data.map((c:{id:number})=>c.id)).not.toContain(ingles.id);
+    expect((await ctx.api(`/grupo-materias/${matematicas.id}/actividades`,{token:propio})).response.status).toBe(200);
+    expect((await ctx.api(`/grupo-materias/${ingles.id}/actividades`,{token:propio})).response.status).toBe(403);
+    expect((await ctx.api(`/grupo-materias/${matematicas.id}/materiales`,{token:otro})).response.status).toBe(403);
+    // Referencias sintéticas: basta generar enlace; nunca exponer el directorio completo.
+    const material=await ctx.dataSource.getRepository(Material).save({grupoMateriaId:matematicas.id,titulo:'Guía recursamiento',archivoNombre:'guia.txt',archivoRuta:'/uploads/guia-recursamiento.txt',mime:'text/plain',bytes:1,activo:true});
+    const ajeno=await ctx.dataSource.getRepository(Material).save({grupoMateriaId:ingles.id,titulo:'Guía ajena',archivoNombre:'guia.txt',archivoRuta:'/uploads/guia-ajena.txt',mime:'text/plain',tamanoKb:1});
+    expect((await ctx.api(`/archivos/materiales/${material.id}/enlace`,{token:propio})).response.status).toBe(200);
+    expect((await ctx.api(`/archivos/materiales/${ajeno.id}/enlace`,{token:propio})).response.status).toBe(403);
+    const docente=await ctx.emitirToken(actual.docente!.usuario.email);
+    const nota={parcial:1,calificacion:85,confirmado:true,motivo:'Captura del primer intento'};
+    expect((await ctx.api(`/recursamientos/${id}/calificaciones`,{method:'POST',token:docente,body:nota})).response.status).toBe(201);
+    expect((await ctx.api(`/recursamientos/${id}/calificaciones`,{method:'POST',token:propio,body:nota})).response.status).toBe(403);
+    expect((await ctx.dataSource.getRepository(Calificacion).findOneByOrFail({id:notaOriginal.id})).calificacion).toBe(40);
+    expect((await ctx.api(`/recursamientos/${id}`,{token:otro})).response.status).toBe(403);
+    expect((await ctx.api(`/recursamientos/${id}/acta`,{token:otro})).response.status).toBe(403);
+    expect((await ctx.api(`/recursamientos/${id}/acta`,{token:propio})).response.status).toBe(200);
+    const propios=await ctx.api('/recursamientos/me',{token:propio});expect(propios.data.datos.map((r:{id:number})=>r.id)).toEqual([id]);
+    const finanzas=await tokenDe(ctx.finanzasId);expect((await ctx.api('/recursamientos',{token:finanzas})).response.status).toBe(403);
+    expect((await ctx.api(`/recursamientos/${id}/baja`,{method:'POST',token:admin,body:{confirmado:true,motivo:'Baja del intento inicial'}})).response.status).toBe(201);
+    expect((await ctx.api(`/grupo-materias/${matematicas.id}/materiales`,{token:propio})).response.status).toBe(403);
+    const nuevo=await ctx.api('/recursamientos',{method:'POST',token:admin,body:{...body,idempotencia:randomUUID()}});expect(nuevo.response.status).toBe(201);expect(nuevo.data.intento).toBe(2);expect(nuevo.data.id).not.toBe(id);
+    expect((await ctx.api(`/academico/grupos/${receptor.id}`,{method:'PATCH',token:admin,body:{nivelId:nivel.id,carreraId:carrera.id,periodoAcademicoId:periodo.id}})).response.status).toBe(409);
+    const regular=await post('/alumnos',{email:`rc2${ctx.sufijo}@example.invalid`,matricula:`RC2${ctx.sufijo}`,nombre:'Alumno',apellidoPaterno:'Regular receptor',curp:'GODE561231HDFRRN09',plantelId:ctx.plantelId});
+    expect((await ctx.api(`/academico/grupos/${receptor.id}/alumnos`,{method:'POST',token:admin,body:{alumnoId:regular.id}})).response.status).toBe(409);
+    expect((await ctx.api(`/recursamientos/clases/${matematicas.id}/cupo`,{method:'PATCH',token:admin,body:{cupoTotalManual:2,confirmado:true,motivo:'Ampliación manual autorizada'}})).response.status).toBe(200);
+    expect((await ctx.api(`/academico/grupos/${receptor.id}/alumnos`,{method:'POST',token:admin,body:{alumnoId:regular.id}})).response.status).toBe(201);
+    expect((await ctx.api('/recursamientos',{method:'POST',token:admin,body:{...body,alumnoId:alumnos[1].id,cupoTotalManual:2,idempotencia:randomUUID()}})).response.status).toBe(409);
+    expect(await ctx.dataSource.getRepository(CalificacionRecursamiento).countBy({participacionId:id})).toBe(1);expect(await ctx.dataSource.getRepository(CalificacionRecursamiento).countBy({participacionId:nuevo.data.id})).toBe(0);
+    expect((await ctx.api(`/academico/grupo-materias/${matematicas.id}`,{method:'DELETE',token:admin})).response.status).toBe(409);
+    expect(await ctx.dataSource.getRepository(HistorialRecursamiento).countBy({participacionId:id})).toBe(1);
+    expect(await ctx.dataSource.getRepository(Inscripcion).countBy({alumnoId:alumnos[0].id,grupoId:receptor.id})).toBe(0);expect(await ctx.dataSource.getRepository(Inscripcion).countBy({alumnoId:alumnos[0].id,grupoId:principal.id,estatus:'ACTIVA'})).toBe(1);
+  });
+}

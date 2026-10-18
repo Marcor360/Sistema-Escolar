@@ -1,3 +1,5 @@
+import { clasesRecursadas } from '../recursamientos/acceso-recursamiento';
+import { ParticipacionAsignatura } from '../entities/participacion-asignatura.entity';
 import { randomBytes } from 'crypto';
 import { Usuario } from '../entities/usuario.entity';
 import { esMaestroRestringido } from '../common/politica-acceso';
@@ -227,6 +229,7 @@ export class AlumnosService {
       await manager.getRepository(Inscripcion).update(
         { alumnoId: id, estatus: 'ACTIVA' }, { estatus: 'BAJA' },
       );
+      await manager.getRepository(ParticipacionAsignatura).update({ alumnoId: id, estado: 'ACTIVA' }, { estado: 'BAJA', activoClave: null });
       await this.usuarios.actualizar(alumno.usuarioId, { activo: false }, manager);
       if (user) await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId: alumno.plantelId, accion: 'ALUMNO_BAJA', entidadId: id, detalle: 'Transición explícita: cuenta e inscripciones desactivadas', fecha: new Date() });
       return { ok: true };
@@ -244,6 +247,7 @@ export class AlumnosService {
       alumno.estatus = 'EGRESADO';
       await alumnos.save(alumno);
       await manager.getRepository(Inscripcion).update({ alumnoId: id, estatus: 'ACTIVA' }, { estatus: 'BAJA' });
+      await manager.getRepository(ParticipacionAsignatura).update({ alumnoId: id, estado: 'ACTIVA' }, { estado: 'BAJA', activoClave: null });
       await this.usuarios.actualizar(alumno.usuarioId, { activo: false }, manager);
       if (user) await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId: alumno.plantelId, accion: alumno.estatus === 'EGRESADO' ? 'ALUMNO_EGRESADO' : 'ALUMNO_BAJA', entidadId: id, detalle: 'Transición explícita: cuenta e inscripciones desactivadas', fecha: new Date() });
       return { ok: true };
@@ -263,6 +267,7 @@ export class AlumnosService {
       const destino = await manager.getRepository(Plantel).findOne({ where: { id: plantelId, activo: true } });
       if (!destino) throw new NotFoundException('Plantel de destino activo no encontrado');
       await manager.getRepository(Inscripcion).update({ alumnoId: id, estatus: 'ACTIVA' }, { estatus: 'BAJA' });
+      await manager.getRepository(ParticipacionAsignatura).update({ alumnoId: id, estado: 'ACTIVA' }, { estado: 'BAJA', activoClave: null });
       await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId: alumno.plantelId, accion: 'ALUMNO_TRANSFERIDO', entidadId: id, detalle: `origen=${alumno.plantelId}; destino=${plantelId}; inscripciones anteriores desactivadas`, fecha: new Date() });
       alumno.plantelId = plantelId;
       alumno.plantel = destino;
@@ -292,8 +297,9 @@ export class AlumnosService {
     const inscripciones = await this.inscripciones.find({
       where: { ...inscripcionVigente, alumnoId: alumno.id },
     });
-    if (inscripciones.length === 0) return [];
+    const recursadas = await clasesRecursadas(this.dataSource.manager, alumno.id);
+    if (!inscripciones.length && !recursadas.length) return [];
     const grupoIds = [...new Set(inscripciones.map((insc) => insc.grupoId))];
-    return this.grupoMaterias.find({ where: { grupoId: In(grupoIds) }, order: { grupoId: 'ASC', materiaId: 'ASC' } });
+    return this.grupoMaterias.find({ where: [...(grupoIds.length ? [{ grupoId: In(grupoIds) }] : []), ...(recursadas.length ? [{ id: In(recursadas) }] : [])], order: { grupoId: 'ASC', materiaId: 'ASC' } });
   }
 }
