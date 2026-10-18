@@ -84,11 +84,30 @@ export default function FinanzasPage() {
     [],
   );
   const cargarDatos = useCallback(async () => {
-    await Promise.all([cargarCargos(), cargarPagos()]);
-    try { const { data } = await api.get('/finanzas/adeudos'); setAdeudos(data.datos); setPaginaAdeudos(1); setTotalAdeudos(data.total); }
-    catch (err) { setError(mensajeDeError(err)); }
-  }, [cargarCargos, cargarPagos]);
-  useEffect(() => { cargarCatalogos(); cargarDatos(); api.get('/planteles/mios').then((r) => setPlanteles(r.data)).catch((e) => setError(mensajeDeError(e))); }, [cargarCatalogos, cargarDatos]);
+    if (tab === 'cargos') {
+      await cargarCargos();
+      return;
+    }
+    if (tab === 'pagos') {
+      await cargarPagos();
+      return;
+    }
+    try {
+      const { data } = await api.get('/finanzas/adeudos');
+      setAdeudos(data.datos);
+      setPaginaAdeudos(1);
+      setTotalAdeudos(data.total);
+    } catch (err) { setError(mensajeDeError(err)); }
+  }, [tab, cargarCargos, cargarPagos]);
+
+  useEffect(() => {
+    void cargarCatalogos();
+    api.get('/planteles/mios')
+      .then((r) => setPlanteles(r.data))
+      .catch((e) => setError(mensajeDeError(e)));
+  }, [cargarCatalogos]);
+
+  useEffect(() => { void cargarDatos(); }, [cargarDatos]);
 
   const limpiarAvisos = () => { setError(''); setMensaje(''); };
 
