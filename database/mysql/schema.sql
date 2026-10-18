@@ -597,3 +597,219 @@ CREATE TABLE biblioteca_archivos (
  CONSTRAINT ck_biblioteca_categoria CHECK (categoria IN ('FOTO','LOGO','CALENDARIO','DOCUMENTO'))
 );
 CREATE INDEX idx_biblioteca_archivo_plantel ON biblioteca_archivos(plantel_id,carpeta_id);
+
+-- Paridad documental de catálogos académicos (#97).
+-- Aditiva: sin catálogo precargado; grupos históricos conservan contexto NULL.
+CREATE TABLE niveles_academicos (
+ id INT AUTO_INCREMENT NOT NULL PRIMARY KEY,
+ plantel_id INT NOT NULL,
+ clave VARCHAR(20) NOT NULL,
+ nombre VARCHAR(120) NOT NULL,
+ activo BOOLEAN NOT NULL DEFAULT TRUE,
+  CONSTRAINT fk_niveles_academicos_plantel FOREIGN KEY (plantel_id) REFERENCES planteles(id),
+ CONSTRAINT uq_nivel_plantel_clave UNIQUE (plantel_id,clave)
+);
+CREATE TABLE carreras_planes (
+ id INT AUTO_INCREMENT NOT NULL PRIMARY KEY,
+ plantel_id INT NOT NULL,
+ clave VARCHAR(20) NOT NULL,
+ nombre VARCHAR(120) NOT NULL,
+ activo BOOLEAN NOT NULL DEFAULT TRUE,
+ nivel_id INT NOT NULL,
+ version_plan VARCHAR(40) NOT NULL,
+ CONSTRAINT fk_carrera_nivel FOREIGN KEY (nivel_id) REFERENCES niveles_academicos(id),
+ CONSTRAINT fk_carreras_planes_plantel FOREIGN KEY (plantel_id) REFERENCES planteles(id),
+ CONSTRAINT uq_carrera_plan UNIQUE (plantel_id,nivel_id,clave,version_plan)
+);
+CREATE TABLE periodos_academicos (
+ id INT AUTO_INCREMENT NOT NULL PRIMARY KEY,
+ plantel_id INT NOT NULL,
+ clave VARCHAR(20) NOT NULL,
+ nombre VARCHAR(120) NOT NULL,
+ activo BOOLEAN NOT NULL DEFAULT TRUE,
+ carrera_id INT NOT NULL,
+ ciclo_id INT NOT NULL,
+ tipo VARCHAR(16) NOT NULL,
+ numero INT NOT NULL,
+ CONSTRAINT fk_periodo_carrera FOREIGN KEY (carrera_id) REFERENCES carreras_planes(id),
+ CONSTRAINT fk_periodo_ciclo FOREIGN KEY (ciclo_id) REFERENCES ciclos_escolares(id),
+ CONSTRAINT ck_periodo_tipo CHECK (tipo IN ('ANUAL','SEMESTRAL','CUATRIMESTRAL')),
+ CONSTRAINT ck_periodo_numero CHECK (numero BETWEEN 1 AND 1000),
+ CONSTRAINT fk_periodos_academicos_plantel FOREIGN KEY (plantel_id) REFERENCES planteles(id),
+ CONSTRAINT uq_periodo_carrera_ciclo_clave UNIQUE (carrera_id,ciclo_id,clave),
+ CONSTRAINT uq_periodo_carrera_ciclo_numero UNIQUE (carrera_id,ciclo_id,tipo,numero)
+);
+ALTER TABLE grupos ADD nivel_id INT NULL, ADD carrera_id INT NULL, ADD periodo_academico_id INT NULL;
+ALTER TABLE grupos ADD CONSTRAINT fk_grupos_nivel_id FOREIGN KEY (nivel_id) REFERENCES niveles_academicos(id);
+ALTER TABLE grupos ADD CONSTRAINT fk_grupos_carrera_id FOREIGN KEY (carrera_id) REFERENCES carreras_planes(id);
+ALTER TABLE grupos ADD CONSTRAINT fk_grupos_periodo_academico_id FOREIGN KEY (periodo_academico_id) REFERENCES periodos_academicos(id);
+ALTER TABLE grupos ADD CONSTRAINT ck_grupo_contexto_completo CHECK ((nivel_id IS NULL AND carrera_id IS NULL AND periodo_academico_id IS NULL) OR (nivel_id IS NOT NULL AND carrera_id IS NOT NULL AND periodo_academico_id IS NOT NULL));
+CREATE INDEX idx_grupos_contexto ON grupos(plantel_id,nivel_id,carrera_id,periodo_academico_id);
+
+-- Paridad documental de programas especiales (#98).
+-- Grupos existentes REGULAR; programas manuales sin nuevos alumnos, cargos ni cuentas.
+CREATE TABLE programas_especiales (
+ id INT AUTO_INCREMENT NOT NULL PRIMARY KEY,
+ plantel_id INT NOT NULL,
+ ciclo_id INT NOT NULL,
+ clave VARCHAR(20) NOT NULL,
+ nombre VARCHAR(120) NOT NULL,
+ tipo VARCHAR(24) NOT NULL,
+ fecha_inicio DATE NOT NULL,
+ fecha_fin DATE NOT NULL,
+ estado VARCHAR(16) NOT NULL DEFAULT 'ACTIVO',
+ CONSTRAINT uq_programa_plantel_ciclo_clave UNIQUE (plantel_id,ciclo_id,clave),
+ CONSTRAINT fk_programa_plantel FOREIGN KEY (plantel_id) REFERENCES planteles(id),
+ CONSTRAINT fk_programa_ciclo FOREIGN KEY (ciclo_id) REFERENCES ciclos_escolares(id),
+ CONSTRAINT ck_programa_tipo CHECK (tipo IN ('DIPLOMADO','CERTIFICACION','ESPECIALIZACION','EXTRACURRICULAR')),
+ CONSTRAINT ck_programa_estado CHECK (estado IN ('ACTIVO','CERRADO','CANCELADO')),
+ CONSTRAINT ck_programa_fechas CHECK (fecha_inicio <= fecha_fin)
+);
+ALTER TABLE grupos ADD tipo VARCHAR(12) NOT NULL DEFAULT 'REGULAR', ADD programa_especial_id INT NULL, ADD cupo_manual INT NULL;
+ALTER TABLE grupos ADD CONSTRAINT fk_grupo_programa FOREIGN KEY (programa_especial_id) REFERENCES programas_especiales(id);
+ALTER TABLE grupos ADD CONSTRAINT ck_grupo_modalidad CHECK ((tipo = 'REGULAR' AND programa_especial_id IS NULL AND cupo_manual IS NULL) OR (tipo = 'ESPECIAL' AND programa_especial_id IS NOT NULL AND cupo_manual IS NOT NULL AND cupo_manual BETWEEN 1 AND 10000));
+CREATE INDEX idx_grupo_programa ON grupos(programa_especial_id,tipo);
+
+-- Agrupación ordinaria incremental
+CREATE TABLE solicitudes_grupo_regular (
+ id INT AUTO_INCREMENT NOT NULL PRIMARY KEY,
+ alumno_id INT NOT NULL,
+ plantel_id INT NOT NULL,
+ ciclo_id INT NOT NULL,
+ nivel_id INT NOT NULL,
+ carrera_id INT NOT NULL,
+ periodo_academico_id INT NOT NULL,
+ turno VARCHAR(10) NOT NULL,
+ estado VARCHAR(12) NOT NULL DEFAULT 'PENDIENTE',
+ grupo_id INT NULL,
+ CONSTRAINT uq_solicitud_alumno_ciclo UNIQUE (alumno_id,ciclo_id),
+ CONSTRAINT ck_solicitud_estado CHECK (estado IN ('PENDIENTE','ASIGNADA','ANULADA')),
+ CONSTRAINT ck_solicitud_turno CHECK (turno IN ('MATUTINO','VESPERTINO')),
+ CONSTRAINT ck_solicitud_asignada CHECK ((estado='ASIGNADA' AND grupo_id IS NOT NULL) OR (estado <> 'ASIGNADA' AND grupo_id IS NULL))
+);
+CREATE INDEX idx_solicitud_cohorte ON solicitudes_grupo_regular(plantel_id,ciclo_id,periodo_academico_id,turno,estado);
+ALTER TABLE solicitudes_grupo_regular ADD CONSTRAINT fk_sgr_alumno FOREIGN KEY (alumno_id) REFERENCES alumnos(id);
+ALTER TABLE solicitudes_grupo_regular ADD CONSTRAINT fk_sgr_plantel FOREIGN KEY (plantel_id) REFERENCES planteles(id);
+ALTER TABLE solicitudes_grupo_regular ADD CONSTRAINT fk_sgr_ciclo FOREIGN KEY (ciclo_id) REFERENCES ciclos_escolares(id);
+ALTER TABLE solicitudes_grupo_regular ADD CONSTRAINT fk_sgr_nivel FOREIGN KEY (nivel_id) REFERENCES niveles_academicos(id);
+ALTER TABLE solicitudes_grupo_regular ADD CONSTRAINT fk_sgr_carrera FOREIGN KEY (carrera_id) REFERENCES carreras_planes(id);
+ALTER TABLE solicitudes_grupo_regular ADD CONSTRAINT fk_sgr_periodo_academico FOREIGN KEY (periodo_academico_id) REFERENCES periodos_academicos(id);
+ALTER TABLE solicitudes_grupo_regular ADD CONSTRAINT fk_sgr_grupo FOREIGN KEY (grupo_id) REFERENCES grupos(id);
+
+-- Apertura de cartera incremental
+CREATE TABLE aperturas_cartera (
+ id INT AUTO_INCREMENT NOT NULL PRIMARY KEY,
+ idempotencia VARCHAR(36) NOT NULL,
+ peticion_hash VARCHAR(64) NOT NULL,
+ alumno_id INT NOT NULL,
+ plantel_id INT NOT NULL,
+ ciclo_id INT NOT NULL,
+ solicitud_id INT NULL,
+ creado_por_id INT NOT NULL,
+ estado VARCHAR(12) NOT NULL DEFAULT 'PENDIENTE',
+ conceptos TEXT NOT NULL,
+ created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ CONSTRAINT uq_apertura_idempotencia UNIQUE (idempotencia),
+ CONSTRAINT uq_apertura_alumno_ciclo UNIQUE (alumno_id,ciclo_id),
+ CONSTRAINT ck_apertura_estado CHECK (estado IN ('PENDIENTE','ABIERTA')),
+ CONSTRAINT fk_ac_alumno FOREIGN KEY (alumno_id) REFERENCES alumnos(id),
+ CONSTRAINT fk_ac_plantel FOREIGN KEY (plantel_id) REFERENCES planteles(id),
+ CONSTRAINT fk_ac_ciclo FOREIGN KEY (ciclo_id) REFERENCES ciclos_escolares(id),
+ CONSTRAINT fk_ac_solicitud FOREIGN KEY (solicitud_id) REFERENCES solicitudes_grupo_regular(id),
+ CONSTRAINT fk_ac_usuario FOREIGN KEY (creado_por_id) REFERENCES usuarios(id)
+);
+CREATE UNIQUE INDEX uq_apertura_solicitud ON aperturas_cartera(solicitud_id);
+
+-- Recursamiento incremental
+CREATE TABLE participaciones_asignatura (
+ id INT AUTO_INCREMENT NOT NULL PRIMARY KEY,
+ idempotencia VARCHAR(36) NOT NULL,
+ alumno_id INT NOT NULL,
+ grupo_materia_id INT NOT NULL,
+ inscripcion_principal_id INT NOT NULL,
+ cupo_total_confirmado INT NOT NULL,
+ intento INT NOT NULL,
+ estado VARCHAR(12) NOT NULL DEFAULT 'ACTIVA',
+ activo_clave VARCHAR(80) NULL,
+ created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ CONSTRAINT uq_participacion_idempotencia UNIQUE (idempotencia),
+ CONSTRAINT uq_participacion_intento UNIQUE (alumno_id,grupo_materia_id,intento),
+ CONSTRAINT fk_pa_alumno FOREIGN KEY (alumno_id) REFERENCES alumnos(id),
+ CONSTRAINT fk_pa_clase FOREIGN KEY (grupo_materia_id) REFERENCES grupo_materias(id),
+ CONSTRAINT fk_pa_principal FOREIGN KEY (inscripcion_principal_id) REFERENCES inscripciones(id),
+ CONSTRAINT ck_pa_intento CHECK (intento >= 1 AND cupo_total_confirmado BETWEEN 1 AND 10000),
+ CONSTRAINT ck_pa_estado CHECK (estado IN ('ACTIVA','BAJA','FINALIZADA')),
+ CONSTRAINT ck_pa_activa CHECK ((estado='ACTIVA' AND activo_clave IS NOT NULL) OR (estado<>'ACTIVA' AND activo_clave IS NULL))
+);
+CREATE TABLE cupos_recursamiento (
+ id INT AUTO_INCREMENT NOT NULL PRIMARY KEY,
+ grupo_materia_id INT NOT NULL,
+ cupo_total_manual INT NOT NULL,
+ CONSTRAINT uq_cupo_clase UNIQUE (grupo_materia_id),
+ CONSTRAINT fk_cr_clase FOREIGN KEY (grupo_materia_id) REFERENCES grupo_materias(id),
+ CONSTRAINT ck_cr_cupo CHECK (cupo_total_manual BETWEEN 1 AND 10000)
+);
+CREATE TABLE calificaciones_recursamiento (
+ id INT AUTO_INCREMENT NOT NULL PRIMARY KEY,
+ participacion_id INT NOT NULL,
+ parcial INT NOT NULL,
+ calificacion DECIMAL(5,2) NOT NULL,
+ capturada_por_id INT NOT NULL,
+ updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ CONSTRAINT uq_nota_recursamiento UNIQUE (participacion_id,parcial),
+ CONSTRAINT fk_nrec_participacion FOREIGN KEY (participacion_id) REFERENCES participaciones_asignatura(id),
+ CONSTRAINT fk_nrec_usuario FOREIGN KEY (capturada_por_id) REFERENCES usuarios(id),
+ CONSTRAINT ck_nrec_valores CHECK (parcial BETWEEN 0 AND 3 AND calificacion BETWEEN 0 AND 100)
+);
+CREATE TABLE historial_recursamiento (
+ id INT AUTO_INCREMENT NOT NULL PRIMARY KEY,
+ participacion_id INT NOT NULL,
+ parcial INT NOT NULL,
+ anterior DECIMAL(5,2) NULL,
+ nueva DECIMAL(5,2) NOT NULL,
+ usuario_id INT NOT NULL,
+ motivo VARCHAR(400) NOT NULL,
+ created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ CONSTRAINT fk_hrec_participacion FOREIGN KEY (participacion_id) REFERENCES participaciones_asignatura(id),
+ CONSTRAINT fk_hrec_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+);
+CREATE UNIQUE INDEX uq_participacion_activa ON participaciones_asignatura(activo_clave);
+
+-- Incremental: no modifica usuarios, tokens ni sesiones existentes.
+CREATE TABLE auth_correo_outbox (
+ id VARCHAR(36) NOT NULL PRIMARY KEY,
+ usuario_id INT NOT NULL,
+ tipo VARCHAR(16) NOT NULL,
+ estado VARCHAR(16) NOT NULL DEFAULT 'PENDIENTE',
+ version INT NOT NULL,
+ clave_id VARCHAR(40) NULL,
+ token_hash VARCHAR(64) NULL,
+ intentos INT NOT NULL DEFAULT 0,
+ proximo_intento DATETIME NOT NULL,
+ expira_en DATETIME NOT NULL,
+ lease_hasta DATETIME NULL,
+ claim VARCHAR(36) NULL,
+ error_codigo VARCHAR(24) NULL,
+ created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ CONSTRAINT fk_auth_outbox_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+ CONSTRAINT ck_auth_outbox_tipo CHECK (tipo IN ('ACTIVACION','RECUPERACION')),
+ CONSTRAINT ck_auth_outbox_estado CHECK (estado IN ('PENDIENTE','PROCESANDO','ACEPTADO','FALLIDO','EXPIRADO','CANCELADO')),
+ CONSTRAINT ck_auth_outbox_intentos CHECK (intentos >= 0 AND intentos <= 6),
+ CONSTRAINT ck_auth_outbox_token CHECK ((clave_id IS NULL AND token_hash IS NULL) OR (clave_id IS NOT NULL AND token_hash IS NOT NULL))
+);
+CREATE INDEX idx_auth_outbox_pendiente ON auth_correo_outbox(estado,proximo_intento);
+CREATE INDEX idx_auth_outbox_usuario ON auth_correo_outbox(usuario_id,tipo,expira_en);
+CREATE INDEX idx_auth_outbox_expira ON auth_correo_outbox(expira_en);
+
+-- Sin clasificar ni duplicar materias históricas.
+ALTER TABLE materias ADD tipo VARCHAR(16) NULL;
+ALTER TABLE materias ADD CONSTRAINT ck_materia_tipo CHECK (tipo IS NULL OR tipo IN ('OBLIGATORIA','OPTATIVA','ADICIONAL','COMPLEMENTARIA'));
+CREATE TABLE materia_contextos (
+ id INT AUTO_INCREMENT NOT NULL PRIMARY KEY,
+ materia_id INT NOT NULL,
+ periodo_academico_id INT NOT NULL,
+ activo BOOLEAN NOT NULL DEFAULT 1,
+ CONSTRAINT uq_materia_periodo UNIQUE (materia_id,periodo_academico_id),
+ CONSTRAINT fk_materia_contexto_materia FOREIGN KEY (materia_id) REFERENCES materias(id),
+ CONSTRAINT fk_materia_contexto_periodo FOREIGN KEY (periodo_academico_id) REFERENCES periodos_academicos(id)
+);

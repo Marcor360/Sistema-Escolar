@@ -1,3 +1,4 @@
+import { ListarMateriasDto } from './listar-materias.dto';
 import { Injectable } from '@nestjs/common';
 import { JwtUser } from '../common/current-user.decorator';
 import { ActualizarCicloDto, ActualizarGrupoDto, ActualizarMateriaDto, AsignarMateriaDto, CicloDto, GrupoDto, ListarGruposDto, MateriaDto } from './academico.dto';
@@ -12,6 +13,7 @@ listarCiclos() { return this.ciclos.listarCiclos(); }
 async crearCiclo(dto: CicloDto) { return this.ciclos.crearCiclo(dto); }
 async actualizarCiclo(id: number, dto: ActualizarCicloDto) { return this.ciclos.actualizarCiclo(id, dto); }
 clasesParaSeleccion(user: JwtUser, query: ListarGruposDto) { return this.grupos.clasesParaSeleccion(user,query); }
+consultarMaterias(query: ListarMateriasDto) { return this.materias.consultarMaterias(query); }
 listarMaterias() { return this.materias.listarMaterias(); }
 crearMateria(dto: MateriaDto) { return this.materias.crearMateria(dto); }
 async actualizarMateria(id: number, dto: ActualizarMateriaDto) { return this.materias.actualizarMateria(id, dto); }

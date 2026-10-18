@@ -1,3 +1,4 @@
+import { clasesRecursadas, recursaClase } from '../recursamientos/acceso-recursamiento';
 import { programarLimpieza } from '../archivos/archivo-limpieza.service';
 import { basename } from 'path';
 import { BitacoraAcademica } from '../entities/bitacora-academica.entity';
@@ -69,7 +70,7 @@ export class ActividadesService {
     const inscripcion = await this.inscripciones.findOne({
       where: { ...inscripcionVigente, alumnoId: alumno.id, grupoId: gm.grupoId },
     });
-    if (!inscripcion) throw new ForbiddenException('El alumno no está inscrito en el grupo de esta actividad');
+    if (!inscripcion && !await recursaClase(this.dataSource.manager, user.sub, gm.id)) throw new ForbiddenException('El alumno no está inscrito en esta clase');
     return { alumno, gm };
   }
 
@@ -202,11 +203,12 @@ export class ActividadesService {
     const inscripciones = await this.inscripciones.find({
       where: { ...inscripcionVigente, alumnoId: alumno.id },
     });
-    if (inscripciones.length === 0) return [];
-
-    const gms = await this.grupoMaterias.find({
-      where: { grupoId: In(inscripciones.map((i) => i.grupoId)) },
-    });
+    const recursadas = await clasesRecursadas(this.dataSource.manager, alumno.id);
+    if (!inscripciones.length && !recursadas.length) return [];
+    const gms = await this.grupoMaterias.find({ where: [
+      ...(inscripciones.length ? [{ grupoId: In(inscripciones.map(i=>i.grupoId)) }] : []),
+      ...(recursadas.length ? [{ id: In(recursadas) }] : []),
+    ] });
     const gruposActivos = gms.filter((gm) => gm.grupo.activo);
     if (gruposActivos.length === 0) return [];
 
