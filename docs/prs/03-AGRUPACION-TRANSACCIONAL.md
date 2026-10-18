@@ -21,3 +21,8 @@ Casos 4/5/49–55/99–105, plantel/plan/turno cruzados, 2 aperturas paralelas, 
 
 ## Dependencias
 #97, #98 y el flujo de #100. Este PR inicia la especificación; **todavía no activa el algoritmo**.
+
+## Implementación
+`AgrupacionRegularService` coordina exclusivamente solicitudes de apertura ordinaria dentro de la transacción compartida READ COMMITTED. Bloquea el plantel, valida los catálogos y el alumno, conserva solicitudes pendientes y crea grupos con el planificador existente. Reutiliza grupos regulares activos con exactamente el mismo contexto y turno, llena hasta 50 y permite solo remanentes hasta 54. No reequilibra grupos vivos: en la transición 54→55 el nuevo alumno queda pendiente hasta completar al menos cinco sin mover el historial.
+
+No hay endpoint independiente que permita agrupar especiales o abrir cargos fuera de cartera. El módulo exporta el coordinador para #116; antes de esa integración no se activa desde una alta simple. Las solicitudes tienen unicidad alumno/ciclo y estados auditados; las de alumnos inactivos o trasladados se anulan antes de contar una cohorte. La prueba de integración comprueba espera 4→5, rollback completo, dos solicitudes paralelas, inscripción única y exclusión de FINANZAS. Migraciones incrementales equivalentes incluidas.
