@@ -82,3 +82,12 @@ it('edita tipo sin sobrescribir la descripción histórica y mantiene la baja so
   fireEvent.click(screen.getByRole('button', { name: 'Guardar materia' }));
   await waitFor(() => expect(patch).toHaveBeenCalledWith('/academico/materias/21', { clave: 'LEG', nombre: 'Legada', creditos: 2, tipo: 'COMPLEMENTARIA' }));
 });
+
+it('ofrece desde cada ciclo el acceso directo a grupos de ese ciclo', async () => {
+  vi.spyOn(api, 'get').mockImplementation(async url => ({ data: url === '/academico/materias/listado'
+    ? { datos: [], total: 0 }
+    : [{ id: 8, clave: '2027', nombre: '2027–2028', fechaInicio: '2027-08-01', fechaFin: '2028-07-31', estado: 'PREPARACION', activo: false }] }));
+  render(<MemoryRouter><MateriasPage /></MemoryRouter>);
+  const enlace = await screen.findByRole('link', { name: 'Ver grupos del ciclo 2027' });
+  expect((enlace as HTMLAnchorElement).getAttribute('href')).toBe('/grupos?vista=consulta&ciclo=8');
+});
