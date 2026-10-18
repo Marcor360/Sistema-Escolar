@@ -46,3 +46,7 @@ El transporte Nodemailer existente interpreta el puerto 465 como TLS implícito 
 Antes de fusionar, ejecutar en `backend/`: `npm run lint`, `npm run typecheck`, `npm test -- --runInBand` y `npm run build`. Las pruebas automatizadas de configuración no equivalen a una prueba de correo real.
 
 La falla SMTP se comunica en los flujos existentes según cada servicio; se debe supervisar operativamente. No habilitar envíos masivos sin observar entregas, rate limiting y disponibilidad.
+
+## Entrega a Microsoft 365 bajo el mismo dominio
+
+Si el dominio `iua.edu.mx` mantiene destinatarios tanto en cPanel como en Microsoft 365, aplicar el diagnóstico de solo lectura de [correo entre cPanel y Exchange Online](SMTP_DOMINIO_COMPARTIDO_MICROSOFT365.md) antes de cambiar enrutamiento o registros DNS.
