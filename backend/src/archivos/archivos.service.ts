@@ -1,3 +1,4 @@
+import { recursaClase } from '../recursamientos/acceso-recursamiento';
 import { BibliotecaArchivo } from '../entities/biblioteca.entity';
 import { contentDisposition } from '../common/content-disposition';
 import { ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
@@ -152,7 +153,7 @@ export class ArchivosService {
       return;
     }
     if (user.roles.includes('MAESTRO') && material.grupoMateria.docente?.usuarioId === user.sub && grupoVigente(grupo)) return;
-    if (user.roles.includes('ALUMNO') && (await this.alumnoInscritoEnGrupo(grupo.id, user.sub))) return;
+    if (user.roles.includes('ALUMNO') && ((await this.alumnoInscritoEnGrupo(grupo.id, user.sub)) || await recursaClase(this.inscripciones.manager, user.sub, material.grupoMateria.id))) return;
     throw new ForbiddenException('No tienes acceso a este material');
   }
 

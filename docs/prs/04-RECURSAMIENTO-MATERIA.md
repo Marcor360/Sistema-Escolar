@@ -20,3 +20,12 @@ Autoridad para aprobar, regla de cupo extraordinario, nota que acredita, periodo
 
 ## Estado
 Especificación en borrador; no añade ruta de recursamiento hasta validar datos y permisos.
+
+## Implementación y reglas confirmadas
+Se autoriza gestión por SUPERADMIN/ADMINISTRATIVO, con docente existente solo para captura en su clase y ALUMNO para sus consultas. Se reutiliza la clase receptora; no se crea otra `Inscripcion` ni se cambia la principal. Se requieren mismo plantel, ciclo, nivel y carrera/plan configurados, alumno/cuenta activos, clase regular vigente y docente activo.
+
+El cupo total manual obligatorio cuenta regulares y recursantes de esa clase; un cambio se confirma con motivo y bitácora, nunca aplica la excepción automática 51–54. Unicidad activa e idempotencia por UUID; cada nuevo intento después de baja/finalización obtiene identificador independiente. Calificaciones 0–100/parciales 0–3 compatibles con el contrato actual, historial de correcciones y respeto del cierre del parcial. Las notas originales permanecen intactas; no se infiere una regla de acreditación ni se sustituyen promedios automáticamente. No se generan cargos.
+
+Web: recorrido desde el expediente, formulario enfocado y lista paginada; docentes acceden desde su materia a las notas independientes de cada intento. Acta CSV autenticada por intento. Expo consulta intentos propios y notas; materias, actividades y materiales autorizan solo la clase exacta. Los documentos conservan enlaces firmados y revalidación de permisos. Baja, egreso y traslado del alumno terminan sus participaciones sin borrar notas.
+
+Migraciones incrementales espejo y pruebas reales: 3A recursa Matemáticas 2B sin ver Inglés, cupo, doble clic, permisos, acceso a materiales privados, nota original conservada, nuevo intento sin notas heredadas y matrícula principal intacta. No desplegado en staging; acreditación y tarifas institucionales quedan fuera del automatismo.
