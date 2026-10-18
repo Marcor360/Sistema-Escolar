@@ -46,6 +46,12 @@ export function registrarRecursamientos(ctx:ContextoIntegracion){
     expect((await ctx.api(`/recursamientos/${id}/baja`,{method:'POST',token:admin,body:{confirmado:true,motivo:'Baja del intento inicial'}})).response.status).toBe(201);
     expect((await ctx.api(`/grupo-materias/${matematicas.id}/materiales`,{token:propio})).response.status).toBe(403);
     const nuevo=await ctx.api('/recursamientos',{method:'POST',token:admin,body:{...body,idempotencia:randomUUID()}});expect(nuevo.response.status).toBe(201);expect(nuevo.data.intento).toBe(2);expect(nuevo.data.id).not.toBe(id);
+    expect((await ctx.api(`/academico/grupos/${receptor.id}`,{method:'PATCH',token:admin,body:{nivelId:nivel.id,carreraId:carrera.id,periodoAcademicoId:periodo.id}})).response.status).toBe(409);
+    const regular=await post('/alumnos',{email:`rc2${ctx.sufijo}@example.invalid`,matricula:`RC2${ctx.sufijo}`,nombre:'Alumno',apellidoPaterno:'Regular receptor',curp:'GODE561231HDFRRN09',plantelId:ctx.plantelId});
+    expect((await ctx.api(`/academico/grupos/${receptor.id}/alumnos`,{method:'POST',token:admin,body:{alumnoId:regular.id}})).response.status).toBe(409);
+    expect((await ctx.api(`/recursamientos/clases/${matematicas.id}/cupo`,{method:'PATCH',token:admin,body:{cupoTotalManual:2,confirmado:true,motivo:'Ampliación manual autorizada'}})).response.status).toBe(200);
+    expect((await ctx.api(`/academico/grupos/${receptor.id}/alumnos`,{method:'POST',token:admin,body:{alumnoId:regular.id}})).response.status).toBe(201);
+    expect((await ctx.api('/recursamientos',{method:'POST',token:admin,body:{...body,alumnoId:alumnos[1].id,cupoTotalManual:2,idempotencia:randomUUID()}})).response.status).toBe(409);
     expect(await ctx.dataSource.getRepository(CalificacionRecursamiento).countBy({participacionId:id})).toBe(1);expect(await ctx.dataSource.getRepository(CalificacionRecursamiento).countBy({participacionId:nuevo.data.id})).toBe(0);
     expect((await ctx.api(`/academico/grupo-materias/${matematicas.id}`,{method:'DELETE',token:admin})).response.status).toBe(409);
     expect(await ctx.dataSource.getRepository(HistorialRecursamiento).countBy({participacionId:id})).toBe(1);

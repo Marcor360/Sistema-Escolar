@@ -101,12 +101,12 @@ async actualizarGrupo(id: number, dto: ActualizarGrupoDto, user: JwtUser) {
       const inscritos = await this.inscripciones.count({ where: { grupoId: id } });
       if (inscritos) throw new ConflictException('No puedes cambiar grado o turno de un grupo con inscripciones');
     }
-    if (['nivelId', 'carreraId', 'periodoAcademicoId'].some((campo) => Object.prototype.hasOwnProperty.call(dto, campo))) {
+    if (['nivelId', 'carreraId', 'periodoAcademicoId'].some((campo) => Object.prototype.hasOwnProperty.call(dto, campo)) || (dto.grado !== undefined && dto.grado !== grupo.grado) || (dto.turno !== undefined && dto.turno !== grupo.turno)) {
       return this.dataSource.transaction(async (manager) => {
         await manager.getRepository(Plantel).findOne({ where: { id: grupo.plantelId }, lock: { mode: 'pessimistic_write' } });
         const repo = manager.getRepository(Grupo);
         const actual = await repo.findOneOrFail({ where: { id }, lock: { mode: 'pessimistic_write' } });
-        if (await manager.getRepository(Inscripcion).existsBy({ grupoId: id })) throw new ConflictException('No puedes cambiar el contexto académico de un grupo con historial de inscripciones');
+        if (await manager.getRepository(Inscripcion).existsBy({ grupoId: id }) || await manager.getRepository(ParticipacionAsignatura).existsBy({ grupoMateria: { grupoId: id } })) throw new ConflictException('No puedes cambiar el contexto académico de un grupo con historial de inscripciones o recursamientos');
         await validarContextoGrupo(manager, { ...actual, ...dto });
         await repo.update(id, dto);
         return repo.findOneBy({ id });
