@@ -35,8 +35,9 @@ function crearService(overrides: {
 } = {}) {
   const materialesRepo = overrides.materialesRepo ?? { findOne: jest.fn() };
   const entregasRepo = overrides.entregasRepo ?? { findOne: jest.fn() };
-  const qb = { where: jest.fn().mockReturnThis(), andWhere: jest.fn().mockReturnThis(), getCount: jest.fn().mockResolvedValue(0) };
+  const qb = { innerJoin: jest.fn().mockReturnThis(), where: jest.fn().mockReturnThis(), andWhere: jest.fn().mockReturnThis(), getCount: jest.fn().mockResolvedValue(0) };
   const inscripcionesRepo = overrides.inscripcionesRepo ?? { createQueryBuilder: jest.fn().mockReturnValue(qb) };
+  inscripcionesRepo.manager = { getRepository: jest.fn().mockReturnValue({ createQueryBuilder: jest.fn().mockReturnValue(qb) }) };
   const usuariosRepo = overrides.usuariosRepo ?? { findOne: jest.fn() };
   const scope = new ScopeService({} as any);
   jest.spyOn(scope, 'validarGestion').mockResolvedValue(null as any);
