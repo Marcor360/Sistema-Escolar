@@ -1,32 +1,29 @@
 import { compararPassword, hashPasswordNueva } from '../common/password-bcrypt';
-import { BadRequestException, ForbiddenException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, In, Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { createHash, randomUUID } from 'crypto';
 import { Sesion } from '../entities/sesion.entity';
 import { LIMITE_INACTIVIDAD_MS, sesionInactiva, instanteActividad } from './sesion-inactividad';
 import { Alumno } from '../entities/alumno.entity';
 import { Docente } from '../entities/docente.entity';
-import { UsuarioPlantel } from '../entities/usuario-plantel.entity';
 import { Usuario } from '../entities/usuario.entity';
 import { PasswordResetToken } from '../entities/password-reset-token.entity';
 import { BitacoraActividad } from '../entities/bitacora-actividad.entity';
-import { NotificacionesService } from '../notificaciones/notificaciones.service';
-import { plantillaRecuperacion } from '../notificaciones/plantillas-correo';
+import { CorreoAccesoOutboxService } from './correo-acceso-outbox.service';
 import { JwtUser } from '../common/current-user.decorator';
 import { MENSAJES_PORTAL, Portal, ROLES_POR_PORTAL } from '../common/portales';
 
 @Injectable()
 export class AuthService {
-  private readonly logger = new Logger(AuthService.name);
   constructor(
     @InjectRepository(Usuario) private readonly usuarios: Repository<Usuario>,
     @InjectRepository(PasswordResetToken) private readonly tokens: Repository<PasswordResetToken>,
     @InjectRepository(BitacoraActividad) private readonly bitacora: Repository<BitacoraActividad>,
     private readonly jwt: JwtService,
-    private readonly notificaciones: NotificacionesService,
+    private readonly outbox: CorreoAccesoOutboxService,
     private readonly config: ConfigService,
     private readonly dataSource: DataSource,
   ) {}
@@ -178,58 +175,10 @@ export class AuthService {
     return { mensaje: 'Contraseña actualizada' };
   }
 
-  /** Genera token de recuperación (1 hora). Se envía por correo si hay SMTP; en BD solo se guarda su hash. */
+  /** Respuesta genérica tras el commit de una solicitud; SMTP se procesa fuera del HTTP. */
   async forgotPassword(email: string) {
-    const usuario = await this.usuarios.findOne({ where: { email, activo: true } });
-    // Respuesta idéntica exista o no el correo (no revelar cuentas)
-    if (!usuario || usuario.activacionPendiente) return { mensaje: 'Solicitud recibida. Si la cuenta existe y el correo está disponible, recibirás instrucciones. Si no llegan, contacta a Control escolar.' };
-
-    // Evita multiplicar avisos al responsable durante la vigencia de otro código.
-    const pendiente = await this.tokens.findOne({ where: { usuarioId: usuario.id, usado: false } });
-    const notificarResponsable = !pendiente || pendiente.expiraEn <= new Date();
-    const token = randomUUID().replace(/-/g, '');
-    const emitido = await this.dataSource.transaction(async (manager) => {
-      const actual = await manager.getRepository(Usuario).findOne({ where: { id: usuario.id, activo: true }, lock: { mode: 'pessimistic_write' } });
-      if (!actual || actual.activacionPendiente || (actual.sessionVersion ?? 0) !== (usuario.sessionVersion ?? 0)) return false;
-      const tokens = manager.getRepository(PasswordResetToken);
-      await tokens.update({ usuarioId: usuario.id, usado: false }, { usado: true });
-      await tokens.save(tokens.create({ usuarioId: usuario.id, token: this.hashToken(token), expiraEn: new Date(Date.now() + 60 * 60 * 1000) }));
-      return true;
-    });
-    if (!emitido) return { mensaje: 'Solicitud recibida. Si la cuenta existe y el correo está disponible, recibirás instrucciones. Si no llegan, contacta a Control escolar.' };
-    await this.notificaciones.enviarEmail(
-      usuario.email,
-      'Recuperación de contraseña',
-      plantillaRecuperacion(token),
-    ).catch(() => {
-      this.logger.error('No se pudo entregar el correo de recuperacion de contrasena');
-    });
-    if (notificarResponsable) {
-      await this.notificarAyudaPlantel(usuario).catch(() =>
-        this.logger.warn('No fue posible notificar al responsable del plantel'));
-    }
+    await this.outbox.solicitar(email, 'RECUPERACION');
     return { mensaje: 'Solicitud recibida. Si la cuenta existe y el correo está disponible, recibirás instrucciones. Si no llegan, contacta a Control escolar.' };
-  }
-
-  private async notificarAyudaPlantel(usuario: Usuario): Promise<void> {
-    const alumno = await this.dataSource.getRepository(Alumno).findOne({ where: { usuarioId: usuario.id } });
-    const asignaciones = alumno ? [] : await this.dataSource.getRepository(UsuarioPlantel).find({ where: { usuarioId: usuario.id, activo: true } });
-    const plantelIds = alumno ? [alumno.plantelId] : asignaciones.map((item) => item.plantelId);
-    if (!plantelIds.length) return;
-    const administradores = await this.dataSource.getRepository(UsuarioPlantel).find({ where: { plantelId: In(plantelIds), activo: true }, relations: { usuario: true } });
-    const correos = [...new Set(administradores.filter((item) =>
-      item.usuario.activo && item.usuario.roles.some((rol) => rol.clave === 'ADMINISTRATIVO'),
-    ).map((item) => item.usuario.email))];
-    const correoSolicitante = usuario.email.replace(/[&<>"']/g, (caracter) =>
-      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[caracter] ?? caracter,
-    );
-    for (const correo of correos) {
-      await this.notificaciones.enviarEmail(correo, 'IUA · Solicitud de apoyo para acceso',
-        '<p>Se registró una solicitud de recuperación de acceso en uno de tus planteles.</p>' +
-        '<p>Cuenta institucional solicitante: <strong>' + correoSolicitante + '</strong></p>' +
-        '<p>Ingresa al portal administrativo y consulta la sección Usuarios para identificar al titular y, si corresponde, emitir una contraseña temporal.</p>' +
-        '<p>Esta notificación no incluye códigos ni contraseñas. Verifica la identidad del solicitante antes de realizar cambios.</p>');
-    }
   }
 
   async resetPassword(token: string, password: string) {

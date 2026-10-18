@@ -10,7 +10,7 @@ import { UsuarioPlantel } from '../entities/usuario-plantel.entity';
 export type TipoEliminacion = 'alumnos' | 'docentes' | 'planteles' | 'usuarios';
 const cuentasAuxiliares = new Set([
   'usuario_roles', 'usuario_planteles', 'sesiones', 'password_reset_tokens',
-  'activacion_tokens', 'push_dispositivos', 'notificaciones',
+  'activacion_tokens', 'auth_correo_outbox', 'push_dispositivos', 'notificaciones',
 ]);
 const nombresVinculos: Record<string, string> = {
   alumnos: 'expedientes de alumnos', docentes: 'expedientes de docentes', planteles: 'dirección de planteles',
@@ -81,7 +81,7 @@ export class EliminacionService {
           await this.validarReferencias(manager, Usuario, usuarioId, referenciasUsuario,
             new Set([...cuentasAuxiliares, 'alumnos', 'docentes', 'bitacora_actividad']));
           // Limpieza explícita: incluye tablas sin relaciones declaradas en la entidad.
-          for (const tabla of ['push_dispositivos', 'notificaciones', 'activacion_tokens', 'password_reset_tokens', 'sesiones', 'usuario_planteles', 'usuario_roles']) {
+          for (const tabla of ['auth_correo_outbox', 'push_dispositivos', 'notificaciones', 'activacion_tokens', 'password_reset_tokens', 'sesiones', 'usuario_planteles', 'usuario_roles']) {
             const metadata = this.dataSource.entityMetadatas.find((m) => m.tableName === tabla);
             if (!metadata) throw new Error(`Falta metadata de ${tabla}`);
             const columna = metadata.columns.find((c) => c.databaseName === 'usuario_id');

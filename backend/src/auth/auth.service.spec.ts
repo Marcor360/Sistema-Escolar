@@ -1,6 +1,6 @@
 import * as bcrypt from 'bcryptjs';
 import { createHash } from 'crypto';
-import { Logger, UnauthorizedException } from '@nestjs/common';
+import { UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 
 const usuario = async (roles: string[]) => ({
@@ -140,43 +140,17 @@ describe('AuthService.forgotPassword / resetPassword', () => {
     return { service, usuarios, tokens, notificaciones, dataSource };
   };
 
-  it('guarda el hash del token (sha256, 64 hex), no el valor en claro', async () => {
-    const { service, usuarios, tokens, notificaciones } = crear();
-    usuarios.findOne.mockResolvedValue({ id: 1, email: 'demo@escuela.mx', nombre: 'Demo' });
-
-    await service.forgotPassword('demo@escuela.mx');
-
-    expect(tokens.save).toHaveBeenCalledTimes(1);
-    const guardado = tokens.save.mock.calls[0][0];
-    const tokenEnClaro = notificaciones.enviarEmail.mock.calls[0][2].match(/<strong[^>]*>([a-f0-9]{32})<\/strong>/)?.[1];
-    expect(guardado.token).toMatch(/^[0-9a-f]{64}$/);
-    expect(guardado.token).not.toBe(tokenEnClaro);
-    expect(guardado.token).toBe(createHash('sha256').update(tokenEnClaro).digest('hex'));
+  it('persiste la solicitud sin esperar SMTP ni emitir tokens en HTTP', async () => {
+    const outbox = { solicitar: jest.fn().mockResolvedValue(undefined) };
+    const service = new AuthService({} as never, {} as never, {} as never, {} as never, outbox as never, {} as never, {} as never);
+    const respuesta = await service.forgotPassword('demo@escuela.mx');
+    expect(outbox.solicitar).toHaveBeenCalledWith('demo@escuela.mx', 'RECUPERACION');
+    expect(respuesta.mensaje).toContain('Si la cuenta existe');
   });
-
-  it('mantiene la respuesta genérica y registra el fallo si SMTP no entrega el correo', async () => {
-    const { service, usuarios, notificaciones } = crear();
-    usuarios.findOne.mockResolvedValue({ id: 1, email: 'demo@escuela.mx', nombre: 'Demo' });
-    notificaciones.enviarEmail.mockRejectedValue(new Error('SMTP no disponible'));
-    const registrarError = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
-
-    await expect(service.forgotPassword('demo@escuela.mx')).resolves.toEqual({
-      mensaje: 'Solicitud recibida. Si la cuenta existe y el correo está disponible, recibirás instrucciones. Si no llegan, contacta a Control escolar.',
-    });
-
-    expect(registrarError).toHaveBeenCalled();
-    registrarError.mockRestore();
-  });
-
-  it('no emite recuperación si la versión cambia antes de adquirir el bloqueo', async () => {
-    const { service, usuarios, tokens, notificaciones, dataSource } = crear();
-    usuarios.findOne.mockResolvedValue({ id: 1, email: 'demo@escuela.mx', sessionVersion: 0 });
-    dataSource.transaction.mockImplementationOnce(async (callback) => callback({
-      getRepository: () => ({ findOne: async () => ({ id: 1, sessionVersion: 1 }) }),
-    } as never));
-    await service.forgotPassword('demo@escuela.mx');
-    expect(tokens.save).not.toHaveBeenCalled();
-    expect(notificaciones.enviarEmail).not.toHaveBeenCalled();
+  it('no afirma que se recibió una solicitud si falla el commit duradero', async () => {
+    const outbox = { solicitar: jest.fn().mockRejectedValue(new Error('BD no disponible')) };
+    const service = new AuthService({} as never, {} as never, {} as never, {} as never, outbox as never, {} as never, {} as never);
+    await expect(service.forgotPassword('demo@escuela.mx')).rejects.toThrow('BD no disponible');
   });
 
   it('resetPassword acepta el token original aunque solo se persista su hash', async () => {

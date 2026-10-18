@@ -1,3 +1,5 @@
+import { CorreoAccesoOutboxService } from '../../src/auth/correo-acceso-outbox.service';
+import { AuthCorreoOutbox } from '../../src/entities/auth-correo-outbox.entity';
 import { ActivacionService } from '../../src/auth/activacion.service';
 import { NotificacionesService } from '../../src/notificaciones/notificaciones.service';
 import { ActivacionToken, PasswordResetToken } from '../../src/entities';
@@ -35,15 +37,20 @@ export function registrarBeta(ctx: ContextoIntegracion) {
     expect((await ctx.api('/auth/me', { token: previa.accessToken })).response.status).toBe(401);
     const correo = jest.spyOn(ctx.app.get(NotificacionesService), 'enviarEmail');
     const codigos: string[] = [];
-    correo.mockImplementation(async (_email, _asunto, html) => { codigos.push(html.match(/<strong[^>]*>([a-f0-9]{64})<\/strong>/)![1]); return { simulado: false }; });
+    correo.mockImplementation(async (_email, _asunto, html) => { if (_email === nuevo.email) codigos.push(html.match(/<strong[^>]*>([a-f0-9]{64})<\/strong>/)![1]); return { simulado: false }; });
     try {
       const generica = await activacion.solicitar('inexistente@example.invalid');
       expect(await activacion.solicitar(nuevo.email)).toEqual(generica);
-      await activacion.onModuleDestroy();
+      await ctx.app.get(CorreoAccesoOutboxService).procesar();
       expect((await tokens.findBy({ usuarioId: nuevo.id }))[0].token).toBe(createHash('sha256').update(codigos[0]).digest('hex'));
       expect(JSON.stringify(generica)).not.toContain(codigos[0]);
       await activacion.solicitar(nuevo.email);
-      await activacion.onModuleDestroy();
+      await ctx.app.get(CorreoAccesoOutboxService).procesar();
+      // Repetir una solicitud vigente conserva el primer código; una nueva ventana sí lo revoca.
+      expect(codigos).toHaveLength(1);
+      await ctx.dataSource.getRepository(AuthCorreoOutbox).update({ usuarioId: nuevo.id }, { expiraEn: new Date(Date.now() - 60000) });
+      await activacion.solicitar(nuevo.email);
+      await ctx.app.get(CorreoAccesoOutboxService).procesar();
       await expect(activacion.activar(codigos[0], password)).rejects.toThrow();
       const reset = randomUUID();
       await ctx.dataSource.getRepository(PasswordResetToken).save({ usuarioId: nuevo.id, token: createHash('sha256').update(reset).digest('hex'), expiraEn: new Date(Date.now() + 60000), usado: false });
@@ -62,14 +69,14 @@ export function registrarBeta(ctx: ContextoIntegracion) {
       await expect(auth.login(nuevo.email, password, 'WEB')).resolves.toHaveProperty('accessToken');
       await usuarios.update(nuevo.id, { activacionPendiente: true });
       await activacion.solicitar(nuevo.email);
-      await activacion.onModuleDestroy();
+      await ctx.app.get(CorreoAccesoOutboxService).procesar();
       await tokens.update({ usuarioId: nuevo.id, usado: false }, { expiraEn: new Date(Date.now() - 60000) });
       await expect(activacion.activar(codigos[2], password)).rejects.toThrow();
       correo.mockResolvedValue({ simulado: true });
       expect(await activacion.solicitar(nuevo.email)).toEqual(generica);
-      await activacion.onModuleDestroy();
+      await ctx.app.get(CorreoAccesoOutboxService).procesar();
       expect((await usuarios.findOneByOrFail({ id: nuevo.id })).activacionPendiente).toBe(true);
-    } finally { await activacion.onModuleDestroy(); correo.mockRestore(); }
+    } finally { await ctx.app.get(CorreoAccesoOutboxService).procesar(); correo.mockRestore(); }
   });
 
   it('sesiones: actividad real, polling sin renovación y expiración de JWT/refresh en ambos motores', async () => {
