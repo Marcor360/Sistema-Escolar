@@ -23,6 +23,7 @@ Si un PR anterior sigue abierto al entrar en vigor el control, debe actualizarse
 | 1.26.1 | Seguridad de cuentas, cartera/catálogos consolidados y UX previa | Ya en main antes de este PR |
 | 1.26.2 | Política de versiones y mapa de ejemplos académicos | Propuesta; no desplegada |
 | 1.26.3 | Guía contextual de ciclos en web y acceso a grupos por ciclo | PR apilado sobre 1.26.2; sin despliegue |
+| 1.26.4 | Vigencia de ciclo y contexto visible de cotización en apertura de cartera | PR apilado sobre 1.26.3; sin despliegue |
 | 1.27.0 | Temario como nuevo dominio con API/migraciones/web | Requiere PR separado, pruebas y aceptación |
 
 No confundir `versión`, número de PR GitHub, SHA integrado o versión de servidor: son identificadores distintos.
