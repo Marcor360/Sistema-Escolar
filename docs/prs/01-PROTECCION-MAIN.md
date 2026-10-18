@@ -18,3 +18,8 @@ La consulta `GET /repos/Marcor360/Sistema-Escolar/branches/main` informó `prote
 
 ## Estado
 **Pendiente de acción administrativa.** Este documento dentro de un PR **NO activa** la protección y no debe marcarse como corrección completa al fusionarlo.
+
+## Implementación revisable
+La política versionada `.github/main-protection.json` exige ocho checks del emisor GitHub Actions (app 15368 comprobada), revisión independiente del último push, descarte de aprobaciones obsoletas, conversaciones resueltas y protección del administrador sin force push ni borrado.
+
+`node scripts/main-protection.cjs` verifica la configuración efectiva sin escribir; `node scripts/main-protection.cjs --apply` aplica la política y vuelve a leerla. No envía pushes fallidos de prueba a main ni crea bypass. El comando falla si falta algún control o la API rechaza los permisos. La activación se verifica por separado de la integración del código. Una vez activa, cada PR necesita un revisor independiente, también los del administrador.
