@@ -223,3 +223,12 @@ Hora y umbral del servidor; escritura atómica sobre sesión/version/expiración
 ### Alta docente por invitación
 
 El alta individual de docente no recibe contraseña inicial: solicita una invitación después de confirmar la transacción. Requiere `cedulaProfesional` o `cedulaPendiente: true`. La plantilla de importación docente también admite `cedulaPendiente` con texto `true` o `false`; cuando es `true` guarda la cédula como NULL. Las columnas de contraseña no están permitidas en archivos. La importación conserva su contrato de recuperación de acceso por correo.
+
+### Resoluciones de conciliación
+
+`GET /finanzas/conciliacion/resoluciones` requiere FINANZAS (o SUPERADMIN),
+aplica alcance por plantel y filtra las acciones CONCILIAR_ORDEN/CONCILIAR_PAGO
+antes de paginar. Usa PaginacionDto: 10 por defecto, máximo 100 y orden estable
+por createdAt/id descendentes. Devuelve `{ datos, total, pagina, porPagina }`.
+La ruta histórica `/finanzas/bitacora` conserva su contrato; la pantalla de
+conciliación usa el nuevo listado sin descargar ni recortar 300 movimientos.

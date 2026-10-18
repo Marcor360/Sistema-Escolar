@@ -6,6 +6,23 @@ import { AuthService } from '../../src/auth/auth.service';
 import { UsuariosService } from '../../src/usuarios/usuarios.service';
 import { Usuario, OrdenPago, Alumno, GrupoMateria } from '../../src/entities';
 export function registrarBarrido(ctx: ContextoIntegracion) {
+  it('resoluciones de conciliación: paginación validada y acceso exclusivo financiero', async () => {
+    const token = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.finanzasId })).email);
+    const alumno = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.alumnoUsuarioId })).email);
+    const ruta = '/finanzas/conciliacion/resoluciones';
+    expect((await ctx.api(ruta)).response.status).toBe(401);
+    expect((await ctx.api(ruta, { token: alumno })).response.status).toBe(403);
+    const { response, data } = await ctx.api(ruta, { token });
+    expect(response.status).toBe(200);
+    expect(data).toMatchObject({ pagina: 1, porPagina: 10, total: expect.any(Number), datos: expect.any(Array) });
+    expect(data.datos.length).toBeLessThanOrEqual(10);
+    expect((await ctx.api(`${ruta}?porPagina=101`, { token })).response.status).toBe(400);
+    const segunda = await ctx.api(`${ruta}?pagina=2&porPagina=1`, { token });
+    expect(segunda.response.status).toBe(200);
+    expect(segunda.data).toMatchObject({ pagina: 2, porPagina: 1 });
+    expect(segunda.data.datos.length).toBeLessThanOrEqual(1);
+  });
+
   it('edición de marca y carga concurrente preservan el logo; la sustitución conserva su limpieza',async () => {
     const root = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.superadminId })).email);
     const { data: original } = await ctx.api('/configuracion/marca');
