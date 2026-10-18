@@ -1,3 +1,4 @@
+import { useModuloTrabajo } from '../components/ModuloTrabajo';
 import { EliminarRegistro } from '../components/EliminarRegistro';
 import '../components/tabla-adaptable.css';
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
@@ -32,6 +33,7 @@ export default function UsuariosPage() {
   const [plantelId, setPlantelId] = useState('');
   const [plantelIds, setPlantelIds] = useState<number[]>([]);
   const [enviando, setEnviando] = useState(false);
+  const trabajo = useModuloTrabajo(enviando), legado = trabajo.modo === 'legado', consultaVisible = legado || trabajo.modo === 'consulta';
   const [cargando, setCargando] = useState(false); const consulta = useRef(0);
   const [buscar, setBuscar] = useState('');
   const [form, setForm] = useState(FORM_INICIAL);
@@ -41,7 +43,7 @@ export default function UsuariosPage() {
   const [cuentaRestablecer, setCuentaRestablecer] = useState<Fila | null>(null);
   const [passwordTemporal, setPasswordTemporal] = useState('');
 
-  const cargar = useCallback(async (pagina = 1, tipoActual: Tipo = 'ALUMNO', plantelActual = '', termino = '') => {
+  const consultar = useCallback(async (pagina = 1, tipoActual: Tipo = 'ALUMNO', plantelActual = '', termino = '') => {
     const actual = ++consulta.current; setCargando(true); setError('');
     try {
       const { data } = await api.get<Resultado>('/usuarios/listado', {
@@ -51,10 +53,19 @@ export default function UsuariosPage() {
     } catch (err) { if (actual === consulta.current) setError(mensajeDeError(err)); }
     finally { if (actual === consulta.current) setCargando(false); }
   }, []);
+  const cargar = (pagina = 1, tipoActual: Tipo = 'ALUMNO', plantelActual = '', termino = '') => legado ? consultar(pagina,tipoActual,plantelActual,termino) : Promise.resolve(trabajo.actualizar({pagina:String(pagina),tipo:tipoActual,plantel:plantelActual,buscar:termino}));
+  const paginaQuery = Math.max(1, Number(trabajo.query.get('pagina')) || 1), tipoQuery = (['ALUMNO','DOCENTE','ADMINISTRATIVO'].includes(trabajo.query.get('tipo') || '') ? trabajo.query.get('tipo') : 'ALUMNO') as Tipo, plantelQuery = trabajo.query.get('plantel') || '', buscarQuery = trabajo.query.get('buscar') || '';
   useEffect(() => {
     api.get<Plantel[]>('/planteles/mios').then((r) => setPlanteles(r.data)).catch((err) => setError(mensajeDeError(err)));
-    cargar(1, 'ALUMNO', '', '');
-  }, [cargar]);
+  }, []);
+  useEffect(() => { if (!consultaVisible) return; setTipo(tipoQuery); setPlantelId(plantelQuery); setBuscar(buscarQuery); void consultar(paginaQuery,tipoQuery,plantelQuery,buscarQuery); return () => { consulta.current++; }; }, [consultaVisible,paginaQuery,tipoQuery,plantelQuery,buscarQuery,consultar]);
+  useEffect(() => {
+    if(legado) return;
+    if(trabajo.modo === 'nuevo') { setEditarId(null); setForm(FORM_INICIAL); setRolesElegidos(['ADMINISTRATIVO']); setPlantelIds([]); }
+    if(trabajo.modo !== 'editar' || !trabajo.id || !esSuperadmin) return;
+    let vigente = true;
+    api.get(`/usuarios/${trabajo.id}/personal`).then(({data})=>{ if(!vigente) return; setEditarId(data.id); setActivo(data.activo); setPlantelIds(data.plantelIds); setRolesElegidos(data.roles.map((r:{clave:string})=>r.clave)); setForm({email:data.email,nombre:data.nombre,apellidoPaterno:data.apellidoPaterno,apellidoMaterno:data.apellidoMaterno ?? '',telefono:data.telefono ?? ''}); }).catch(err=>{if(vigente)setError(mensajeDeError(err));}); return()=>{vigente=false;};
+  }, [legado,trabajo.modo,trabajo.id,esSuperadmin]);
 
   const restablecer = async (e: FormEvent) => {
     e.preventDefault();
@@ -81,13 +92,14 @@ export default function UsuariosPage() {
     try {
       if (editarId) await api.patch(`/usuarios/${editarId}/personal`, { nombre: form.nombre, apellidoPaterno: form.apellidoPaterno, apellidoMaterno: form.apellidoMaterno, telefono: form.telefono, roles: rolesElegidos, plantelIds, activo });
       else await api.post('/usuarios', { email: form.email, nombre: form.nombre, apellidoPaterno: form.apellidoPaterno, apellidoMaterno: form.apellidoMaterno, telefono: form.telefono, roles: rolesElegidos, plantelIds: plantelIds.length ? plantelIds : undefined });
-      setMensaje(editarId ? `Cuenta ${form.email} actualizada` : 'Cuenta creada. Si el correo está disponible, recibirá instrucciones para activarla.'); setForm(FORM_INICIAL); setEditarId(null); await cargar(1, tipo, plantelId, buscar);
+      trabajo.guardado(); if(!legado) trabajo.ir('consulta');
+      setMensaje(editarId ? `Cuenta ${form.email} actualizada` : 'Cuenta creada. Si el correo está disponible, recibirá instrucciones para activarla.'); setForm(FORM_INICIAL); setEditarId(null); if(legado) await cargar(1, tipo, plantelId, buscar);
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
   return <>
     <Encabezado titulo="Usuarios" detalle="Consulta de alumnos, docentes y personal según tu alcance" />
-    {esSuperadmin && <section className="panel"><h2 ref={tituloFormRef} tabIndex={-1}>{editarId ? 'Corregir cuenta de personal' : 'Crear cuenta de personal'}</h2>
+    {esSuperadmin && (legado || trabajo.modo === 'nuevo' || (trabajo.modo === 'editar' && editarId === trabajo.id)) && <section className="panel"><h2 ref={tituloFormRef} tabIndex={-1}>{editarId ? 'Corregir cuenta de personal' : 'Crear cuenta de personal'}</h2>
       <form onSubmit={crear} aria-busy={enviando}><fieldset disabled={enviando} style={{ border: 0, padding: 0 }}><legend>Datos del personal</legend><div className="fila">
         <div className="campo"><label htmlFor="personal-nombre">Nombre</label><input id="personal-nombre" required value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} /></div>
         <div className="campo"><label htmlFor="personal-paterno">Primer apellido</label><input id="personal-paterno" required value={form.apellidoPaterno} onChange={(e) => setForm({ ...form, apellidoPaterno: e.target.value })} /></div>
@@ -97,10 +109,11 @@ export default function UsuariosPage() {
         <div className="campo"><label htmlFor="personal-telefono">Teléfono</label><input id="personal-telefono" type="tel" maxLength={20} value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} /></div>
       </div><div className="fila" style={{ marginTop: 12 }}>{ROLES_PERSONAL.map((rol) => <label className="casilla" key={rol}><input type="checkbox" checked={rolesElegidos.includes(rol)} onChange={() => alternarRol(rol)} />{rol}</label>)}<button disabled={enviando} className="boton">{enviando ? 'Guardando…' : editarId ? 'Guardar corrección' : 'Crear'}</button></div><fieldset><legend>Planteles de alcance</legend>{planteles.map((p) => <label key={p.id} className="casilla">
         <input type="checkbox" checked={plantelIds.includes(p.id)} onChange={() => setPlantelIds((ids) => ids.includes(p.id) ? ids.filter((id) => id !== p.id) : [...ids, p.id])} />{p.nombre}
-      </label>)}</fieldset>{editarId && <><label><input type="checkbox" checked={activo} onChange={(e) => setActivo(e.target.checked)} />Cuenta activa</label><button type="button" onClick={() => { setEditarId(null); setForm(FORM_INICIAL); }}>Cancelar edición</button></>}<p>{editarId ? 'El restablecimiento de contraseña se realiza en la acción específica con permisos.' : 'La cuenta se activa mediante una invitación enviada al correo institucional.'} Las correcciones de roles, planteles o acceso revocan las sesiones anteriores.</p></fieldset></form>
+      </label>)}</fieldset>{editarId && <><label><input type="checkbox" checked={activo} onChange={(e) => setActivo(e.target.checked)} />Cuenta activa</label><button type="button" onClick={() => { if (!legado) trabajo.ir('consulta'); else { setEditarId(null); setForm(FORM_INICIAL); } }}>Cancelar edición</button></>}<p>{editarId ? 'El restablecimiento de contraseña se realiza en la acción específica con permisos.' : 'La cuenta se activa mediante una invitación enviada al correo institucional.'} Las correcciones de roles, planteles o acceso revocan las sesiones anteriores.</p></fieldset></form>
     </section>}
     {error && <p className="mensaje-error" role="alert">{error}</p>}{mensaje && <p className="mensaje-ok" role="status">{mensaje}</p>}
 
+    {consultaVisible && <>
     {cuentaRestablecer && <section className="panel" aria-label="Restablecimiento de contraseña"><h2>Restablecer acceso: {cuentaRestablecer.nombre}</h2><p>La cuenta cerrará sus sesiones y deberá cambiar la contraseña temporal al ingresar.</p><form onSubmit={restablecer}><div className="campo"><label htmlFor="password-temporal-cuenta">Nueva contraseña temporal</label><input id="password-temporal-cuenta" type="password" autoComplete="new-password" required minLength={8} value={passwordTemporal} onChange={(e) => setPasswordTemporal(e.target.value)} /></div><div className="fila"><button className="boton" disabled={enviando}>{enviando ? 'Actualizando…' : 'Restablecer contraseña'}</button><button type="button" className="boton secundario" onClick={() => { setCuentaRestablecer(null); setPasswordTemporal(''); }} disabled={enviando}>Cancelar</button></div></form></section>}
 
     <div className="fila" style={{ marginBottom: 14 }}>
@@ -114,9 +127,10 @@ export default function UsuariosPage() {
 
     {cargando && <p role="status">Cargando usuarios…</p>}
     <div className="tabla-contenedor" role="region" aria-label="Listado de usuarios" tabIndex={0}><table className="tabla tabla-adaptable" aria-busy={cargando}><caption className="solo-lector">Identificador, nombre, correo, planteles y estatus de las cuentas visibles</caption><thead><tr><th scope="col">Identificador</th><th scope="col">Nombre</th><th scope="col">Correo</th><th scope="col">Plantel(es)</th><th scope="col">Roles/Estatus</th></tr></thead><tbody>
-      {resultado.datos.map((fila) => <tr key={fila.id}><td data-etiqueta="Identificador">{fila.matricula ?? fila.numEmpleado ?? fila.id}</td><td data-etiqueta="Nombre">{fila.nombre}</td><td data-etiqueta="Correo">{fila.correo ?? 'Restringido'}</td><td data-etiqueta="Plantel(es)">{fila.plantel ?? fila.planteles?.join(', ') ?? '—'}</td><td data-etiqueta="Roles/Estatus">{tipo === 'ADMINISTRATIVO' && fila.id !== sesion?.sub && <EliminarRegistro ruta={`/usuarios/${fila.id}`} nombre={`usuario ${fila.nombre}`} deshabilitado={enviando} alEliminar={async () => { setEditarId(null); setForm(FORM_INICIAL); setCuentaRestablecer(null); setPasswordTemporal(''); setMensaje('Cuenta eliminada definitivamente'); await cargar(1, tipo, plantelId, buscar); }} />}{fila.roles?.join(', ') ?? fila.estatus ?? (fila.activo ? 'ACTIVO' : 'INACTIVO')}{puedeRestablecer && (esSuperadmin || tipo !== 'ADMINISTRATIVO') && fila.id !== sesion?.sub && <button type="button" className="boton secundario chico" disabled={enviando} onClick={() => { setCuentaRestablecer(fila); setPasswordTemporal(''); setError(''); }}>Restablecer contraseña</button>}{esSuperadmin && tipo === 'ADMINISTRATIVO' && <button disabled={enviando} onClick={async () => { try { const { data } = await api.get(`/usuarios/${fila.id}/personal`); setEditarId(data.id); setActivo(data.activo); setPlantelIds(data.plantelIds); setRolesElegidos(data.roles.map((r: { clave: string }) => r.clave)); setForm({ email: data.email, nombre: data.nombre, apellidoPaterno: data.apellidoPaterno, apellidoMaterno: data.apellidoMaterno ?? '', telefono: data.telefono ?? '' }); } catch (err) { setError(mensajeDeError(err)); } }}>Corregir cuenta</button>}</td></tr>)}
+      {resultado.datos.map((fila) => <tr key={fila.id}><td data-etiqueta="Identificador">{fila.matricula ?? fila.numEmpleado ?? fila.id}</td><td data-etiqueta="Nombre">{fila.nombre}</td><td data-etiqueta="Correo">{fila.correo ?? 'Restringido'}</td><td data-etiqueta="Plantel(es)">{fila.plantel ?? fila.planteles?.join(', ') ?? '—'}</td><td data-etiqueta="Roles/Estatus">{tipo === 'ADMINISTRATIVO' && fila.id !== sesion?.sub && <EliminarRegistro ruta={`/usuarios/${fila.id}`} nombre={`usuario ${fila.nombre}`} deshabilitado={enviando} alEliminar={async () => { setEditarId(null); setForm(FORM_INICIAL); setCuentaRestablecer(null); setPasswordTemporal(''); setMensaje('Cuenta eliminada definitivamente'); await cargar(1, tipo, plantelId, buscar); }} />}{fila.roles?.join(', ') ?? fila.estatus ?? (fila.activo ? 'ACTIVO' : 'INACTIVO')}{puedeRestablecer && (esSuperadmin || tipo !== 'ADMINISTRATIVO') && fila.id !== sesion?.sub && <button type="button" className="boton secundario chico" disabled={enviando} onClick={() => { setCuentaRestablecer(fila); setPasswordTemporal(''); setError(''); }}>Restablecer contraseña</button>}{esSuperadmin && tipo === 'ADMINISTRATIVO' && <button disabled={enviando} onClick={async () => { if (!legado) { trabajo.ir('editar',fila.id); return; } try { const { data } = await api.get(`/usuarios/${fila.id}/personal`); setEditarId(data.id); setActivo(data.activo); setPlantelIds(data.plantelIds); setRolesElegidos(data.roles.map((r: { clave: string }) => r.clave)); setForm({ email: data.email, nombre: data.nombre, apellidoPaterno: data.apellidoPaterno, apellidoMaterno: data.apellidoMaterno ?? '', telefono: data.telefono ?? '' }); } catch (err) { setError(mensajeDeError(err)); } }}>Corregir cuenta</button>}</td></tr>)}
       {!cargando && !resultado.datos.length && <tr><td className="vacio" colSpan={5}>Sin resultados.</td></tr>}
     </tbody></table></div>
     <Paginador total={resultado.total} pagina={resultado.pagina} porPagina={resultado.porPagina} deshabilitado={cargando} onCambio={(pagina) => cargar(pagina, tipo, plantelId, buscar)} />
+    </>}
   </>;
 }

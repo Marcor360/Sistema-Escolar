@@ -1,3 +1,4 @@
+import { useModuloTrabajo } from '../components/ModuloTrabajo';
 import { useConfirmacion } from '../components/useConfirmacion';
 import { PanelCargos } from '../features/finanzas/PanelCargos';
 import { PanelPagos } from '../features/finanzas/PanelPagos';
@@ -16,7 +17,7 @@ import { Encabezado } from '../components/Encabezado';
 export default function FinanzasPage() {
   const confirmacion = useConfirmacion();
   const dialogoMotivo = useDialogoMotivo();
-  const [tab, setTab] = useState<'cargos' | 'pagos' | 'adeudos'>('cargos');
+  const [tabLegado, setTab] = useState<'cargos' | 'pagos' | 'adeudos'>('cargos');
   const [conceptos, setConceptos] = useState<Concepto[]>([]);
   const [ciclos, setCiclos] = useState<Ciclo[]>([]);
   const [resultadoCargos, setResultadoCargos] = useState<ResultadoCargos>({ datos: [], total: 0, pagina: 1, porPagina: 10 });
@@ -26,6 +27,10 @@ export default function FinanzasPage() {
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const trabajo = useModuloTrabajo(enviando), modo = trabajo.modo, legado = modo === 'legado';
+  const tab = legado ? tabLegado : modo === 'pago-nuevo' ? 'pagos' : modo === 'cargo-nuevo' || modo === 'colegiaturas' ? 'cargos' : modo as 'cargos' | 'pagos' | 'adeudos';
+  const listado = legado || ['cargos', 'pagos', 'adeudos'].includes(modo);
+  const pagina = Math.max(1, Number(trabajo.query.get('pagina')) || 1);
   const [planteles, setPlanteles] = useState<{ id: number; nombre: string }[]>([]);
   const [plantelOperacion, setPlantelOperacion] = useState('');
   const confirmarMasiva = async (preview: string, datos: object) => {
@@ -87,12 +92,12 @@ export default function FinanzasPage() {
   const cargarPagos = useCallback((pagina = 1) => cargarColeccion('pagos', pagina), [cargarColeccion]);
   const cargarAdeudos = useCallback((pagina = 1) => cargarColeccion('adeudos', pagina), [cargarColeccion]);
   // Tras una operación consulta el panel que está visible al terminar, aunque se haya cambiado de pestaña.
-  const cargarDatos = useCallback(() => cargarColeccion(tabActual.current), [cargarColeccion]);
+  const cargarDatos = useCallback(() => listado ? cargarColeccion(tabActual.current, pagina) : Promise.resolve(), [cargarColeccion, listado, pagina]);
   useEffect(() => {
-    void cargarCatalogos();
-    api.get('/planteles/mios').then(r => setPlanteles(r.data)).catch(e => setError(mensajeDeError(e)));
-  }, [cargarCatalogos]);
-  useEffect(() => { void cargarDatos(); }, [tab, cargarDatos]);
+    if (legado || ['cargo-nuevo','colegiaturas'].includes(modo)) void cargarCatalogos();
+    if (legado || ['colegiaturas', 'adeudos'].includes(modo)) api.get('/planteles/mios').then(r => setPlanteles(r.data)).catch(e => setError(mensajeDeError(e)));
+  }, [cargarCatalogos, legado, modo]);
+  useEffect(() => { if (listado) void cargarColeccion(tab, pagina); return () => { consultas.current.cargos++; consultas.current.pagos++; consultas.current.adeudos++; }; }, [tab, cargarColeccion, listado, pagina]);
   useEffect(() => () => {
     consultas.current.cargos++; consultas.current.pagos++; consultas.current.adeudos++;
   }, []);
@@ -111,6 +116,7 @@ export default function FinanzasPage() {
         monto: Number(formCargo.monto), descuento: Number(formCargo.descuento),
         fechaVencimiento: formCargo.fechaVencimiento || undefined,
       });
+      trabajo.guardado(); if (!legado) trabajo.ir('cargos');
       setFormCargo({ alumnoId: '', conceptoId: '', descripcion: '', monto: '', descuento: '0', fechaVencimiento: '' });
       setMensaje('Cargo registrado');
       cargarDatos();
@@ -128,6 +134,7 @@ export default function FinanzasPage() {
         cicloId: Number(formColegiaturas.cicloId),
         periodo: formColegiaturas.periodo,
       });
+      trabajo.guardado(); if (!legado) trabajo.ir('cargos');
       setMensaje(`Colegiaturas: ${data.generados} generadas, ${data.omitidos} ya existían (vencen ${data.vencimiento})`);
       cargarDatos();
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
@@ -165,6 +172,7 @@ export default function FinanzasPage() {
         claveIdempotencia: intentoPago.current.clave,
       });
       intentoPago.current = null;
+      trabajo.guardado(); if (!legado) trabajo.ir('pagos');
       setFormPago({ alumnoId: '', cargoId: '', monto: '', metodo: 'EFECTIVO', referencia: '' });
       setMensaje('Pago registrado y estado de cuenta actualizado');
       cargarDatos();
@@ -198,34 +206,34 @@ export default function FinanzasPage() {
   return (
     <>{confirmacion.elemento}{dialogoMotivo.elemento}
       <Encabezado titulo="Finanzas" detalle="Cargos, pagos, adeudos y cobranza" />
-      <CatalogoConceptos cambiado={() => { void cargarCatalogos(); }} />
+      {(legado || modo === 'conceptos') && <CatalogoConceptos cambiado={() => { void cargarCatalogos(); }} />}
 
-      <div className="tabs" role="tablist" aria-label="Secciones de finanzas">
+      {legado && <div className="tabs" role="tablist" aria-label="Secciones de finanzas">
         <button id="tab-cargos" role="tab" aria-selected={tab === 'cargos'} aria-controls="panel-cargos" tabIndex={tab === 'cargos' ? 0 : -1} className={tab === 'cargos' ? 'activa' : ''} onKeyDown={navegarTabs} onClick={() => setTab('cargos')}>Cargos</button>
         <button id="tab-pagos" role="tab" aria-selected={tab === 'pagos'} aria-controls="panel-pagos" tabIndex={tab === 'pagos' ? 0 : -1} className={tab === 'pagos' ? 'activa' : ''} onKeyDown={navegarTabs} onClick={() => setTab('pagos')}>Pagos</button>
         <button id="tab-adeudos" role="tab" aria-selected={tab === 'adeudos'} aria-controls="panel-adeudos" tabIndex={tab === 'adeudos' ? 0 : -1} className={tab === 'adeudos' ? 'activa' : ''} onKeyDown={navegarTabs} onClick={() => setTab('adeudos')}>Adeudos y cobranza</button>
-      </div>
+      </div>}
 
       {error && <p className="mensaje-error" role="alert">{error}</p>}
       {mensaje && <p className="mensaje-ok" role="status">{mensaje}</p>}
       {cargando && <p role="status">Cargando {tab}…</p>}
 
-      <Conciliacion />
-      <section className="panel"><label htmlFor="plantel-operacion">Plantel para operaciones masivas</label>
+      {(legado || modo === 'conciliacion') && <Conciliacion />}
+      {(legado || ['colegiaturas', 'adeudos'].includes(modo)) && <section className="panel"><label htmlFor="plantel-operacion">Plantel para operaciones masivas</label>
         <select id="plantel-operacion" value={plantelOperacion} onChange={(e) => setPlantelOperacion(e.target.value)}><option value="">Selecciona un plantel…</option>{planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select>
         <p>Las colegiaturas, recargos y avisos requieren previsualización y confirmación para este plantel.</p>
-      </section>
+      </section>}
       <div aria-busy={cargando}>
       {tab === 'cargos' && (
-        <PanelCargos crearCargo={crearCargo} formCargo={formCargo} setFormCargo={setFormCargo} conceptos={conceptos} enviando={enviando} generarColegiaturas={generarColegiaturas} formColegiaturas={formColegiaturas} setFormColegiaturas={setFormColegiaturas} ciclos={ciclos} aplicarRecargos={aplicarRecargos} resultadoCargos={resultadoCargos} corregir={corregir} cargarCargos={cargarCargos} />
+        <PanelCargos vista={legado ? 'legado' : modo === 'cargo-nuevo' ? 'nuevo' : modo === 'colegiaturas' ? 'colegiaturas' : 'consulta'} crearCargo={crearCargo} formCargo={formCargo} setFormCargo={setFormCargo} conceptos={conceptos} enviando={enviando} generarColegiaturas={generarColegiaturas} formColegiaturas={formColegiaturas} setFormColegiaturas={setFormColegiaturas} ciclos={ciclos} aplicarRecargos={aplicarRecargos} resultadoCargos={resultadoCargos} corregir={corregir} cargarCargos={legado ? cargarCargos : async p => trabajo.actualizar({ pagina: String(p || 1) })} />
       )}
 
       {tab === 'pagos' && (
-        <PanelPagos registrarPago={registrarPago} formPago={formPago} setFormPago={setFormPago} enviando={enviando} resultadoPagos={resultadoPagos} corregir={corregir} cargarPagos={cargarPagos} />
+        <PanelPagos vista={legado ? 'legado' : modo === 'pago-nuevo' ? 'nuevo' : 'consulta'} registrarPago={registrarPago} formPago={formPago} setFormPago={setFormPago} enviando={enviando} resultadoPagos={resultadoPagos} corregir={corregir} cargarPagos={legado ? cargarPagos : async p => trabajo.actualizar({ pagina: String(p || 1) })} />
       )}
 
       {tab === 'adeudos' && (
-        <PanelAdeudos enviando={enviando} enviarAvisos={enviarAvisos} descargarExcel={descargarExcel} adeudos={adeudos} corregir={corregir} totalAdeudos={totalAdeudos} paginaAdeudos={paginaAdeudos} cargarAdeudos={cargarAdeudos} />
+        <PanelAdeudos enviando={enviando} enviarAvisos={enviarAvisos} descargarExcel={descargarExcel} adeudos={adeudos} corregir={corregir} totalAdeudos={totalAdeudos} paginaAdeudos={paginaAdeudos} cargarAdeudos={legado ? cargarAdeudos : async p => trabajo.actualizar({ pagina: String(p || 1) })} />
       )}
       </div>
     </>

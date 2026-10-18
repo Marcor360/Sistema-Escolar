@@ -4,6 +4,7 @@ import { FORM_INICIAL } from './tipos';
 import type { Plantel } from './tipos';
 
 interface Props {
+  cancelar?: () => void;
   editando: number | null;
   crear: (e: FormEvent) => Promise<void>;
   enviando: boolean;
@@ -20,7 +21,7 @@ interface Props {
 }
 
 export function FormularioAlumno({
-  editando, crear, enviando, form, setForm, planteles, dar, setEditando, error, mensaje,
+  editando, crear, enviando, form, setForm, planteles, dar, setEditando, error, mensaje, cancelar,
 }: Props) {
   const nuevo = editando === null;
   const curpValida = /^[A-ZÑ&]{4}\d{6}[HM][A-ZÑ]{5}[A-Z0-9]\d$/.test(form.curp.trim().toUpperCase());
@@ -127,7 +128,7 @@ export function FormularioAlumno({
             {enviando ? 'Guardando…' : nuevo ? 'Registrar alumno' : 'Guardar cambios'}
           </button>
           {!nuevo && <button type="button" className="boton secundario" disabled={enviando}
-            onClick={() => { setEditando(null); setForm(FORM_INICIAL); }}>
+            onClick={() => { if (cancelar) cancelar(); else { setEditando(null); setForm(FORM_INICIAL); } }}>
             Cancelar edición
           </button>}
         </div>

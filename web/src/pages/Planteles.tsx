@@ -1,3 +1,5 @@
+import { useModuloTrabajo } from '../components/ModuloTrabajo';
+import { Paginador } from '../components/Paginador';
 import { EliminarRegistro } from '../components/EliminarRegistro';
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
@@ -29,15 +31,21 @@ export default function PlantelesPage() {
   const [mensaje, setMensaje] = useState('');
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
+  const trabajo = useModuloTrabajo(guardando), legado = trabajo.modo === 'legado', consultaVisible = legado || trabajo.modo === 'consulta';
+  const pagina = Math.max(1,Number(trabajo.query.get('pagina')) || 1), buscar = trabajo.query.get('buscar') || '';
+  const [termino,setTermino] = useState(buscar), [total,setTotal] = useState(0);
+  const consulta = useRef(0);
   const [cargandoDetalle, setCargandoDetalle] = useState(false);
   const consultaDetalle = useRef(0);
 
   const cargar = useCallback(async () => {
     setCargando(true);
-    try { const { data } = await api.get<Plantel[]>('/planteles'); setPlanteles(data); }
-    catch (err) { setError(mensajeDeError(err)); }
-    finally { setCargando(false); }
-  }, []);
+    const actual = ++consulta.current;
+    try { if(legado) { const {data}=await api.get<Plantel[]>('/planteles'); if(actual===consulta.current) {setPlanteles(data);setTotal(data.length);} }
+      else { const {data}=await api.get<{datos:Plantel[];total:number}>('/planteles/listado',{params:{pagina,porPagina:10,buscar}}); if(actual===consulta.current){setPlanteles(data.datos);setTotal(data.total);} }
+    } catch(err) { if(actual===consulta.current)setError(mensajeDeError(err)); }
+    finally { if(actual===consulta.current)setCargando(false); }
+  }, [legado,pagina,buscar]);
   const seleccionar = async (id: number) => {
     const actual = ++consultaDetalle.current;
     setError(''); setDetalle(null); setCargandoDetalle(true);
@@ -50,9 +58,9 @@ export default function PlantelesPage() {
     finally { if (actual === consultaDetalle.current) setCargandoDetalle(false); }
   };
   useEffect(() => {
-    void cargar();
-    return () => { consultaDetalle.current += 1; };
-  }, [cargar]);
+    if(consultaVisible) void cargar();
+    return () => { consultaDetalle.current += 1; consulta.current++; };
+  }, [cargar,consultaVisible]);
 
   const crear = async (e: FormEvent) => {
     e.preventDefault();
@@ -65,6 +73,7 @@ export default function PlantelesPage() {
         municipio: alta.municipio || undefined,
         telefono: alta.telefono || undefined,
       });
+      trabajo.guardado(); if(!legado) trabajo.ir('detalle',data.id);
       setAlta({ clave: '', nombre: '', direccion: '', municipio: '', telefono: '' });
       setMensaje('Plantel creado. Revisa el detalle y asigna director y personal.'); await cargar(); await seleccionar(data.id);
     } catch (err) { setError(mensajeDeError(err)); }
@@ -74,6 +83,7 @@ export default function PlantelesPage() {
   const comenzarEdicion = (plantel: Plantel) => {
     if (!esSuperadmin || guardando) return;
     setError(''); setMensaje('');
+    if(!legado) trabajo.ir('editar',plantel.id);
     setEdicion({
       id: plantel.id,
       nombre: plantel.nombre,
@@ -94,8 +104,8 @@ export default function PlantelesPage() {
         nombre: nombre.trim(), direccion: direccion.trim(),
         municipio: municipio.trim(), telefono: telefono.trim(), activo,
       });
-      await cargar();
-      await seleccionar(id);
+      trabajo.guardado(); if(!legado) trabajo.ir('consulta');
+      if(legado) { await cargar(); await seleccionar(id); }
       setMensaje('Datos del plantel actualizados.');
     } catch (err) {
       setError(mensajeDeError(err));
@@ -104,6 +114,17 @@ export default function PlantelesPage() {
     }
   };
 
+  useEffect(() => {
+    if(legado || !trabajo.id || !['editar','detalle'].includes(trabajo.modo)) return;
+    let vigente = true;
+    if(trabajo.modo === 'detalle') { void seleccionar(trabajo.id); return; }
+    if(!esSuperadmin) return;
+    api.get<Plantel>(`/planteles/${trabajo.id}`).then(({data:p})=>{if(vigente)setEdicion({id:p.id,nombre:p.nombre,direccion:p.direccion || '',municipio:p.municipio || '',telefono:p.telefono || '',activo:p.activo});}).catch(err=>{if(vigente)setError(mensajeDeError(err));});
+    return()=>{vigente=false;};
+    // seleccionar limpia el detalle antes de cada consulta y descarta respuestas antiguas.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trabajo.id,trabajo.modo,legado,esSuperadmin]);
+  useEffect(()=>{setTermino(buscar);},[buscar]);
   const operar = async (accion: () => Promise<unknown>, texto: string) => {
     if (!detalle || guardando) return;
     setGuardando(true); setError(''); setMensaje('');
@@ -117,7 +138,7 @@ export default function PlantelesPage() {
     {error && <p role="alert" className="mensaje-error">{error}</p>}
     {mensaje && <p role="status" className="mensaje-ok">{mensaje}</p>}
 
-    {esSuperadmin && <section className="panel">
+    {esSuperadmin && (legado || trabajo.modo === 'nuevo') && <section className="panel">
       <h2>Nuevo plantel</h2>
       <p className="texto-ayuda" id="ayuda-nuevo-plantel">Paso 1: registra la sede. Después selecciona el plantel para vincular su director y personal. Los alumnos se inscriben en grupos desde Control escolar.</p>
       <form className="fila" onSubmit={crear} aria-busy={guardando} aria-describedby="ayuda-nuevo-plantel">
@@ -130,8 +151,9 @@ export default function PlantelesPage() {
       </form>
     </section>}
 
-    <section className="panel">
-      <div className="cabecera-listado"><h2>Directorio de planteles</h2><p>{planteles.length} planteles</p></div>
+    {consultaVisible && <section className="panel">
+      {!legado && <form className="fila" onSubmit={e=>{e.preventDefault();trabajo.actualizar({buscar:termino.trim(),pagina:'1'});}}><label>Buscar por clave o nombre<input value={termino} onChange={e=>setTermino(e.target.value)} /></label><button>Buscar</button></form>}
+      <div className="cabecera-listado"><h2>Directorio de planteles</h2><p>{total} planteles</p></div>
       {cargando && <p role="status">Cargando planteles…</p>}
       <div className="tabla-contenedor" role="region" aria-label="Listado de planteles" tabIndex={0}>
         <table className="tabla tabla-adaptable" aria-busy={cargando}>
@@ -144,15 +166,16 @@ export default function PlantelesPage() {
               <td data-etiqueta="Nombre">{p.nombre}</td>
               <td data-etiqueta="Municipio">{p.municipio ?? '—'}</td>
               <td data-etiqueta="Estatus"><span className={`sello ${p.activo ? 'ok' : 'neutro'}`}>{p.activo ? 'Activo' : 'Inactivo'}</span></td>
-              <td data-etiqueta="Acciones" className="derecha"><span className="acciones-fila"><EliminarRegistro ruta={`/planteles/${p.id}`} nombre={`plantel ${p.clave}`} deshabilitado={guardando} alEliminar={async () => { consultaDetalle.current++; setDetalle(null); setEdicion(null); setCargandoDetalle(false); setMensaje('Plantel eliminado definitivamente'); await cargar(); }} /><button className="boton secundario chico" disabled={guardando} onClick={() => seleccionar(p.id)}>Ver detalle</button>{esSuperadmin && <button type="button" className="boton secundario chico" disabled={guardando} onClick={() => comenzarEdicion(p)}>Editar</button>}</span></td>
+              <td data-etiqueta="Acciones" className="derecha"><span className="acciones-fila"><EliminarRegistro ruta={`/planteles/${p.id}`} nombre={`plantel ${p.clave}`} deshabilitado={guardando} alEliminar={async () => { consultaDetalle.current++; setDetalle(null); setEdicion(null); setCargandoDetalle(false); setMensaje('Plantel eliminado definitivamente'); await cargar(); }} /><button className="boton secundario chico" disabled={guardando} onClick={() => {if(legado) void seleccionar(p.id); else trabajo.ir('detalle',p.id);}}>Ver detalle</button>{esSuperadmin && <button type="button" className="boton secundario chico" disabled={guardando} onClick={() => comenzarEdicion(p)}>Editar</button>}</span></td>
             </tr>)}
             {!cargando && planteles.length === 0 && <tr><td colSpan={6} className="vacio">No hay planteles disponibles para tu cuenta. Si tienes permisos de superadministración, puedes registrar el primero.</td></tr>}
           </tbody>
         </table>
       </div>
-    </section>
+      {!legado && <Paginador total={total} pagina={pagina} porPagina={10} deshabilitado={cargando} onCambio={p=>trabajo.actualizar({pagina:String(p)})} />}
+    </section>}
 
-    {esSuperadmin && edicion && <section className="panel" aria-labelledby="titulo-editar-plantel">
+    {esSuperadmin && (legado || (trabajo.modo === 'editar' && edicion?.id === trabajo.id)) && edicion && <section className="panel" aria-labelledby="titulo-editar-plantel">
       <h2 id="titulo-editar-plantel">Editar plantel: {planteles.find((p) => p.id === edicion.id)?.clave}</h2>
       <p className="texto-ayuda">Puedes corregir nombre, ubicación, teléfono y estatus. La clave institucional y el ID no se modifican. Para desactivar un plantel primero deben liberarse sus alumnos, grupos y personal activos.</p>
       <form className="fila" onSubmit={guardarEdicion} aria-busy={guardando}>
@@ -162,12 +185,12 @@ export default function PlantelesPage() {
         <div className="campo"><label htmlFor="editar-plantel-telefono">Teléfono</label><input id="editar-plantel-telefono" maxLength={20} disabled={guardando} value={edicion.telefono} onChange={(e) => setEdicion({ ...edicion, telefono: e.target.value })} /></div>
         <div className="campo"><label htmlFor="editar-plantel-activo">Estatus</label><select id="editar-plantel-activo" disabled={guardando} value={edicion.activo ? 'activo' : 'inactivo'} onChange={(e) => setEdicion({ ...edicion, activo: e.target.value === 'activo' })}><option value="activo">Activo</option><option value="inactivo">Inactivo</option></select></div>
         <button type="submit" className="boton" disabled={guardando}>{guardando ? 'Guardando…' : 'Guardar cambios'}</button>
-        <button type="button" className="boton secundario" disabled={guardando} onClick={() => setEdicion(null)}>Cancelar</button>
+        <button type="button" className="boton secundario" disabled={guardando} onClick={() => { if(legado) setEdicion(null); else trabajo.ir('consulta'); }}>Cancelar</button>
       </form>
     </section>}
 
     {cargandoDetalle && <p role="status">Cargando detalle del plantel…</p>}
-    {detalle && <section className="panel">
+    {(legado || trabajo.modo === 'detalle') && detalle && <section className="panel">
       <h2>{detalle.nombre}</h2>
       <p className="detalle">{detalle.direccion || 'Sin dirección'} · {detalle.municipio || 'Sin municipio'} · {detalle.telefono || 'Sin teléfono'}</p>
       <div className="fila"><span className="sello neutro">{detalle.conteos.alumnos} alumnos</span><span className="sello neutro">{detalle.conteos.grupos} grupos</span></div>

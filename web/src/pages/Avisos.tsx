@@ -1,3 +1,4 @@
+import { useModuloTrabajo } from '../components/ModuloTrabajo';
 import { FormEvent, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { Encabezado } from '../components/Encabezado';
@@ -8,15 +9,19 @@ export default function AvisosPage() {
   const [form, setForm] = useState(FORM_INICIAL);
   const [error, setError] = useState('');
   const [exito, setExito] = useState('');
+  const [enviando,setEnviando] = useState(false);
+  const trabajo = useModuloTrabajo(enviando);
 
   const difundir = async (e: FormEvent) => {
     e.preventDefault();
+    if(enviando) return;
+    setEnviando(true);
     setError(''); setExito('');
     try {
       const { data } = await api.post('/notificaciones/difundir', form);
       setExito(`Aviso enviado a ${data.enviadas} personas con el rol ${form.rol}.`);
-      setForm(FORM_INICIAL);
-    } catch (err) { setError(mensajeDeError(err)); }
+      trabajo.guardado(); setForm(FORM_INICIAL);
+    } catch (err) { setError(mensajeDeError(err)); } finally {setEnviando(false);}
   };
 
   return (
@@ -25,7 +30,7 @@ export default function AvisosPage() {
 
       <section className="panel">
         <h2>Nuevo aviso</h2>
-        <form onSubmit={difundir}>
+        <form onSubmit={difundir} aria-busy={enviando}>
           <div className="fila">
             <div className="campo" style={{ flex: '1 1 280px' }}><label>Título</label>
               <input required maxLength={150} value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} />
@@ -49,11 +54,11 @@ export default function AvisosPage() {
             </div>
           </div>
           <div className="fila" style={{ marginTop: 10 }}>
-            <button className="boton">Enviar aviso</button>
+            <button className="boton" disabled={enviando}>Enviar aviso</button>
           </div>
         </form>
-        {error && <p className="mensaje-error">{error}</p>}
-        {exito && <p className="mensaje-ok">{exito}</p>}
+        {error && <p className="mensaje-error" role="alert">{error}</p>}
+        {exito && <p className="mensaje-ok" role="status">{exito}</p>}
       </section>
     </>
   );

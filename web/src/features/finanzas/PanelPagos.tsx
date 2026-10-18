@@ -5,6 +5,7 @@ import { SelectorBuscable } from '../../components/SelectorBuscable';
 import { Paginador } from '../../components/Paginador';
 import type { Alumno, Cargo, ResultadoPagos } from './tipos';
 interface Props {
+vista?: 'legado' | 'consulta' | 'nuevo' | 'colegiaturas';
 registrarPago: (e: FormEvent) => Promise<void>;
 formPago: { alumnoId: string; cargoId: string; monto: string; metodo: string; referencia: string; };
 setFormPago: React.Dispatch<React.SetStateAction<{ alumnoId: string; cargoId: string; monto: string; metodo: string; referencia: string; }>>;
@@ -13,8 +14,8 @@ resultadoPagos: ResultadoPagos;
 corregir: (tipo: 'cargos' | 'pagos', id: number) => void;
 cargarPagos: (pagina?: number) => Promise<void>;
 }
-export function PanelPagos({ registrarPago, formPago, setFormPago, enviando, resultadoPagos, corregir, cargarPagos }: Props) { return (<div id="panel-pagos" role="tabpanel" aria-labelledby="tab-pagos" tabIndex={0}>
-          <section className="panel">
+export function PanelPagos({ vista = 'legado', registrarPago, formPago, setFormPago, enviando, resultadoPagos, corregir, cargarPagos }: Props) { return (<div id="panel-pagos" role="tabpanel" aria-label="Pagos" tabIndex={0}>
+          {(vista === 'legado' || vista === 'nuevo') && <section className="panel">
             <h2>Registrar pago manual</h2>
             <form onSubmit={registrarPago} className="fila">
               <SelectorBuscable<Alumno> ruta="/finanzas/alumnos" valor={formPago.alumnoId} cambiar={(id) => setFormPago({ ...formPago, alumnoId: id, cargoId: '' })} etiqueta="Alumno" texto={(a) => `${a.matricula} — ${a.usuario.nombre} ${a.usuario.apellidoPaterno}`} />
@@ -33,9 +34,9 @@ export function PanelPagos({ registrarPago, formPago, setFormPago, enviando, res
               </div>
               <button disabled={enviando} className="boton">Registrar pago</button>
             </form>
-          </section>
+          </section>}
 
-          <div className="tabla-contenedor" role="region" aria-label="Listado de pagos" tabIndex={0}><table className="tabla">
+          {(vista === 'legado' || vista === 'consulta') && <><div className="tabla-contenedor" role="region" aria-label="Listado de pagos" tabIndex={0}><table className="tabla">
             <thead><tr><th>Fecha</th><th>Alumno</th><th className="derecha">Monto</th><th>Método</th><th>Referencia</th><th>Estatus</th><th>Correcciones</th></tr></thead>
             <tbody>
               {resultadoPagos.datos.map((p) => (
@@ -51,5 +52,5 @@ export function PanelPagos({ registrarPago, formPago, setFormPago, enviando, res
               {resultadoPagos.datos.length === 0 && <tr><td className="vacio" colSpan={6}>Sin pagos registrados.</td></tr>}
             </tbody>
           </table></div>
-          <Paginador total={resultadoPagos.total} pagina={resultadoPagos.pagina} porPagina={resultadoPagos.porPagina} onCambio={cargarPagos} />
+          <Paginador total={resultadoPagos.total} pagina={resultadoPagos.pagina} porPagina={resultadoPagos.porPagina} onCambio={cargarPagos} /></>}
         </div>); }

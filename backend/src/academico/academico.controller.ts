@@ -39,6 +39,10 @@ export class AcademicoController {
   }
 
   // ---- Ciclos ----
+  @Get('ciclos/listado') @Roles('ADMINISTRATIVO', 'FINANZAS', 'MAESTRO')
+  consultarCiclos(@Query() query: ListarMateriasDto) { return this.ciclos.consultarCiclos(query); }
+  @Get('ciclos/:id') @Roles('ADMINISTRATIVO', 'FINANZAS', 'MAESTRO')
+  obtenerCiclo(@Param('id', ParseIntPipe) id: number) { return this.ciclos.obtenerCiclo(id); }
   @Get('ciclos') @Roles('ADMINISTRATIVO', 'FINANZAS', 'MAESTRO')
   listarCiclos() { return this.service.listarCiclos(); }
   @Post('ciclos') @Roles('ADMINISTRATIVO') crearCiclo(@Body() dto: CicloDto) {
@@ -70,6 +74,8 @@ export class AcademicoController {
   @ApiOperation({ summary: 'Catálogo global activo paginado y búsqueda literal por clave o nombre; conserva el endpoint de arreglo' })
   @Get('materias/listado') @Roles('ADMINISTRATIVO', 'FINANZAS', 'MAESTRO')
   consultarMaterias(@Query() query: ListarMateriasDto) { return this.service.consultarMaterias(query); }
+  @Get('materias/:id') @Roles('ADMINISTRATIVO', 'FINANZAS', 'MAESTRO')
+  obtenerMateria(@Param('id', ParseIntPipe) id: number) { return this.service.obtenerMateria(id); }
   @Get('materias') @Roles('ADMINISTRATIVO', 'FINANZAS', 'MAESTRO')
   listarMaterias() { return this.service.listarMaterias(); }
   @Post('materias') @Roles('ADMINISTRATIVO') crearMateria(@Body() dto: MateriaDto) {
@@ -89,6 +95,8 @@ export class AcademicoController {
   listarGrupos(@CurrentUser() user: JwtUser, @Query() query: ListarGruposDto) {
     return this.service.listarGrupos(user, query);
   }
+  @Get('grupos/:id') @Roles('ADMINISTRATIVO')
+  obtenerGrupo(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) { return this.service.obtenerGrupo(id,user); }
   @Post('grupos') @Roles('ADMINISTRATIVO') crearGrupo(@Body() dto: GrupoDto, @CurrentUser() user: JwtUser) {
     return this.service.crearGrupo(dto, user);
   }

@@ -5,6 +5,7 @@ import { SelectorBuscable } from '../../components/SelectorBuscable';
 import { Paginador } from '../../components/Paginador';
 import type { Alumno, Concepto, Ciclo, ResultadoCargos } from './tipos';
 interface Props {
+vista?: 'legado' | 'consulta' | 'nuevo' | 'colegiaturas';
 crearCargo: (e: FormEvent) => Promise<void>;
 formCargo: { alumnoId: string; conceptoId: string; descripcion: string; monto: string; descuento: string; fechaVencimiento: string; };
 setFormCargo: React.Dispatch<React.SetStateAction<{ alumnoId: string; conceptoId: string; descripcion: string; monto: string; descuento: string; fechaVencimiento: string; }>>;
@@ -19,8 +20,8 @@ resultadoCargos: ResultadoCargos;
 corregir: (tipo: 'cargos' | 'pagos', id: number) => void;
 cargarCargos: (pagina?: number) => Promise<void>;
 }
-export function PanelCargos({ crearCargo, formCargo, setFormCargo, conceptos,  enviando, generarColegiaturas, formColegiaturas, setFormColegiaturas, ciclos, aplicarRecargos, resultadoCargos, corregir, cargarCargos }: Props) { return (<div id="panel-cargos" role="tabpanel" aria-labelledby="tab-cargos" tabIndex={0}>
-          <section className="panel">
+export function PanelCargos({ vista = 'legado', crearCargo, formCargo, setFormCargo, conceptos,  enviando, generarColegiaturas, formColegiaturas, setFormColegiaturas, ciclos, aplicarRecargos, resultadoCargos, corregir, cargarCargos }: Props) { return (<div id="panel-cargos" role="tabpanel" aria-label="Cargos" tabIndex={0}>
+          {(vista === 'legado' || vista === 'nuevo') && <section className="panel">
             <h2>Nuevo cargo individual</h2>
             <form onSubmit={crearCargo} className="fila">
               <SelectorBuscable<Alumno> ruta="/finanzas/alumnos" valor={formCargo.alumnoId} cambiar={(id) => setFormCargo({ ...formCargo, alumnoId: id })} etiqueta="Alumno" texto={(a) => `${a.matricula} — ${a.usuario.nombre} ${a.usuario.apellidoPaterno}`} />
@@ -52,9 +53,9 @@ export function PanelCargos({ crearCargo, formCargo, setFormCargo, conceptos,  e
               </div>
               <button disabled={enviando} className="boton">Registrar cargo</button>
             </form>
-          </section>
+          </section>}
 
-          <section className="panel">
+          {(vista === 'legado' || vista === 'colegiaturas') && <section className="panel">
             <h2>Generar colegiaturas del periodo</h2>
             <form onSubmit={generarColegiaturas} className="fila">
               <div className="campo"><label htmlFor="finanzas-campo-5">Ciclo</label>
@@ -70,9 +71,9 @@ export function PanelCargos({ crearCargo, formCargo, setFormCargo, conceptos,  e
               <button disabled={enviando} className="boton">Generar para inscritos</button>
               <button type="button" className="boton secundario" onClick={aplicarRecargos}>Aplicar recargos a vencidos</button>
             </form>
-          </section>
+          </section>}
 
-          <div className="tabla-contenedor" role="region" aria-label="Listado de cargos" tabIndex={0}><table className="tabla">
+          {(vista === 'legado' || vista === 'consulta') && <><div className="tabla-contenedor" role="region" aria-label="Listado de cargos" tabIndex={0}><table className="tabla">
             <thead><tr><th>Alumno</th><th>Descripción</th><th>Periodo</th><th>Vence</th><th className="derecha">Monto</th><th className="derecha">Recargo</th><th>Estatus</th><th>Correcciones</th></tr></thead>
             <tbody>
               {resultadoCargos.datos.map((c) => (
@@ -89,5 +90,5 @@ export function PanelCargos({ crearCargo, formCargo, setFormCargo, conceptos,  e
               {resultadoCargos.datos.length === 0 && <tr><td className="vacio" colSpan={7}>Sin cargos registrados.</td></tr>}
             </tbody>
           </table></div>
-          <Paginador total={resultadoCargos.total} pagina={resultadoCargos.pagina} porPagina={resultadoCargos.porPagina} onCambio={cargarCargos} />
+          <Paginador total={resultadoCargos.total} pagina={resultadoCargos.pagina} porPagina={resultadoCargos.porPagina} onCambio={cargarCargos} /></>}
         </div>); }
