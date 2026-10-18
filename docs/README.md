@@ -1,6 +1,6 @@
 # Documentación de Sistema Escolar
 
-Entrada de lectura para la candidata 1.26.2. Revisión documental: 18 de octubre de 2026. Las guías vigentes describen el código consolidado; las auditorías anteriores conservan su propio corte. El README principal resume las funciones y los requisitos de desarrollo, operación y validación.
+Entrada de lectura para la candidata 1.26.3. Revisión documental: 18 de octubre de 2026. Las guías vigentes describen el código consolidado; las auditorías anteriores conservan su propio corte. El README principal resume las funciones y los requisitos de desarrollo, operación y validación.
 
 ## Leer según la tarea
 
