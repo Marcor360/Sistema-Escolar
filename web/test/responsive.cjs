@@ -88,6 +88,10 @@ async function esperarServidor() {
           }], total: 1, pagina: 1, porPagina: 10,
         };
       if (path.endsWith('/docentes/1')) data = { id: 1, numEmpleado: 'DOC-QA-001', estatus: 'ACTIVO', usuario: { nombre: 'Docente con nombre extenso', apellidoPaterno: 'Prueba', email: 'docente.con.correo.extenso@example.test' }, plantelIds: [1], clases: [] };
+      if (path.endsWith('/cartera')) data = { datos: [], total: 0, pagina: 1, porPagina: 10 };
+      if (path.endsWith('/recursamientos')) data = { datos: [], total: 0, pagina: 1, porPagina: 10 };
+      if (path.endsWith('/programas-especiales')) data = { datos: [], total: 0, pagina: 1, porPagina: 10 };
+      if (/\/academico\/catalogos\/(niveles|carreras|periodos)$/.test(path)) data = { datos: [{ id: 1, clave: 'NIV-QA', nombre: 'Catálogo institucional de prueba', activo: true }], total: 1, pagina: 1, porPagina: 10 };
       if (path.endsWith('/academico/grupos'))
         data = { datos: [{ id: 1, nombre: 'GR-QA-001', grado: 'Primero', turno: 'MATUTINO',
           ciclo: { id: 1, clave: '2026-2027', activo: true, estado: 'VIGENTE' },
@@ -254,6 +258,68 @@ async function esperarServidor() {
     }
     console.log('PASS analytics ' + width);
   }
+  for (const width of [320, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(baseUrl + '/catalogos-academicos');
+    await page.getByRole('button', { name: /Niveles académicos/ }).click();
+    await expect(page.getByText('NIV-QA', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Registrar', exact: true }).click();
+    await expect(page.getByRole('navigation', { name: 'Navegación principal' })).toHaveCount(0);
+    await page.getByLabel('Nombre', { exact: true }).fill('Catálogo pendiente');
+    await page.getByRole('button', { name: 'Cancelar y volver' }).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
+    await expect(page.getByText('NIV-QA', { exact: true })).toBeVisible();
+    if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw Error('Catálogos desborda ' + width);
+    console.log('PASS catálogos ' + width);
+  }
+  for (const width of [320, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(baseUrl + '/programas-especiales');
+    await page.getByRole('button', { name: /Consultar programas/ }).click();
+    await expect(page.getByText('Sin programas para esta consulta.')).toBeVisible();
+    await page.getByRole('link', { name: 'Registrar programa', exact: true }).click();
+    await expect(page.getByRole('navigation', { name: 'Navegación principal' })).toHaveCount(0);
+    await page.getByLabel('Nombre', { exact: true }).fill('Programa pendiente');
+    await page.getByRole('button', { name: 'Cancelar y volver' }).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
+    await expect(page.getByText('Sin programas para esta consulta.')).toBeVisible();
+    if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw Error('Programas desborda ' + width);
+    console.log('PASS programas especiales ' + width);
+  }
+  for (const width of [320, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(baseUrl + '/recursamientos');
+    await page.getByRole('button', { name: /Consultar intentos/ }).click();
+    await expect(page.getByText('Sin intentos para esta consulta.')).toBeVisible();
+    await page.getByRole('link', { name: 'Nuevo recursamiento', exact: true }).click();
+    await expect(page.getByRole('navigation', { name: 'Navegación principal' })).toHaveCount(0);
+    const cupo = page.getByLabel('Cupo total manual de la clase');
+    await expect(cupo).toHaveValue('');
+    await cupo.fill('8');
+    await page.getByRole('button', { name: 'Cancelar y volver' }).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
+    await expect(page.getByText('Sin intentos para esta consulta.')).toBeVisible();
+    if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw Error('Recursamientos desborda ' + width);
+    console.log('PASS recursamientos ' + width);
+  }
+  for (const width of [320, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(baseUrl + '/apertura-cartera');
+    await page.getByRole('button', { name: /Consultar aperturas/ }).click();
+    await expect(page.getByText('Sin aperturas para esta consulta.')).toBeVisible();
+    await page.getByRole('link', { name: 'Nueva apertura', exact: true }).click();
+    await expect(page.getByRole('navigation', { name: 'Navegación principal' })).toHaveCount(0);
+    await page.getByLabel('Fecha de vencimiento').fill('2054-02-05');
+    await page.getByRole('button', { name: 'Volver a aperturas' }).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
+    await expect(page.getByText('Sin aperturas para esta consulta.')).toBeVisible();
+    if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw Error('Cartera desborda ' + width);
+    console.log('PASS cartera ' + width);
+  }
   for (const width of [320, 360, 700, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto(baseUrl + '/docentes');
@@ -383,7 +449,7 @@ async function esperarServidor() {
       })),
     );
     if (
-      iconos.length !== 17 ||
+      iconos.length !== await page.locator('.lateral nav a').count() || iconos.length === 0 ||
       iconos.some(
         (svg) => svg.hidden !== 'true' || svg.focusable !== 'false' || !svg.path || svg.width !== 20 || !svg.label,
       )
