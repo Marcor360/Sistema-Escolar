@@ -1,3 +1,4 @@
+import { validarContextoGrupo } from '../catalogos-academicos/contexto-grupo';
 import { exigirCambios } from '../common/exigir-cambios';
 import { esMaestroRestringido, exigirConsultaAcademica } from '../common/politica-acceso';
 import { BitacoraAcademica } from '../entities/bitacora-academica.entity';
@@ -49,7 +50,11 @@ async listarGrupos(user: JwtUser, query: ListarGruposDto) {
     if (maestroPuro && gruposDocente.length === 0) return { datos: [], total: 0, pagina, porPagina };
     const [datos, total] = await this.grupos.findAndCount({
       where: {
+        tipo: 'REGULAR',
         ...(maestroPuro ? { id: In(gruposDocente) } : {}),
+        ...(query.nivelId ? { nivelId: query.nivelId } : {}),
+        ...(query.carreraId ? { carreraId: query.carreraId } : {}),
+        ...(query.periodoAcademicoId ? { periodoAcademicoId: query.periodoAcademicoId } : {}),
         ...(query.buscar ? { nombre: Like(`%${query.buscar}%`) } : {}),
         ...(query.cicloId ? { cicloId: query.cicloId } : { ciclo: { activo: true }, plantel: { activo: true } }),
         ...(planteles === null ? {} : { plantelId: In(planteles) }),
@@ -69,7 +74,13 @@ async crearGrupo(dto: GrupoDto, user: JwtUser) {
     const plantel = await this.dataSource.getRepository(Plantel).findOne({ where: { id: dto.plantelId, activo: true } });
     if (!plantel) throw new ConflictException('El plantel no está activo');
     try {
-      return await this.grupos.save(this.grupos.create(dto));
+      return await this.dataSource.transaction(async (manager) => {
+        const sede = await manager.getRepository(Plantel).findOne({ where: { id: dto.plantelId }, lock: { mode: 'pessimistic_write' } });
+        if (!sede?.activo) throw new ConflictException('El plantel no está activo');
+        await validarContextoGrupo(manager, dto);
+        const repo = manager.getRepository(Grupo);
+        return repo.save(repo.create(dto));
+      });
     } catch (error) {
       if (esConflictoUnico(error)) throw new ConflictException('Ya existe un grupo con ese nombre en el ciclo');
       throw error;
@@ -80,6 +91,7 @@ async actualizarGrupo(id: number, dto: ActualizarGrupoDto, user: JwtUser) {
     const grupo = await this.grupos.findOne({ where: { id } });
     if (!grupo) throw new NotFoundException('Grupo no encontrado');
     await this.scope.validarGestion(user, grupo.plantelId);
+    if (grupo.tipo === 'ESPECIAL') throw new ConflictException('Gestiona este grupo desde Programas especiales');
     exigirCambios(dto);
     if (dto.cicloId !== undefined && dto.cicloId !== grupo.cicloId) {
       throw new ConflictException('El ciclo del grupo es inmutable; crea un grupo en el ciclo de destino');
@@ -87,6 +99,17 @@ async actualizarGrupo(id: number, dto: ActualizarGrupoDto, user: JwtUser) {
     if ((dto.grado !== undefined && dto.grado !== grupo.grado) || (dto.turno !== undefined && dto.turno !== grupo.turno)) {
       const inscritos = await this.inscripciones.count({ where: { grupoId: id } });
       if (inscritos) throw new ConflictException('No puedes cambiar grado o turno de un grupo con inscripciones');
+    }
+    if (['nivelId', 'carreraId', 'periodoAcademicoId'].some((campo) => Object.prototype.hasOwnProperty.call(dto, campo))) {
+      return this.dataSource.transaction(async (manager) => {
+        await manager.getRepository(Plantel).findOne({ where: { id: grupo.plantelId }, lock: { mode: 'pessimistic_write' } });
+        const repo = manager.getRepository(Grupo);
+        const actual = await repo.findOneOrFail({ where: { id }, lock: { mode: 'pessimistic_write' } });
+        if (await manager.getRepository(Inscripcion).existsBy({ grupoId: id })) throw new ConflictException('No puedes cambiar el contexto académico de un grupo con historial de inscripciones');
+        await validarContextoGrupo(manager, { ...actual, ...dto });
+        await repo.update(id, dto);
+        return repo.findOneBy({ id });
+      });
     }
     try {
       await this.grupos.update(id, dto);
@@ -103,6 +126,7 @@ async eliminarGrupo(id: number, user: JwtUser) {
       const grupo = await grupos.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!grupo) throw new NotFoundException('Grupo no encontrado');
       await this.scope.validarGestion(user, grupo.plantelId);
+      if (grupo.tipo === 'ESPECIAL') throw new ConflictException('Cierra o cancela el programa especial conservando su historial');
       const inscripcionesActivas = await manager.getRepository(Inscripcion).count({
         where: { grupoId: id, estatus: 'ACTIVA' },
       });
@@ -163,6 +187,7 @@ async asignarMateria(grupoId: number, dto: AsignarMateriaDto, user: JwtUser) {
     const grupo = await this.grupos.findOne({ where: { id: grupoId } });
     if (!grupo) throw new NotFoundException('Grupo no encontrado');
     await this.scope.validarGestion(user, grupo.plantelId);
+    if (grupo.tipo === 'ESPECIAL') throw new ConflictException('Asigna materias desde Programas especiales');
     if (!grupo.activo) throw new ConflictException('No se puede asignar una materia a un grupo inactivo');
     exigirGrupoConfigurable(grupo);
     const materia = await this.materias.findOne({ where: { id: dto.materiaId, activo: true } });
@@ -201,6 +226,7 @@ async asignarDocente(grupoMateriaId: number, docenteId: number, user: JwtUser) {
     const gm = await this.grupoMaterias.findOne({ where: { id: grupoMateriaId } });
     if (!gm) throw new NotFoundException('Asignación grupo-materia no encontrada');
     await this.validarAccesoGrupo(gm.grupoId, user);
+    if (gm.grupo.tipo === 'ESPECIAL') throw new ConflictException('Gestiona docentes desde Programas especiales');
     exigirGrupoConfigurable(gm.grupo);
     if (!gm.materia.activo) throw new ConflictException('La materia no está activa');
     const docente = await this.docentes.obtener(docenteId, user);
@@ -225,6 +251,7 @@ async eliminarGrupoMateria(id: number, user: JwtUser) {
     const gm = await this.grupoMaterias.findOne({ where: { id } });
     if (!gm) throw new NotFoundException('Asignación grupo-materia no encontrada');
     await this.scope.validarGestion(user, gm.grupo.plantelId);
+    if (gm.grupo.tipo === 'ESPECIAL') throw new ConflictException('Las asignaturas especiales conservan su historial; gestiona el programa');
 
     const [calificaciones, actividades, materiales] = await Promise.all([
       this.calificaciones.count({ where: { grupoMateriaId: id } }),
