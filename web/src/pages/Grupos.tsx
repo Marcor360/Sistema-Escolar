@@ -1,3 +1,4 @@
+import { ContextoAcademicoSelector, CONTEXTO_VACIO } from '../components/ContextoAcademicoSelector';
 import { MateriasGrupo } from '../features/grupos/MateriasGrupo';
 import { InscripcionesGrupo } from '../features/grupos/InscripcionesGrupo';
 import type { Ciclo, Plantel, Grupo, ResultadoGrupos, Materia, GrupoMateria, Inscripcion } from '../features/grupos/tipos';
@@ -31,6 +32,9 @@ export default function GruposPage() {
   const [seleccionado, setSeleccionado] = useState<Grupo | null>(null);
   const [asignaciones, setAsignaciones] = useState<GrupoMateria[]>([]);
   const [inscritos, setInscritos] = useState<Inscripcion[]>([]);
+  const [contexto, setContexto] = useState(CONTEXTO_VACIO);
+  const [usarContexto, setUsarContexto] = useState(false);
+  const [filtroContexto, setFiltroContexto] = useState(CONTEXTO_VACIO);
   const [formGrupo, setFormGrupo] = useState({ cicloId: '', plantelId: '', nombre: '', grado: '', turno: 'MATUTINO' });
   const [materiaId, setMateriaId] = useState('');
   const [docenteId, setDocenteId] = useState('');
@@ -57,6 +61,7 @@ export default function GruposPage() {
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
   const editar = (g: Grupo) => {
+    setContexto({ nivelId: g.nivelId ? String(g.nivelId) : '', carreraId: g.carreraId ? String(g.carreraId) : '', periodoAcademicoId: g.periodoAcademicoId ? String(g.periodoAcademicoId) : '' }); setUsarContexto(Boolean(g.nivelId));
     setEditando(g); setFormGrupo({ cicloId: String(g.ciclo.id), plantelId: String(g.plantel?.id ?? ''),
       nombre: g.nombre, grado: g.grado ?? '', turno: g.turno ?? 'MATUTINO' });
     document.getElementById('form-grupo')?.scrollIntoView();
@@ -68,7 +73,7 @@ export default function GruposPage() {
     setError('');
     try {
       const { data } = await api.get<ResultadoGrupos>('/academico/grupos', {
-        params: { pagina, ...(filtroCiclo ? { cicloId: filtroCiclo, inactivos: true } : {}), ...(plantelId ? { plantelId } : {}) },
+        params: { pagina, ...(filtroContexto.nivelId ? { nivelId: filtroContexto.nivelId } : {}), ...(filtroContexto.carreraId ? { carreraId: filtroContexto.carreraId } : {}), ...(filtroContexto.periodoAcademicoId ? { periodoAcademicoId: filtroContexto.periodoAcademicoId } : {}), ...(filtroCiclo ? { cicloId: filtroCiclo, inactivos: true } : {}), ...(plantelId ? { plantelId } : {}) },
       });
       if (actual === consultaListado.current) setResultado(data);
     } catch (err) {
@@ -76,7 +81,7 @@ export default function GruposPage() {
     } finally {
       if (actual === consultaListado.current) setCargandoListado(false);
     }
-  }, [filtroCiclo]);
+  }, [filtroCiclo, filtroContexto]);
   const cargarCatalogos = useCallback(async () => {
     const actual = ++consultaCatalogos.current;
     setCargandoCatalogos(true); setErrorCatalogos('');
@@ -136,14 +141,18 @@ export default function GruposPage() {
     e.preventDefault();
     if (enviando) return; setEnviando(true); setError('');
     try {
-      if (editando) await api.patch(`/academico/grupos/${editando.id}`, { nombre: formGrupo.nombre, grado: formGrupo.grado || undefined, turno: formGrupo.turno });
+      const academico = { nivelId: usarContexto ? Number(contexto.nivelId) : null, carreraId: usarContexto ? Number(contexto.carreraId) : null, periodoAcademicoId: usarContexto ? Number(contexto.periodoAcademicoId) : null };
+      const cambioContexto = !editando || Object.entries(academico).some(([k, v]) => (editando[k as keyof typeof academico] ?? null) !== v);
+      if (editando) await api.patch(`/academico/grupos/${editando.id}`, { nombre: formGrupo.nombre, grado: formGrupo.grado || undefined, turno: formGrupo.turno, ...(cambioContexto ? academico : {}) });
       else await api.post('/academico/grupos', {
+        ...(usarContexto ? academico : {}),
         cicloId: Number(formGrupo.cicloId),
         plantelId: Number(formGrupo.plantelId),
         nombre: formGrupo.nombre,
         grado: formGrupo.grado || undefined,
         turno: formGrupo.turno,
       });
+      setContexto(CONTEXTO_VACIO); setUsarContexto(false);
       setEditando(null); setMensaje(editando ? 'Grupo actualizado.' : 'Grupo creado. Ahora selecciona Administrar para asignar materias, docente e inscribir alumnos.');
       setFormGrupo({ cicloId: '', plantelId: '', nombre: '', grado: '', turno: 'MATUTINO' });
       cargar(1, plantelAplicado);
@@ -189,13 +198,13 @@ export default function GruposPage() {
         <p className="texto-ayuda">Paso 1: selecciona un plantel y un ciclo en preparación o activo. Después abre Administrar para asignar materias y docentes e inscribir alumnos.</p><h2 id="form-grupo">{editando ? 'Editar grupo' : 'Nuevo grupo'}</h2>
         <form onSubmit={crearGrupo} className="fila">
           <div className="campo"><label htmlFor="grupos-campo-1">Plantel</label>
-            <select id="grupos-campo-1" required disabled={editando !== null || enviando} value={formGrupo.plantelId} onChange={(e) => setFormGrupo({ ...formGrupo, plantelId: e.target.value })}>
+            <select id="grupos-campo-1" required disabled={editando !== null || enviando} value={formGrupo.plantelId} onChange={(e) => { setContexto(CONTEXTO_VACIO); setFormGrupo({ ...formGrupo, plantelId: e.target.value }); }}>
               <option value="">Selecciona…</option>
               {planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
             </select>
           </div>
           <div className="campo"><label htmlFor="grupos-campo-2">Ciclo</label>
-            <select id="grupos-campo-2" required disabled={editando !== null || enviando} value={formGrupo.cicloId} onChange={(e) => setFormGrupo({ ...formGrupo, cicloId: e.target.value })}>
+            <select id="grupos-campo-2" required disabled={editando !== null || enviando} value={formGrupo.cicloId} onChange={(e) => { setContexto(CONTEXTO_VACIO); setFormGrupo({ ...formGrupo, cicloId: e.target.value }); }}>
               <option value="">Selecciona…</option>
               {ciclos.filter((c) => (c.activo || c.estado === 'PREPARACION') || c.id === editando?.ciclo.id).map((c) => <option key={c.id} value={c.id}>{c.clave}</option>)}
             </select>
@@ -212,13 +221,15 @@ export default function GruposPage() {
               <option value="VESPERTINO">Vespertino</option>
             </select>
           </div>
-          <button disabled={enviando} className="boton">{editando ? 'Guardar corrección' : 'Crear grupo'}</button>{editando && <button type="button" onClick={() => { setEditando(null); setFormGrupo({ cicloId: '', plantelId: '', nombre: '', grado: '', turno: 'MATUTINO' }); }}>Cancelar edición</button>}
+          <label className="casilla"><input type="checkbox" checked={usarContexto} onChange={(e) => { setUsarContexto(e.target.checked); if (!e.target.checked) setContexto(CONTEXTO_VACIO); }} />Asignar nivel, carrera/plan y periodo</label>
+          {usarContexto && <ContextoAcademicoSelector plantelId={formGrupo.plantelId} cicloId={formGrupo.cicloId} valor={contexto} cambiar={setContexto} deshabilitado={enviando} />}
+          <button disabled={enviando} className="boton">{editando ? 'Guardar corrección' : 'Crear grupo'}</button>{editando && <button type="button" onClick={() => { setContexto(CONTEXTO_VACIO); setUsarContexto(false); setEditando(null); setFormGrupo({ cicloId: '', plantelId: '', nombre: '', grado: '', turno: 'MATUTINO' }); }}>Cancelar edición</button>}
         </form>
       </section>
 
-      <div className="fila" style={{ marginBottom: 12 }}><div className="campo"><label htmlFor="filtro-ciclo-grupos">Consultar ciclo</label><select id="filtro-ciclo-grupos" value={filtroCiclo} onChange={(e) => setFiltroCiclo(e.target.value)}><option value="">Vigente</option>{ciclos.map((c) => <option key={c.id} value={c.id}>{c.clave} · {c.estado}</option>)}</select></div>
+      <div className="fila" style={{ marginBottom: 12 }}><div className="campo"><label htmlFor="filtro-ciclo-grupos">Consultar ciclo</label><select id="filtro-ciclo-grupos" value={filtroCiclo} onChange={(e) => { setFiltroContexto(CONTEXTO_VACIO); setFiltroCiclo(e.target.value); }}><option value="">Vigente</option>{ciclos.map((c) => <option key={c.id} value={c.id}>{c.clave} · {c.estado}</option>)}</select></div>
         <div className="campo"><label htmlFor="grupos-campo-6">Filtrar por plantel</label>
-          <select id="grupos-campo-6" value={filtroPlantel} onChange={(e) => setFiltroPlantel(e.target.value)}>
+          <select id="grupos-campo-6" value={filtroPlantel} onChange={(e) => { setFiltroContexto(CONTEXTO_VACIO); setFiltroPlantel(e.target.value); }}>
             <option value="">Todos</option>
             {planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
           </select>
@@ -229,6 +240,7 @@ export default function GruposPage() {
         }}>Aplicar</button>
       </div>
 
+      {filtroPlantel && filtroCiclo && <ContextoAcademicoSelector plantelId={filtroPlantel} cicloId={filtroCiclo} valor={filtroContexto} cambiar={setFiltroContexto} />}
       <div className="cabecera-listado"><h2>Directorio de grupos</h2><p>{resultado.total} grupos</p></div>
       {cargandoListado && <p role="status">Cargando grupos…</p>}
       <div className="tabla-contenedor" role="region" aria-label="Listado de grupos" tabIndex={0}>
