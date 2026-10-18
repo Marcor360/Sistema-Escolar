@@ -232,3 +232,27 @@ antes de paginar. Usa PaginacionDto: 10 por defecto, máximo 100 y orden estable
 por createdAt/id descendentes. Devuelve `{ datos, total, pagina, porPagina }`.
 La ruta histórica `/finanzas/bitacora` conserva su contrato; la pantalla de
 conciliación usa el nuevo listado sin descargar ni recortar 300 movimientos.
+
+### Catálogos académicos (#97)
+
+Ver [modelo, permisos y contrato](CATALOGOS_ACADEMICOS.md). GET/POST y GET/PATCH por
+id en `/academico/catalogos/niveles`, `/carreras`, `/periodos`; escritura
+ADMINISTRATIVO/SUPERADMIN por plantel y consulta adicional FINANZAS/MAESTRO en su
+alcance. Paginación 10/100. Grupo acepta contexto completo opcional y filtros por
+nivel/carrera/periodo académico, sin reclasificar históricos.
+
+### Programas especiales
+
+Administración con alcance de plantel: `GET/POST /programas-especiales`, `GET/PATCH /programas-especiales/:id` (nombre), `POST /:id/cerrar` y `/:id/cancelar` (confirmado=true y motivo). `GET/POST /:id/grupos` crea grupos manuales con cupoManual, materiaId y docenteId obligatorios; contexto académico opcional completo. `GET/PATCH /programas-especiales/grupos/:id` consulta o cambia cupo; `/asignaturas` permite GET/POST y `PATCH /asignaturas/:claseId` reasigna docente. `GET/POST /grupos/:id/inscripciones` consulta/inscribe alumnos existentes; `POST /inscripciones/:inscripcionId/baja` requiere confirmación y motivo. Los listados admiten pagina/porPagina (10 por defecto). `GET /programas-especiales/me` está reservado al alumno autenticado y solo devuelve lo propio. Ver [operación y migración](PROGRAMAS_ESPECIALES.md).
+
+### Apertura ordinaria y agrupación
+
+Solo SUPERADMIN/ADMINISTRATIVO con alcance del plantel: `GET /cartera`, `GET /cartera/:id`, `POST /cartera/previsualizar` y `POST /cartera/confirmar`. Contexto obligatorio: alumnoId, plantelId, cicloId, nivelId, carreraId, periodoAcademicoId, turno; grupoId opcional. Selección de conceptoIds, periodo YYYY-MM y fechaVencimiento dentro del ciclo. La previsualización devuelve tarifa del servidor y huella cotizacion; confirmar requiere esa huella, UUID idempotencia y confirmado=true. Los montos del cliente no alteran tarifas. La respuesta distingue PENDIENTE sin cargos de ABIERTA con grupo/cargos. Listado paginado de diez y búsqueda por matrícula/nombre. No existe una operación pública de agrupación independiente de la cartera.
+
+### Recursamiento por clase
+
+`POST /recursamientos` exige alumnoId, grupoMateriaId, cupoTotalManual explícito, UUID idempotencia y confirmado=true; solo Control Escolar dentro del plantel. Se conserva la inscripción principal y cada intento tiene identificador propio. `GET /recursamientos` y `GET /recursamientos/clases/:id` admiten paginación de diez; el maestro solo consulta sus clases. `GET /recursamientos/me` devuelve exclusivamente los intentos del alumno autenticado. `GET /recursamientos/:id` incluye sus notas independientes y valida propietario, docente asignado o gestión del plantel.
+
+`POST /recursamientos/:id/calificaciones` acepta parcial 0–3 y calificacion 0–100 con motivo y confirmación; lo usan Control Escolar o el docente asignado, respetando cierre del parcial. `POST /:id/baja`, `POST /:id/finalizar` y `PATCH /clases/:id/cupo` requieren motivo y confirmación de Control Escolar. El cupo total cuenta regulares y recursantes y no aplica la excepción automática 51–54. `GET /:id/acta` descarga CSV mediante cliente autenticado, sin URL pública; los materiales mantienen sus enlaces firmados y autorización por clase exacta. No se reemplazan notas originales ni se generan cargos de recursamiento.
+
+Aplicar migraciones incrementales de agrupación ordinaria, apertura de cartera y recursamiento conforme al manifiesto, con DB_SYNC=false; no ejecutar schema.sql sobre bases existentes. Ver contratos y límites operativos en [cartera](prs/02-APERTURA-CARTERA.md), [agrupación](prs/03-AGRUPACION-TRANSACCIONAL.md) y [recursamiento](prs/04-RECURSAMIENTO-MATERIA.md).

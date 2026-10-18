@@ -60,4 +60,21 @@ describe('SMTP seguro en entornos desplegados', () => {
       tls: { rejectUnauthorized: true },
     }));
   });
+  it('no presenta el rechazo parcial como envío exitoso ni filtra destinatarios', async () => {
+    const servicio = crear('465', 'production');
+    const transporte = (nodemailer.createTransport as jest.Mock).mock.results.at(-1)!.value;
+    transporte.sendMail.mockResolvedValue({ accepted: [], rejected: ['privado@example.invalid'] });
+    await expect(servicio.enviarEmail('privado@example.invalid', 'Asunto privado', '<p>secreto</p>')).rejects.toThrow('no aceptó todos');
+  });
+  it('solo acredita aceptación SMTP y no recepción en Inbox', async () => {
+    const servicio = crear('465', 'production');
+    const transporte = (nodemailer.createTransport as jest.Mock).mock.results.at(-1)!.value;
+    transporte.sendMail.mockResolvedValue({ accepted: ['privado@example.invalid'], rejected: [] });
+    await expect(servicio.enviarEmail('privado@example.invalid', 'Asunto privado', '<p>secreto</p>')).resolves.toEqual({ simulado: false });
+    const opciones = transporte.sendMail.mock.calls[0][0];
+    const correlacion = opciones.headers['X-Sistema-Correlacion'];
+    expect(correlacion).toMatch(/^[a-f0-9-]{36}$/);
+    expect(opciones.messageId).toBe(`<${correlacion}@example.test>`);
+  });
+
 });

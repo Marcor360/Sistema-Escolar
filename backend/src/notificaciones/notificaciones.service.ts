@@ -1,3 +1,5 @@
+import { randomUUID } from 'crypto';
+import { ServiceUnavailableException } from '@nestjs/common';
 import { PushService } from './push.service';
 import { ForbiddenException, Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -114,12 +116,23 @@ export class NotificacionesService {
       this.logger.log('SMTP no configurado: correo no enviado');
       return { simulado: true };
     }
-    await this.transporter.sendMail({
-      from: this.config.get<string>('SMTP_FROM') || 'no-reply@escolar.mx',
+    const correlacion = randomUUID();
+    const from = this.config.get<string>('SMTP_FROM') || 'no-reply@escolar.mx';
+    const dominio = from.trim().match(/@([a-z0-9.-]+)>?$/i)?.[1];
+    const idMensaje = messageId || (dominio ? `${correlacion}@${dominio}` : undefined);
+    const resultado = await this.transporter.sendMail({
+      from,
       to,
       subject,
-      html, ...(messageId ? { messageId: `<${messageId}>` } : {}),
+      html, ...(idMensaje ? { messageId: `<${idMensaje}>` } : {}),
+      headers: { 'X-Sistema-Correlacion': correlacion },
     });
+    if (!resultado || !Array.isArray(resultado.accepted) || resultado.accepted.length === 0 || resultado.rejected?.length) {
+      this.logger.warn(`SMTP_RECHAZADO correlacion=${correlacion}`);
+      throw new ServiceUnavailableException('El servidor de correo no aceptó todos los destinatarios');
+    }
+    // No registrar direcciones, asuntos, cuerpos, respuestas SMTP ni enlaces de acceso.
+    this.logger.log(`ACEPTADO_SMTP correlacion=${correlacion}; recepción en buzón no verificada`);
     return { simulado: false };
   }
 }

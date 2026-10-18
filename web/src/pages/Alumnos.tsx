@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { EliminarRegistro } from '../components/EliminarRegistro';
 import { FORM_INICIAL } from '../features/alumnos/tipos';
 import { FormularioAlumno } from '../features/alumnos/FormularioAlumno';
@@ -208,7 +209,7 @@ export default function AlumnosPage() {
               <td data-etiqueta="Estatus"><span className={`sello ${a.estatus === 'ACTIVO' ? 'ok' : 'neutro'}`}>{a.estatus}</span></td>
               <td data-etiqueta="Acciones" className="derecha">
                 <span className="acciones-fila"><EliminarRegistro ruta={`/alumnos/${a.id}`} nombre={`alumno ${a.matricula}`} deshabilitado={enviando} alEliminar={() => { setEditando(null); setForm(FORM_INICIAL); setHistorial(null); setTransferencia(null); setMensaje('Alumno y cuenta eliminados definitivamente'); recargarListado(); }} />
-                  {puedeGestionar && <button className="boton secundario chico" onClick={() => verHistorial(a)}>Historial y boleta</button>}
+                  {puedeGestionar && <><button className="boton secundario chico" onClick={() => verHistorial(a)}>Historial y boleta</button><Link className="boton secundario chico" to={`/recursamientos/nuevo?alumno=${a.id}&plantel=${a.plantel?.id || ''}`}>Recursar materia</Link></>}
                   {puedeGestionar && <>
                     <button disabled={enviando} className="boton secundario chico" onClick={() => editar(a)}>Editar</button>
                     {a.estatus === 'BAJA' && <button disabled={enviando} onClick={() => dialogoMotivo.abrir({ titulo: 'Reactivar alumno', advertencia: 'No se restauran inscripciones; deberá inscribirse explícitamente.', ejecutar: async (motivo) => { await api.post(`/alumnos/${a.id}/reactivacion`, { motivo }); setMensaje('Alumno reactivado; inscribe desde Grupos'); recargarListado(); } })}>Reactivar expediente</button>}

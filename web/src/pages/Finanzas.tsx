@@ -23,10 +23,6 @@ export default function FinanzasPage() {
   const [resultadoPagos, setResultadoPagos] = useState<ResultadoPagos>({ datos: [], total: 0, pagina: 1, porPagina: 10 });
   const [adeudos, setAdeudos] = useState<Adeudo[]>([]);
   const [paginaAdeudos, setPaginaAdeudos] = useState(1); const [totalAdeudos, setTotalAdeudos] = useState(0);
-  const cargarAdeudos = async (pagina = 1) => {
-    try { const { data } = await api.get('/finanzas/adeudos', { params: { pagina } }); setAdeudos(data.datos); setPaginaAdeudos(pagina); setTotalAdeudos(data.total); }
-    catch (err) { setError(mensajeDeError(err)); }
-  };
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -69,26 +65,37 @@ export default function FinanzasPage() {
       setCiclos(ciclosR.data);
     } catch (err) { setError(mensajeDeError(err)); }
   }, []);
-  const cargarCargos = useCallback(
-    async (pagina = 1) => {
-      try { const { data } = await api.get<ResultadoCargos>('/finanzas/cargos', { params: { pagina } }); setResultadoCargos(data); }
-      catch (err) { setError(mensajeDeError(err)); }
-    },
-    [],
-  );
-  const cargarPagos = useCallback(
-    async (pagina = 1) => {
-      try { const { data } = await api.get<ResultadoPagos>('/finanzas/pagos', { params: { pagina } }); setResultadoPagos(data); }
-      catch (err) { setError(mensajeDeError(err)); }
-    },
-    [],
-  );
-  const cargarDatos = useCallback(async () => {
-    await Promise.all([cargarCargos(), cargarPagos()]);
-    try { const { data } = await api.get('/finanzas/adeudos'); setAdeudos(data.datos); setPaginaAdeudos(1); setTotalAdeudos(data.total); }
-    catch (err) { setError(mensajeDeError(err)); }
-  }, [cargarCargos, cargarPagos]);
-  useEffect(() => { cargarCatalogos(); cargarDatos(); api.get('/planteles/mios').then((r) => setPlanteles(r.data)).catch((e) => setError(mensajeDeError(e))); }, [cargarCatalogos, cargarDatos]);
+  const [cargando, setCargando] = useState(false);
+  const tabActual = useRef(tab); tabActual.current = tab;
+  const consultas = useRef({ cargos: 0, pagos: 0, adeudos: 0 });
+  const cargarColeccion = useCallback(async (tipo: 'cargos' | 'pagos' | 'adeudos', pagina = 1) => {
+    const consulta = ++consultas.current[tipo];
+    if (tabActual.current === tipo) { setCargando(true); setError(''); }
+    try {
+      const { data } = await api.get(`/finanzas/${tipo}`, { params: { pagina, porPagina: 10 } });
+      if (consultas.current[tipo] !== consulta || tabActual.current !== tipo) return;
+      if (tipo === 'cargos') setResultadoCargos(data);
+      else if (tipo === 'pagos') setResultadoPagos(data);
+      else { setAdeudos(data.datos); setPaginaAdeudos(pagina); setTotalAdeudos(data.total); }
+    } catch (err) {
+      if (consultas.current[tipo] === consulta && tabActual.current === tipo) setError(mensajeDeError(err));
+    } finally {
+      if (consultas.current[tipo] === consulta && tabActual.current === tipo) setCargando(false);
+    }
+  }, []);
+  const cargarCargos = useCallback((pagina = 1) => cargarColeccion('cargos', pagina), [cargarColeccion]);
+  const cargarPagos = useCallback((pagina = 1) => cargarColeccion('pagos', pagina), [cargarColeccion]);
+  const cargarAdeudos = useCallback((pagina = 1) => cargarColeccion('adeudos', pagina), [cargarColeccion]);
+  // Tras una operación consulta el panel que está visible al terminar, aunque se haya cambiado de pestaña.
+  const cargarDatos = useCallback(() => cargarColeccion(tabActual.current), [cargarColeccion]);
+  useEffect(() => {
+    void cargarCatalogos();
+    api.get('/planteles/mios').then(r => setPlanteles(r.data)).catch(e => setError(mensajeDeError(e)));
+  }, [cargarCatalogos]);
+  useEffect(() => { void cargarDatos(); }, [tab, cargarDatos]);
+  useEffect(() => () => {
+    consultas.current.cargos++; consultas.current.pagos++; consultas.current.adeudos++;
+  }, []);
 
   const limpiarAvisos = () => { setError(''); setMensaje(''); };
 
@@ -201,12 +208,14 @@ export default function FinanzasPage() {
 
       {error && <p className="mensaje-error" role="alert">{error}</p>}
       {mensaje && <p className="mensaje-ok" role="status">{mensaje}</p>}
+      {cargando && <p role="status">Cargando {tab}…</p>}
 
       <Conciliacion />
       <section className="panel"><label htmlFor="plantel-operacion">Plantel para operaciones masivas</label>
         <select id="plantel-operacion" value={plantelOperacion} onChange={(e) => setPlantelOperacion(e.target.value)}><option value="">Selecciona un plantel…</option>{planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select>
         <p>Las colegiaturas, recargos y avisos requieren previsualización y confirmación para este plantel.</p>
       </section>
+      <div aria-busy={cargando}>
       {tab === 'cargos' && (
         <PanelCargos crearCargo={crearCargo} formCargo={formCargo} setFormCargo={setFormCargo} conceptos={conceptos} enviando={enviando} generarColegiaturas={generarColegiaturas} formColegiaturas={formColegiaturas} setFormColegiaturas={setFormColegiaturas} ciclos={ciclos} aplicarRecargos={aplicarRecargos} resultadoCargos={resultadoCargos} corregir={corregir} cargarCargos={cargarCargos} />
       )}
@@ -218,6 +227,7 @@ export default function FinanzasPage() {
       {tab === 'adeudos' && (
         <PanelAdeudos enviando={enviando} enviarAvisos={enviarAvisos} descargarExcel={descargarExcel} adeudos={adeudos} corregir={corregir} totalAdeudos={totalAdeudos} paginaAdeudos={paginaAdeudos} cargarAdeudos={cargarAdeudos} />
       )}
+      </div>
     </>
   );
 }
