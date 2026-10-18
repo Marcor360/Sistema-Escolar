@@ -63,11 +63,11 @@ export class DocentesService {
     const permitidos = await this.scope.plantelesDe(user);
     const asignaciones = await this.asignaciones.find({ where: { usuarioId: docente.usuarioId, activo: true } });
     const clases = await this.dataSource.getRepository(GrupoMateria).find({ where: { docenteId: id,
-      ...(permitidos === null ? {} : { grupo: { plantelId: In(permitidos) } }) } });
+      ...(permitidos === null ? {} : { grupo: { plantelId: In(permitidos) } }) }, relations: { grupo: { nivel: true, carrera: true, periodoAcademico: true } } });
     return { ...this.proyectarDocente(docente),
       plantelIds: asignaciones.filter((a) => permitidos === null || permitidos.includes(a.plantelId)).map((a) => a.plantelId),
       clases: clases.map((c) => ({ id: c.id, grupo: c.grupo.nombre, ciclo: c.grupo.ciclo.nombre, plantel: c.grupo.plantel.nombre,
-        materia: c.materia.nombre, vigente: c.grupo.activo && c.grupo.ciclo.activo })) };
+        nivel: c.grupo.nivel?.nombre ?? null, carrera: c.grupo.carrera?.nombre ?? null, versionPlan: c.grupo.carrera?.versionPlan ?? null, periodo: c.grupo.periodoAcademico?.nombre ?? null, turno: c.grupo.turno, materia: c.materia.nombre, vigente: c.grupo.activo && c.grupo.ciclo.activo })) };
   }
 
   async asignarPlanteles(id: number, plantelIds: number[], user: JwtUser) {

@@ -40,7 +40,7 @@ export default function DocentesPage() {
   const [cargando, setCargando] = useState(false); const consulta = useRef(0);
   const consultaDetalle = useRef(0);
   const [cargandoDetalle, setCargandoDetalle] = useState(false);
-  const [detalle, setDetalle] = useState<{ id: number; estatus: string; plantelIds: number[]; clases: { id: number; grupo: string; materia: string; ciclo: string; plantel: string; vigente: boolean }[] } | null>(null);
+  const [detalle, setDetalle] = useState<{ id: number; estatus: string; plantelIds: number[]; clases: { id: number; grupo: string; materia: string; ciclo: string; plantel: string; nivel?: string | null; carrera?: string | null; versionPlan?: string | null; periodo?: string | null; turno?: string | null; vigente: boolean }[] } | null>(null);
   const verClases = async (d: Docente) => {
     const actual = ++consultaDetalle.current;
     setDetalle(null);
@@ -136,7 +136,7 @@ export default function DocentesPage() {
         {planteles.map((p) => <label key={p.id} className="casilla"><input type="checkbox" checked={detalle.plantelIds.includes(p.id)} onChange={() => setDetalle({ ...detalle,
           plantelIds: detalle.plantelIds.includes(p.id) ? detalle.plantelIds.filter((id) => id !== p.id) : [...detalle.plantelIds, p.id] })} />{p.nombre}</label>)}
       </fieldset><button disabled={enviando} onClick={guardarPlanteles}>{detalle.estatus === 'BAJA' ? 'Reactivar con estos planteles' : 'Guardar planteles'}</button><button type="button" onClick={() => { consultaDetalle.current += 1; setDetalle(null); setCargandoDetalle(false); }}>Cerrar</button>
-        {detalle.clases.map((c) => <p key={c.id}>{c.ciclo} · {c.plantel} · {c.grupo} · {c.materia} · {c.vigente ? 'Vigente' : 'Histórico'}</p>)}
+        {detalle.clases.map((c) => <p key={c.id}>{c.ciclo} · {c.plantel} · {c.grupo} · {c.nivel ?? 'Sin nivel registrado'} · {c.carrera ?? 'Sin carrera registrada'} {c.versionPlan ? `· Plan ${c.versionPlan}` : ''} · {c.periodo ?? 'Sin periodo registrado'} · {c.turno ?? 'Sin turno registrado'} · {c.materia} · {c.vigente ? 'Vigente' : 'Histórico'}</p>)}
         <a href="/grupos">Reasignar clases desde Grupos</a>
       </section>}
       <div className="cabecera-listado"><h2 ref={tituloListado} tabIndex={-1}>Directorio de docentes</h2><p>{resultado.total} registros</p></div>

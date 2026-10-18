@@ -1,3 +1,5 @@
+import { MateriaContextosController } from './materia-contextos.controller';
+import { MateriaContextosService } from './materia-contextos.service';
 import { AgrupacionRegularService } from './agrupacion-regular.service';
 import { ProgramasEspecialesController } from '../programas-especiales/programas.controller';
 import { ProgramasEspecialesService } from '../programas-especiales/programas.service';
@@ -34,8 +36,8 @@ import { PlantelesModule } from '../planteles/planteles.module';
     DocentesModule,
     PlantelesModule,
   ],
-  providers: [AgrupacionRegularService, ProgramasEspecialesService, CatalogosAcademicosService, AcademicoService, CiclosService, PromocionService, MateriasService, GruposService, InscripcionesService],
-  controllers: [ProgramasEspecialesController, CatalogosAcademicosController, AcademicoController],
+  providers: [MateriaContextosService, AgrupacionRegularService, ProgramasEspecialesService, CatalogosAcademicosService, AcademicoService, CiclosService, PromocionService, MateriasService, GruposService, InscripcionesService],
+  controllers: [MateriaContextosController, ProgramasEspecialesController, CatalogosAcademicosController, AcademicoController],
   exports: [AcademicoService, AgrupacionRegularService],
 })
 export class AcademicoModule {}

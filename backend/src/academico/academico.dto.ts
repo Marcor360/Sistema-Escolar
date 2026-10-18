@@ -57,6 +57,8 @@ export class ActualizarCicloDto {
 }
 
 export class MateriaDto {
+  @ApiPropertyOptional({ enum: ['OBLIGATORIA', 'OPTATIVA', 'ADICIONAL', 'COMPLEMENTARIA'], nullable: true })
+  @IsOptional() @IsIn(['OBLIGATORIA', 'OPTATIVA', 'ADICIONAL', 'COMPLEMENTARIA']) tipo?: 'OBLIGATORIA' | 'OPTATIVA' | 'ADICIONAL' | 'COMPLEMENTARIA' | null;
   @ApiProperty({ type: String })
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim().toUpperCase() : value)
   @IsString() @LongitudMinima(1) @MaxLength(20) clave!: string;
@@ -71,6 +73,8 @@ export class MateriaDto {
 }
 
 export class ActualizarMateriaDto {
+  @ApiPropertyOptional({ enum: ['OBLIGATORIA', 'OPTATIVA', 'ADICIONAL', 'COMPLEMENTARIA'], nullable: true })
+  @IsOptional() @IsIn(['OBLIGATORIA', 'OPTATIVA', 'ADICIONAL', 'COMPLEMENTARIA']) tipo?: 'OBLIGATORIA' | 'OPTATIVA' | 'ADICIONAL' | 'COMPLEMENTARIA' | null;
   @ApiPropertyOptional({ type: String })
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim().toUpperCase() : value)
   @OpcionalNoNulo() @IsString() @LongitudMinima(1) @MaxLength(20) clave?: string;

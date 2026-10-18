@@ -1,3 +1,4 @@
+import { registrarMateriasContexto } from './integration/materias-contexto.cases';
 import { ClavesCorreoAcceso } from '../src/auth/correo-acceso-claves';
 import { ConfigService } from '@nestjs/config';
 import { AuthCorreoOutbox } from '../src/entities/auth-correo-outbox.entity';
@@ -457,6 +458,7 @@ Object.keys(casos).map(Number).sort((a,b) => a-b).forEach((id) => casos[id](cont
   registrarRebarrido(contexto);
   registrarBusquedaUsuarios(contexto);
   registrarCatalogos(contexto);
+  registrarMateriasContexto(contexto);
   registrarProgramasEspeciales(contexto);
   registrarCartera(contexto);
   registrarAgrupacion(contexto);
