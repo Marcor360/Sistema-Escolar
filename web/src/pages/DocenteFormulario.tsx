@@ -93,7 +93,7 @@ export default function DocenteFormulario() {
     {cargando && <p role="status">Cargando expediente…</p>}
     {error && <p role="alert" className="mensaje-error">{error}</p>}
     {!cargando && falloCarga && <button type="button" disabled={enviando} onClick={() => setIntento((v) => v + 1)}>Reintentar carga</button>}
-    {!cargando && <form className="panel" onSubmit={guardar} aria-busy={enviando}>
+    {!cargando && <form id="form-docente" className="panel" onSubmit={guardar} aria-busy={enviando}>
       <fieldset disabled={enviando || (editando && !form.numEmpleado)}><legend>Datos del docente</legend>
         <div className="rejilla-formulario">
           <div className="campo"><label htmlFor="doc-empleado">Núm. empleado</label><input id="doc-empleado" disabled={editando} required maxLength={20} {...dar('numEmpleado')} /></div>
