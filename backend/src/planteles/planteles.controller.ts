@@ -1,5 +1,6 @@
+import { ListarMateriasDto } from '../academico/listar-materias.dto';
 import {
-  Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Put, UseGuards,
+  Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Put, Query, UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser, JwtUser } from '../common/current-user.decorator';
@@ -22,6 +23,9 @@ export class PlantelesController {
   @Get()
   @Roles('ADMINISTRATIVO', 'FINANZAS', 'MAESTRO')
   listar(@CurrentUser() user: JwtUser) { return this.service.listar(user); }
+
+  @Get('listado') @Roles('ADMINISTRATIVO', 'FINANZAS')
+  consultar(@Query() query: ListarMateriasDto, @CurrentUser() user: JwtUser) { return this.service.consultar(query,user); }
 
   @Get(':id')
   @Roles('ADMINISTRATIVO', 'FINANZAS')

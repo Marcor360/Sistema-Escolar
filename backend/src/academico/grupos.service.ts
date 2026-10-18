@@ -68,6 +68,13 @@ async listarGrupos(user: JwtUser, query: ListarGruposDto) {
     return { datos, total, pagina, porPagina };
   }
 
+async obtenerGrupo(id: number, user: JwtUser) {
+ const grupo = await this.grupos.findOne({where:{id,tipo:'REGULAR'}});
+ if(!grupo) throw new NotFoundException('Grupo no encontrado');
+ await this.scope.validarGestion(user,grupo.plantelId);
+ return grupo;
+}
+
 async crearGrupo(dto: GrupoDto, user: JwtUser) {
     await this.scope.validarGestion(user, dto.plantelId);
     const ciclo = await this.ciclos.findOne({ where: { id: dto.cicloId } });

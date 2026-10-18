@@ -1,3 +1,4 @@
+import { ListarMateriasDto } from '../academico/listar-materias.dto';
 import {
   BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException,
 } from '@nestjs/common';
@@ -37,6 +38,15 @@ export class PlantelesService {
       where: ids === null ? {} : { id: In(ids) },
       order: { nombre: 'ASC' },
     });
+  }
+
+  async consultar(query: ListarMateriasDto, user: JwtUser) {
+    const ids = await this.scope.resolverFiltro(user), {pagina = 1, porPagina = 10} = query;
+    const qb = this.planteles.createQueryBuilder('p');
+    if(ids !== null) { if(!ids.length) return {datos:[],total:0,pagina,porPagina}; qb.where('p.id IN (:...ids)',{ids}); }
+    if(query.buscar) { const termino = '%' + query.buscar.toLowerCase().replace(/[!%_[]/g,c=>'!'+c)+'%'; qb.andWhere("(LOWER(p.clave) LIKE :termino ESCAPE '!' OR LOWER(p.nombre) LIKE :termino ESCAPE '!')",{termino}); }
+    const [datos,total] = await qb.orderBy('p.nombre','ASC').addOrderBy('p.id','ASC').skip((pagina-1)*porPagina).take(porPagina).getManyAndCount();
+    return {datos,total,pagina,porPagina};
   }
 
   async detalle(id: number, user: JwtUser) {

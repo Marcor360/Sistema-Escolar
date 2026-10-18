@@ -18,3 +18,15 @@ Entrada inicial sin descargar directorios; listados 10 por página **reales**, b
 
 ## Dependencia
 Consolidar #112 antes de refactorizar módulos adyacentes; evitar conflictos de edición simultánea en las mismas pantallas. Ref. #105.
+
+
+## Entrega funcional de #123 (18/10/2026)
+- Panel inicial sin montar ni consultar la página del módulo; acciones filtradas por rol y código diferido por ruta.
+- Alumnos, Materias/Ciclos, Usuarios, Planteles y Grupos: alta/edición separadas del directorio mediante `vista` e `id` en URL; navegación y cabecera lateral ocultas durante el formulario. Se conservan filtros/página al volver y se valida permiso antes de cargar una edición directa.
+- Finanzas: cargos, pagos, adeudos, conciliación y conceptos se montan por separado. Alta individual de cargo/pago y generación de colegiaturas usan formulario enfocado; idempotencia y confirmación de operaciones masivas conservadas.
+- Nuevas consultas `/planteles/listado` y `/academico/ciclos/listado` con diez registros, límites, búsqueda literal y orden estable en servidor; los endpoints de arreglos para selectores siguen disponibles. Detalles por ID para enlazar ediciones sin descargar el directorio.
+- Los módulos secundarios entran por su acción real. Avisos tiene redacción enfocada y bloqueo mientras se envía. Panel, Cuenta y Configuración siguen como vistas singulares.
+- Confirmación al cancelar o usar Atrás con cambios; bloqueo durante solicitudes; foco al cambiar de operación; datos conservados tras error. Los recorridos reales entran por las tarjetas antes de registrar/consultar.
+
+### Continuidad de #105
+Esta entrega no cierra toda #105: quedan la separación interna de formularios secundarios (biblioteca, calendario, conducta, operaciones y edición/captura académica), la revisión de colecciones propias de Expo y la UAT institucional. No se cambian las reglas de evaluación de #102 ni se acredita staging o despliegue.

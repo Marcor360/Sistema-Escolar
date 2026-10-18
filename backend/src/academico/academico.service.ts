@@ -14,11 +14,13 @@ async crearCiclo(dto: CicloDto) { return this.ciclos.crearCiclo(dto); }
 async actualizarCiclo(id: number, dto: ActualizarCicloDto) { return this.ciclos.actualizarCiclo(id, dto); }
 clasesParaSeleccion(user: JwtUser, query: ListarGruposDto) { return this.grupos.clasesParaSeleccion(user,query); }
 consultarMaterias(query: ListarMateriasDto) { return this.materias.consultarMaterias(query); }
+obtenerMateria(id: number) { return this.materias.obtenerMateria(id); }
 listarMaterias() { return this.materias.listarMaterias(); }
 crearMateria(dto: MateriaDto) { return this.materias.crearMateria(dto); }
 async actualizarMateria(id: number, dto: ActualizarMateriaDto) { return this.materias.actualizarMateria(id, dto); }
 async desactivarMateria(id: number) { return this.materias.desactivarMateria(id); }
 async listarGrupos(user: JwtUser, query: ListarGruposDto) { return this.grupos.listarGrupos(user, query); }
+obtenerGrupo(id: number, user: JwtUser) { return this.grupos.obtenerGrupo(id,user); }
 async crearGrupo(dto: GrupoDto, user: JwtUser) { return this.grupos.crearGrupo(dto, user); }
 async actualizarGrupo(id: number, dto: ActualizarGrupoDto, user: JwtUser) { return this.grupos.actualizarGrupo(id, dto, user); }
 async eliminarGrupo(id: number, user: JwtUser) { return this.grupos.eliminarGrupo(id, user); }

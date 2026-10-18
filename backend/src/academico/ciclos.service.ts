@@ -1,3 +1,4 @@
+import { ListarMateriasDto } from './listar-materias.dto';
 import { exigirCambios } from '../common/exigir-cambios';
 import { ActualizarCicloDto, CicloDto } from './academico.dto';
 import { esConflictoTransaccional } from './conflictos';
@@ -78,6 +79,15 @@ export class CiclosService {
     }
   }
 listarCiclos() { return this.dataSource.getRepository(CicloEscolar).find({ order: { fechaInicio: 'DESC' } }); }
+
+async consultarCiclos(query: ListarMateriasDto) {
+ const { pagina = 1, porPagina = 10 } = query;
+ const qb = this.dataSource.getRepository(CicloEscolar).createQueryBuilder('c');
+ if (query.buscar) { const termino = '%' + query.buscar.toLowerCase().replace(/[!%_[]/g, c => '!' + c) + '%'; qb.where("(LOWER(c.clave) LIKE :termino ESCAPE '!' OR LOWER(c.nombre) LIKE :termino ESCAPE '!')", { termino }); }
+ const [datos, total] = await qb.orderBy('c.fechaInicio', 'DESC').addOrderBy('c.id', 'DESC').skip((pagina - 1) * porPagina).take(porPagina).getManyAndCount();
+ return { datos, total, pagina, porPagina };
+}
+async obtenerCiclo(id: number) { const ciclo = await this.dataSource.getRepository(CicloEscolar).findOneBy({ id }); if (!ciclo) throw new NotFoundException('Ciclo no encontrado'); return ciclo; }
 
 async crearCiclo(dto: CicloDto) {
     if (dto.activo === true) throw new BadRequestException('Crea el ciclo en preparación y usa la activación explícita');

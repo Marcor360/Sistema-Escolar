@@ -148,6 +148,9 @@ async function esperarServidor() {
       const claseBeta = { id: 1, grupo: { id: 1, nombre: 'Grupo Beta', ciclo: { id: 1, nombre: '2026–2027', clave: '2026' }, plantel: { nombre: 'Plantel Beta' } }, materia: { clave: 'MAT', nombre: 'Matemáticas' } };
       if (path.endsWith('/planteles/mios')) data = [{ id: 1, nombre: 'Plantel Beta' }];
       if (path.endsWith('/academico/materias/listado')) data = { datos: [], total: 0, pagina: 1, porPagina: 10 };
+      if (path.endsWith('/planteles/listado')) data = {datos:[{id:1,clave:'PL-QA-001',nombre:'Plantel de Prueba con un Nombre Extenso',municipio:'Municipio de prueba',activo:true}],total:1,pagina:1,porPagina:10};
+      if (path.endsWith('/academico/ciclos/listado')) data = {datos:[],total:0,pagina:1,porPagina:10};
+      if (path.endsWith('/academico/grupos/1')) data = {id:1,nombre:'GR-QA-001',plantel:{id:1,nombre:'Plantel Beta'},ciclo:{id:1,clave:'2026',activo:true,estado:'ACTIVO'}};
       if (path.endsWith('/usuarios/listado')) data = { datos: [{ id: 1, matricula: 'US-QA-001', nombre: 'Usuario con nombre largo de prueba', correo: 'correo.extenso.de.prueba@example.invalid', plantel: 'Plantel Beta', estatus: 'ACTIVO' }], total: 1, pagina: 1, porPagina: 10 };
       if (path.endsWith('/academico/mis-grupos') || path.endsWith('/academico/grupo-materias')) data = [claseBeta];
       if (path.endsWith('/academico/clases-seleccion')) data = { datos: [claseBeta], total: 1 };
@@ -211,8 +214,8 @@ async function esperarServidor() {
   for (const width of [320, 375, 360, 768, 1024, 1440, 2560, 3840]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('http://127.0.0.1:5182/alumnos');
+    await page.getByRole('button',{name:/Registrar alumno/}).click();
     await expect(page.getByRole('heading', { name: 'Registrar alumno' })).toBeVisible();
-    await expect(page.getByText('QA-001', { exact: true })).toBeVisible();
     const geometry = await page.evaluate(() => ({
       scroll: document.documentElement.scrollWidth,
       width: innerWidth,
@@ -222,6 +225,8 @@ async function esperarServidor() {
     }));
     if (geometry.scroll > geometry.width || geometry.oversized)
       throw Error('Form overflow ' + width + ': ' + JSON.stringify(geometry));
+    await page.getByRole('button',{name:'Cancelar y volver a consulta',exact:true}).click();
+    await expect(page.getByText('QA-001', { exact: true })).toBeVisible();
     await page.locator('.tabla-contenedor').scrollIntoViewIfNeeded();
     await page.locator('.tabla-contenedor').evaluate((el) => {
       el.scrollLeft = el.scrollWidth;
@@ -233,6 +238,7 @@ async function esperarServidor() {
   for (const width of [320, 375, 360, 768, 1024, 1440, 2560, 3840]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto(baseUrl + '/analitica');
+    await page.getByRole('button',{name:/Consultar indicadores/}).click();
     await expect(page.getByText('Consulta los indicadores de tu institución')).toBeVisible();
     await page.getByRole('button', { name: 'Consultar indicadores' }).click();
     await expect(page.getByRole('heading', { name: 'Finanzas del ciclo' })).toBeVisible();
@@ -358,12 +364,16 @@ async function esperarServidor() {
   for (const width of [320, 360, 700, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto(baseUrl + '/planteles');
+    await page.getByRole('button',{name:/Consultar planteles/}).click();
     const listado = page.getByRole('region', { name: 'Listado de planteles' });
     await expect(listado.getByText('PL-QA-001', { exact: true })).toBeVisible();
+    await expect(listado.getByRole('table')).toHaveCount(1);
+    const anchoListado = await listado.evaluate(el => ({scroll:document.documentElement.scrollWidth,width:innerWidth,ficha:getComputedStyle(el.querySelector('tbody tr')).display === 'block'}));
+    if(anchoListado.scroll > anchoListado.width || (width <= 700 && !anchoListado.ficha)) throw Error('Planteles listado '+width);
     await listado.getByRole('button', { name: 'Ver detalle' }).click();
     const personal = page.getByRole('region', { name: 'Personal del plantel' });
     await expect(personal.getByText('personal.con.correo.extenso@example.test')).toBeVisible();
-    for (const region of [listado, personal]) {
+    for (const region of [personal]) {
       const geometry = await region.evaluate((el) => ({
         scroll: document.documentElement.scrollWidth, width: innerWidth,
         desbordamiento: el.scrollWidth > el.clientWidth + 1,
@@ -381,6 +391,7 @@ async function esperarServidor() {
   for (const width of [320, 360, 700, 768, 1440, 3840]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto(baseUrl + '/grupos');
+    await page.getByRole('button',{name:/Consultar grupos/}).click();
     const listado = page.getByRole('region', { name: 'Listado de grupos' });
     await expect(listado.getByText('GR-QA-001', { exact: true })).toBeVisible();
     const geometry = await listado.evaluate((el) => ({
@@ -402,6 +413,8 @@ async function esperarServidor() {
     await page.setViewportSize({ width, height: 900 });
     for (const ruta of ['/usuarios', '/materias', '/maestro', '/calificaciones', '/biblioteca', '/operaciones']) {
       await page.goto(baseUrl + ruta);
+      const accion = {'/usuarios':'Consultar usuarios','/materias':'Consultar materias','/maestro':'Consultar mis clases','/calificaciones':'Consultar o capturar calificaciones','/biblioteca':'Consultar biblioteca','/operaciones':'Importar o promover'}[ruta];
+      await page.getByRole('button',{name:new RegExp(accion)}).click();
       await expect(page.locator('h1')).toBeVisible();
       if (ruta === '/operaciones') {
         await page.getByLabel('Archivo', { exact: true }).setInputFiles({ name: 'lote.csv', mimeType: 'text/csv', buffer: Buffer.from('matricula,grupoId\nALUMNO-QA-001,1') });
@@ -485,7 +498,7 @@ async function esperarServidor() {
     try {
       await page.setViewportSize({ width, height: 900 });
       await page.emulateMedia({ reducedMotion, forcedColors });
-      await page.goto(baseUrl + '/analitica', { waitUntil: 'domcontentloaded' });
+      await page.goto(baseUrl + '/analitica', { waitUntil: 'domcontentloaded' }); await page.getByRole('button',{name:/Consultar indicadores/}).click();
       await expect.poll(() => moduloSolicitado).toBe(true);
       const estado = page.getByRole('status', { name: 'Cargando contenido' });
       await expect(estado).toBeVisible();
@@ -512,12 +525,13 @@ async function esperarServidor() {
     for (const ruta of ['/cuenta', '/configuracion', '/conducta', '/calendario', '/avisos', '/finanzas', '/pago-completado']) {
       console.log('CHECK extended', ruta, width, height, escala);
       await page.goto(baseUrl + ruta);
+      const accion = {'/conducta':'Consultar incidencias','/calendario':'Consultar calendario','/avisos':'Redactar aviso'}[ruta];
+      if(accion) await page.getByRole('button',{name:new RegExp(accion)}).click();
       try { await expect(page.locator('h1')).toBeVisible(); } catch (error) { console.log(await page.locator('body').innerText(), errors); throw error; }
       await page.evaluate(escala => { document.documentElement.style.fontSize = `${escala * 100}%`; }, escala);
       if (ruta === '/finanzas') {
-        for (const nombre of ['Cargos', 'Pagos', 'Adeudos y cobranza']) {
-          await page.getByRole('tab', { name: nombre, exact: true }).click();
-          await expect(page.getByRole('tab', { name: nombre, exact: true })).toHaveAttribute('aria-selected', 'true');
+        for (const nombre of ['Consultar cargos', 'Consultar pagos', 'Adeudos y cobranza']) {
+          await page.getByRole('button', { name: new RegExp(nombre) }).click();
           const region = page.getByRole('tabpanel').getByRole('region').first();
           await expect(region.getByText('FIN-QA-001', { exact: false })).toBeVisible();
           await region.scrollIntoViewIfNeeded();
@@ -528,6 +542,7 @@ async function esperarServidor() {
             await page.keyboard.press('ArrowRight');
             await expect.poll(() => region.evaluate(el => el.scrollLeft)).toBeGreaterThan(0);
           }
+          if(nombre !== 'Adeudos y cobranza') await page.getByRole('button',{name:'Volver a opciones',exact:true}).click();
         }
         await expect(page.getByText('SMTP_', { exact: false })).toBeVisible();
         await page.getByRole('button', { name: 'Reintentar con motivo' }).click();

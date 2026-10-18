@@ -1,3 +1,4 @@
+import { esFormularioModulo } from '../components/ModuloTrabajo';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
@@ -163,7 +164,7 @@ export function Shell() {
   }
 
   return (
-    <div className="shell">
+    <div className={`shell${esFormularioModulo(new URLSearchParams(location.search).get('vista') || '') ? ' shell-enfoque' : ''}`}>
       <a ref={saltoContenido} className="skip-link" href="#contenido-principal">
         Saltar al contenido principal
       </a>

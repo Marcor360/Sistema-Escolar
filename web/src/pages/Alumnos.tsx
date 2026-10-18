@@ -1,3 +1,4 @@
+import { useModuloTrabajo } from '../components/ModuloTrabajo';
 import { Link } from 'react-router-dom';
 import { EliminarRegistro } from '../components/EliminarRegistro';
 import { FORM_INICIAL } from '../features/alumnos/tipos';
@@ -23,6 +24,10 @@ import '../components/tabla-adaptable.css';
 
 
 export default function AlumnosPage() {
+  const [enviando, setEnviando] = useState(false);
+  const trabajo = useModuloTrabajo(enviando), { modo } = trabajo;
+  const consultaVisible = modo === 'legado' || modo === 'consulta';
+
   const confirmacion = useConfirmacion();
   const dialogoMotivo = useDialogoMotivo();
   const [resultado, setResultado] = useState<Resultado>({ datos: [], total: 0, pagina: 1, porPagina: 10 });
@@ -41,8 +46,7 @@ export default function AlumnosPage() {
   const puedeGestionar = tieneRol('ADMINISTRATIVO');
   const puedeCrear = tieneRol('FINANZAS', 'SUPERADMIN');
   const [editando, setEditando] = useState<number | null>(null);
-  const mostrarFormulario = puedeCrear || (puedeGestionar && editando !== null);
-  const [enviando, setEnviando] = useState(false);
+  const mostrarFormulario = modo === 'legado' ? puedeCrear || (puedeGestionar && editando !== null) : (modo === 'nuevo' && puedeCrear) || (modo === 'editar' && puedeGestionar && editando !== null);
   const [transferencia, setTransferencia] = useState<Alumno | null>(null);
   const [destino, setDestino] = useState('');
   const [historial, setHistorial] = useState<{ alumno: Alumno; registros: Historial[] } | null>(null);
@@ -59,7 +63,7 @@ export default function AlumnosPage() {
     try { const { data } = await api.get<Historial[]>(`/alumnos/${alumno.id}/historial`); setHistorial({ alumno, registros: data }); setNotas(null); }
     catch (err) { setError(mensajeDeError(err)); }
   };
-  const editar = async (alumno: Alumno) => {
+  const editar = async (alumno: Pick<Alumno, 'id'>) => {
     if (enviando) return;
     setEnviando(true); setError('');
     try {
@@ -68,6 +72,7 @@ export default function AlumnosPage() {
         nombre: data.usuario.nombre, apellidoPaterno: data.usuario.apellidoPaterno, apellidoMaterno: data.usuario.apellidoMaterno ?? '', telefono: data.usuario.telefono ?? '', email: data.usuario.email, curp: data.curp ?? '', fechaNacimiento: data.fechaNacimiento ?? '', direccion: data.direccion ?? '',
         tutorNombre: data.tutorNombre ?? '', tutorTelefono: data.tutorTelefono ?? '' });
       setEditando(alumno.id);
+      if (modo !== 'legado') trabajo.ir('editar', alumno.id);
       document.getElementById('form-alumno')?.scrollIntoView();
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
@@ -87,7 +92,7 @@ export default function AlumnosPage() {
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
-  const cargar = useCallback((pagina = 1, termino = '', filtroPlantel = '') => {
+  const consultar = useCallback((pagina = 1, termino = '', filtroPlantel = '') => {
     const actual = ++consulta.current;
     setCargando(true);
     setError('');
@@ -101,16 +106,28 @@ export default function AlumnosPage() {
       .catch((err) => { if (actual === consulta.current) setError(mensajeDeError(err)); })
       .finally(() => { if (actual === consulta.current) setCargando(false); });
   }, []);
-  const recargarListado = () => {
-    const filtros = filtrosAplicados.current;
-    cargar(1, filtros.buscar, filtros.plantelId);
+  const paginaConsulta = Math.max(1, Number.parseInt(trabajo.query.get('pagina') || '1', 10) || 1);
+  const busquedaConsulta = trabajo.query.get('buscar') || '', plantelConsulta = trabajo.query.get('plantel') || '';
+  const cargar = (pagina = 1, termino = '', plantel = '') => {
+    if (modo === 'legado') consultar(pagina, termino, plantel);
+    else trabajo.actualizar({ pagina: String(pagina), buscar: termino, plantel });
   };
-
+  const recargarListado = () => consultar(modo === 'legado' ? 1 : paginaConsulta, filtrosAplicados.current.buscar, filtrosAplicados.current.plantelId);
   useEffect(() => {
-    api.get<Plantel[]>('/planteles/mios').then((r) => setPlanteles(r.data)).catch((err) => setError(mensajeDeError(err)));
-    cargar(1, '');
-    return () => { consulta.current += 1; };
-  }, [cargar]);
+    api.get<Plantel[]>('/planteles/mios').then(r => setPlanteles(r.data)).catch(err => setError(mensajeDeError(err)));
+    return () => { consulta.current++; };
+  }, []);
+  useEffect(() => {
+    if (!consultaVisible) return;
+    setBuscar(busquedaConsulta); setPlantelId(plantelConsulta);
+    consultar(paginaConsulta, busquedaConsulta, plantelConsulta);
+  }, [consultaVisible, paginaConsulta, busquedaConsulta, plantelConsulta, consultar]);
+  useEffect(() => {
+    if (modo === 'nuevo' || modo === 'consulta') { setEditando(null); setForm(FORM_INICIAL); }
+    if (modo === 'editar' && trabajo.id && puedeGestionar && editando !== trabajo.id) void editar({ id: trabajo.id });
+  // Los datos iniciales solo se recargan al cambiar de pantalla o expediente.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modo, trabajo.id]);
 
   const crear = async (e: FormEvent) => {
     e.preventDefault();
@@ -133,7 +150,8 @@ export default function AlumnosPage() {
       setMensaje(editando ? `Expediente de ${form.matricula} actualizado.` : `Expediente de ${form.matricula} registrado. Ahora inscríbelo en un grupo desde Grupos.`);
       setEditando(null);
       setForm(FORM_INICIAL);
-      recargarListado();
+      trabajo.guardado();
+      if (modo === 'legado') recargarListado(); else trabajo.ir('consulta');
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
@@ -165,9 +183,11 @@ export default function AlumnosPage() {
       <Encabezado titulo="Alumnos" detalle="Alta, consulta, boletas y baja de expedientes" />
       {puedeGestionar && <p className="texto-ayuda">Recorrido recomendado: registra el expediente, después abre Grupos, elige el grupo del ciclo correspondiente e inscribe al alumno. La matrícula por sí sola no habilita materias ni calificaciones.</p>}
 
-      {mostrarFormulario && <FormularioAlumno editando={editando} crear={crear} enviando={enviando} form={form} setForm={setForm} planteles={planteles} dar={dar} setEditando={setEditando} error={error} mensaje={mensaje} />}
+      {mostrarFormulario && <FormularioAlumno editando={editando} crear={crear} enviando={enviando} form={form} setForm={setForm} planteles={planteles} dar={dar} setEditando={setEditando} cancelar={modo === 'legado' ? undefined : () => trabajo.ir('consulta')} error={error} mensaje={mensaje} />}
       {!puedeGestionar && error && <p role="alert" className="mensaje-error">{error}</p>}
-      {historial && <HistorialAlumno historial={historial} boleta={boleta} cargandoNotas={cargandoNotas} verNotas={verNotas} notas={notas} setHistorial={setHistorial} />}
+      {!mostrarFormulario && error && puedeGestionar && <p role="alert">{error}</p>}
+      {!mostrarFormulario && mensaje && <p role="status">{mensaje}</p>}
+      {consultaVisible && <>{historial && <HistorialAlumno historial={historial} boleta={boleta} cargandoNotas={cargandoNotas} verNotas={verNotas} notas={notas} setHistorial={setHistorial} />}
       {transferencia && <TransferirAlumno transferencia={transferencia} transferir={transferir} destino={destino} setDestino={setDestino} planteles={planteles} enviando={enviando} setTransferencia={setTransferencia} />}
 
       <section className="panel panel-filtros" aria-label="Filtros de alumnos"><div className="fila">
@@ -230,6 +250,7 @@ export default function AlumnosPage() {
         </tbody>
       </table></div>
       <Paginador deshabilitado={cargando} total={resultado.total} pagina={resultado.pagina} porPagina={resultado.porPagina} onCambio={(pagina) => cargar(pagina, busquedaAplicada, plantelAplicado)} />
+      </>}
     </>
   );
 }

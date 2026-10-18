@@ -1,3 +1,4 @@
+import { useModuloTrabajo } from '../components/ModuloTrabajo';
 import { ContextoAcademicoSelector, CONTEXTO_VACIO } from '../components/ContextoAcademicoSelector';
 import { MateriasGrupo } from '../features/grupos/MateriasGrupo';
 import { InscripcionesGrupo } from '../features/grupos/InscripcionesGrupo';
@@ -24,9 +25,9 @@ export default function GruposPage() {
   const confirmacion = useConfirmacion();
   const [ciclos, setCiclos] = useState<Ciclo[]>([]);
   const [planteles, setPlanteles] = useState<Plantel[]>([]);
-  const [filtroCiclo, setFiltroCiclo] = useState('');
-  const [filtroPlantel, setFiltroPlantel] = useState('');
-  const [plantelAplicado, setPlantelAplicado] = useState('');
+  const [filtroCiclo, setFiltroCiclo] = useState(new URLSearchParams(location.search).get('ciclo') || '');
+  const [filtroPlantel, setFiltroPlantel] = useState(new URLSearchParams(location.search).get('plantel') || '');
+  const [plantelAplicado, setPlantelAplicado] = useState(new URLSearchParams(location.search).get('plantel') || '');
   const [resultado, setResultado] = useState<ResultadoGrupos>({ datos: [], total: 0, pagina: 1, porPagina: 10 });
   const [materias, setMaterias] = useState<Materia[]>([]);
   const [seleccionado, setSeleccionado] = useState<Grupo | null>(null);
@@ -42,6 +43,9 @@ export default function GruposPage() {
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const trabajo = useModuloTrabajo(enviando), legado = trabajo.modo === 'legado', consultaVisible = legado || trabajo.modo === 'consulta';
+  const paginaQuery = Math.max(1, Number(trabajo.query.get('pagina')) || 1), buscarQuery = trabajo.query.get('buscar') || '';
+  const [buscar,setBuscar] = useState(buscarQuery);
   const [cargandoListado, setCargandoListado] = useState(false);
   const consultaListado = useRef(0);
   const consultaGrupo = useRef(0);
@@ -64,16 +68,17 @@ export default function GruposPage() {
     setContexto({ nivelId: g.nivelId ? String(g.nivelId) : '', carreraId: g.carreraId ? String(g.carreraId) : '', periodoAcademicoId: g.periodoAcademicoId ? String(g.periodoAcademicoId) : '' }); setUsarContexto(Boolean(g.nivelId));
     setEditando(g); setFormGrupo({ cicloId: String(g.ciclo.id), plantelId: String(g.plantel?.id ?? ''),
       nombre: g.nombre, grado: g.grado ?? '', turno: g.turno ?? 'MATUTINO' });
+    if(!legado) trabajo.ir('editar',g.id);
     document.getElementById('form-grupo')?.scrollIntoView();
   };
 
-  const cargar = useCallback(async (pagina = 1, plantelId = '') => {
+  const consultar = useCallback(async (pagina = 1, plantelId = '') => {
     const actual = ++consultaListado.current;
     setCargandoListado(true);
     setError('');
     try {
       const { data } = await api.get<ResultadoGrupos>('/academico/grupos', {
-        params: { pagina, ...(filtroContexto.nivelId ? { nivelId: filtroContexto.nivelId } : {}), ...(filtroContexto.carreraId ? { carreraId: filtroContexto.carreraId } : {}), ...(filtroContexto.periodoAcademicoId ? { periodoAcademicoId: filtroContexto.periodoAcademicoId } : {}), ...(filtroCiclo ? { cicloId: filtroCiclo, inactivos: true } : {}), ...(plantelId ? { plantelId } : {}) },
+        params: { pagina, ...(legado ? {} : {porPagina:10}), ...(buscarQuery ? {buscar:buscarQuery} : {}), ...(filtroContexto.nivelId ? { nivelId: filtroContexto.nivelId } : {}), ...(filtroContexto.carreraId ? { carreraId: filtroContexto.carreraId } : {}), ...(filtroContexto.periodoAcademicoId ? { periodoAcademicoId: filtroContexto.periodoAcademicoId } : {}), ...(filtroCiclo ? { cicloId: filtroCiclo, inactivos: true } : {}), ...(plantelId ? { plantelId } : {}) },
       });
       if (actual === consultaListado.current) setResultado(data);
     } catch (err) {
@@ -81,7 +86,14 @@ export default function GruposPage() {
     } finally {
       if (actual === consultaListado.current) setCargandoListado(false);
     }
-  }, [filtroCiclo, filtroContexto]);
+  }, [filtroCiclo, filtroContexto, buscarQuery, legado]);
+  const cargar = (pagina = 1, plantelId = '') => legado ? consultar(pagina,plantelId) : Promise.resolve(trabajo.actualizar({pagina:String(pagina),plantel:plantelId,ciclo:filtroCiclo,nivel:filtroContexto.nivelId,carrera:filtroContexto.carreraId,periodo:filtroContexto.periodoAcademicoId,buscar}));
+  const plantelQuery = trabajo.query.get('plantel') || '', cicloQuery = trabajo.query.get('ciclo') || '', nivelQuery = trabajo.query.get('nivel') || '', carreraQuery = trabajo.query.get('carrera') || '', periodoQuery = trabajo.query.get('periodo') || '';
+  useEffect(()=>{
+    if(legado) return;
+    setFiltroPlantel(plantelQuery);setPlantelAplicado(plantelQuery);setFiltroCiclo(cicloQuery);setBuscar(buscarQuery);
+    setFiltroContexto(prev=>prev.nivelId===nivelQuery && prev.carreraId===carreraQuery && prev.periodoAcademicoId===periodoQuery ? prev : {nivelId:nivelQuery,carreraId:carreraQuery,periodoAcademicoId:periodoQuery});
+  },[legado,plantelQuery,cicloQuery,nivelQuery,carreraQuery,periodoQuery,buscarQuery]);
   const cargarCatalogos = useCallback(async () => {
     const actual = ++consultaCatalogos.current;
     setCargandoCatalogos(true); setErrorCatalogos('');
@@ -106,9 +118,9 @@ export default function GruposPage() {
     return () => { consultaCatalogos.current += 1; consultaGrupo.current += 1; };
   }, [cargarCatalogos]);
   useEffect(() => {
-    void cargar(1, plantelAplicado);
+    if(consultaVisible) void consultar(paginaQuery, plantelAplicado);
     return () => { consultaListado.current += 1; };
-  }, [cargar, plantelAplicado]);
+  }, [consultar, plantelAplicado,consultaVisible,paginaQuery]);
 
   const abrirGrupo = async (grupo: Grupo) => {
     const actual = ++consultaGrupo.current;
@@ -137,6 +149,16 @@ export default function GruposPage() {
     }
   };
 
+  useEffect(() => {
+    if(legado) return;
+    if(trabajo.modo === 'nuevo') {setEditando(null);setFormGrupo({cicloId:'',plantelId:'',nombre:'',grado:'',turno:'MATUTINO'});setContexto(CONTEXTO_VACIO);setUsarContexto(false);}
+    if(!trabajo.id || !['editar','administrar'].includes(trabajo.modo))return;
+    let vigente = true;
+    api.get<Grupo>(`/academico/grupos/${trabajo.id}`).then(({data:g})=>{if(!vigente)return;if(trabajo.modo==='editar') editar(g);else void abrirGrupo(g);}).catch(e=>{if(vigente)setError(mensajeDeError(e));});
+    return()=>{vigente=false;};
+    // Los handlers cargan solo el registro seleccionado; sus respuestas tienen contador propio.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trabajo.modo,trabajo.id,legado]);
   const crearGrupo = async (e: FormEvent) => {
     e.preventDefault();
     if (enviando) return; setEnviando(true); setError('');
@@ -152,6 +174,7 @@ export default function GruposPage() {
         grado: formGrupo.grado || undefined,
         turno: formGrupo.turno,
       });
+      trabajo.guardado(); if(!legado) trabajo.ir('consulta');
       setContexto(CONTEXTO_VACIO); setUsarContexto(false);
       setEditando(null); setMensaje(editando ? 'Grupo actualizado.' : 'Grupo creado. Ahora selecciona Administrar para asignar materias, docente e inscribir alumnos.');
       setFormGrupo({ cicloId: '', plantelId: '', nombre: '', grado: '', turno: 'MATUTINO' });
@@ -194,7 +217,7 @@ export default function GruposPage() {
       {cargandoCatalogos && <p role="status">Cargando catálogos…</p>}
       {errorCatalogos && <div role="alert"><p>{errorCatalogos}</p><button className="boton secundario" onClick={() => { void cargarCatalogos(); }}>Reintentar catálogos</button></div>}
 
-      <section className="panel">
+      {(legado || trabajo.modo === 'nuevo' || (trabajo.modo === 'editar' && editando?.id === trabajo.id)) && <section className="panel">
         <p className="texto-ayuda">Paso 1: selecciona un plantel y un ciclo en preparación o activo. Después abre Administrar para asignar materias y docentes e inscribir alumnos.</p><h2 id="form-grupo">{editando ? 'Editar grupo' : 'Nuevo grupo'}</h2>
         <form onSubmit={crearGrupo} className="fila">
           <div className="campo"><label htmlFor="grupos-campo-1">Plantel</label>
@@ -223,11 +246,11 @@ export default function GruposPage() {
           </div>
           <label className="casilla"><input type="checkbox" checked={usarContexto} onChange={(e) => { setUsarContexto(e.target.checked); if (!e.target.checked) setContexto(CONTEXTO_VACIO); }} />Asignar nivel, carrera/plan y periodo</label>
           {usarContexto && <ContextoAcademicoSelector plantelId={formGrupo.plantelId} cicloId={formGrupo.cicloId} valor={contexto} cambiar={setContexto} deshabilitado={enviando} />}
-          <button disabled={enviando} className="boton">{editando ? 'Guardar corrección' : 'Crear grupo'}</button>{editando && <button type="button" onClick={() => { setContexto(CONTEXTO_VACIO); setUsarContexto(false); setEditando(null); setFormGrupo({ cicloId: '', plantelId: '', nombre: '', grado: '', turno: 'MATUTINO' }); }}>Cancelar edición</button>}
+          <button disabled={enviando} className="boton">{editando ? 'Guardar corrección' : 'Crear grupo'}</button>{editando && <button type="button" onClick={() => {if(!legado) trabajo.ir('consulta'); else {setContexto(CONTEXTO_VACIO); setUsarContexto(false); setEditando(null); setFormGrupo({ cicloId: '', plantelId: '', nombre: '', grado: '', turno: 'MATUTINO' });}}}>Cancelar edición</button>}
         </form>
-      </section>
+      </section>}
 
-      <div className="fila" style={{ marginBottom: 12 }}><div className="campo"><label htmlFor="filtro-ciclo-grupos">Consultar ciclo</label><select id="filtro-ciclo-grupos" value={filtroCiclo} onChange={(e) => { setFiltroContexto(CONTEXTO_VACIO); setFiltroCiclo(e.target.value); }}><option value="">Vigente</option>{ciclos.map((c) => <option key={c.id} value={c.id}>{c.clave} · {c.estado}</option>)}</select></div>
+      {consultaVisible && <><div className="fila" style={{ marginBottom: 12 }}><div className="campo"><label htmlFor="filtro-ciclo-grupos">Consultar ciclo</label><select id="filtro-ciclo-grupos" value={filtroCiclo} onChange={(e) => { setFiltroContexto(CONTEXTO_VACIO); setFiltroCiclo(e.target.value); }}><option value="">Vigente</option>{ciclos.map((c) => <option key={c.id} value={c.id}>{c.clave} · {c.estado}</option>)}</select></div>
         <div className="campo"><label htmlFor="grupos-campo-6">Filtrar por plantel</label>
           <select id="grupos-campo-6" value={filtroPlantel} onChange={(e) => { setFiltroContexto(CONTEXTO_VACIO); setFiltroPlantel(e.target.value); }}>
             <option value="">Todos</option>
@@ -235,12 +258,14 @@ export default function GruposPage() {
           </select>
         </div>
         <button className="boton secundario" disabled={cargandoListado} onClick={() => {
+          if(!legado) { void cargar(1,filtroPlantel); setPlantelAplicado(filtroPlantel); return; }
           if (filtroPlantel === plantelAplicado) void cargar(1, plantelAplicado);
           else setPlantelAplicado(filtroPlantel);
         }}>Aplicar</button>
       </div>
 
       {filtroPlantel && filtroCiclo && <ContextoAcademicoSelector plantelId={filtroPlantel} cicloId={filtroCiclo} valor={filtroContexto} cambiar={setFiltroContexto} />}
+      {!legado && <form className="fila" onSubmit={e=>{e.preventDefault();void cargar(1,plantelAplicado);}}><label>Buscar por nombre<input value={buscar} onChange={e=>setBuscar(e.target.value)} /></label><button>Buscar</button></form>}
       <div className="cabecera-listado"><h2>Directorio de grupos</h2><p>{resultado.total} grupos</p></div>
       {cargandoListado && <p role="status">Cargando grupos…</p>}
       <div className="tabla-contenedor" role="region" aria-label="Listado de grupos" tabIndex={0}>
@@ -258,7 +283,7 @@ export default function GruposPage() {
               <td data-etiqueta="Turno">{g.turno ?? '—'}</td>
               <td data-etiqueta="Acciones" className="derecha">
                 <span className="acciones-fila">
-                  <button className="boton secundario chico" disabled={enviando} onClick={() => abrirGrupo(g)}>Administrar</button>
+                  <button className="boton secundario chico" disabled={enviando} onClick={() => {if(legado) void abrirGrupo(g); else trabajo.ir('administrar',g.id);}}>Administrar</button>
                   <button className="boton secundario chico" disabled={enviando} onClick={() => editar(g)}>Editar</button>
                   <button className="boton peligro chico" disabled={enviando} onClick={() => operar(`/academico/grupos/${g.id}`, 'delete')}>Desactivar grupo</button>
                 </span>
@@ -270,9 +295,10 @@ export default function GruposPage() {
         </tbody>
       </table></div>
       <Paginador total={resultado.total} pagina={resultado.pagina} porPagina={resultado.porPagina} deshabilitado={cargandoListado} onCambio={(pagina) => cargar(pagina, plantelAplicado)} />
+      </>}
 
       {cargandoGrupo && <p role="status">Cargando detalle del grupo…</p>}
-      {seleccionado && !cargandoGrupo && !detalleGrupoCompleto && <button className="boton secundario" onClick={() => { void abrirGrupo(seleccionado); }}>Reintentar detalle del grupo</button>}
+      {(legado || trabajo.modo === 'administrar') && seleccionado && !cargandoGrupo && !detalleGrupoCompleto && <button className="boton secundario" onClick={() => { void abrirGrupo(seleccionado); }}>Reintentar detalle del grupo</button>}
       {seleccionado && !cargandoGrupo && detalleGrupoCompleto && (
         <>
           <section className="panel" aria-label="Preparación del grupo"><h2>{seleccionado.nombre}: siguientes pasos</h2><ol><li>Grupo registrado en {seleccionado.ciclo.clave}.</li><li>{asignaciones.length} materias asignadas; {asignaciones.filter((a) => !a.docente).length} pendientes de docente.</li><li>{inscritos.length} alumnos inscritos. El expediente se registra por separado.</li></ol></section>

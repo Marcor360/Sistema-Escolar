@@ -25,6 +25,8 @@ async consultarMaterias(query: ListarMateriasDto) {
     return { datos, total, pagina, porPagina };
   }
 
+async obtenerMateria(id: number) { const materia = await this.materias.findOneBy({ id }); if (!materia) throw new NotFoundException('Materia no encontrada'); return materia; }
+
 async crearMateria(dto: MateriaDto) {
     try { return await this.materias.save(this.materias.create(dto)); }
     catch (error) { if (esConflictoUnico(error)) throw new ConflictException('La clave de materia ya está registrada'); throw error; }
