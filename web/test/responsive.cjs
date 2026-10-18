@@ -147,6 +147,7 @@ async function esperarServidor() {
       if (/\/academico\/grupos\/\d+\/(materias|alumnos)$/.test(path)) data = [];
       const claseBeta = { id: 1, grupo: { id: 1, nombre: 'Grupo Beta', ciclo: { id: 1, nombre: '2026–2027', clave: '2026' }, plantel: { nombre: 'Plantel Beta' } }, materia: { clave: 'MAT', nombre: 'Matemáticas' } };
       if (path.endsWith('/planteles/mios')) data = [{ id: 1, nombre: 'Plantel Beta' }];
+      if (path.endsWith('/academico/materias/listado')) data = { datos: [], total: 0, pagina: 1, porPagina: 10 };
       if (path.endsWith('/usuarios/listado')) data = { datos: [{ id: 1, matricula: 'US-QA-001', nombre: 'Usuario con nombre largo de prueba', correo: 'correo.extenso.de.prueba@example.invalid', plantel: 'Plantel Beta', estatus: 'ACTIVO' }], total: 1, pagina: 1, porPagina: 10 };
       if (path.endsWith('/academico/mis-grupos') || path.endsWith('/academico/grupo-materias')) data = [claseBeta];
       if (path.endsWith('/academico/clases-seleccion')) data = { datos: [claseBeta], total: 1 };
@@ -407,6 +408,7 @@ async function esperarServidor() {
         await page.getByRole('button', { name: 'Previsualizar archivo' }).click();
         await expect(page.getByRole('region', { name: 'Filas de previsualización' })).toBeVisible();
       }
+      if (ruta === '/materias') await expect(page.getByLabel('Buscar materias por clave o nombre')).toBeVisible();
       if (ruta === '/usuarios') await expect(page.getByText('US-QA-001')).toBeVisible();
       if (ruta === '/calificaciones') {
         await expect(page.getByLabel('Clase').locator('option[value="1"]')).toBeAttached();

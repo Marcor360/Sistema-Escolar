@@ -38,10 +38,15 @@ export function registrarBeta(ctx: ContextoIntegracion) {
     const correo = jest.spyOn(ctx.app.get(NotificacionesService), 'enviarEmail');
     const codigos: string[] = [];
     correo.mockImplementation(async (_email, _asunto, html) => { if (_email === nuevo.email) codigos.push(html.match(/<strong[^>]*>([a-f0-9]{64})<\/strong>/)![1]); return { simulado: false }; });
+    const procesarHasta = async (cantidad: number) => {
+      // El worker respeta lotes de diez; puede haber otras solicitudes anteriores en esta base aislada.
+      for (let i = 0; codigos.length < cantidad && i < 20; i++) await ctx.app.get(CorreoAccesoOutboxService).procesar();
+      expect(codigos).toHaveLength(cantidad);
+    };
     try {
       const generica = await activacion.solicitar('inexistente@example.invalid');
       expect(await activacion.solicitar(nuevo.email)).toEqual(generica);
-      await ctx.app.get(CorreoAccesoOutboxService).procesar();
+      await procesarHasta(1);
       expect((await tokens.findBy({ usuarioId: nuevo.id }))[0].token).toBe(createHash('sha256').update(codigos[0]).digest('hex'));
       expect(JSON.stringify(generica)).not.toContain(codigos[0]);
       await activacion.solicitar(nuevo.email);
@@ -50,7 +55,7 @@ export function registrarBeta(ctx: ContextoIntegracion) {
       expect(codigos).toHaveLength(1);
       await ctx.dataSource.getRepository(AuthCorreoOutbox).update({ usuarioId: nuevo.id }, { expiraEn: new Date(Date.now() - 60000) });
       await activacion.solicitar(nuevo.email);
-      await ctx.app.get(CorreoAccesoOutboxService).procesar();
+      await procesarHasta(2);
       await expect(activacion.activar(codigos[0], password)).rejects.toThrow();
       const reset = randomUUID();
       await ctx.dataSource.getRepository(PasswordResetToken).save({ usuarioId: nuevo.id, token: createHash('sha256').update(reset).digest('hex'), expiraEn: new Date(Date.now() + 60000), usado: false });
@@ -69,7 +74,7 @@ export function registrarBeta(ctx: ContextoIntegracion) {
       await expect(auth.login(nuevo.email, password, 'WEB')).resolves.toHaveProperty('accessToken');
       await usuarios.update(nuevo.id, { activacionPendiente: true });
       await activacion.solicitar(nuevo.email);
-      await ctx.app.get(CorreoAccesoOutboxService).procesar();
+      await procesarHasta(3);
       await tokens.update({ usuarioId: nuevo.id, usado: false }, { expiraEn: new Date(Date.now() - 60000) });
       await expect(activacion.activar(codigos[2], password)).rejects.toThrow();
       correo.mockResolvedValue({ simulado: true });
