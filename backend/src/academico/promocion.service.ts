@@ -28,16 +28,18 @@ export class PromocionService {
     if (!cicloOrigen || !cicloDestino) throw new ConflictException('El contexto académico cambió; vuelve a consultar');
     origen.ciclo = cicloOrigen; destino.ciclo = cicloDestino;
     await this.scope.validarGestion(user, origen.plantelId); await this.scope.validarGestion(user, destino.plantelId);
+    if (origen.tipo === 'ESPECIAL' || destino.tipo === 'ESPECIAL') throw new ConflictException('La promoción ordinaria excluye programas especiales');
     if (origen.cicloId === destino.cicloId || ciclos.find((c) => c.id === origen.cicloId)?.estado !== 'CERRADO' || ciclos.find((c) => c.id === destino.cicloId)?.estado !== 'PREPARACION') throw new ConflictException('La promoción requiere origen cerrado y destino en preparación');
     if (destino.ciclo.fechaInicio <= origen.ciclo.fechaFin) throw new ConflictException('El ciclo de destino debe ser posterior al de origen');
     if (origen.plantelId !== destino.plantelId || !destino.activo || !plantel?.activo) throw new ConflictException('El destino debe estar activo en el mismo plantel; usa transferencia para cambiar plantel');
+    if ((origen.nivelId ?? null) !== (destino.nivelId ?? null) || (origen.carreraId ?? null) !== (destino.carreraId ?? null)) throw new ConflictException('La promoción requiere nivel y carrera/plan compatibles');
     return { origen, destino };
   }
   async preview(dto: PromocionDto, user: JwtUser) {
     try { return await this.ds.transaction(async (manager) => {
       const { origen, destino } = await this.contexto(manager, dto, user);
       const inscripciones = await manager.getRepository(Inscripcion).find({ where: { grupoId: origen.id, estatus: 'ACTIVA', alumno: { estatus: 'ACTIVO', usuario: { activo: true }, plantelId: destino.plantelId } } });
-      const previas = await manager.getRepository(Inscripcion).find({ where: { grupo: { cicloId: destino.cicloId }, estatus: 'ACTIVA' } });
+      const previas = await manager.getRepository(Inscripcion).find({ where: { grupo: { cicloId: destino.cicloId, tipo: 'REGULAR' }, estatus: 'ACTIVA' } });
       const ocupados = new Set(previas.map((p) => p.alumnoId));
       const alumnos = inscripciones.map((i) => ({ id: i.alumnoId, matricula: i.alumno.matricula, nombre: i.alumno.usuario.nombreCompleto, elegible: !ocupados.has(i.alumnoId) }));
       return { origen: { id: origen.id, nombre: origen.nombre, cicloId: origen.cicloId }, destino: { id: destino.id, nombre: destino.nombre, cicloId: destino.cicloId }, plantel: destino.plantel.nombre, alumnos, regla: 'Solo alumnos seleccionados; la promoción no copia calificaciones ni equivale a aprobación automática.' };
@@ -55,7 +57,7 @@ export class PromocionService {
       const repo = manager.getRepository(Inscripcion);
       for (const alumno of alumnos) {
         if (!await repo.findOneBy({ grupoId: origen.id, alumnoId: alumno.id, estatus: 'ACTIVA' })) throw new ConflictException('El alumno no tiene inscripción en el origen');
-        if (await repo.findOne({ where: { alumnoId: alumno.id, estatus: 'ACTIVA', grupo: { cicloId: destino.cicloId } } })) throw new ConflictException('Ya existe una inscripción activa en el destino; la operación no se aplica parcialmente');
+        if (await repo.findOne({ where: { alumnoId: alumno.id, estatus: 'ACTIVA', grupo: { cicloId: destino.cicloId, tipo: 'REGULAR' } } })) throw new ConflictException('Ya existe una inscripción activa en el destino; la operación no se aplica parcialmente');
         const anterior = await repo.findOneBy({ grupoId: destino.id, alumnoId: alumno.id });
         if (anterior) await repo.update(anterior.id, { estatus: 'ACTIVA' });
         else await repo.insert({ grupoId: destino.id, alumnoId: alumno.id, estatus: 'ACTIVA' });
