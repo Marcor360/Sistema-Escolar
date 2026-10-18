@@ -5,9 +5,11 @@ import { ModuloTrabajo, useModuloTrabajo } from './ModuloTrabajo';
 import { useEffect, useState } from 'react';
 import Materias from '../pages/Materias';
 import Finanzas from '../pages/Finanzas';
+import Usuarios from '../pages/Usuarios';
+import Grupos from '../pages/Grupos';
 import { api } from '../api/client';
 const auth = vi.hoisted(() => ({superadmin:true}));
-vi.mock('../auth/AuthContext',()=>({useAuth:()=>({tieneRol:(...roles:string[])=>auth.superadmin || roles.includes('ADMINISTRATIVO')})}));
+vi.mock('../auth/AuthContext',()=>({useAuth:()=>({sesion:{sub:1,roles:auth.superadmin?['SUPERADMIN']:['ADMINISTRATIVO']},tieneRol:(...roles:string[])=>auth.superadmin || roles.includes('ADMINISTRATIVO')})}));
 beforeEach(()=>{auth.superadmin=true;HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','');};HTMLDialogElement.prototype.close=function(){this.removeAttribute('open');};});
 afterEach(()=>{cleanup();vi.restoreAllMocks();});
 const acciones=[{titulo:'Consultar',detalle:'Buscar registros',vista:'consulta'},{titulo:'Registrar',detalle:'Nuevo registro',vista:'nuevo',roles:['SUPERADMIN']}];
@@ -35,4 +37,18 @@ it('materias: alta enfocada no consulta directorios y volver a consulta conserva
 it('finanzas: consultar cargos no monta pagos, conciliación ni formularios',async()=>{
  const get=vi.spyOn(api,'get').mockResolvedValue({data:{datos:[],total:0,pagina:1,porPagina:10}});
  montar(<Finanzas/>,'/modulo?vista=cargos',['cargos']);await waitFor(()=>expect(get).toHaveBeenCalledWith('/finanzas/cargos',{params:{pagina:1,porPagina:10}}));expect(get).toHaveBeenCalledTimes(1);expect(screen.queryByText('Nuevo cargo individual')).toBeNull();expect(screen.queryByText('Registrar pago manual')).toBeNull();
+});
+
+it.each(['usuarios','grupos'])('guardar %s vuelve a consulta sin sobrescribir la navegación con otra actualización de filtros', async tipo=>{
+ const get = vi.spyOn(api,'get').mockImplementation(async url=>({data:url==='/planteles/mios'?[{id:1,nombre:'Plantel prueba'}]:url==='/academico/ciclos'?[{id:1,clave:'CICLO',activo:true,estado:'ACTIVO'}]:url==='/academico/materias'?[]:{datos:[],total:0,pagina:2,porPagina:10}}));
+ const post=vi.spyOn(api,'post').mockResolvedValue({data:{id:9}});
+ const router=montar(tipo==='usuarios'?<Usuarios/>:<Grupos/>,'/modulo?vista=nuevo&pagina=2&buscar=criterio');
+ if(tipo==='usuarios') {
+  fireEvent.change(screen.getByLabelText('Nombre'),{target:{value:'Personal'}});fireEvent.change(screen.getByLabelText('Primer apellido'),{target:{value:'Prueba'}});fireEvent.change(screen.getByLabelText('Correo'),{target:{value:'prueba@example.invalid'}});fireEvent.click(await screen.findByLabelText('Plantel prueba'));fireEvent.click(screen.getByRole('button',{name:'Crear'}));
+ } else {
+  await waitFor(()=>expect(screen.getByLabelText('Plantel').querySelectorAll('option')).toHaveLength(2));
+  fireEvent.change(screen.getByLabelText('Plantel'),{target:{value:'1'}});fireEvent.change(screen.getByLabelText('Ciclo'),{target:{value:'1'}});fireEvent.change(screen.getByLabelText('Nombre'),{target:{value:'Grupo prueba'}});fireEvent.click(screen.getByRole('button',{name:'Crear grupo'}));
+ }
+ await waitFor(()=>expect(post).toHaveBeenCalledTimes(1));await waitFor(()=>expect(router.state.location.search).toContain('vista=consulta'));expect(router.state.location.search).toContain('pagina=2');expect(router.state.location.search).toContain('buscar=criterio');expect(screen.queryByRole('dialog')).toBeNull();
+ await waitFor(()=>expect(get.mock.calls.some(([url])=>url===(tipo==='usuarios'?'/usuarios/listado':'/academico/grupos'))).toBe(true));
 });

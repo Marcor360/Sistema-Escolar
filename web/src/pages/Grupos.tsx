@@ -178,7 +178,7 @@ export default function GruposPage() {
       setContexto(CONTEXTO_VACIO); setUsarContexto(false);
       setEditando(null); setMensaje(editando ? 'Grupo actualizado.' : 'Grupo creado. Ahora selecciona Administrar para asignar materias, docente e inscribir alumnos.');
       setFormGrupo({ cicloId: '', plantelId: '', nombre: '', grado: '', turno: 'MATUTINO' });
-      cargar(1, plantelAplicado);
+      if(legado) void cargar(1, plantelAplicado);
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 

@@ -93,7 +93,7 @@ export default function UsuariosPage() {
       if (editarId) await api.patch(`/usuarios/${editarId}/personal`, { nombre: form.nombre, apellidoPaterno: form.apellidoPaterno, apellidoMaterno: form.apellidoMaterno, telefono: form.telefono, roles: rolesElegidos, plantelIds, activo });
       else await api.post('/usuarios', { email: form.email, nombre: form.nombre, apellidoPaterno: form.apellidoPaterno, apellidoMaterno: form.apellidoMaterno, telefono: form.telefono, roles: rolesElegidos, plantelIds: plantelIds.length ? plantelIds : undefined });
       trabajo.guardado(); if(!legado) trabajo.ir('consulta');
-      setMensaje(editarId ? `Cuenta ${form.email} actualizada` : 'Cuenta creada. Si el correo está disponible, recibirá instrucciones para activarla.'); setForm(FORM_INICIAL); setEditarId(null); await cargar(1, tipo, plantelId, buscar);
+      setMensaje(editarId ? `Cuenta ${form.email} actualizada` : 'Cuenta creada. Si el correo está disponible, recibirá instrucciones para activarla.'); setForm(FORM_INICIAL); setEditarId(null); if(legado) await cargar(1, tipo, plantelId, buscar);
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
