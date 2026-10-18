@@ -1,7 +1,9 @@
+import { useSearchParams } from 'react-router-dom';
+import { Paginador } from '../components/Paginador';
 import '../components/tabla-adaptable.css';
 import { useDialogoMotivo } from '../components/useDialogoMotivo';
 import { useConfirmacion } from '../components/useConfirmacion';
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { Encabezado } from '../components/Encabezado';
 import { useAuth } from '../auth/AuthContext';
@@ -18,8 +20,31 @@ export default function MateriasPage() {
   const [error, setError] = useState(''); const [mensaje, setMensaje] = useState(''); const [enviando, setEnviando] = useState(false);
   const [resumen, setResumen] = useState<ResumenCierre | null>(null); const { tieneRol } = useAuth();
   const [cargandoCatalogos, setCargandoCatalogos] = useState(true);
-  const cargar = useCallback(async () => { setCargandoCatalogos(true); try { const [m, c] = await Promise.all([api.get<Materia[]>('/academico/materias'), api.get<Ciclo[]>('/academico/ciclos')]); setMaterias(m.data); setCiclos(c.data); } finally { setCargandoCatalogos(false); } }, []);
-  useEffect(() => { void cargar().catch((err) => setError(mensajeDeError(err))); }, [cargar]);
+  const [params, setParams] = useSearchParams();
+  const pagina = Math.max(1, Number(params.get('pagina')) || 1);
+  const buscar = params.get('buscar') || '';
+  const [termino, setTermino] = useState(buscar), [total, setTotal] = useState(0);
+  const consulta = useRef(0);
+  useEffect(() => { setTermino(buscar); }, [buscar]);
+  useEffect(() => {
+    if (termino === buscar) return;
+    const timer = setTimeout(() => setParams(prev => {
+      const next = new URLSearchParams(prev); next.delete('pagina');
+      if (termino.trim()) next.set('buscar', termino.trim()); else next.delete('buscar');
+      return next;
+    }, { replace: true }), 300);
+    return () => clearTimeout(timer);
+  }, [termino, buscar, setParams]);
+  const cargar = useCallback(async () => {
+    const actual = ++consulta.current; setCargandoCatalogos(true);
+    try {
+      const [m, c] = await Promise.all([api.get<{ datos: Materia[]; total: number }>('/academico/materias/listado', { params: { pagina, porPagina: 10, buscar } }), api.get<Ciclo[]>('/academico/ciclos')]);
+      if (actual !== consulta.current) return;
+      setMaterias(m.data.datos); setTotal(m.data.total); setCiclos(c.data); setError('');
+    } catch (err) { if (actual === consulta.current) setError(mensajeDeError(err)); }
+    finally { if (actual === consulta.current) setCargandoCatalogos(false); }
+  }, [pagina, buscar]);
+  useEffect(() => { void cargar(); return () => { consulta.current++; }; }, [cargar]);
   const operar = async (trabajo: () => Promise<void>, anunciar = true) => { if (enviando) return; setEnviando(true); setError(''); setMensaje('');
     try { await trabajo(); await cargar(); if (anunciar) setMensaje('Operación completada'); } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); } };
   const guardarMateria = (e: FormEvent) => { e.preventDefault(); void operar(async () => {
@@ -54,10 +79,14 @@ export default function MateriasPage() {
       <label htmlFor="mat-descripcion">Descripción<input id="mat-descripcion" maxLength={300} value={formMateria.descripcion} onChange={(e) => setFormMateria({ ...formMateria, descripcion: e.target.value })} /></label>
       <button disabled={enviando}>Guardar materia</button>{editarMateria && <button type="button" onClick={async () => { setEditarMateria(null); setFormMateria(MATERIA); }}>Cancelar edición</button>}
     </form></section>
+    <label htmlFor="buscar-materias">Buscar materias por clave o nombre<input id="buscar-materias" maxLength={120} value={termino} onChange={e => setTermino(e.target.value)} /></label>
+    <button type="button" disabled={cargandoCatalogos} onClick={() => void cargar()}>Actualizar catálogo</button>
+    {cargandoCatalogos && <p role="status">Cargando catálogo…</p>}
     <div className="tabla-contenedor" role="region" aria-label="Catálogo de materias" tabIndex={0}><table className="tabla tabla-adaptable" aria-busy={cargandoCatalogos}><caption className="solo-lector">Claves, nombres, créditos y acciones del catálogo académico</caption><thead><tr><th scope="col">Clave</th><th scope="col">Materia</th><th scope="col">Créditos</th><th scope="col">Acciones</th></tr></thead><tbody>{materias.map((m) => <tr key={m.id}><td data-etiqueta="Clave">{m.clave}</td><td data-etiqueta="Materia">{m.nombre}</td><td data-etiqueta="Créditos">{m.creditos}</td><td data-etiqueta="Acciones">
       <button disabled={enviando} onClick={async () => { setEditarMateria(m.id); setFormMateria({ clave: m.clave, nombre: m.nombre, creditos: String(m.creditos), descripcion: m.descripcion ?? '' }); }}>Editar</button>
       {tieneRol('SUPERADMIN') && <button disabled={enviando} onClick={async () => { if (await confirmacion.solicitar(`¿Desactivar ${m.nombre}? El historial se conserva.`)) void operar(async () => { await api.delete(`/academico/materias/${m.id}`); }); }}>Desactivar</button>}
-    </td></tr>)}{!cargandoCatalogos && !error && !materias.length && <tr><td colSpan={4} className="vacio">No hay materias registradas. Crea la primera para asignarla a un grupo.</td></tr>}</tbody></table></div>
+    </td></tr>)}{!cargandoCatalogos && !error && !materias.length && <tr><td colSpan={4} className="vacio">No hay materias para esta búsqueda. Ajusta el texto o registra una materia.</td></tr>}</tbody></table></div>
+    <Paginador total={total} pagina={pagina} porPagina={10} deshabilitado={cargandoCatalogos} onCambio={p => setParams(prev => { const next = new URLSearchParams(prev); next.set('pagina', String(p)); return next; })} />
     <section className="panel"><h2>{editarCiclo ? 'Editar ciclo' : 'Preparar ciclo escolar'}</h2><form onSubmit={guardarCiclo} className="fila">
       <label htmlFor="cic-clave">Clave del ciclo<input id="cic-clave" required maxLength={20} value={formCiclo.clave} onChange={(e) => setFormCiclo({ ...formCiclo, clave: e.target.value })} /></label>
       <label htmlFor="cic-nombre">Nombre del ciclo<input id="cic-nombre" required maxLength={80} value={formCiclo.nombre} onChange={(e) => setFormCiclo({ ...formCiclo, nombre: e.target.value })} /></label>

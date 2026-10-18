@@ -1,3 +1,4 @@
+import { registrarMateriasPaginadas } from './integration/materias-paginadas.cases';
 import { registrarRecursamientos } from './integration/recursamientos.cases';
 import { registrarCartera } from './integration/cartera.cases';
 import { registrarAgrupacion } from './integration/agrupacion.cases';
@@ -438,6 +439,7 @@ const casos = { ...casos_baseline, ...casos_identidad, ...casos_academico, ...ca
 Object.keys(casos).map(Number).sort((a,b) => a-b).forEach((id) => casos[id](contexto));
 
   registrarBeta(contexto);
+  registrarMateriasPaginadas(contexto);
   registrarCapturaSinCambios(contexto);
   registrarAltasInstitucionales(contexto);
   registrarRecorridoFinanciero(contexto);

@@ -15,3 +15,10 @@ Pruebas de 115 materias y búsquedas de claves fuera de primera página; filtros
 
 ## Estado
 Plan de migración de contrato. No se cambia la respuesta pública hasta tener pruebas y consumidores adaptados.
+
+## Implementación
+`GET /api/academico/materias/listado` añade el contrato `{datos,total,pagina,porPagina}` con diez resultados por defecto y máximo cien. Filtra activo, busca literalmente por clave/nombre mediante parámetros (escapa %, _ y [), ordena por clave e ID y conserva los roles del catálogo existente. Materia es un catálogo global, sin vínculo directo a plantel o programa: no se inventa ese filtro. La autorización de asignación por plantel permanece en los módulos de grupos/clases.
+
+La página Materias consume la nueva ruta, mantiene búsqueda/página en la URL, reinicia a página uno al buscar, muestra carga/error/vacío y descarta respuestas anteriores. Grupos y ProgramasEspeciales conservan por compatibilidad su consumo de `GET /academico/materias` como arreglo; reportes/importaciones y móvil no requieren cambiar ese contrato. No se modifican exportaciones ni datos existentes. La migración de selectores grandes puede usar la nueva ruta sin cambiar el arreglo público.
+
+Pruebas RTL de consulta/búsqueda/navegación y contratos existentes; integración en ambos motores con 115 materias, página 12, clave fuera de primera página, comodines literales, validación de límites y acceso denegado a ALUMNO. No requiere migraciones.
