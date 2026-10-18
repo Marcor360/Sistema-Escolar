@@ -1,8 +1,10 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import MateriasPage from './Materias';
 import { api } from '../api/client';
-vi.mock('../auth/AuthContext', () => ({ useAuth: () => ({ tieneRol: () => true }) }));
+const { tieneRol } = vi.hoisted(() => ({ tieneRol: vi.fn(() => true) }));
+vi.mock('../auth/AuthContext', () => ({ useAuth: () => ({ tieneRol }) }));
+beforeEach(() => tieneRol.mockImplementation(() => true));
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 it('crea materia con cero créditos y ciclo en preparación sin activar el vigente', async () => {
   vi.spyOn(api, 'get').mockResolvedValue({ data: [] }); const post = vi.spyOn(api, 'post').mockResolvedValue({ data: {} });
@@ -34,4 +36,25 @@ it('muestra los requisitos y tablas accesibles de materias y ciclos', async () =
   await waitFor(() => expect(screen.getByText(/No hay materias registradas/)).toBeTruthy());
   expect(screen.getByRole('region', { name: 'Catálogo de materias' }).querySelector('.tabla-adaptable')).toBeTruthy();
   expect(screen.getByRole('region', { name: 'Ciclos escolares' }).querySelector('.tabla-adaptable')).toBeTruthy();
+});
+
+
+it.each([false, true])('desactivación visible solo con SUPERADMIN: %s', async (superadmin) => {
+  tieneRol.mockImplementation((...roles: string[]) => superadmin || roles.includes('ADMINISTRATIVO'));
+  vi.spyOn(api, 'get').mockImplementation(async (url) => ({ data: url === '/academico/materias'
+    ? [{ id: 9, clave: 'HIST', nombre: 'Historia', creditos: 2 }] : [] }));
+  const eliminar = vi.spyOn(api, 'delete').mockResolvedValue({ data: { ok: true } });
+  render(<MateriasPage />);
+  await screen.findByText('Historia');
+  expect(screen.getByRole('button', { name: 'Editar' })).toBeTruthy();
+  const boton = screen.queryByRole('button', { name: 'Desactivar' });
+  if (!superadmin) { expect(boton).toBeNull(); expect(eliminar).not.toHaveBeenCalled(); return; }
+  fireEvent.click(boton!);
+  await screen.findByRole('dialog');
+  fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+  expect(eliminar).not.toHaveBeenCalled();
+  fireEvent.click(boton!);
+  await screen.findByRole('dialog');
+  fireEvent.click(screen.getByRole('button', { name: 'Confirmar' }));
+  await waitFor(() => expect(eliminar).toHaveBeenCalledWith('/academico/materias/9'));
 });

@@ -4,8 +4,34 @@ import { ContextoIntegracion } from './contexto';
 import { expect,it } from '@jest/globals';
 import { AuthService } from '../../src/auth/auth.service';
 import { UsuariosService } from '../../src/usuarios/usuarios.service';
-import { Usuario, OrdenPago, Alumno, GrupoMateria } from '../../src/entities';
+import { Usuario, OrdenPago, Alumno, GrupoMateria, Materia, Grupo } from '../../src/entities';
 export function registrarBarrido(ctx: ContextoIntegracion) {
+  it('solo SUPERADMIN desactiva materias y conserva referencias históricas', async () => {
+    const tokenDe = async (id: number) => ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id })).email);
+    const root = await tokenDe(ctx.superadminId), admin = await tokenDe(ctx.adminId);
+    const finanzas = await tokenDe(ctx.finanzasId), alumno = await tokenDe(ctx.alumnoUsuarioId);
+    const creada = await ctx.api('/academico/materias', { method: 'POST', token: admin,
+      body: { clave: `PM${ctx.sufijo}`, nombre: 'Materia de permisos', creditos: 0 } });
+    expect(creada.response.status).toBe(201);
+    const id = creada.data.id, ruta = `/academico/materias/${id}`;
+    expect((await ctx.api(ruta, { method: 'PATCH', token: admin, body: { nombre: 'Materia editada' } })).response.status).toBe(200);
+    expect((await ctx.api(ruta, { method: 'PATCH', token: admin, body: { activo: false } })).response.status).toBe(400);
+    expect((await ctx.api(ruta, { method: 'DELETE' })).response.status).toBe(401);
+    for (const token of [admin, finanzas, alumno]) {
+      expect((await ctx.api(ruta, { method: 'DELETE', token })).response.status).toBe(403);
+    }
+    expect((await ctx.dataSource.getRepository(Materia).findOneByOrFail({ id })).activo).toBe(true);
+    const clase = await ctx.dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: ctx.grupoMateriaIdMaestro });
+    const grupo = await ctx.dataSource.getRepository(Grupo).save({ cicloId: clase.grupo.cicloId,
+      plantelId: ctx.plantelId, nombre: `PM${ctx.sufijo}`, activo: false });
+    const historica = await ctx.dataSource.getRepository(GrupoMateria).save({ grupoId: grupo.id, materiaId: id, docenteId: null });
+    expect((await ctx.api(ruta, { method: 'DELETE', token: root })).response.status).toBe(200);
+    expect(await ctx.dataSource.getRepository(Materia).findOneByOrFail({ id })).toMatchObject({ activo: false, nombre: 'Materia editada' });
+    expect(await ctx.dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: historica.id })).toMatchObject({ materiaId: id });
+    const catalogo = await ctx.api('/academico/materias', { token: admin });
+    expect(catalogo.data.some((m: { id: number }) => m.id === id)).toBe(false);
+  });
+
   it('resoluciones de conciliación: paginación validada y acceso exclusivo financiero', async () => {
     const token = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.finanzasId })).email);
     const alumno = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.alumnoUsuarioId })).email);
