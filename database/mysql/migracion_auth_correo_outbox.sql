@@ -22,3 +22,4 @@ CREATE TABLE auth_correo_outbox (
 );
 CREATE INDEX idx_auth_outbox_pendiente ON auth_correo_outbox(estado,proximo_intento);
 CREATE INDEX idx_auth_outbox_usuario ON auth_correo_outbox(usuario_id,tipo,expira_en);
+CREATE INDEX idx_auth_outbox_expira ON auth_correo_outbox(expira_en);

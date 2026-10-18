@@ -7,6 +7,7 @@ export type EstadoCorreoAcceso = 'PENDIENTE' | 'PROCESANDO' | 'ACEPTADO' | 'FALL
 @Entity('auth_correo_outbox')
 @Index('idx_auth_outbox_pendiente', ['estado', 'proximoIntento'])
 @Index('idx_auth_outbox_usuario', ['usuarioId', 'tipo', 'expiraEn'])
+@Index('idx_auth_outbox_expira', ['expiraEn'])
 export class AuthCorreoOutbox {
   @PrimaryColumn({ length: 36 }) id!: string;
   @Column({ type: 'int' }) usuarioId!: number;
