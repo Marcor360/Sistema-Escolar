@@ -91,7 +91,7 @@ export default function App() {
 
           <Route element={<RutaProtegida roles={['MAESTRO', 'ADMINISTRATIVO']} />}>
             <Route path="/conducta" element={<ModuloTrabajo titulo="Conducta" acciones={[{titulo:'Consultar incidencias',detalle:'Historial y seguimiento interno por ciclo',vista:'consulta'},{titulo:'Registrar incidencia',detalle:'Registrar una nota interna de alumno inscrito',vista:'nuevo'}]} vistas={['seguimiento']}><ConductaPage /></ModuloTrabajo>} />
-            <Route path="/calificaciones" element={<ModuloTrabajo titulo="Calificaciones" acciones={[{titulo:'Consultar o capturar calificaciones',detalle:'Abrir las operaciones disponibles según tu alcance',vista:'consulta'}]}><CalificacionesPage /></ModuloTrabajo>} />
+            <Route path="/calificaciones" element={<ModuloTrabajo titulo="Calificaciones" acciones={[{titulo:'Consultar calificaciones',detalle:'Notas, reportes e historial autorizado',vista:'consulta'},{titulo:'Capturar calificaciones',detalle:'Registrar o corregir notas con justificación',vista:'nuevo'},{titulo:'Importar calificaciones',detalle:'Previsualizar y confirmar un lote',vista:'importar'}]}><CalificacionesPage /></ModuloTrabajo>} />
             <Route path="/calendario" element={<ModuloTrabajo titulo="Calendario" acciones={[{titulo:'Consultar calendario',detalle:'Buscar eventos por intervalo y plantel',vista:'consulta'},{titulo:'Registrar evento',detalle:'Agregar un evento autorizado',vista:'nuevo'}]} vistas={['editar']}><CalendarioPage /></ModuloTrabajo>} />
           </Route>
 

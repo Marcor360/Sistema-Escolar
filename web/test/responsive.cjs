@@ -414,7 +414,7 @@ async function esperarServidor() {
     await page.setViewportSize({ width, height: 900 });
     for (const ruta of ['/usuarios', '/materias', '/maestro', '/calificaciones', '/biblioteca', '/operaciones']) {
       await page.goto(baseUrl + ruta);
-      const accion = {'/usuarios':'Consultar usuarios','/materias':'Consultar materias','/maestro':'Consultar mis clases','/calificaciones':'Consultar o capturar calificaciones','/biblioteca':'Consultar biblioteca','/operaciones':'Importar expedientes'}[ruta];
+      const accion = {'/usuarios':'Consultar usuarios','/materias':'Consultar materias','/maestro':'Consultar mis clases','/calificaciones':'Consultar calificaciones','/biblioteca':'Consultar biblioteca','/operaciones':'Importar expedientes'}[ruta];
       await page.getByRole('button',{name:new RegExp(accion)}).click();
       await expect(page.locator('h1')).toBeVisible();
       if (ruta === '/operaciones') {
