@@ -7,7 +7,7 @@ import { useConfirmacion } from '../components/useConfirmacion';
 import { SelectorBuscable } from '../components/SelectorBuscable';
 import { Paginador } from '../components/Paginador';
 import { Encabezado } from '../components/Encabezado';
-interface Clase { id: number; grupo: { id: number; nombre: string; ciclo: { nombre: string }; plantel: { nombre: string } }; materia: { clave: string; nombre: string } }
+interface Clase { id: number; grupo: { id: number; nombre: string; ciclo: { nombre: string }; plantel: { nombre: string }; nivel?: {nombre:string} | null; carrera?: {nombre:string;versionPlan:string} | null; periodoAcademico?: {nombre:string;tipo:string;numero:number} | null; turno?:string | null }; materia: { clave: string; nombre: string } }
 interface Inscripcion { alumno: { id: number; matricula: string; usuario: { nombre: string; apellidoPaterno: string } } }
 interface Registro { alumnoId: number; calificacion: number }
 interface EstadoPeriodo { estatus: 'ABIERTO' | 'CERRADO'; inscritos: number; capturados: number; faltantes: number }
@@ -91,6 +91,11 @@ export default function CalificacionesPage() {
       <button className="boton secundario" disabled={!clase || ocupado} onClick={cargarAlumnos}>{cargando ? 'Cargando lista…' : 'Cargar lista'}</button>
       <button className="boton secundario" disabled={!clase || ocupado || descargando} onClick={descargarExcel}>{descargando ? 'Descargando…' : 'Descargar Excel'}</button>
     </div>{cargando && <p role="status">Cargando alumnos, notas e historial…</p>}</section>
+    {clase && <section className="panel" aria-label="Contexto de la evaluación"><h2>Clase {clase.id}: {clase.materia.clave} · {clase.materia.nombre}</h2><dl className="rejilla-formulario">
+      <div><dt>Grupo</dt><dd>{clase.grupo.nombre}</dd></div><div><dt>Plantel</dt><dd>{clase.grupo.plantel.nombre}</dd></div><div><dt>Ciclo</dt><dd>{clase.grupo.ciclo.nombre}</dd></div>
+      <div><dt>Nivel académico</dt><dd>{clase.grupo.nivel?.nombre ?? 'Sin nivel registrado'}</dd></div><div><dt>Carrera</dt><dd>{clase.grupo.carrera?.nombre ?? 'Sin carrera registrada'}</dd></div><div><dt>Plan de estudios</dt><dd>{clase.grupo.carrera?.versionPlan ?? 'Sin plan registrado'}</dd></div>
+      <div><dt>Periodo académico</dt><dd>{clase.grupo.periodoAcademico?.nombre ?? 'Sin periodo registrado'}</dd></div><div><dt>Turno</dt><dd>{clase.grupo.turno ?? 'Sin turno registrado'}</dd></div>
+    </dl><p>Evaluación seleccionada: {parcial === '0' ? 'Final independiente' : `Parcial ${parcial}`}. Se conserva la escala actual de 0 a 100.</p></section>}
     {claseId && <ImportarCalificaciones claseId={claseId} parcial={parcial} deshabilitado={ocupado || periodo?.estatus === 'CERRADO'} alConfirmar={() => { void cargarAlumnos(); }} />}
     {periodo && <section className="panel"><p role="status">Periodo {periodo.estatus.toLowerCase()} · Inscritos: {periodo.inscritos} · Capturados: {periodo.capturados} · Faltantes: {periodo.faltantes}</p>
       {tieneRol('ADMINISTRATIVO') && <button className="boton secundario" disabled={ocupado} onClick={cambiarEstado}>{periodo.estatus === 'ABIERTO' ? 'Cerrar periodo' : 'Reabrir periodo'}</button>}
