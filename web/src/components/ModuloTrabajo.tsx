@@ -17,18 +17,18 @@ export function useModuloTrabajo(ocupado = false) {
   return trabajo;
 }
 function Bloqueo({ sucio, ocupado, guardado }: { sucio: boolean; ocupado: React.MutableRefObject<boolean>; guardado: React.MutableRefObject<boolean> }) {
-  return useSalidaPendiente(sucio, ocupado, guardado);
+  return useSalidaPendiente(sucio, ocupado, guardado, true);
 }
 function Guardia({ children }: { children: ReactNode }) {
   return useContext(UNSAFE_DataRouterContext) ? children : null;
 }
-export const esFormularioModulo = (vista: string) => ['nuevo', 'editar', 'ciclo-nuevo', 'ciclo-editar', 'cargo-nuevo', 'pago-nuevo', 'colegiaturas', 'carpeta-nueva', 'archivo-nuevo'].includes(vista);
+export const esFormularioModulo = (vista: string) => ['nuevo', 'editar', 'ciclo-nuevo', 'ciclo-editar', 'cargo-nuevo', 'pago-nuevo', 'colegiaturas', 'carpeta-nueva', 'archivo-nuevo', 'seguimiento', 'importar', 'promover'].includes(vista);
 
 export function ModuloTrabajo({ titulo, acciones, vistas = [], permisos = {}, children }: { titulo: string; acciones: Accion[]; vistas?: string[]; permisos?: Record<string,string[]>; children: ReactNode }) {
   const { tieneRol } = useAuth(), [query, setQuery] = useSearchParams();
   const permitidas = acciones.filter(a => !a.roles || tieneRol(...a.roles));
   const solicitada = query.get('vista') || '';
-  const necesitaId = ['editar','ciclo-editar','contextos','detalle','administrar'].includes(solicitada);
+  const necesitaId = ['editar','ciclo-editar','contextos','detalle','administrar','seguimiento'].includes(solicitada);
   const idValido = Number.isSafeInteger(Number(query.get('id'))) && Number(query.get('id')) > 0;
   const autorizada = !permisos[solicitada] || tieneRol(...permisos[solicitada]);
   const modo = autorizada && (!necesitaId || idValido) && (permitidas.some(a => a.vista === solicitada) || vistas.includes(solicitada)) ? solicitada : '';

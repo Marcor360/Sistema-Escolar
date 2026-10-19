@@ -26,6 +26,7 @@ export class BibliotecaController {
   @Get() listar(@Query() dto: ConsultaBibliotecaDto, @CurrentUser() user: JwtUser) {
     return this.service.listar(dto, user);
   }
+  @Get('carpetas') carpetas(@Query() dto: ConsultaBibliotecaDto, @CurrentUser() user: JwtUser) { return this.service.carpetas(dto.plantelId,user); }
   @Post('carpetas') crear(@Body() dto: CrearCarpetaDto, @CurrentUser() user: JwtUser) {
     return this.service.crear(dto, user);
   }
