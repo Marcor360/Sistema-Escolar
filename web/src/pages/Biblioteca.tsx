@@ -1,3 +1,4 @@
+import { useModuloTrabajo } from '../components/ModuloTrabajo';
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { api, archivosBase, mensajeDeError } from '../api/client';
 import { Encabezado } from '../components/Encabezado';
@@ -46,6 +47,8 @@ export default function BibliotecaPage() {
     [mensaje, setMensaje] = useState(''),
     [ocupado, setOcupado] = useState(false),
     [cargando, setCargando] = useState(false);
+  const trabajo = useModuloTrabajo(ocupado), legado = trabajo.modo === 'legado', consultaVisible = legado || trabajo.modo === 'consulta';
+  const paginaQuery = Math.max(1,Number(trabajo.query.get('pagina')) || 1), plantelQuery = trabajo.query.get('plantel') || '', carpetaQuery = trabajo.query.get('carpeta') || '';
   const consulta = useRef(0),
     file = useRef<HTMLInputElement>(null),
     confirmacion = useConfirmacion();
@@ -67,7 +70,7 @@ export default function BibliotecaPage() {
   const cargar = useCallback(
     async (pagina = 1) => {
       const actual = ++consulta.current;
-      setDatos(VACIO);
+      setDatos(prev=>({...VACIO,carpetas:prev.carpetas}));
       if (!plantel) {
         setCargando(false);
         return;
@@ -88,11 +91,22 @@ export default function BibliotecaPage() {
     [plantel, carpeta],
   );
   useEffect(() => {
-    void cargar();
+    if(consultaVisible) void cargar(paginaQuery);
     return () => {
       invalidar(consulta);
     };
-  }, [cargar]);
+  }, [cargar,consultaVisible,paginaQuery]);
+  useEffect(()=>{
+    if(legado) return;
+    setPlantel(plantelQuery);setCarpeta(carpetaQuery);
+  },[legado,plantelQuery,carpetaQuery]);
+  useEffect(()=>{
+    if(legado || consultaVisible || !plantel) return;
+    let vigente = true;
+    api.get<Carpeta[]>('/biblioteca/carpetas',{params:{plantelId:plantel}}).then(({data})=>{if(vigente)setDatos(prev=>({...prev,carpetas:data}));}).catch(e=>{if(vigente)setError(mensajeDeError(e));});
+    return()=>{vigente=false;};
+  },[legado,consultaVisible,plantel]);
+  useEffect(()=>{if(!legado && !consultaVisible){setNombre('');setTitulo('');setCategoria('DOCUMENTO');if(file.current)file.current.value='';}},[legado,consultaVisible,trabajo.modo]);
   const crear = async (e: FormEvent) => {
     e.preventDefault();
     if (!plantel || ocupado) return;
@@ -107,7 +121,7 @@ export default function BibliotecaPage() {
       });
       setNombre('');
       setMensaje('Carpeta creada; selecciónala para cargar archivos.');
-      await cargar();
+      trabajo.guardado(); if(legado) await cargar(); else trabajo.ir('consulta');
     } catch (e) {
       setError(mensajeDeError(e));
     } finally {
@@ -135,7 +149,7 @@ export default function BibliotecaPage() {
       setTitulo('');
       if (file.current) file.current.value = '';
       setMensaje('Archivo validado y guardado de forma privada.');
-      await cargar();
+      trabajo.guardado(); if(legado) await cargar(); else trabajo.ir('consulta');
     } catch (e) {
       setError(mensajeDeError(e));
     } finally {
@@ -191,7 +205,8 @@ export default function BibliotecaPage() {
               value={plantel}
               onChange={(e) => {
                 consulta.current++;
-                setPlantel(e.target.value);
+                setPlantel(e.target.value);setDatos(VACIO);
+                if(!legado) trabajo.actualizar({plantel:e.target.value,carpeta:'',pagina:'1'});
                 setCarpeta('');
                 setMensaje('');
               }}
@@ -206,7 +221,7 @@ export default function BibliotecaPage() {
           </div>
           <div className="campo">
             <label htmlFor="bib-carpeta">Carpeta</label>
-            <select id="bib-carpeta" disabled={ocupado} value={carpeta} onChange={(e) => setCarpeta(e.target.value)}>
+            <select id="bib-carpeta" disabled={ocupado} value={carpeta} onChange={e=>{setCarpeta(e.target.value);if(!legado)trabajo.actualizar({carpeta:e.target.value,pagina:'1'});}}>
               <option value="">Todas / raíz</option>
               {datos.carpetas.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -217,15 +232,15 @@ export default function BibliotecaPage() {
             </select>
           </div>
         </div>
-        {plantel && (
+        {plantel && consultaVisible && (
           <p>
             Espacio utilizado: {(datos.bytes / 1048576).toFixed(1)} de {(datos.cuota / 1048576).toFixed(1)} MB.
           </p>
         )}
       </section>
-      {plantel && (
+      {plantel && (legado || ['carpeta-nueva','archivo-nuevo'].includes(trabajo.modo)) && (
         <section className="panel">
-          <h2>Crear carpeta</h2>
+          {(legado || trabajo.modo === 'carpeta-nueva') && <><h2>Crear carpeta</h2>
           <form onSubmit={crear} className="fila">
             <div className="campo">
               <label htmlFor="bib-nombre">Nombre de carpeta{carpeta ? ' dentro de la seleccionada' : ''}</label>
@@ -241,7 +256,8 @@ export default function BibliotecaPage() {
               Crear carpeta
             </button>
           </form>
-          <h2>Subir archivo</h2>
+          </>}
+          {(legado || trabajo.modo === 'archivo-nuevo') && <><h2>Subir archivo</h2>
           <p>
             PNG/JPEG para fotos y logos; también PDF para calendarios y documentos. Máximo 10 MB. Se requiere antivirus
             operativo; el archivo permanece privado y no cambia la identidad visual pública.
@@ -275,11 +291,11 @@ export default function BibliotecaPage() {
               </div>
               <button className="boton">Validar y subir</button>
             </fieldset>
-          </form>
+          </form></>}
         </section>
       )}
       {(ocupado || cargando) && <p role="status">Procesando…</p>}
-      {plantel && (
+      {plantel && consultaVisible && (
         <>
           <div className="tabla-contenedor" role="region" aria-label="Archivos de biblioteca" tabIndex={0}>
             <table className="tabla tabla-adaptable">
@@ -323,7 +339,7 @@ export default function BibliotecaPage() {
             pagina={datos.pagina}
             porPagina={datos.porPagina}
             deshabilitado={ocupado || cargando}
-            onCambio={cargar}
+            onCambio={legado ? cargar : p=>trabajo.actualizar({pagina:String(p)})}
           />
         </>
       )}

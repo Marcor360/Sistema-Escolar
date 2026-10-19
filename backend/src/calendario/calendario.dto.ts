@@ -1,3 +1,4 @@
+import { PaginacionDto } from '../common/paginacion.dto';
 import { PartialType } from '@nestjs/swagger';
 import { IsDateString, MaxLength, MinLength, Min } from 'class-validator';
 import { Transform as Normalizar } from 'class-transformer';
@@ -21,4 +22,11 @@ export class EventoDto {
 
 export class EditarEventoDto extends PartialType(EventoDto) {
   @IsString() @MaxLength(64) @MinLength(64) revision!: string;
+}
+
+export class ConsultarEventosDto extends PaginacionDto {
+  @IsOptional() @IsDateString({strict:true}) desde?: string;
+  @IsOptional() @IsDateString({strict:true}) hasta?: string;
+  @IsOptional() @Type(()=>Number) @IsInt() @Min(1) plantelId?: number;
+  @IsOptional() @IsString() @MaxLength(150) buscar?: string;
 }
