@@ -11,12 +11,12 @@ beforeEach(()=>{HTMLDialogElement.prototype.showModal=function(){this.setAttribu
 afterEach(()=>{cleanup();vi.restoreAllMocks();});
 function montar(child:React.ReactNode,url:string){const router=createMemoryRouter([{path:'/modulo',element:<ModuloTrabajo titulo="Prueba" acciones={[{titulo:'Consultar',detalle:'Directorio',vista:'consulta'},{titulo:'Crear',detalle:'Formulario',vista:'nuevo'},{titulo:'Carpeta',detalle:'Crear carpeta',vista:'carpeta-nueva'},{titulo:'Archivo',detalle:'Subir archivo',vista:'archivo-nuevo'}]} vistas={['editar','seguimiento']}>{child}</ModuloTrabajo>}],{initialEntries:[url]});render(<RouterProvider router={router}/>);return router;}
 it('conducta: alta no descarga historial, guarda una vez y vuelve con filtros',async()=>{
- const get=vi.spyOn(api,'get').mockResolvedValue({data:[]}),post=vi.spyOn(api,'post').mockResolvedValue({data:{id:3}});
+ const get=vi.spyOn(api,'get').mockImplementation(async u=>({data:u==='/academico/grupos'?{datos:[],total:0}:[]})),post=vi.spyOn(api,'post').mockResolvedValue({data:{id:3}});
  const router=montar(<Conducta/>,'/modulo?vista=nuevo&ciclo=9&pagina=3');
  expect(screen.getByLabelText('Descripción interna')).toBeTruthy();expect(get.mock.calls.some(([u])=>u==='/conducta/incidencias')).toBe(false);expect(screen.queryByRole('table')).toBeNull();
  fireEvent.change(screen.getByLabelText('Tipo'),{target:{value:'Observación'}});fireEvent.change(screen.getByLabelText('Descripción interna'),{target:{value:'Nota interna'}});
  // La validación de inscripción la realiza la API; envío programático aísla la navegación posterior al commit.
- get.mockImplementation(async u=>({data:u==='/conducta/incidencias'?{datos:[],total:0,pagina:3}:[]}));
+ get.mockImplementation(async u=>({data:u==='/conducta/incidencias'?{datos:[],total:0,pagina:3}:u==='/academico/grupos'?{datos:[],total:0}:[]}));
  fireEvent.submit(screen.getByLabelText('Descripción interna').closest('form')!);
  await waitFor(()=>expect(post).toHaveBeenCalledTimes(1));await waitFor(()=>expect(router.state.location.search).toContain('vista=consulta'));expect(router.state.location.search).toContain('pagina=3');expect(screen.queryByLabelText('Descripción interna')).toBeNull();
  await waitFor(()=>expect(get).toHaveBeenCalledWith('/conducta/incidencias',{params:{pagina:3,porPagina:10,cicloId:'9'}}));
@@ -42,5 +42,5 @@ it('calendario: consulta paginada no carga clases ni muestra formulario; edició
  await waitFor(()=>expect(patch).toHaveBeenCalledWith('/calendario/8',expect.objectContaining({revision:evento.revision,titulo:'Examen corregido'})));await waitFor(()=>expect(router.state.location.search).toContain('vista=consulta'));expect(router.state.location.search).toContain('pagina=3');expect(router.state.location.search).toContain('buscar=Examen');
 });
 it('cancelar un formulario secundario con cambios pide confirmación y conserva los datos al rechazar',async()=>{
- vi.spyOn(api,'get').mockResolvedValue({data:[]});const router=montar(<Conducta/>,'/modulo?vista=nuevo');fireEvent.change(screen.getByLabelText('Descripción interna'),{target:{value:'Borrador'}});fireEvent.click(screen.getByText('Cancelar y volver a consulta'));await screen.findByRole('dialog');fireEvent.click(screen.getByRole('button',{name:/^Cancelar$/}));await act(async()=>{});expect((screen.getByLabelText('Descripción interna') as HTMLTextAreaElement).value).toBe('Borrador');expect(router.state.location.search).toBe('?vista=nuevo');
+ vi.spyOn(api,'get').mockImplementation(async u=>({data:u==='/academico/grupos'?{datos:[],total:0}:[]}));const router=montar(<Conducta/>,'/modulo?vista=nuevo');fireEvent.change(screen.getByLabelText('Descripción interna'),{target:{value:'Borrador'}});fireEvent.click(screen.getByText('Cancelar y volver a consulta'));await screen.findByRole('dialog');fireEvent.click(screen.getByRole('button',{name:/^Cancelar$/}));await act(async()=>{});expect((screen.getByLabelText('Descripción interna') as HTMLTextAreaElement).value).toBe('Borrador');expect(router.state.location.search).toBe('?vista=nuevo');
 });
