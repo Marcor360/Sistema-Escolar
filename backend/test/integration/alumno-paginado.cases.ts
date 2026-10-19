@@ -19,7 +19,9 @@ export function registrarAlumnoPaginado(ctx:ContextoIntegracion){
   expect(primera.response.status).toBe(200);expect(primera.data).toMatchObject({total:12,pagina:1,porPagina:10});expect(primera.data.datos).toHaveLength(10);expect(segunda.data.datos).toHaveLength(2);expect([...primera.data.datos,...segunda.data.datos].map((c:{id:number})=>c.id)).toEqual(clases.map(c=>c.id));
   const notas=ctx.dataSource.getRepository(Calificacion);
   await notas.save([0,1,2,3].map(parcial=>({alumnoId:alumno.id,grupoMateriaId:clases[0].id,parcial,calificacion:parcial===0?60:parcial===1?80:parcial===2?90:100})));
-  await notas.save({alumnoId:ctx.alumnoId,grupoMateriaId:clases[0].id,parcial:1,calificacion:12});
+  const otro=await post('/alumnos',{email:`pgpeer${ctx.sufijo}@example.invalid`,matricula:`PGPEER${ctx.sufijo}`,nombre:'Otro alumno',apellidoPaterno:'Prueba',curp:'GODE561231HDFRRN09',plantelId:ctx.plantelId});
+  await post(`/academico/grupos/${grupo.id}/alumnos`,{alumnoId:otro.id});
+  await notas.save({alumnoId:otro.id,grupoMateriaId:clases[0].id,parcial:1,calificacion:12});
   const r=await ctx.api('/calificaciones/mias/listado?porPagina=1',{token}),r2=await ctx.api('/calificaciones/mias/listado?porPagina=1&pagina=2',{token});
   expect(r.response.status).toBe(200);expect(r.data).toMatchObject({total:4,porPagina:1,pagina:1});expect(r.data.datos).toHaveLength(1);expect(r.data.datos[0]).toMatchObject({alumnoId:alumno.id,parcial:0,promedioOficial:90});expect(r2.data.datos[0]).toMatchObject({alumnoId:alumno.id,parcial:1,promedioOficial:90});
   for(const ruta of ['/alumnos/me/materias/listado','/calificaciones/mias/listado']){
@@ -27,6 +29,7 @@ export function registrarAlumnoPaginado(ctx:ContextoIntegracion){
    const fin=await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({id:ctx.finanzasId})).email);expect((await ctx.api(ruta,{token:fin})).response.status).toBe(403);
    for(const query of ['pagina=0','porPagina=101'])expect((await ctx.api(ruta+'?'+query,{token})).response.status).toBe(400);
   }
+  const otroToken=await ctx.emitirToken(`pgpeer${ctx.sufijo}@example.invalid`);const otras=await ctx.api('/calificaciones/mias/listado',{token:otroToken});expect(otras.data.total).toBe(1);expect(otras.data.datos[0]).toMatchObject({alumnoId:otro.id,calificacion:12,promedioOficial:null});
   expect((await ctx.api('/alumnos/me/materias',{token})).data).toHaveLength(12);expect((await ctx.api('/calificaciones/mias',{token})).data).toHaveLength(4);
  });
 }
