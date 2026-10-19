@@ -50,8 +50,8 @@ La pantalla antigua incluye inscripción y mensualidad como campos libres. Aquí
 | Alta operativa | Logo del staging sigue en incidente #106 | Diagnóstico IIS/ACL/tamaño y verificación real; pruebas integradas no acreditan staging. |
 | Alta operativa | M365 no recibe SMTP, incidente #107 | Message Trace, Track Delivery, DNS/ruteo y pruebas con buzones consentidos. |
 | Alta operativa | main sin regla activa (`protected=false`) | Activar protección real tras conseguir revisor; #115 solo versionó su política. |
-| Media | #105 UX secundarios, #102 calificaciones, #103 permisos y #96 épica | Cerrar mediante aceptación puntual y PR separados, sin duplicar lo ya fusionado. |
-| Media | PR #126 ETL legado abierto | Revisión independiente; no mezclar con ciclo/cartera. |
+| Media | #105 UX transversal, #102 normativa de calificaciones y #103 permisos | Continuar con aceptación puntual y PR separados. #133/#134 ya integraron módulos secundarios y contexto académico; #96 fue cerrada administrativamente por el solicitante y no se reabre por este seguimiento. |
+| Media | ETL legado completo pendiente | #126 integra el plan documental; faltan el esquema real del origen y la conciliación institucional antes de implementar pipelines adicionales. |
 
 ## 6. Criterios de aceptación futura
 
