@@ -23,6 +23,7 @@ const secciones = [
   { destino: '/catalogos-academicos', etiqueta: 'Catálogos académicos', roles: ['ADMINISTRATIVO'] },
   { destino: '/materias', etiqueta: 'Materias', roles: ['ADMINISTRATIVO'] },
   { destino: '/grupos', etiqueta: 'Grupos', roles: ['ADMINISTRATIVO'] },
+  { destino: '/temarios', etiqueta: 'Temarios', roles: ['MAESTRO', 'ADMINISTRATIVO'] },
   { destino: '/maestro', etiqueta: 'Mis clases', roles: ['MAESTRO'] },
   { destino: '/calificaciones', etiqueta: 'Calificaciones', roles: ['MAESTRO', 'ADMINISTRATIVO'] },
   { destino: '/calendario', etiqueta: 'Calendario', roles: ['MAESTRO', 'ADMINISTRATIVO'] },

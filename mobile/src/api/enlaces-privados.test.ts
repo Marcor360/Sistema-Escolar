@@ -20,3 +20,9 @@ describe("Enlaces firmados del alumno", () => {
     expect(() => resolverEnlacePrivado("https://api.colegio.test", ruta, tipo, 5)).toThrow("inválido");
   });
 });
+
+it('temarios: firma ligada al adjunto exacto, sin permitir otro archivo o recurso', () => {
+  expect(resolverEnlacePrivado('https://example.test', '/api/archivos/temarios/9?t=abc.def', 'temario', 9)).toBe('https://example.test/api/archivos/temarios/9?t=abc.def');
+  expect(() => resolverEnlacePrivado('https://example.test', '/api/archivos/temarios/10?t=abc.def', 'temario', 9)).toThrow();
+  expect(() => resolverEnlacePrivado('https://example.test', '/api/archivos/materiales/9?t=abc.def', 'temario', 9)).toThrow();
+});

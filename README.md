@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma
 
-**Versión candidata: `1.26.6`** · API, web y app del alumno alineadas. Aceptación institucional y despliegue pendientes.
+**Versión candidata: `1.27.0`** · API, web y app del alumno alineadas. Aceptación institucional y despliegue pendientes.
 
 API, portal administrativo/docente y app del alumno para gestión académica y financiera con alcance por plantel. Las versiones de backend, web, móvil, lockfiles y Expo están alineadas. Este README describe una única versión actual; los informes históricos permanecen en `docs/`.
 
@@ -8,12 +8,19 @@ API, portal administrativo/docente y app del alumno para gestión académica y f
 |---|---|
 | API y web | Candidata técnica a primera beta funcional; aceptación del piloto pendiente |
 | App del alumno | Candidata a beta del alumno; arranque corregido, pruebas físicas pendientes |
-| Base de datos | Baseline v1 y diez migraciones incrementales espejo; MySQL 8.4 / SQL Server 2022 probados en CI |
+| Base de datos | Baseline v1 y migraciones incrementales espejo; MySQL 8.4 / SQL Server 2022 probados en CI |
 | ETL de legado | Prototipo parcial; no listo para migración institucional general |
 
 La versión 1.26.4 aclara en apertura de cartera la vigencia del ciclo frente al mes de cobro y la fecha de vencimiento. Conserva la guía de ciclos de 1.26.3 y la política de versiones de 1.26.2. No cambia tarifas ni reglas de la API y no acredita un despliegue. La versión del repositorio identifica el código; la disponibilidad en el VPS o en un APK depende del despliegue correspondiente. La evidencia histórica conserva su versión y fecha originales.
 
-## Novedades de 1.26.6
+## Novedades de 1.27.0
+
+- Temario independiente por clase: borradores, publicación con fechas, cancelación, revisiones históricas y adjuntos privados; consulta de temas publicados en Expo.
+- Ficha integral del ciclo: conteos reales y grupos/asignaturas paginados, dentro del alcance de plantel y docente.
+- No cambia tareas, promedios ni normativa de evaluación. Requiere la migración incremental `migracion_temarios.sql` antes de habilitarse; no ejecuta despliegue.
+- [Contrato y operación de temarios y ciclos](docs/TEMARIOS_CICLOS.md).
+
+### Entregado previamente en 1.26.6
 
 La consulta de calificaciones se separa de captura e importación, conservando el contexto. Se confirma antes de descartar notas o archivos pendientes. Mantiene escala, correcciones, cierres y permisos.
 

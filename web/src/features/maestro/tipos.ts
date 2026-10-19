@@ -1,6 +1,6 @@
 export interface GrupoMateria {
   id: number;
-  grupo: { nombre: string; ciclo: { clave: string } };
+  grupo: { nombre: string; ciclo: { id?: number; clave: string } };
   materia: { clave: string; nombre: string };
 }
 export interface Actividad {

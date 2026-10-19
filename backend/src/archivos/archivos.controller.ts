@@ -10,6 +10,11 @@ import { CurrentUser, JwtUser } from '../common/current-user.decorator';
 export class ArchivosController {
   constructor(private readonly service: ArchivosService) {}
 
+  @Get('temarios/:id/enlace') @ApiBearerAuth() @UseGuards(JwtAuthGuard)
+  enlaceTemario(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) { return this.service.enlaceTemario(id, user); }
+  @Get('temarios/:id')
+  descargarTemario(@Param('id', ParseIntPipe) id: number, @Query('t') token: string, @Res() res: Response) { return this.service.descargarTemario(id, token, res); }
+
   @Get('materiales/:id/enlace')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)

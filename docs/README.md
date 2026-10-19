@@ -84,3 +84,5 @@ Se revisaron contenido, propósito, referencias, corte de versión y utilidad de
 | [VALIDACION_UX_ONEST.md](VALIDACION_UX_ONEST.md) | Conservado sin cambios | Matriz de aceptación visual/nativa y evidencia delimitada, útil para QA. |
 
 Resultado: 44 originales, 13 actualizados, 2 retirados y 29 conservados sin cambios. Se añaden este índice y la especificación de activación segura. Git conserva las versiones anteriores y los inventarios retirados.
+
+- [Temarios independientes y ficha integral de ciclo](TEMARIOS_CICLOS.md).

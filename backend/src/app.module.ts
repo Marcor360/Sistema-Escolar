@@ -1,3 +1,4 @@
+import { TemariosModule } from './temarios/temarios.module';
 import { RecursamientosModule } from './recursamientos/recursamientos.module';
 import { CarteraModule } from './cartera/cartera.module';
 import { EliminacionModule } from './eliminacion/eliminacion.module';
@@ -40,7 +41,7 @@ import { HealthModule } from './health/health.module';
     AlumnosModule,
     DocentesModule,
     AcademicoModule, RecursamientosModule, CarteraModule,
-    ActividadesModule,
+    ActividadesModule, TemariosModule,
     CalificacionesModule,
     CalendarioModule,
     NotificacionesModule,

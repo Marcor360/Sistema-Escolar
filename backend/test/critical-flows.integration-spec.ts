@@ -1,3 +1,4 @@
+import { registrarTemarios } from './integration/temarios.cases';
 import { registrarAlumnoPaginado } from './integration/alumno-paginado.cases';
 import { registrarMateriasContexto } from './integration/materias-contexto.cases';
 import { ClavesCorreoAcceso } from '../src/auth/correo-acceso-claves';
@@ -466,6 +467,7 @@ Object.keys(casos).map(Number).sort((a,b) => a-b).forEach((id) => casos[id](cont
   registrarAgrupacion(contexto);
   registrarRecursamientos(contexto);
   registrarEliminacion(contexto);
+  registrarTemarios(contexto);
 
   afterAll(async () => {
     if (archivoPrueba) {

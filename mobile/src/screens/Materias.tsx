@@ -1,3 +1,4 @@
+import { TemarioClase } from '../components/TemarioClase';
 import { Paginador } from '../components/Paginador';
 import { RecursamientosPropios } from "../components/RecursamientosPropios";
 import { leerConCache } from "../api/cache-academica";
@@ -251,7 +252,7 @@ export default function MateriasScreen() {
 
                 {desplegada && (
                   <View style={estilos.materiales}>
-                    <Text style={estilos.subtitulo}>Materiales de clase</Text>
+                    <TemarioClase claseId={item.id} /><Text style={estilos.subtitulo}>Materiales de clase</Text>
                     {!materiales && cargandoMateriales === item.id && (
                       <ActivityIndicator accessibilityLabel="Cargando materiales de clase" />
                     )}
