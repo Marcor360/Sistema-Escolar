@@ -5,7 +5,7 @@ import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { Roles } from '../common/roles.decorator';
 import { RolesGuard } from '../common/roles.guard';
 import { CalendarioService } from './calendario.service';
-import { EventoDto, EditarEventoDto } from './calendario.dto';
+import { EventoDto, EditarEventoDto, ConsultarEventosDto } from './calendario.dto';
 
 @ApiTags('calendario')
 @ApiBearerAuth()
@@ -13,6 +13,11 @@ import { EventoDto, EditarEventoDto } from './calendario.dto';
 @Controller('calendario')
 export class CalendarioController {
   constructor(private readonly service: CalendarioService) {}
+
+  @Get('listado') @Roles('ALUMNO','MAESTRO','ADMINISTRATIVO')
+  consultar(@Query() q:ConsultarEventosDto,@CurrentUser() user:JwtUser) {return this.service.consultar(q,user);}
+  @Get(':id') @Roles('MAESTRO','ADMINISTRATIVO')
+  paraEditar(@Param('id',ParseIntPipe) id:number,@CurrentUser() user:JwtUser) {return this.service.paraEditar(id,user);}
 
   @Get()
   @Roles('ALUMNO', 'MAESTRO', 'ADMINISTRATIVO')

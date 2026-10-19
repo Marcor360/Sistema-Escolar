@@ -65,11 +65,11 @@ export default function App() {
           </Route>
 
           <Route element={<RutaProtegida roles={['ADMINISTRATIVO', 'FINANZAS']} />}>
-            <Route path="/operaciones" element={<ModuloTrabajo titulo="Importar y promover" acciones={[{titulo:'Importar o promover',detalle:'Abrir las operaciones disponibles según tu alcance',vista:'consulta'}]}><OperacionesPage /></ModuloTrabajo>} />
+            <Route path="/operaciones" element={<ModuloTrabajo titulo="Importar y promover" acciones={[{titulo:'Importar expedientes',detalle:'Previsualizar y confirmar CSV o Excel',vista:'importar'},{titulo:'Promover alumnos',detalle:'Promoción autorizada entre ciclos',vista:'promover',roles:['ADMINISTRATIVO']},{titulo:'Consultar bitácora',detalle:'Operaciones académicas auditadas',vista:'consulta',roles:['ADMINISTRATIVO']}]}><OperacionesPage /></ModuloTrabajo>} />
           </Route>
 
           <Route element={<RutaProtegida roles={['ADMINISTRATIVO']} />}>
-            <Route path="/biblioteca" element={<ModuloTrabajo titulo="Biblioteca" acciones={[{titulo:'Consultar biblioteca',detalle:'Abrir las operaciones disponibles según tu alcance',vista:'consulta'}]}><BibliotecaPage /></ModuloTrabajo>} />
+            <Route path="/biblioteca" element={<ModuloTrabajo titulo="Biblioteca" acciones={[{titulo:'Consultar biblioteca',detalle:'Consultar carpetas y archivos privados',vista:'consulta'},{titulo:'Crear carpeta',detalle:'Organizar documentos por plantel',vista:'carpeta-nueva'},{titulo:'Subir archivo',detalle:'Validar y guardar un archivo privado',vista:'archivo-nuevo'}]}><BibliotecaPage /></ModuloTrabajo>} />
             <Route path="/docentes" element={<DocentesPage />} />
             <Route path="/docentes/nuevo" element={<DocenteFormulario />} />
             <Route path="/docentes/:id/editar" element={<DocenteFormulario />} />
@@ -90,9 +90,9 @@ export default function App() {
           </Route>
 
           <Route element={<RutaProtegida roles={['MAESTRO', 'ADMINISTRATIVO']} />}>
-            <Route path="/conducta" element={<ModuloTrabajo titulo="Conducta" acciones={[{titulo:'Consultar incidencias',detalle:'Abrir las operaciones disponibles según tu alcance',vista:'consulta'}]}><ConductaPage /></ModuloTrabajo>} />
+            <Route path="/conducta" element={<ModuloTrabajo titulo="Conducta" acciones={[{titulo:'Consultar incidencias',detalle:'Historial y seguimiento interno por ciclo',vista:'consulta'},{titulo:'Registrar incidencia',detalle:'Registrar una nota interna de alumno inscrito',vista:'nuevo'}]} vistas={['seguimiento']}><ConductaPage /></ModuloTrabajo>} />
             <Route path="/calificaciones" element={<ModuloTrabajo titulo="Calificaciones" acciones={[{titulo:'Consultar o capturar calificaciones',detalle:'Abrir las operaciones disponibles según tu alcance',vista:'consulta'}]}><CalificacionesPage /></ModuloTrabajo>} />
-            <Route path="/calendario" element={<ModuloTrabajo titulo="Calendario" acciones={[{titulo:'Consultar calendario',detalle:'Abrir las operaciones disponibles según tu alcance',vista:'consulta'}]}><CalendarioPage /></ModuloTrabajo>} />
+            <Route path="/calendario" element={<ModuloTrabajo titulo="Calendario" acciones={[{titulo:'Consultar calendario',detalle:'Buscar eventos por intervalo y plantel',vista:'consulta'},{titulo:'Registrar evento',detalle:'Agregar un evento autorizado',vista:'nuevo'}]} vistas={['editar']}><CalendarioPage /></ModuloTrabajo>} />
           </Route>
 
           <Route element={<RutaProtegida roles={['ADMINISTRATIVO']} />}>

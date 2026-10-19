@@ -1,3 +1,4 @@
+import { EventoCalendario, BibliotecaCarpeta } from '../../src/entities';
 import { extraerStreamsPdf } from './pdf-streams';
 import { ArchivoLimpieza, Inscripcion } from '../../src/entities';
 import { ContextoIntegracion } from './contexto';
@@ -6,6 +7,32 @@ import { AuthService } from '../../src/auth/auth.service';
 import { UsuariosService } from '../../src/usuarios/usuarios.service';
 import { Usuario, OrdenPago, Alumno, GrupoMateria, Materia, Grupo } from '../../src/entities';
 export function registrarBarrido(ctx: ContextoIntegracion) {
+  it('calendario paginado conserva alcance y revisión; selector de carpetas no expone otro plantel', async()=>{
+    const token = async(id:number)=>ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({id})).email);
+    const root=await token(ctx.superadminId),admin=await token(ctx.adminId),alumno=await token(ctx.alumnoUsuarioId),finanzas=await token(ctx.finanzasId);
+    const prefijo=`EV${ctx.sufijo}`, repo=ctx.dataSource.getRepository(EventoCalendario);
+    const eventos=await repo.save(Array.from({length:115},(_,i)=>({titulo:`${prefijo} ${i}`,fechaInicio:new Date('2060-01-05T10:00:00Z'),tipo:'GENERAL' as const,plantelId:ctx.plantelId,creadoPorId:ctx.adminId})));
+    const ajeno=await repo.save({titulo:prefijo+' ajeno',fechaInicio:new Date('2060-01-05T10:00:00Z'),tipo:'GENERAL',plantelId:ctx.otroPlantelId,creadoPorId:ctx.superadminId});
+    const ruta=`/calendario/listado?desde=2060-01-01&hasta=2060-01-31&buscar=${prefijo}`;
+    const primera=await ctx.api(ruta,{token:admin}),ultima=await ctx.api(ruta+'&pagina=12',{token:admin});
+    expect(primera.response.status).toBe(200);expect(primera.data).toMatchObject({total:115,pagina:1,porPagina:10});expect(primera.data.datos).toHaveLength(10);expect(ultima.data.datos).toHaveLength(5);
+    expect(primera.data.datos.map((r:{id:number})=>r.id)).toEqual(eventos.slice(0,10).map(e=>e.id));
+    expect((await ctx.api(ruta,{token:root})).data.total).toBe(116);
+    expect((await ctx.api(ruta+'&plantelId='+ctx.otroPlantelId,{token:admin})).response.status).toBe(403);
+    for(const q of ['pagina=0','porPagina=101','desde=incorrecta']) expect((await ctx.api('/calendario/listado?'+q,{token:admin})).response.status).toBe(400);
+    expect((await ctx.api('/calendario/'+ajeno.id,{token:admin})).response.status).toBe(403);
+    expect((await ctx.api('/calendario/'+eventos[0].id,{token:alumno})).response.status).toBe(403);
+    const detalle=await ctx.api('/calendario/'+eventos[0].id,{token:admin});expect(detalle.data.revision).toHaveLength(64);
+    expect((await ctx.api('/calendario/'+eventos[0].id,{method:'PATCH',token:admin,body:{titulo:prefijo+' corregido',revision:detalle.data.revision}})).response.status).toBe(200);
+    expect((await ctx.api('/calendario/'+eventos[0].id,{method:'PATCH',token:admin,body:{titulo:'Perder cambio',revision:detalle.data.revision}})).response.status).toBe(409);
+    const literal=await repo.save({titulo:prefijo+' %_! literal',fechaInicio:new Date('2060-01-05T10:00:00Z'),tipo:'GENERAL',plantelId:ctx.plantelId,creadoPorId:ctx.adminId});
+    expect((await ctx.api('/calendario/listado?desde=2060-01-01&hasta=2060-01-31&buscar='+encodeURIComponent('%_!'),{token:admin})).data.datos.map((r:{id:number})=>r.id)).toEqual([literal.id]);
+    const antigua=await ctx.api('/calendario?desde=2060-01-01&hasta=2060-01-31',{token:admin});expect(Array.isArray(antigua.data)).toBe(true);expect(antigua.data.some((e:{id:number})=>e.id===ajeno.id)).toBe(false);
+    const carpeta=await ctx.dataSource.getRepository(BibliotecaCarpeta).save({plantelId:ctx.plantelId,nombre:prefijo,padreId:null});
+    const carpetas=await ctx.api('/biblioteca/carpetas?plantelId='+ctx.plantelId,{token:admin});expect(carpetas.response.status).toBe(200);expect(carpetas.data.some((c:{id:number})=>c.id===carpeta.id)).toBe(true);
+    expect((await ctx.api('/biblioteca/carpetas?plantelId='+ctx.otroPlantelId,{token:admin})).response.status).toBe(403);
+    expect((await ctx.api('/biblioteca/carpetas?plantelId='+ctx.plantelId,{token:finanzas})).response.status).toBe(403);
+  });
   it('solo SUPERADMIN desactiva materias y conserva referencias históricas', async () => {
     const tokenDe = async (id: number) => ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id })).email);
     const root = await tokenDe(ctx.superadminId), admin = await tokenDe(ctx.adminId);

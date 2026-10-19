@@ -6,7 +6,7 @@
 
 Cada PR que vaya a integrarse incrementa la versión respecto de **su rama base**: 1.26.2 → 1.26.3 → 1.26.4 para entregas pequeñas; una ampliación grande, coordinada y validada, cambia a 1.27.0. No volver a utilizar un identificador ya fusionado, aunque el código no haya sido desplegado. Los PR simultáneos no reservan versiones: si otro PR se fusiona primero, rebasar, renumerar y volver a validar. Los PR apilados se integran en orden.
 
-Cada entrega deberá actualizar **backend, web y mobile** en sus `package.json`, los tres `package-lock.json`, `mobile/app.json` y la versión candidata en `README.md`, con una descripción específica de alcance. No reescribir versiones de evidencias históricas.
+Cada entrega deberá actualizar **backend, web y mobile** en sus `package.json`, los tres `package-lock.json`, `mobile/app.json`, `docs/BETA_ACEPTACION.json`, `docs/UAT_MATRIZ_2026-10-15.json` y la versión candidata en `README.md`, con una descripción específica de alcance. No reescribir versiones de evidencias históricas.
 
 En título/cuerpo del PR, especificar versión, propósito, archivos/módulos, validaciones ejecutadas, impacto de base de datos, migraciones, riesgos, alcance por rol y limitaciones de despliegue. Un merge no cambia IIS, el Windows Server ni una app móvil instalada.
 

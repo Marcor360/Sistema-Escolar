@@ -24,6 +24,10 @@ export class BibliotecaService {
       throw new BadRequestException('Cuota de biblioteca no configurada correctamente');
     return n * 1024 * 1024;
   }
+  async carpetas(plantelId: number, user: JwtUser) {
+    await this.scope.validarGestion(user,plantelId);
+    return this.ds.getRepository(BibliotecaCarpeta).find({where:{plantelId},order:{nombre:'ASC',id:'ASC'},take:500});
+  }
   async listar(dto: ConsultaBibliotecaDto, user: JwtUser) {
     await this.scope.validarGestion(user, dto.plantelId);
     if (dto.carpetaId) await this.carpeta(dto.carpetaId, user, dto.plantelId);
