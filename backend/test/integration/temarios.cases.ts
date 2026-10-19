@@ -1,6 +1,6 @@
 import { expect, it } from '@jest/globals';
 import { ContextoIntegracion } from './contexto';
-import { GrupoMateria, Materia, Usuario, Rol, Actividad, Calificacion, Tema, TemaAdjunto } from '../../src/entities';
+import { GrupoMateria, Materia, Usuario, Docente, Rol, Actividad, Calificacion, Tema, TemaAdjunto } from '../../src/entities';
 export function registrarTemarios(ctx: ContextoIntegracion) {
   it('temarios independientes: publicación, alcance, revisiones concurrentes, archivos privados y cancelación auditada', async () => {
     const token = async (id: number) => ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id })).email);
@@ -48,6 +48,7 @@ export function registrarTemarios(ctx: ContextoIntegracion) {
     expect(enlace.response.status).toBe(200); const descarga = await fetch(new URL(enlace.data.url, ctx.baseUrl)); expect(descarga.status).toBe(200); expect(await descarga.text()).toBe('Tema privado de prueba');
     expect((await ctx.api('/temarios/' + inicial.id + '/historial', { token: alumno })).response.status).toBe(403);
     const cuenta = await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: estudiante.usuarioId });
+    await ctx.dataSource.getRepository(Docente).save({ usuarioId: cuenta.id, numEmpleado: 'DT' + ctx.sufijo, estatus: 'ACTIVO' });
     const anteriores = [...cuenta.roles]; cuenta.roles.push(await ctx.dataSource.getRepository(Rol).findOneByOrFail({ clave: 'MAESTRO' })); await ctx.dataSource.getRepository(Usuario).save(cuenta);
     const dual = await token(cuenta.id);
     expect((await ctx.api(lista, { token: dual })).data.total).toBe(1);
@@ -65,6 +66,14 @@ export function registrarTemarios(ctx: ContextoIntegracion) {
 
     expect((await ctx.api('/temarios/' + inicial.id, { method: 'PATCH', token: maestro, body: { revision: 5, titulo: 'Reactivar' } })).response.status).toBe(409);
     expect(await ctx.dataSource.getRepository(TemaAdjunto).countBy({ temaId: inicial.id, activo: true })).toBe(1);
+    const retiro = await crear(15);
+    const formularioRetiro = new FormData(); formularioRetiro.append('revision', '1'); formularioRetiro.append('archivo', new Blob(['Retiro privado']), 'retirar.txt');
+    const cargaRetiro = await ctx.api('/temarios/' + retiro.id + '/adjuntos', { method: 'POST', token: maestro, body: formularioRetiro }); expect(cargaRetiro.response.status).toBe(201);
+    const adjuntoRetiro = cargaRetiro.data.adjuntos[0].id;
+    expect((await ctx.api('/temarios/' + retiro.id + '/adjuntos/' + adjuntoRetiro, { method: 'DELETE', token: alumno, body: { revision: 2 } })).response.status).toBe(403);
+    expect((await ctx.api('/temarios/' + retiro.id + '/adjuntos/' + adjuntoRetiro, { method: 'DELETE', token: maestro, body: { revision: 2 } })).response.status).toBe(200);
+    expect((await ctx.api('/archivos/temarios/' + adjuntoRetiro + '/enlace', { token: maestro })).response.status).toBe(404);
+    expect(await ctx.dataSource.getRepository(TemaAdjunto).countBy({ id: adjuntoRetiro, activo: false })).toBe(1);
     expect(await ctx.dataSource.getRepository(Calificacion).count()).toBe(notasAntes); expect(await ctx.dataSource.getRepository(Actividad).count()).toBe(tareasAntes);
   });
   it('ficha de ciclo: grupos y clases paginados, conteos reales y alcance administrativo/docente', async () => {
