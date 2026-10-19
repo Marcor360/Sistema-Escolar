@@ -1,3 +1,4 @@
+import { Paginador } from '../components/Paginador';
 import { ordenarPeriodos } from "../utils/orden-calificaciones";
 import { useSesion } from "../sesion";
 import { leerConCache } from "../api/cache-academica";
@@ -38,6 +39,9 @@ interface Calificacion {
 
 export default function CalificacionesScreen() {
   const { sesion } = useSesion();
+  const [pagina,setPagina]=useState(1),[total,setTotal]=useState(0);
+  useEffect(()=>{setPagina(1);setTotal(0);},[sesion?.sub]);
+
   const [boletas, setBoletas] = useState<Boleta[]>([]);
   const [errorBoletas, setErrorBoletas] = useState("");
   const lecturaBoletas = useRef(crearControlLectura());
@@ -114,14 +118,15 @@ export default function CalificacionesScreen() {
   const cargar = useCallback(() => {
     if (!sesion?.sub) return;
     setError("");
+    setRegistros([]);
     setCargando(true);
     void lectura.current.cargar(
       () =>
-        leerConCache("/calificaciones/mias", () =>
-          api.get<Calificacion[]>("/calificaciones/mias"),
+        leerConCache("/calificaciones/mias/listado?pagina="+pagina, () =>
+          api.get<{datos:Calificacion[];total:number}>("/calificaciones/mias/listado",{params:{pagina,porPagina:10}}),
         ),
       (r) => {
-        setRegistros(r.data);
+        setRegistros(r.data.datos);setTotal(r.data.total);
         setOffline(r.offline);
         setCacheExpira(r.fecha + 5 * 60000);
         setUltimaActualizacion(new Date(r.fecha).toLocaleString());
@@ -130,20 +135,22 @@ export default function CalificacionesScreen() {
       (fallo) => setError(mensajeDeError(fallo)),
       () => setCargando(false),
     );
-  }, [sesion?.sub]);
+  }, [sesion?.sub,pagina]);
 
   useFocusEffect(
     useCallback(() => {
       cargar();
-      cargarBoletas();
       return () => {
-        lecturaBoletas.current.invalidar();
         lectura.current.invalidar();
         descargaVigente.current++;
         setDescargando(false);
       };
-    }, [cargar, cargarBoletas]),
+    }, [cargar]),
   );
+
+  useFocusEffect(useCallback(()=>{
+    cargarBoletas();return()=>{lecturaBoletas.current.invalidar();};
+  },[cargarBoletas]));
 
   // Agrupar por materia para lectura tipo boleta
   const materias = new Map<
@@ -188,6 +195,7 @@ export default function CalificacionesScreen() {
           <Text>Descargar boleta del ciclo vigente</Text>
         </TouchableOpacity>
       )}
+      <Paginador pagina={pagina} total={total} ocupado={cargando} cambiar={setPagina} />
       <FlatList
         ListHeaderComponent={
           <>

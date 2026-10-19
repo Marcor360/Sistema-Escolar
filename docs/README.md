@@ -1,11 +1,13 @@
 # Documentación de Sistema Escolar
 
-Entrada de lectura para main 1.26.1. Revisión documental: 16 de octubre de 2026. Las guías vigentes describen el código consolidado; las auditorías anteriores conservan su propio corte. El README principal resume las funciones y los requisitos de desarrollo, operación y validación.
+Entrada de lectura para la candidata 1.26.4. Revisión documental: 18 de octubre de 2026. Las guías vigentes describen el código consolidado; las auditorías anteriores conservan su propio corte. El README principal resume las funciones y los requisitos de desarrollo, operación y validación.
 
 ## Leer según la tarea
 
 | Tarea | Fuente vigente |
 |---|---|
+| Versionado único y correlativo por PR | [Política de versiones](VERSIONADO_PR.md) |
+| Referencias de ciclo, materias, temario, docente y cartera | [Contrato académico 18/oct](CONTRATO_ACADEMICO_REFERENCIAS_2026-10-18.md) |
 | Auditoría histórica de ramas en 1.26.0 | [Consolidación 1.26.0](CONSOLIDACION_1.26.0.md) |
 | Baja y eliminación definitiva | [Reglas de eliminación](ELIMINACION-REGISTROS.md) |
 | Barrido responsivo, matriz y límites | [Revisión del 15 de octubre](BARRIDO_RESPONSIVO_2026-10-15.md) |

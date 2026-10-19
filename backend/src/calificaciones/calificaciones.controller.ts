@@ -20,6 +20,9 @@ export class CalificacionesController {
   @ApiResponse({ status: 401, description: 'Sesión expirada o revocada' })
   @ApiResponse({ status: 403, description: 'Rol, portal, alcance u origen no autorizado' })
   @ApiResponse({ status: 409, description: 'Conflicto con el estado actual' })
+  @Get('mias/listado') @Roles('ALUMNO')
+  consultarMias(@Query() q:PaginacionDto,@CurrentUser() user:JwtUser) {return this.service.consultarMias(user,q);}
+
   @Get('mias')
   @Roles('ALUMNO')
   mias(@CurrentUser() user: JwtUser, @Query('cicloId', new ParseIntPipe({ optional: true })) cicloId?: number) {

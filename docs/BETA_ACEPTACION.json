@@ -1,14 +1,54 @@
 {
-  "version": "1.26.1",
+  "version": "1.26.5",
   "alcance": "Puertas de aceptación institucional; pruebas locales se documentan aparte y no sustituyen firmas de UAT.",
   "puertas": [
-    { "id": "ci_ultimo_sha", "estado": "pendiente", "responsable": "Mantenimiento", "evidencias": [] },
-    { "id": "web_api_motores", "estado": "pendiente", "responsable": "QA", "evidencias": [] },
-    { "id": "android_fisico", "estado": "pendiente", "responsable": "QA móvil", "evidencias": [] },
-    { "id": "ios_fisico", "estado": "pendiente", "responsable": "QA móvil", "evidencias": [] },
-    { "id": "smtp_staging", "estado": "pendiente", "responsable": "Operación", "evidencias": [] },
-    { "id": "antivirus_real", "estado": "pendiente", "responsable": "Operación", "evidencias": [] },
-    { "id": "restore_operativo", "estado": "pendiente", "responsable": "Operación", "evidencias": [] },
-    { "id": "uat_roles", "estado": "pendiente", "responsable": "Responsables de planteles", "evidencias": [] }
+    {
+      "id": "ci_ultimo_sha",
+      "estado": "pendiente",
+      "responsable": "Mantenimiento",
+      "evidencias": []
+    },
+    {
+      "id": "web_api_motores",
+      "estado": "pendiente",
+      "responsable": "QA",
+      "evidencias": []
+    },
+    {
+      "id": "android_fisico",
+      "estado": "pendiente",
+      "responsable": "QA móvil",
+      "evidencias": []
+    },
+    {
+      "id": "ios_fisico",
+      "estado": "pendiente",
+      "responsable": "QA móvil",
+      "evidencias": []
+    },
+    {
+      "id": "smtp_staging",
+      "estado": "pendiente",
+      "responsable": "Operación",
+      "evidencias": []
+    },
+    {
+      "id": "antivirus_real",
+      "estado": "pendiente",
+      "responsable": "Operación",
+      "evidencias": []
+    },
+    {
+      "id": "restore_operativo",
+      "estado": "pendiente",
+      "responsable": "Operación",
+      "evidencias": []
+    },
+    {
+      "id": "uat_roles",
+      "estado": "pendiente",
+      "responsable": "Responsables de planteles",
+      "evidencias": []
+    }
   ]
 }

@@ -1,6 +1,7 @@
 import { useModuloTrabajo } from '../components/ModuloTrabajo';
 import { ContextosMateria } from '../components/ContextosMateria';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
+import { GuiaPreparacionCiclo } from '../components/GuiaPreparacionCiclo';
 import { Paginador } from '../components/Paginador';
 import '../components/tabla-adaptable.css';
 import { useDialogoMotivo } from '../components/useDialogoMotivo';
@@ -95,6 +96,7 @@ export default function MateriasPage() {
   return <>{confirmacion.elemento}{dialogo.elemento}<Encabezado titulo="Materias y ciclos" detalle="Preparar un ciclo no cambia el ciclo vigente. Activación y cierre institucional por Superadmin." />
     {!legado && ((modo === 'editar' && editarMateria !== trabajo.id) || (modo === 'ciclo-editar' && editarCiclo !== trabajo.id)) && !error && <p role="status">Cargando registro…</p>}
     {error && <p role="alert" className="mensaje-error">{error}</p>}{mensaje && <p role="status">{mensaje}</p>}
+    {!legado && (modo === 'ciclos' || modo === 'ciclo-nuevo' || modo === 'ciclo-editar') && <GuiaPreparacionCiclo />}
     {legado && <section className="panel" aria-label="Preparación académica"><h2>Orden de preparación</h2><p>Primero prepara el ciclo y el catálogo de materias; después crea grupos y asigna materias y docentes. Un ciclo en preparación no reemplaza al vigente hasta que SUPERADMIN lo active.</p><ol><li>Prepara el ciclo y registra las materias.</li><li>Crea grupos en el plantel y ciclo; asigna materia y docente.</li><li>Registra expedientes e inscribe alumnos en Grupos.</li></ol><p>PREPARACION permite configurar. ACTIVO es el ciclo vigente para el trabajo académico. EN_CIERRE permite completar notas; CERRADO conserva el historial y bloquea cambios.</p></section>}
     {(legado || modo === 'nuevo' || (modo === 'editar' && editarMateria === trabajo.id)) && tieneRol('ADMINISTRATIVO') && <section className="panel"><h2>{editarMateria ? 'Editar materia' : 'Nueva materia'}</h2><form onSubmit={guardarMateria} className="fila">
       <label htmlFor="mat-clave">Clave<input id="mat-clave" required maxLength={20} value={formMateria.clave} onChange={(e) => setFormMateria({ ...formMateria, clave: e.target.value })} /></label>
@@ -124,6 +126,7 @@ export default function MateriasPage() {
       <button disabled={enviando}>Guardar ciclo en preparación</button>{editarCiclo && <button type="button" onClick={async () => { if (!legado) trabajo.ir('ciclos'); else { setEditarCiclo(null); setFormCiclo(CICLO); } }}>Cancelar edición</button>}
     </form></section>}
     {consultaCiclos && <div className="tabla-contenedor" role="region" aria-label="Ciclos escolares" tabIndex={0}><table className="tabla tabla-adaptable" aria-busy={cargandoCatalogos}><caption className="solo-lector">Ciclos, periodos, estados y acciones autorizadas</caption><thead><tr><th scope="col">Clave</th><th scope="col">Ciclo</th><th scope="col">Periodo</th><th scope="col">Estado</th><th scope="col">Acciones</th></tr></thead><tbody>{ciclos.map((c) => <tr key={c.id}><td data-etiqueta="Clave">{c.clave}</td><td data-etiqueta="Ciclo">{c.nombre}</td><td data-etiqueta="Periodo">{c.fechaInicio} — {c.fechaFin}</td><td data-etiqueta="Estado">{c.estado}</td><td data-etiqueta="Acciones">
+      <Link className="boton secundario chico" to={`/grupos?vista=consulta&ciclo=${c.id}`}>Ver grupos del ciclo {c.clave}</Link>
       {tieneRol('ADMINISTRATIVO') && c.estado !== 'CERRADO' && <button disabled={enviando} onClick={async () => { if(!legado) trabajo.ir('ciclo-editar',c.id); setEditarCiclo(c.id); setFormCiclo({ clave: c.clave, nombre: c.nombre, fechaInicio: c.fechaInicio, fechaFin: c.fechaFin }); }}>Editar ciclo</button>}
       {tieneRol('SUPERADMIN') && <>{c.estado === 'PREPARACION' && <button disabled={enviando} onClick={() => transicion(c, 'activar')}>Activar</button>}{c.estado === 'ACTIVO' && <button disabled={enviando} onClick={() => transicion(c, 'iniciar-cierre')}>Iniciar cierre</button>}{c.estado === 'EN_CIERRE' && <button disabled={enviando} onClick={() => transicion(c, 'cerrar')}>Validar y cerrar</button>}</>}
     </td></tr>)}{!cargandoCatalogos && !error && !ciclos.length && <tr><td colSpan={5} className="vacio">No hay ciclos preparados. Registra el primero para organizar grupos.</td></tr>}</tbody></table></div>

@@ -1,3 +1,4 @@
+import { Paginador } from '../components/Paginador';
 import { RecursamientosPropios } from "../components/RecursamientosPropios";
 import { leerConCache } from "../api/cache-academica";
 import { resolverEnlacePrivado } from "../api/enlaces-privados";
@@ -42,6 +43,9 @@ interface Material {
 
 export default function MateriasScreen() {
   const { sesion } = useSesion();
+  const [pagina,setPagina]=useState(1),[total,setTotal]=useState(0);
+  useEffect(()=>{setPagina(1);setTotal(0);},[sesion?.sub]);
+
   const [materias, setMaterias] = useState<Materia[]>([]);
   const [cargando, setCargando] = useState(false);
   const [cargaInicialCompleta, setCargaInicialCompleta] = useState(false);
@@ -100,14 +104,15 @@ export default function MateriasScreen() {
     setErroresMateriales({});
     setCargandoMateriales(null);
     setError("");
+    setMaterias([]);
     setCargando(true);
     void lectura.current.cargar(
       () =>
-        leerConCache("/alumnos/me/materias", () =>
-          api.get<Materia[]>("/alumnos/me/materias"),
+        leerConCache("/alumnos/me/materias/listado?pagina="+pagina, () =>
+          api.get<{datos:Materia[];total:number}>("/alumnos/me/materias/listado",{params:{pagina,porPagina:10}}),
         ),
       (r) => {
-        setMaterias(r.data);
+        setMaterias(r.data.datos);setTotal(r.data.total);
         setOffline(r.offline);
         setCacheExpira(r.fecha + 5 * 60000);
         setUltimaActualizacion(new Date(r.fecha).toLocaleString());
@@ -116,7 +121,7 @@ export default function MateriasScreen() {
       (fallo) => setError(mensajeDeError(fallo)),
       () => setCargando(false),
     );
-  }, [sesion?.sub]);
+  }, [sesion?.sub,pagina]);
 
   useFocusEffect(
     useCallback(() => {
@@ -193,6 +198,7 @@ export default function MateriasScreen() {
           archivos requieren conexión.
         </Text>
       )}
+      <Paginador pagina={pagina} total={total} ocupado={cargando} cambiar={setPagina} />
       <FlatList
         ListHeaderComponent={
           <><RecursamientosPropios /><GuiaPantalla
