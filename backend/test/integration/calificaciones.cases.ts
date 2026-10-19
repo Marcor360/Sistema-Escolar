@@ -256,11 +256,20 @@ export function registrarCapturaSinCambios(ctx: ContextoIntegracion) {
     const historial = await ctx.api(`/calificaciones/periodos/${clase.id}/1/historial`,{ token: root }); expect(historial.data.total).toBe(2);
     expect(historial.data.datos[0]).toMatchObject({ valorAnterior: 80.25,valorNuevo: 80.25,observacionAnterior: 'Primera captura',observacionNueva: '',usuarioId: ctx.adminId });
     const selector = await ctx.api('/academico/clases-seleccion?porPagina=1&buscar=NO-', { token: root }); expect(selector.response.status).toBe(200); expect(selector.data.datos).toHaveLength(1); expect(selector.data.total).toBe(1);
+    expect(selector.data.datos[0].grupo).toMatchObject({nivel:null,carrera:null,periodoAcademico:null});
     const maestro = await ctx.dataSource.getRepository(Docente).findOneByOrFail({ id: base.docenteId! });
     const usuarioMaestro = await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: maestro.usuarioId });
     const propias = await ctx.api('/academico/clases-seleccion',{ token: await ctx.emitirToken(usuarioMaestro.email) }); expect(propias.response.status).toBe(200); expect(propias.data.datos.length).toBeGreaterThan(0); expect(propias.data.datos.every((c: { docenteId: number }) => c.docenteId === maestro.id)).toBe(true);
     const restringidas = await ctx.api('/academico/clases-seleccion',{ token: admin }); expect(restringidas.data.datos.every((c: { grupo: { plantelId: number } }) => c.grupo.plantelId === ctx.plantelId)).toBe(true);
     for (const id of [ctx.finanzasId,ctx.alumnoUsuarioId]) expect((await ctx.api('/academico/clases-seleccion',{ token: await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id })).email) })).response.status).toBe(403);
+    const post = async(ruta:string,body:unknown)=>{const r=await ctx.api(ruta,{method:'POST',token:root,body});expect(r.response.status).toBe(201);return r.data;};
+    const nivel=await post('/academico/catalogos/niveles',{plantelId:ctx.plantelId,clave:`ECN${ctx.sufijo}`,nombre:'Nivel de evaluación'});
+    const carrera=await post('/academico/catalogos/carreras',{plantelId:ctx.plantelId,nivelId:nivel.id,clave:`ECC${ctx.sufijo}`,nombre:'Carrera de evaluación',versionPlan:'Plan vigente configurado'});
+    const periodo=await post('/academico/catalogos/periodos',{plantelId:ctx.plantelId,carreraId:carrera.id,cicloId:base.grupo.cicloId,clave:'S1',nombre:'Primer semestre',tipo:'SEMESTRAL',numero:1});
+    const contextual=await post('/academico/grupos',{plantelId:ctx.plantelId,cicloId:base.grupo.cicloId,nombre:`EC-${ctx.sufijo}`,nivelId:nivel.id,carreraId:carrera.id,periodoAcademicoId:periodo.id,turno:'VESPERTINO'});
+    const contextualClase=await ctx.dataSource.getRepository(GrupoMateria).save({grupoId:contextual.id,materiaId:base.materiaId,docenteId:null});
+    const seleccion=await ctx.api('/academico/clases-seleccion?buscar=EC-'+ctx.sufijo,{token:admin});expect(seleccion.response.status).toBe(200);expect(seleccion.data.total).toBe(1);expect(seleccion.data.datos[0]).toMatchObject({id:contextualClase.id,grupo:{turno:'VESPERTINO',nivel:{id:nivel.id,nombre:'Nivel de evaluación'},carrera:{id:carrera.id,versionPlan:'Plan vigente configurado'},periodoAcademico:{id:periodo.id,nombre:'Primer semestre'}}});
+
 
   });
 }
