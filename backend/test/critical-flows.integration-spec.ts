@@ -1,3 +1,4 @@
+import { registrarAlumnoPaginado } from './integration/alumno-paginado.cases';
 import { registrarMateriasContexto } from './integration/materias-contexto.cases';
 import { ClavesCorreoAcceso } from '../src/auth/correo-acceso-claves';
 import { ConfigService } from '@nestjs/config';
@@ -451,6 +452,7 @@ Object.keys(casos).map(Number).sort((a,b) => a-b).forEach((id) => casos[id](cont
   registrarBeta(contexto);
   registrarOutbox(contexto);
   registrarMateriasPaginadas(contexto);
+  registrarAlumnoPaginado(contexto);
   registrarCapturaSinCambios(contexto);
   registrarAltasInstitucionales(contexto);
   registrarRecorridoFinanciero(contexto);

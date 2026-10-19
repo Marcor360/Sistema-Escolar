@@ -240,6 +240,19 @@ export class CalificacionesService {
     return this.proyectarConPromedio(registros);
   }
 
+  async consultarMias(user:JwtUser,q:PaginacionDto) {
+    const alumno=await this.alumnos.obtenerPorUsuario(user.sub);
+    const activas=await this.inscripciones.find({where:{...inscripcionVigente,alumnoId:alumno.id}});
+    if(!activas.length) return {datos:[],total:0,pagina:q.pagina,porPagina:q.porPagina};
+    const [registros,total]=await this.repo.findAndCount({where:{alumnoId:alumno.id,grupoMateria:{grupo:{id:In(activas.map(i=>i.grupoId)),ciclo:{activo:true}}}},order:{grupoMateriaId:'ASC',parcial:'ASC',id:'ASC'},skip:(q.pagina-1)*q.porPagina,take:q.porPagina});
+    const clases=[...new Set(registros.map(r=>r.grupoMateriaId))];
+    // Solo recupera las evaluaciones de las materias de la página (máximo 100),
+    // para que un límite entre páginas nunca cambie el promedio oficial.
+    const notas=clases.length ? await this.repo.find({where:{alumnoId:alumno.id,grupoMateriaId:In(clases)},select:{grupoMateriaId:true,parcial:true,calificacion:true},loadEagerRelations:false}) : [];
+    const promedios=new Map(clases.map(id=>[id,promedioOficial(new Map(notas.filter(n=>n.grupoMateriaId===id).map(n=>[n.parcial,Number(n.calificacion)])))]));
+    return {datos:registros.map(r=>({...this.proyectar(r),promedioOficial:promedios.get(r.grupoMateriaId) ?? null})),total,pagina:q.pagina,porPagina:q.porPagina};
+  }
+
   private proyectarConPromedio(registros: Calificacion[]) {
     return registros.map((registro) => ({ ...this.proyectar(registro), promedioOficial: promedioOficial(new Map(
       registros.filter((c) => c.grupoMateriaId === registro.grupoMateriaId).map((c) => [c.parcial, Number(c.calificacion)]),

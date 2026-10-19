@@ -1,3 +1,4 @@
+import { PaginacionDto } from '../common/paginacion.dto';
 import { clasesRecursadas } from '../recursamientos/acceso-recursamiento';
 import { ParticipacionAsignatura } from '../entities/participacion-asignatura.entity';
 import { randomBytes } from 'crypto';
@@ -289,6 +290,16 @@ export class AlumnosService {
       await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId: alumno.plantelId, accion: 'ALUMNO_REACTIVADO', entidadId: id, detalle: motivo, fecha: new Date() });
       return { ok: true, mensaje: 'Expediente reactivado; inscribe explícitamente al alumno. No se restauran inscripciones.' };
     });
+  }
+
+  async consultarMisMaterias(usuarioId:number,q:PaginacionDto) {
+    const alumno=await this.obtenerPorUsuario(usuarioId);
+    const inscripciones=await this.inscripciones.find({where:{...inscripcionVigente,alumnoId:alumno.id}});
+    const recursadas=await clasesRecursadas(this.dataSource.manager,alumno.id);
+    const grupoIds=[...new Set(inscripciones.map(i=>i.grupoId))];
+    if(!grupoIds.length && !recursadas.length) return {datos:[],total:0,pagina:q.pagina,porPagina:q.porPagina};
+    const [datos,total]=await this.grupoMaterias.findAndCount({where:[...(grupoIds.length?[{grupoId:In(grupoIds)}]:[]),...(recursadas.length?[{id:In(recursadas)}]:[])],order:{grupoId:'ASC',materiaId:'ASC',id:'ASC'},skip:(q.pagina-1)*q.porPagina,take:q.porPagina});
+    return {datos,total,pagina:q.pagina,porPagina:q.porPagina};
   }
 
   /** Materias del alumno en sus grupos con inscripción activa. */

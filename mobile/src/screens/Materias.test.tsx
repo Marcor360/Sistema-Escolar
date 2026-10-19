@@ -42,7 +42,7 @@ let vista: ReactTestRenderer;
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   contexto.sesion = { sub: 1 }; contexto.enfocada = true;
-  vi.mocked(api.get).mockReset().mockResolvedValue({ data: materias });
+  vi.mocked(api.get).mockReset().mockResolvedValue({ data: {datos:materias,total:materias.length} });
   vi.mocked(Linking.openURL).mockReset();
 });
 afterEach(async () => { if (vista) await act(async () => vista.unmount()); vi.unstubAllGlobals(); });
@@ -86,10 +86,10 @@ it('cambiar de alumno limpia materiales y vuelve a consultar el catálogo sin pe
   await pulsar('MAT1: Materia 1. Ver materiales');
   const nueva = pendiente(); vi.mocked(api.get).mockReturnValueOnce(nueva.promesa);
   contexto.sesion = { sub: 2 }; await actualizar();
-  expect(api.get).toHaveBeenLastCalledWith('/alumnos/me/materias');
+  expect(api.get).toHaveBeenLastCalledWith('/alumnos/me/materias/listado',{params:{pagina:1,porPagina:10}});
   expect(textos()).not.toContain('guia.pdf');
   expect(textos()).not.toContain('MAT1');
-  await act(async () => { nueva.resolver({ data: [materias[1]] }); });
+  await act(async () => { nueva.resolver({ data: {datos:[materias[1]],total:1} }); });
   expect(textos()).toContain('MAT2');
   expect(textos()).not.toContain('MAT1');
 });
@@ -125,7 +125,7 @@ it('actualizar materias invalida los materiales antiguos y vuelve a consultarlos
   vi.mocked(api.get).mockResolvedValueOnce({ data: [material] });
   await pulsar('MAT1: Materia 1. Ver materiales');
   expect(textos()).toContain('guia.pdf');
-  vi.mocked(api.get).mockResolvedValueOnce({ data: materias });
+  vi.mocked(api.get).mockResolvedValueOnce({ data: {datos:materias,total:materias.length} });
   const refrescar = vista.root.findByType(RefreshControl);
   await act(async () => refrescar.props.onRefresh());
   expect(textos()).not.toContain('guia.pdf');
@@ -133,4 +133,17 @@ it('actualizar materias invalida los materiales antiguos y vuelve a consultarlos
   await pulsar('MAT1: Materia 1. Ver materiales');
   expect(textos()).toContain('El maestro aún no sube materiales.');
   expect(api.get).toHaveBeenLastCalledWith('/grupo-materias/1/materiales');
+});
+
+it('pagina desde API sin conservar materiales de la página anterior',async()=>{
+ vi.mocked(api.get).mockResolvedValueOnce({data:{datos:[materias[0]],total:11}});await montar();
+ vi.mocked(api.get).mockResolvedValueOnce({data:[material]});await pulsar('MAT1: Materia 1. Ver materiales');
+ vi.mocked(api.get).mockResolvedValueOnce({data:{datos:[materias[1]],total:11}});await pulsar('Página siguiente');
+ expect(api.get).toHaveBeenLastCalledWith('/alumnos/me/materias/listado',{params:{pagina:2,porPagina:10}});expect(textos()).toContain('MAT2');expect(textos()).not.toContain('MAT1');expect(textos()).not.toContain('guia.pdf');expect(textos()).toContain('registros');
+});
+it('cambiar de alumno desde página dos vuelve a uno sin mostrar datos anteriores',async()=>{
+ vi.mocked(api.get).mockResolvedValueOnce({data:{datos:[materias[0]],total:11}});await montar();
+ vi.mocked(api.get).mockResolvedValueOnce({data:{datos:[materias[1]],total:11}});await pulsar('Página siguiente');
+ vi.mocked(api.get).mockResolvedValue({data:{datos:[],total:0}});contexto.sesion={sub:2};await actualizar();
+ expect(api.get).toHaveBeenLastCalledWith('/alumnos/me/materias/listado',{params:{pagina:1,porPagina:10}});expect(textos()).not.toContain('MAT2');
 });
