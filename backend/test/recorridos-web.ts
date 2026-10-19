@@ -51,7 +51,7 @@ export async function recorridoWeb(d: Datos, tipo: 'academico' | 'financiero' | 
       await alumnos.getByLabel('Buscar alumno').fill(matricula); await expect(alumnos.getByLabel('Alumno', { exact: true }).locator('option').filter({ hasText: matricula })).toBeAttached(); await alumnos.getByLabel('Alumno', { exact: true }).selectOption({ label: await alumnos.getByLabel('Alumno', { exact: true }).locator('option').filter({ hasText: matricula }).innerText() }); await alumnos.getByRole('button', { name: 'Inscribir', exact: true }).click(); await expect(alumnos.locator('tbody tr')).toHaveCount(1);
       await alumnos.getByRole('button', { name: 'Dar de baja inscripción' }).click(); await expect(alumnos.locator('tbody tr').filter({ hasText: matricula })).toHaveCount(0);
       await alumnos.getByLabel('Alumno', { exact: true }).selectOption({ label: await alumnos.getByLabel('Alumno', { exact: true }).locator('option').filter({ hasText: matricula }).innerText() }); await alumnos.getByRole('button', { name: 'Inscribir', exact: true }).click(); await expect(alumnos.locator('tbody tr').filter({ hasText: matricula })).toHaveCount(1);
-      await page.getByRole('link', { name: 'Calificaciones', exact: true }).click(); await page.getByRole('button',{name:/Consultar o capturar calificaciones/}).click(); await page.getByLabel('Buscar clase').fill(grupo);
+      await page.getByRole('link', { name: 'Calificaciones', exact: true }).click(); await page.getByRole('button',{name:/Capturar calificaciones/}).click(); await page.getByLabel('Buscar clase').fill(grupo);
       const selector = page.getByLabel('Clase', { exact: true }); await expect(selector.locator('option').filter({ hasText: grupo })).toBeAttached(); await selector.selectOption({ label: await selector.locator('option').filter({ hasText: grupo }).innerText() });
       await page.getByRole('button',{ name: 'Cargar lista' }).click(); await page.getByLabel(`Calificación de ${matricula.toUpperCase()}`).fill('80.25'); await page.getByRole('button',{ name: 'Guardar calificaciones' }).click(); await expect(page.getByText('1 calificaciones guardadas',{ exact: true })).toBeVisible();
       await page.getByRole('button',{ name: 'Guardar calificaciones' }).click(); await expect(page.getByText('No hay cambios que guardar.',{ exact: true })).toBeVisible();
@@ -61,6 +61,7 @@ export async function recorridoWeb(d: Datos, tipo: 'academico' | 'financiero' | 
       const xlsx = page.waitForResponse((r: { url: () => string }) => r.url().includes('/calificaciones.xlsx')); await page.getByRole('button',{ name: 'Descargar Excel' }).click(); assert.equal((await xlsx).status(),200);
       const claseImportacion = await selector.inputValue();
       const alumnoImportacion = (await page.getByLabel(`Calificación de ${matricula.toUpperCase()}`).getAttribute('id')).replace('nota-', '');
+      await page.getByRole('button',{name:'Importar esta evaluación',exact:true}).click();
       const importacion = page.getByRole('region', { name: 'Importación de calificaciones', exact: true });
       await importacion.getByLabel('Motivo si corrige notas existentes').fill('Corrección en lote desde navegador');
       await importacion.getByLabel('Archivo de calificaciones').setInputFiles({ name: 'notas.csv', mimeType: 'text/csv', buffer: Buffer.from(`grupoMateriaId,parcial,alumnoId,matricula,grado,calificacion\n${claseImportacion},1,${alumnoImportacion},${matricula.toUpperCase()},,91.25`) });
@@ -68,7 +69,9 @@ export async function recorridoWeb(d: Datos, tipo: 'academico' | 'financiero' | 
       await expect(importacion.getByText('1 filas; 1 cambios; 0 sin cambios.')).toBeVisible();
       await importacion.getByRole('button', { name: 'Confirmar importación', exact: true }).click();
       await expect(importacion.getByText('1 notas importadas; 0 sin cambios.')).toBeVisible();
+      await page.getByRole('button',{name:'Capturar esta evaluación',exact:true}).click();
       await expect(page.getByLabel(`Calificación de ${matricula.toUpperCase()}`)).toHaveValue('91.25');
+      await page.getByRole('button',{name:'Cancelar y volver a consulta',exact:true}).click();
       await page.getByRole('link', { name: 'Alumnos', exact: true }).click(); await page.getByRole('button',{name:/Consultar alumnos/}).click(); fila = page.locator('tr').filter({ hasText: matricula }); await fila.getByRole('button', { name: 'Historial y boleta' }).click(); await page.getByRole('button', { name: 'Ver calificaciones', exact: true }).click(); await expect(page.getByText('91.25',{ exact: true }).first()).toBeVisible();
       const pdf = page.waitForResponse((r: { url: () => string }) => r.url().includes('/reportes/boleta/')); await page.getByRole('button', { name: 'Boleta de esta inscripción' }).click(); const respuesta = await pdf; assert.equal(respuesta.status(), 200); assert((await respuesta.body()).subarray(0,4).toString() === '%PDF');
     } else if (tipo === 'financiero') {
