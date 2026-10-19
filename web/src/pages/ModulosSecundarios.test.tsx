@@ -18,7 +18,7 @@ it('conducta: alta no descarga historial, guarda una vez y vuelve con filtros',a
  // La validación de inscripción la realiza la API; envío programático aísla la navegación posterior al commit.
  get.mockImplementation(async u=>({data:u==='/conducta/incidencias'?{datos:[],total:0,pagina:3}:u==='/academico/grupos'?{datos:[],total:0}:[]}));
  fireEvent.submit(screen.getByLabelText('Descripción interna').closest('form')!);
- await waitFor(()=>expect(post).toHaveBeenCalledTimes(1));await waitFor(()=>expect(router.state.location.search).toContain('vista=consulta'));expect(router.state.location.search).toContain('pagina=3');expect(screen.queryByLabelText('Descripción interna')).toBeNull();
+ await waitFor(()=>expect(post).toHaveBeenCalledTimes(1));await waitFor(()=>expect(router.state.location.search).toContain('vista=consulta'));expect(router.state.location.search).toContain('pagina=3');await waitFor(()=>expect(screen.queryByLabelText('Descripción interna')).toBeNull());
  await waitFor(()=>expect(get).toHaveBeenCalledWith('/conducta/incidencias',{params:{pagina:3,porPagina:10,cicloId:'9'}}));
 });
 it('conducta: seguimiento directo carga solo el detalle y conserva la nota si falla',async()=>{
