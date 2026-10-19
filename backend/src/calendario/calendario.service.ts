@@ -12,7 +12,7 @@ import { Grupo } from '../entities/grupo.entity';
 import { GrupoMateria } from '../entities/grupo-materia.entity';
 import { Inscripcion } from '../entities/inscripcion.entity';
 import { ScopeService } from '../planteles/scope.service';
-import { EventoDto, EditarEventoDto } from './calendario.dto';
+import { EventoDto, EditarEventoDto, ConsultarEventosDto } from './calendario.dto';
 
 @Injectable()
 export class CalendarioService {
@@ -26,7 +26,7 @@ export class CalendarioService {
     private readonly scope: ScopeService,
   ) {}
 
-  async listar(user: JwtUser, desde?: string, hasta?: string, plantelId?: number) {
+  private async consulta(user: JwtUser, desde?: string, hasta?: string, plantelId?: number) {
     if ((desde && !Number.isFinite(Date.parse(desde))) || (hasta && !Number.isFinite(Date.parse(hasta))) ||
         (desde && hasta && Date.parse(hasta) < Date.parse(desde))) throw new BadRequestException('Intervalo de fechas inválido');
     const qb = this.eventos.createQueryBuilder('e').leftJoinAndSelect('e.plantel', 'p');
@@ -79,8 +79,24 @@ export class CalendarioService {
         else if (plantelId) qb.andWhere('((e.plantel_id IS NULL AND e.grupo_id IS NULL) OR (e.grupo_id IS NULL AND e.plantel_id = :plantelId) OR EXISTS (SELECT 1 FROM grupos g WHERE g.id = e.grupo_id AND g.plantel_id = :plantelId))', { plantelId });
       }
     }
-    const eventos = await qb.orderBy('e.fecha_inicio', 'ASC').getMany();
-    return eventos.map((e) => ({ ...e, revision: this.revision(e) }));
+    return qb.orderBy('e.fechaInicio','ASC');
+  }
+  async listar(user: JwtUser, desde?: string, hasta?: string, plantelId?: number) {
+    const qb = await this.consulta(user,desde,hasta,plantelId);
+    const eventos = await qb.getMany();
+    return eventos.map(e=>({...e,revision:this.revision(e)}));
+  }
+  async consultar(q: ConsultarEventosDto, user: JwtUser) {
+    const qb = await this.consulta(user,q.desde,q.hasta,q.plantelId);
+    if(q.buscar?.trim()) { const termino = '%'+q.buscar.trim().toLowerCase().replace(/[!%_[]/g,c=>'!'+c)+'%'; qb.andWhere("LOWER(e.titulo) LIKE :termino ESCAPE '!'",{termino}); }
+    const [eventos,total] = await qb.addOrderBy('e.id','ASC').skip((q.pagina-1)*q.porPagina).take(q.porPagina).getManyAndCount();
+    return {datos:eventos.map(e=>({...e,revision:this.revision(e)})),total,pagina:q.pagina,porPagina:q.porPagina};
+  }
+  async paraEditar(id:number,user:JwtUser) {
+    const evento = await this.eventos.findOne({where:{id},relations:{plantel:true}});
+    if(!evento) throw new NotFoundException('Evento no encontrado');
+    await this.autorizarOrigen(evento,user);
+    return {...evento,revision:this.revision(evento)};
   }
 
   async crear(dto: EventoDto, user: JwtUser) {

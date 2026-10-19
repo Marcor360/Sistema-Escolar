@@ -157,6 +157,7 @@ async function esperarServidor() {
       if (path.endsWith('/academico/grupos/1/alumnos')) data = [{ id: 1, alumno: { id: 1, matricula: 'NO-QA-001', usuario: { nombre: 'Alumno Beta', apellidoPaterno: 'Prueba' } } }];
       if (path.endsWith('/calificaciones/periodos/1/1')) data = { estatus: 'ABIERTO', inscritos: 1, capturados: 0, faltantes: 1 };
       if (path.endsWith('/calificaciones/periodos/1/1/historial')) data = { datos: [{ id: 1, alumnoId: 1, fecha: '2026-10-13T12:00:00Z', valorAnterior: 80, valorNuevo: 90, usuarioId: 1, motivo: 'Corrección autorizada de prueba' }], total: 1, pagina: 1, porPagina: 10 };
+      if (path.endsWith('/calendario/listado')) data = {datos:[],total:0,pagina:1,porPagina:10};
       if (path.endsWith('/biblioteca')) data = { carpetas: [{ id: 1, nombre: 'Documentos Beta', padreId: null }], archivos: [{ id: 1, titulo: 'Calendario institucional de prueba para familias y docentes', archivoNombre: 'calendario-con-nombre-extenso.pdf', categoria: 'CALENDARIO', bytes: 512 }], total: 1, pagina: 1, porPagina: 10, bytes: 512, cuota: 104857600 };
       if (path.endsWith('/academico/bitacora')) data = { datos: [], total: 0, pagina: 1 };
       if (path.endsWith('/importaciones/preview')) data = { previewId: 'qa-preview', registros: 1, errores: [], regla: 'Confirmación atómica del lote', identificadores: [{ fila: 2, identificador: 'ALUMNO-QA-001' }] };
@@ -413,7 +414,7 @@ async function esperarServidor() {
     await page.setViewportSize({ width, height: 900 });
     for (const ruta of ['/usuarios', '/materias', '/maestro', '/calificaciones', '/biblioteca', '/operaciones']) {
       await page.goto(baseUrl + ruta);
-      const accion = {'/usuarios':'Consultar usuarios','/materias':'Consultar materias','/maestro':'Consultar mis clases','/calificaciones':'Consultar o capturar calificaciones','/biblioteca':'Consultar biblioteca','/operaciones':'Importar o promover'}[ruta];
+      const accion = {'/usuarios':'Consultar usuarios','/materias':'Consultar materias','/maestro':'Consultar mis clases','/calificaciones':'Consultar o capturar calificaciones','/biblioteca':'Consultar biblioteca','/operaciones':'Importar expedientes'}[ruta];
       await page.getByRole('button',{name:new RegExp(accion)}).click();
       await expect(page.locator('h1')).toBeVisible();
       if (ruta === '/operaciones') {
@@ -437,6 +438,14 @@ async function esperarServidor() {
         await tabla.scrollIntoViewIfNeeded();
         const region = tabla.locator('..'); await region.focus();
         await expect(region).toBeFocused();
+      }
+      if(ruta === '/operaciones') {
+        await page.getByRole('button',{name:'Cancelar y volver a consulta',exact:true}).click();
+        await expect(page.getByRole('dialog')).toBeVisible();
+        await page.getByRole('dialog').getByRole('button',{name:'Cancelar',exact:true}).click();
+        await expect(page.getByRole('region',{name:'Filas de previsualización'})).toBeVisible();
+        await page.getByRole('button',{name:'Cancelar y volver a consulta',exact:true}).click();
+        await page.getByRole('dialog').getByRole('button',{name:'Confirmar',exact:true}).click();
       }
       console.log('PASS beta ' + ruta + ' ' + width);
     }

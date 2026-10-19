@@ -157,6 +157,7 @@ async clasesParaSeleccion(user: JwtUser, query: ListarGruposDto) {
     if (planteles?.length === 0) return { datos: [], total: 0, pagina: query.pagina, porPagina: query.porPagina };
     const qb = this.grupoMaterias.createQueryBuilder('gm').innerJoinAndSelect('gm.grupo','g')
       .innerJoinAndSelect('g.ciclo','c').innerJoinAndSelect('g.plantel','p').innerJoinAndSelect('gm.materia','m')
+      .leftJoinAndSelect('g.nivel','nivel').leftJoinAndSelect('g.carrera','carrera').leftJoinAndSelect('g.periodoAcademico','periodoAcademico')
       .where('g.activo = :si AND c.activo = :si AND p.activo = :si AND m.activo = :si',{ si: true });
     if (planteles !== null) qb.andWhere('g.plantel_id IN (:...planteles)',{ planteles });
     if (docenteId !== null) qb.andWhere('gm.docente_id = :docenteId',{ docenteId });
