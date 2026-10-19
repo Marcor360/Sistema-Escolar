@@ -25,6 +25,7 @@ Si un PR anterior sigue abierto al entrar en vigor el control, debe actualizarse
 | 1.26.3 | Guía contextual de ciclos en web y acceso a grupos por ciclo | PR apilado sobre 1.26.2; sin despliegue |
 | 1.26.4 | Vigencia de ciclo y contexto visible de cotización en apertura de cartera | PR apilado sobre 1.26.3; sin despliegue |
 | 1.26.5 | Consulta propia paginada en API y Expo | PR apilado; sin despliegue |
+| 1.26.6 | Consulta, captura e importación enfocadas de calificaciones | PR apilado; sin despliegue |
 | 1.27.0 | Temario como nuevo dominio con API/migraciones/web | Requiere PR separado, pruebas y aceptación |
 
 No confundir `versión`, número de PR GitHub, SHA integrado o versión de servidor: son identificadores distintos.
