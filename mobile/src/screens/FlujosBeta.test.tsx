@@ -1,3 +1,4 @@
+import { configurarCacheAcademica } from '../api/cache-academica';
 import Inicio from "./Inicio";
 import ActivarCuenta from "./ActivarCuenta";
 import Calificaciones from "./Calificaciones";
@@ -95,7 +96,7 @@ beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.clearAllMocks();
   sesion.sub = 1;
-  vi.mocked(api.get).mockResolvedValue({ data: [] });
+  vi.mocked(api.get).mockImplementation(async ruta=>({data:ruta==='/calificaciones/mias/listado'?{datos:[],total:0}:[]}));
   vi.mocked(api.post).mockResolvedValue({ data: {} });
   sesion.iniciar.mockResolvedValue(undefined);
   sesion.cerrar.mockResolvedValue(undefined);
@@ -434,7 +435,7 @@ it('boleta móvil obtiene enlace propio y no abre una descarga si la pantalla se
   let resolver!: (r: { data: { url: string } }) => void;
   vi.mocked(api.get).mockImplementation(async (ruta) => {
     if (ruta === '/reportes/mi-boleta/enlace') return new Promise((r) => { resolver = r; });
-    return { data: [] };
+    return { data: ruta==='/calificaciones/mias/listado'?{datos:[],total:0}:[] };
   });
   await montar(<Calificaciones />);
   const boton = vista.root.findAllByType(TouchableOpacity)[0];
@@ -445,7 +446,7 @@ it('boleta móvil obtiene enlace propio y no abre una descarga si la pantalla se
   expect(Linking.openURL).not.toHaveBeenCalled();
 });
 it('boleta móvil selecciona inscripción propia para distinguir traslados del mismo ciclo', async () => {
-  vi.mocked(api.get).mockImplementation(async (ruta) => ({ data: ruta === '/reportes/mis-boletas' ? [{ inscripcionId: 9, cicloId: 2, ciclo: '2026', grupo: '1-A', plantel: 'Centro' }] : ruta === '/reportes/mi-boleta/enlace' ? { url: '/api/reportes/boleta-descarga/1?t=firmado' } : [] }));
+  vi.mocked(api.get).mockImplementation(async (ruta) => ({ data: ruta === '/reportes/mis-boletas' ? [{ inscripcionId: 9, cicloId: 2, ciclo: '2026', grupo: '1-A', plantel: 'Centro' }] : ruta === '/reportes/mi-boleta/enlace' ? { url: '/api/reportes/boleta-descarga/1?t=firmado' } : ruta==='/calificaciones/mias/listado'?{datos:[],total:0}:[] }));
   await montar(<Calificaciones />);
   await act(async () => vista.root.findByProps({ accessibilityLabel: 'Descargar boleta de 2026, 1-A' }).props.onPress());
   expect(api.get).toHaveBeenCalledWith('/reportes/mi-boleta/enlace', { params: { cicloId: 2, inscripcionId: 9 } });
@@ -455,18 +456,18 @@ it('boleta móvil selecciona inscripción propia para distinguir traslados del m
 
 it("calificaciones descarta notas y consultas pendientes al cambiar de identidad", async () => {
   const nota = (nombre: string) => ({ id: 1, parcial: 1, calificacion: 90, promedioOficial: null, grupoMateriaId: 1, grupoMateria: { materia: { clave: "MAT", nombre }, grupo: { nombre: "A", ciclo: { id: 1, nombre: "2026" } } } });
-  vi.mocked(api.get).mockImplementation(async (ruta) => ({ data: ruta === "/calificaciones/mias" ? [nota("Alumno anterior")] : [] }));
+  vi.mocked(api.get).mockImplementation(async (ruta) => ({ data: ruta === "/calificaciones/mias/listado" ? {datos:[nota("Alumno anterior")],total:1} : [] }));
   await montar(<Calificaciones />);
   expect(texto()).toContain("Alumno anterior");
-  let resolver!: (r: { data: unknown[] }) => void;
-  vi.mocked(api.get).mockImplementation(async (ruta) => ruta === "/calificaciones/mias" ? new Promise((r) => { resolver = r; }) : { data: [] });
+  let resolver!: (r: { data: {datos:unknown[];total:number} }) => void;
+  vi.mocked(api.get).mockImplementation(async (ruta) => ruta === "/calificaciones/mias/listado" ? new Promise((r) => { resolver = r; }) : { data: [] });
   sesion.sub = 2;
   await act(async () => vista.update(<Calificaciones />));
   expect(texto()).not.toContain("Alumno anterior");
   sesion.sub = null;
   await act(async () => vista.update(<Calificaciones />));
   const llamadas = vi.mocked(api.get).mock.calls.length;
-  await act(async () => resolver({ data: [nota("Respuesta obsoleta")] }));
+  await act(async () => resolver({ data: {datos:[nota("Respuesta obsoleta")],total:1} }));
   expect(texto()).not.toContain("Respuesta obsoleta");
   expect(api.get).toHaveBeenCalledTimes(llamadas);
 });
@@ -637,4 +638,24 @@ it("inicio no confunde un saldo no disponible con no tener adeudos", async () =>
   const textos = vista.root.findAllByType(Text).map((nodo) => nodo.props.children).flat().join(" ");
   expect(textos).toContain("No se pudo consultar tu saldo");
   expect(textos).not.toContain("No tienes saldo pendiente");
+});
+
+it('calificaciones pagina desde servidor y conserva el promedio oficial sin recargar boletas',async()=>{
+ const nota=(nombre:string)=>({id:1,parcial:1,calificacion:80,promedioOficial:90,grupoMateriaId:1,grupoMateria:{materia:{clave:'MAT',nombre},grupo:{nombre:'A',ciclo:{id:1,nombre:'2026'}}}});
+ vi.mocked(api.get).mockImplementation(async(ruta,config)=>({data:ruta==='/calificaciones/mias/listado'?{datos:[nota((config?.params as {pagina:number}).pagina===1?'Primera página':'Segunda página')],total:11}:[]}));
+ await montar(<Calificaciones/>);expect(texto()).toContain('Primera página');
+ const boletas=vi.mocked(api.get).mock.calls.filter(([ruta])=>ruta==='/reportes/mis-boletas').length;
+ await act(async()=>vista.root.findByProps({accessibilityLabel:'Página siguiente'}).props.onPress());
+ expect(api.get).toHaveBeenCalledWith('/calificaciones/mias/listado',{params:{pagina:2,porPagina:10}});expect(texto()).toContain('Segunda página');expect(texto()).not.toContain('Primera página');expect(texto()).toContain('90');expect(vi.mocked(api.get).mock.calls.filter(([ruta])=>ruta==='/reportes/mis-boletas')).toHaveLength(boletas);
+});
+it('el caché de calificaciones no usa la página uno para suplir una página dos sin conexión',async()=>{
+ configurarCacheAcademica(1);
+ const nota={id:1,parcial:1,calificacion:80,promedioOficial:null,grupoMateriaId:1,grupoMateria:{materia:{clave:'MAT',nombre:'Nota cacheada'},grupo:{nombre:'A',ciclo:{id:1,nombre:'2026'}}}};
+ vi.mocked(api.get).mockImplementation(async(ruta,config)=>{
+  if(ruta!=='/calificaciones/mias/listado') return {data:[]};
+  if((config?.params as {pagina:number}).pagina===1)return {data:{datos:[nota],total:11}};
+  throw Object.assign(new Error('Sin red en página dos'),{code:'ERR_NETWORK'});
+ });
+ await montar(<Calificaciones/>);expect(texto()).toContain('Nota cacheada');
+ await act(async()=>vista.root.findByProps({accessibilityLabel:'Página siguiente'}).props.onPress());expect(texto()).not.toContain('Nota cacheada');expect(vista.root.findByProps({accessibilityLabel:'Reintentar carga'})).toBeTruthy();expect(texto()).not.toContain('copia de calificaciones de esta sesión');configurarCacheAcademica(null);
 });

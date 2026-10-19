@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma
 
-**Versión candidata: `1.26.4`** · API, web y app del alumno alineadas. Aceptación institucional y despliegue pendientes.
+**Versión candidata: `1.26.5`** · API, web y app del alumno alineadas. Aceptación institucional y despliegue pendientes.
 
 API, portal administrativo/docente y app del alumno para gestión académica y financiera con alcance por plantel. Las versiones de backend, web, móvil, lockfiles y Expo están alineadas. Este README describe una única versión actual; los informes históricos permanecen en `docs/`.
 
@@ -13,7 +13,11 @@ API, portal administrativo/docente y app del alumno para gestión académica y f
 
 La versión 1.26.4 aclara en apertura de cartera la vigencia del ciclo frente al mes de cobro y la fecha de vencimiento. Conserva la guía de ciclos de 1.26.3 y la política de versiones de 1.26.2. No cambia tarifas ni reglas de la API y no acredita un despliegue. La versión del repositorio identifica el código; la disponibilidad en el VPS o en un APK depende del despliegue correspondiente. La evidencia histórica conserva su versión y fecha originales.
 
-## Novedades de 1.26.4
+## Novedades de 1.26.5
+
+Materias y calificaciones propias del alumno consultan páginas del servidor. El caché se limita a la identidad y página de la sesión; el promedio usa todas las evaluaciones necesarias. No modifica las reglas académicas.
+
+### Entregado previamente en 1.26.4
 
 - En apertura de cartera, presenta la vigencia del ciclo seleccionado de forma informativa sin mezclarla con el mes de cobro ni el vencimiento.
 - En la confirmación de la cotización, repite contexto de ciclo, periodo de cargo y vencimiento; búsqueda por nombre o matrícula reconocida en el servidor.

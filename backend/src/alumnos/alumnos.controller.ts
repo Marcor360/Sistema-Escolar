@@ -1,3 +1,4 @@
+import { PaginacionDto } from '../common/paginacion.dto';
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AlumnosService } from './alumnos.service';
@@ -16,6 +17,9 @@ export class AlumnosController {
   constructor(private readonly service: AlumnosService, private readonly activacion: ActivacionService) {}
 
   // --- Portal/app del alumno ---
+  @Get('me/materias/listado') @Roles('ALUMNO')
+  consultarMisMaterias(@Query() q:PaginacionDto,@CurrentUser() user:JwtUser) {return this.service.consultarMisMaterias(user.sub,q);}
+
   @Get('me/materias')
   @Roles('ALUMNO')
   misMaterias(@CurrentUser() user: JwtUser) {
