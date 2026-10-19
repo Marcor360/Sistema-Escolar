@@ -41,3 +41,11 @@ it('presenta una captura legible por alumno y el historial como tabla adaptable'
   expect(region.querySelector('[data-etiqueta="Matrícula"]')?.textContent).toBe('AL1');
   expect(screen.getByRole('region', { name: 'Historial de modificaciones de notas' })).toBeTruthy();
 });
+
+it('muestra contexto académico legado sin inventar nivel, carrera ni periodo', async()=>{
+ await preparar(); const region=screen.getByRole('region',{name:'Contexto de la evaluación'});expect(region.textContent).toContain('Clase 7: MAT');expect(region.textContent).toContain('1-A');expect(region.textContent).toContain('Centro');expect(region.textContent).toContain('Sin nivel registrado');expect(region.textContent).toContain('Sin carrera registrada');expect(region.textContent).toContain('Sin periodo registrado');expect(region.textContent).toContain('escala actual de 0 a 100');
+});
+it('presenta nivel, plan, periodo y turno de la clase autorizada',async()=>{
+ const clase={id:9,grupo:{id:8,nombre:'2-B',ciclo:{nombre:'2026'},plantel:{nombre:'Centro'},nivel:{nombre:'Licenciatura'},carrera:{nombre:'Derecho',versionPlan:'Plan 2025'},periodoAcademico:{nombre:'Segundo semestre',tipo:'SEMESTRAL',numero:2},turno:'VESPERTINO'},materia:{clave:'DER',nombre:'Derecho civil'}};
+ vi.spyOn(api,'get').mockResolvedValue({data:{datos:[clase],total:1}});render(<CalificacionesPage/>);await waitFor(()=>expect((screen.getByLabelText('Clase') as HTMLSelectElement).disabled).toBe(false));fireEvent.change(screen.getByLabelText('Clase'),{target:{value:'9'}});const region=screen.getByRole('region',{name:'Contexto de la evaluación'});for(const valor of ['Licenciatura','Derecho','Plan 2025','Segundo semestre','VESPERTINO'])expect(region.textContent).toContain(valor);
+});
