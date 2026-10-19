@@ -43,7 +43,7 @@ La pantalla antigua incluye inscripción y mensualidad como campos libres. Aquí
 
 | Prioridad | Pendiente comprobado | Acción recomendada |
 | --- | --- | --- |
-| Alta | Ficha y navegación curricular de Ciclos poco explícitas | PR web incremental de enlaces contextuales y guía, sin inventar endpoint. |
+| Alta | Ficha y navegación curricular de Ciclos poco explícitas | En 1.26.3 se añade guía y vínculo a grupos filtrados; queda pendiente una ficha agregada real desde API. |
 | Alta | Temario distinto de Actividades no existe | PR funcional grande 1.27.0 con modelo, permisos, API, web y pruebas de ambos motores. |
 | Media | Selección por docente mejorable | PR UX acotado sobre asignaciones existentes en Grupos; no recrear datos. |
 | Media | Cartera opera pero falta UAT institucional y visibilidad de cotización/pending | PR de experiencia y pruebas; no rehacer transacción #116/#117. |
