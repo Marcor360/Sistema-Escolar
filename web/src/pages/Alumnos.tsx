@@ -45,6 +45,7 @@ export default function AlumnosPage() {
   const { tieneRol } = useAuth();
   const puedeGestionar = tieneRol('ADMINISTRATIVO');
   const puedeCrear = tieneRol('FINANZAS', 'SUPERADMIN');
+  const puedeAbrirCartera = tieneRol('ADMINISTRATIVO', 'SUPERADMIN');
   const [editando, setEditando] = useState<number | null>(null);
   const mostrarFormulario = modo === 'legado' ? puedeCrear || (puedeGestionar && editando !== null) : (modo === 'nuevo' && puedeCrear) || (modo === 'editar' && puedeGestionar && editando !== null);
   const [transferencia, setTransferencia] = useState<Alumno | null>(null);
@@ -147,7 +148,7 @@ export default function AlumnosPage() {
         tutorNombre: form.tutorNombre || undefined,
         tutorTelefono: form.tutorTelefono || undefined,
       });
-      setMensaje(editando ? `Expediente de ${form.matricula} actualizado.` : `Expediente de ${form.matricula} registrado. Ahora inscríbelo en un grupo desde Grupos.`);
+      setMensaje(editando ? `Expediente de ${form.matricula} actualizado.` : `Expediente de ${form.matricula} registrado. Control Escolar debe continuar con Apertura de cartera.`);
       setEditando(null);
       setForm(FORM_INICIAL);
       trabajo.guardado();
@@ -181,7 +182,7 @@ export default function AlumnosPage() {
   return (
     <>{confirmacion.elemento}{dialogoMotivo.elemento}
       <Encabezado titulo="Alumnos" detalle="Alta, consulta, boletas y baja de expedientes" />
-      {puedeGestionar && <p className="texto-ayuda">Recorrido recomendado: registra el expediente, después abre Grupos, elige el grupo del ciclo correspondiente e inscribe al alumno. La matrícula por sí sola no habilita materias ni calificaciones.</p>}
+      {(puedeGestionar || puedeCrear) && <p className="texto-ayuda">Recorrido recomendado: registra el expediente y continúa con Apertura de cartera para el contexto académico, asignación de grupo y cargos. Crear la matrícula no equivale a inscribir.</p>}
 
       {mostrarFormulario && <FormularioAlumno editando={editando} crear={crear} enviando={enviando} form={form} setForm={setForm} planteles={planteles} dar={dar} setEditando={setEditando} cancelar={modo === 'legado' ? undefined : () => trabajo.ir('consulta')} error={error} mensaje={mensaje} />}
       {!puedeGestionar && error && <p role="alert" className="mensaje-error">{error}</p>}
@@ -211,7 +212,7 @@ export default function AlumnosPage() {
         {(busquedaAplicada || plantelAplicado || buscar || plantelId) && <button type="button" className="boton secundario" onClick={() => { setBuscar(''); setPlantelId(''); cargar(1, '', ''); }}>Limpiar filtros</button>}
       </div></section>
 
-      {puedeGestionar && mensaje.includes('registrado') && <p><a className="boton secundario" href="/grupos">Ir a Grupos para inscribir al alumno</a></p>}
+      {mensaje.includes('registrado') && <p>{puedeAbrirCartera ? <Link className="boton secundario" to="/apertura-cartera/nueva">Continuar con apertura de cartera</Link> : 'Control Escolar debe completar la apertura de cartera. Finanzas no asigna grupos desde este módulo.'}</p>}
       <div className="cabecera-listado"><h2>Expedientes de alumnos</h2><p>{resultado.total} registros encontrados</p></div>
       <div className="tabla-contenedor" role="region" aria-label="Listado de alumnos" tabIndex={0}>
       <table className="tabla tabla-adaptable" aria-busy={cargando}>

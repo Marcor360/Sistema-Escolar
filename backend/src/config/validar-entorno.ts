@@ -17,7 +17,7 @@ export function validarEntorno(entrada: Record<string, unknown>): Record<string,
   for (const n of ['DB_HOST','DB_USER','DB_PASS','DB_NAME','DB_PORT','JWT_SECRET','UPLOADS_DIR']) texto(n, true);
   for (const n of ['PORT','DB_PORT','SMTP_PORT']) puerto(n);
   if (texto('DB_SYNC', true) !== 'false') error('DB_SYNC (debe ser false; usa migraciones)');
-  for (const n of ['DB_SSL','DB_ENCRYPT','DB_TRUST_SERVER_CERTIFICATE','PUSH_ENABLED','ALLOW_DEV_SEED','SMTP_REQUIRED']) booleano(n);
+  for (const n of ['DB_SSL','DB_ENCRYPT','DB_TRUST_SERVER_CERTIFICATE','PUSH_ENABLED','ALLOW_DEV_SEED','SMTP_REQUIRED','INSCRIPCION_ORDINARIA_SOLO_CARTERA']) booleano(n);
   if (prod && (texto('JWT_SECRET').length < 32 || texto('JWT_SECRET').includes('cambiar-en-produccion'))) error('JWT_SECRET');
   if (prod && motor === 'mysql' && !booleano('DB_SSL')) error('DB_SSL');
   if (prod && motor === 'mssql' && (texto('DB_ENCRYPT') === 'false' || booleano('DB_TRUST_SERVER_CERTIFICATE'))) error('DB_ENCRYPT / DB_TRUST_SERVER_CERTIFICATE');

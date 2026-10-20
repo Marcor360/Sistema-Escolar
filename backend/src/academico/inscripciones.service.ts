@@ -41,9 +41,16 @@ async inscribirAlumno(grupoId: number, alumnoId: number, user: JwtUser) {
         const inscripciones = manager.getRepository(Inscripcion);
         const otra = await inscripciones.findOne({ where: { alumnoId, estatus: 'ACTIVA', grupo: { cicloId: grupo.cicloId, tipo: 'REGULAR' } } });
         if (otra) throw new ConflictException('El alumno ya tiene una inscripción activa en este ciclo; corrige la inscripción anterior');
-        const limite = await limiteRegulares(manager, grupoId);
-        if (await inscripciones.countBy({ grupoId, estatus: 'ACTIVA' }) >= limite) throw new ConflictException('El cupo total autorizado de una clase con recursantes está completo');
+        // La inscripción directa no utiliza la excepción de remanente (51–54), reservada a cartera.
+        const limite = Math.min(50, await limiteRegulares(manager, grupoId));
+        if (await inscripciones.countBy({ grupoId, estatus: 'ACTIVA' }) >= limite) {
+          throw new ConflictException('El grupo alcanzó el cupo de inscripción directa; revisa la apertura de cartera y las reservas por recursamiento');
+        }
         const duplicada = await inscripciones.findOne({ where: { grupoId, alumnoId } });
+        // Política opt-in mientras se acuerdan las excepciones históricas y los tests institucionales.
+        if (process.env.INSCRIPCION_ORDINARIA_SOLO_CARTERA === 'true' && (!duplicada || duplicada.estatus !== 'BAJA')) {
+          throw new ConflictException('Las altas ordinarias requieren Apertura de cartera; aquí solo se reactiva una inscripción previa en baja del mismo grupo');
+        }
         if (duplicada) {
           duplicada.estatus = 'ACTIVA';
           const guardada = await inscripciones.save(duplicada);

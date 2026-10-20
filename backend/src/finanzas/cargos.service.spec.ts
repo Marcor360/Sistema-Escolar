@@ -1,7 +1,7 @@
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { CargosService } from './cargos.service';
-import { CrearCargoDto, GenerarColegiaturasDto } from './finanzas.dto';
+import { AplicarRecargosDto, CrearCargoDto, GenerarColegiaturasDto } from './finanzas.dto';
 import { Cargo, CicloEscolar, Alumno } from '../entities';
 
 describe('CargosService.saldoDeCargo / totalDeCargo', () => {
@@ -62,6 +62,16 @@ describe('CargosService.adeudos minimiza datos del alumno', () => {
     for (const datoPrivado of ['CURP-PRIVADA', 'Tutor privado', '5550000000', 'Dirección privada', 'ana@example.invalid']) {
       expect(JSON.stringify(respuesta)).not.toContain(datoPrivado);
     }
+  });
+});
+
+describe('Recargos de importe nulo', () => {
+  it('rechaza un porcentaje de 0 en el contrato de la API y en el servicio', async () => {
+    const dto = plainToInstance(AplicarRecargosDto, { porcentaje: 0, plantelId: 4, confirmado: true });
+    expect((await validate(dto)).some((error) => error.property === 'porcentaje')).toBe(true);
+    const servicio = Object.create(CargosService.prototype) as CargosService;
+    await expect(servicio.aplicarRecargos(dto, { sub: 1, roles: ['FINANZAS'] } as Parameters<CargosService['aplicarRecargos']>[1]))
+      .rejects.toThrow('mayor que cero');
   });
 });
 
@@ -264,5 +274,21 @@ describe('CargosService.generarColegiaturas', () => {
 
     expect(resultado).toEqual({ generados: 0, omitidos: 0 });
     expect(guardar).not.toHaveBeenCalled();
+  });
+});
+
+
+describe('Recargos que redondean a cero', () => {
+  it.each([true, false])('no cambia estado ni audita un cargo sin importe positivo (preview=%s)', async (preview) => {
+    const cargo = { id: 10, monto: 0.01, descuento: 0, recargo: 0, estatus: 'PENDIENTE' };
+    const qb = { innerJoinAndSelect: jest.fn().mockReturnThis(), where: jest.fn().mockReturnThis(), andWhere: jest.fn().mockReturnThis(), getMany: jest.fn().mockResolvedValue([cargo]) };
+    const repo = { createQueryBuilder: jest.fn().mockReturnValue(qb), save: jest.fn() };
+    const transaccion = { transaction: jest.fn() }, bitacora = { registrar: jest.fn() };
+    const service = new CargosService(repo as any, {} as any, {} as any, {} as any, {} as any, {} as any,
+      bitacora as any, { resolverFiltro: jest.fn().mockResolvedValue(null) } as any, transaccion as any);
+    const resultado = await service.aplicarRecargos({ porcentaje: 10, plantelId: 4, confirmado: true }, { sub: 1, roles: ['FINANZAS'] } as any, preview);
+    expect(resultado).toMatchObject(preview ? { registros: 0, totalEstimado: 0 } : { aplicados: 0 });
+    expect(cargo.estatus).toBe('PENDIENTE'); expect(repo.save).not.toHaveBeenCalled();
+    expect(transaccion.transaction).not.toHaveBeenCalled(); expect(bitacora.registrar).not.toHaveBeenCalled();
   });
 });

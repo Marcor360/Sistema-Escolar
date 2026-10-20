@@ -33,7 +33,7 @@ export function FormularioAlumno({
         <div>
           <p className="sobrelinea">CONTROL ESCOLAR</p>
           <h2 id="titulo-form-alumno">{nuevo ? 'Registrar alumno' : 'Editar expediente'}</h2>
-          <p className="texto-ayuda">Paso 1: crea el expediente. Después inscribe al alumno en un grupo del plantel y ciclo desde Grupos. Completa los datos de identidad y contacto. Los campos marcados con * son obligatorios.</p>
+          <p className="texto-ayuda">Paso 1: crea el expediente. Después Control Escolar realiza la apertura de cartera para asignar contexto, grupo y cargos. Completa los datos de identidad y contacto. Los campos marcados con * son obligatorios.</p>
         </div>
         <span className="sello neutro">{nuevo ? 'Alta individual' : 'Edición'}</span>
       </div>
@@ -91,7 +91,7 @@ export function FormularioAlumno({
             </div>
             {nuevo && <div className="aviso-credenciales" role="note">
               <strong>Primer acceso del alumno</strong>
-              <p>La matrícula solo identifica su expediente: no es una contraseña. El alumno solicitará un código de activación enviado a su correo, establecerá una contraseña y después podrá iniciar sesión. Si no tiene acceso al correo, Control escolar deberá resolverlo mediante un canal institucional autorizado.</p><p>Al registrar el expediente todavía no se asigna un grupo ni materias. Después inscríbelo desde Grupos en el plantel y ciclo que correspondan.</p>
+              <p>La matrícula solo identifica su expediente: no es una contraseña. El alumno solicitará un código de activación enviado a su correo, establecerá una contraseña y después podrá iniciar sesión. Si no tiene acceso al correo, Control escolar deberá resolverlo mediante un canal institucional autorizado.</p><p>Al registrar el expediente todavía no se asigna un grupo ni materias. Después Control Escolar debe completar la apertura de cartera en el plantel y ciclo que correspondan.</p>
             </div>}
           </div>
         </fieldset>

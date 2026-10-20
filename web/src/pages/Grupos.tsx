@@ -176,7 +176,7 @@ export default function GruposPage() {
       });
       trabajo.guardado(); if(!legado) trabajo.ir('consulta');
       setContexto(CONTEXTO_VACIO); setUsarContexto(false);
-      setEditando(null); setMensaje(editando ? 'Grupo actualizado.' : 'Grupo creado. Ahora selecciona Administrar para asignar materias, docente e inscribir alumnos.');
+      setEditando(null); setMensaje(editando ? 'Grupo actualizado.' : 'Grupo creado. Ahora selecciona Administrar para asignar materias y docentes. Las nuevas aperturas se realizan en Apertura de cartera.');
       setFormGrupo({ cicloId: '', plantelId: '', nombre: '', grado: '', turno: 'MATUTINO' });
       if(legado) void cargar(1, plantelAplicado);
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
@@ -202,17 +202,18 @@ export default function GruposPage() {
     if (!seleccionado) return;
     if (enviando) return; setEnviando(true); setError('');
     try {
+      if (!await confirmacion.solicitar('Esta acción no genera cargos y está sujeta a la política institucional de altas ordinarias. Para nuevas altas usa Apertura de cartera. ¿Confirmas la corrección?')) return;
       await api.post(`/academico/grupos/${seleccionado.id}/alumnos`, { alumnoId: Number(alumnoId) });
       setAlumnoId('');
       await abrirGrupo(seleccionado);
-      setMensaje('Inscripción registrada. El alumno podrá consultar las materias y actividades vigentes que le correspondan.');
+      setMensaje('Inscripción académica confirmada sin generar cargos. Revisa el expediente y su apertura de cartera.');
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
   return (
     <>{confirmacion.elemento}
       <Encabezado titulo="Grupos" detalle="Grupos por ciclo, materias asignadas e inscripciones" />
-      <p className="texto-ayuda">Orden recomendado: prepara el ciclo y las materias, registra docentes y alumnos, crea el grupo, asígnale materias con docente e inscribe a los alumnos. Cada paso es independiente y conserva las reglas de autorización del servidor.</p>
+      <p className="texto-ayuda">Orden recomendado: prepara el ciclo y las materias, registra docentes y alumnos. Para una inscripción ordinaria con cargos usa Apertura de cartera; Grupos permite consultar clases y corregir inscripciones existentes según la política institucional, sin generar cargos.</p>
       {error && <p role="alert" className="mensaje-error">{error}</p>}{mensaje && <p role="status" className="mensaje-ok">{mensaje}</p>}
       {cargandoCatalogos && <p role="status">Cargando catálogos…</p>}
       {errorCatalogos && <div role="alert"><p>{errorCatalogos}</p><button className="boton secundario" onClick={() => { void cargarCatalogos(); }}>Reintentar catálogos</button></div>}
@@ -276,7 +277,7 @@ export default function GruposPage() {
           {resultado.datos.map((g) => (
             <tr key={g.id}>
               <td data-etiqueta="ID"><code>{g.id}</code></td>
-              <td data-etiqueta="Grupo">{g.nombre}</td>
+              <td data-etiqueta="Grupo">{g.nombre}{g.nombre.startsWith('AUTO-') && <span className="sello neutro">Generado automáticamente</span>}</td>
               <td data-etiqueta="Plantel">{g.plantel?.nombre ?? <span className="sello neutro">Sin plantel</span>}</td>
               <td data-etiqueta="Ciclo">{g.ciclo?.clave}</td>
               <td data-etiqueta="Grado">{g.grado ?? '—'}</td>
@@ -301,7 +302,19 @@ export default function GruposPage() {
       {(legado || trabajo.modo === 'administrar') && seleccionado && !cargandoGrupo && !detalleGrupoCompleto && <button className="boton secundario" onClick={() => { void abrirGrupo(seleccionado); }}>Reintentar detalle del grupo</button>}
       {seleccionado && !cargandoGrupo && detalleGrupoCompleto && (
         <>
-          <section className="panel" aria-label="Preparación del grupo"><h2>{seleccionado.nombre}: siguientes pasos</h2><ol><li>Grupo registrado en {seleccionado.ciclo.clave}.</li><li>{asignaciones.length} materias asignadas; {asignaciones.filter((a) => !a.docente).length} pendientes de docente.</li><li>{inscritos.length} alumnos inscritos. El expediente se registra por separado.</li></ol></section>
+          <section className="panel" aria-label="Preparación del grupo">
+            <h2>{seleccionado.nombre}: preparación académica</h2>
+            {seleccionado.nombre.startsWith('AUTO-') && <p className="texto-ayuda">Este grupo fue generado automáticamente. Su clave es provisional: Control Escolar debe revisar la denominación institucional antes del inicio de clases.</p>}
+            <ol>
+              <li>Grupo registrado en el ciclo {seleccionado.ciclo.clave}.</li>
+              <li>{asignaciones.length} materias asignadas; {asignaciones.filter((a) => !a.docente).length} pendientes de docente.</li>
+              <li>{inscritos.length} alumnos inscritos; el expediente y la cartera se verifican en módulos separados.</li>
+            </ol>
+            {asignaciones.length === 0 ? <p role="status">Preparación pendiente: registra las materias y sus docentes desde este panel.</p>
+              : asignaciones.some((a) => !a.docente) ? <p role="status">Preparación pendiente: asigna los profesores que faltan antes de impartir clases.</p>
+              : inscritos.length === 0 ? <p role="status">Materias y profesores asignados; todavía no hay alumnos inscritos.</p>
+              : <p role="status">Asignaciones académicas completas en este grupo. Verifica por separado ciclo vigente, cartera y documentación institucional.</p>}
+          </section>
           <MateriasGrupo seleccionado={seleccionado} reasignando={reasignando} nuevoDocente={nuevoDocente} setNuevoDocente={setNuevoDocente} enviando={enviando} operar={operar} setReasignando={setReasignando} asignarMateria={asignarMateria} materiaId={materiaId} setMateriaId={setMateriaId} materias={materias} docenteId={docenteId} setDocenteId={setDocenteId} asignaciones={asignaciones} />
 
           <InscripcionesGrupo seleccionado={seleccionado} inscribir={inscribir} alumnoId={alumnoId} setAlumnoId={setAlumnoId} enviando={enviando} inscritos={inscritos} operar={operar} />
