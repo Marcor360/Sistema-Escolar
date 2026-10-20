@@ -1076,3 +1076,28 @@ dialog button { max-width: 100%; min-height: 44px; white-space: normal; overflow
 .trabajo-enfocado { max-width: 980px; margin: 0 auto; padding: 20px; }
 .trabajo-enfocado form { max-width: 100%; }
 .trabajo-enfocado input, .trabajo-enfocado select { max-width: 100%; }
+
+
+/* 1.27.5: foco visible, fuentes ampliadas y formularios estrechos. */
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid var(--pizarra);
+  outline-offset: 3px;
+}
+:where(.lateral, .barra-superior) :where(button, a):focus-visible {
+  outline-color: #fff;
+  box-shadow: 0 0 0 5px var(--pizarra-2);
+}
+.selector-error { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.selector-error .boton { min-height: 44px; }
+@media (max-width: 700px) {
+  main, section, form, fieldset, .panel, .tabla-contenedor { min-width: 0; }
+  .panel { padding: 14px; }
+  .rejilla-formulario { grid-template-columns: minmax(0, 1fr); }
+  .fila { flex-wrap: wrap; }
+  .fila > *, input, select, textarea { max-width: 100%; }
+  .paginador-acciones { flex-wrap: wrap; }
+}
+@media (max-width: 360px) {
+  .contenido { padding-left: 12px; padding-right: 12px; }
+  .kpis { grid-template-columns: minmax(0, 1fr); }
+}

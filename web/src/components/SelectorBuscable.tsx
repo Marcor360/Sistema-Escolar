@@ -9,6 +9,7 @@ export function SelectorBuscable<T extends { id: number }>({ ruta, valor, cambia
   const id = useId(); const [buscar, setBuscar] = useState(''); const [pagina, setPagina] = useState(1);
   const [resultado, setResultado] = useState<{ datos: T[]; total: number }>({ datos: [], total: 0 });
   const [error, setError] = useState(''); const [cargando, setCargando] = useState(false);
+  const [reintento, setReintento] = useState(0);
   const seleccion = useRef<{ id: string; texto: string } | null>(null);
   const params = JSON.stringify(filtros);
   useEffect(() => {
@@ -22,9 +23,10 @@ export function SelectorBuscable<T extends { id: number }>({ ruta, valor, cambia
         .finally(() => { if (activa) setCargando(false); });
     }, 250);
     return () => { activa = false; controller.abort(); clearTimeout(timer); };
-  }, [ruta, buscar, pagina, params]);
+  }, [ruta, buscar, pagina, params, reintento]);
   return <div className="campo"><label htmlFor={`${id}-buscar`}>Buscar {etiqueta.toLowerCase()}</label>
-    <input id={`${id}-buscar`} disabled={deshabilitado} value={buscar} placeholder="Nombre o identificador" onChange={(e) => { setBuscar(e.target.value); setPagina(1); }} />
+    <input id={`${id}-buscar`} type="search" aria-describedby={`${id}-ayuda`} disabled={deshabilitado} value={buscar} placeholder="Nombre o identificador" onChange={(e) => { setBuscar(e.target.value); setPagina(1); }} />
+    <p className="texto-ayuda" id={`${id}-ayuda`}>Escribe para filtrar resultados de diez en diez. Conservaremos tu elección al cambiar de página.</p>
     <label htmlFor={id}>{etiqueta}</label><select id={id} required={requerido} disabled={deshabilitado || cargando} aria-busy={cargando} value={valor} onChange={(e) => {
       const item = resultado.datos.find((i) => String(i.id) === e.target.value);
       const valorNuevo=e.target.value;
@@ -33,7 +35,10 @@ export function SelectorBuscable<T extends { id: number }>({ ruta, valor, cambia
     }}><option value="">Selecciona…</option>
       {valor && !resultado.datos.some((i) => String(i.id) === valor) && <option value={valor}>{seleccion.current?.id === valor ? seleccion.current.texto : `Seleccionado ${valor}`}</option>}
       {resultado.datos.map((i) => <option key={i.id} value={i.id}>{texto(i)}</option>)}
-    </select>{cargando && <span role="status">Buscando…</span>}{error && <span role="alert">{error}</span>}
+    </select>{cargando && <span role="status">Buscando…</span>}{error && <div role="alert" className="selector-error">
+      <span>{error}</span>
+      <button type="button" className="boton secundario" disabled={deshabilitado || cargando} onClick={() => setReintento(n => n+1)}>Reintentar búsqueda</button>
+    </div>}
     <Paginador total={resultado.total} pagina={pagina} porPagina={10} onCambio={setPagina} deshabilitado={deshabilitado || cargando} />
   </div>;
 }

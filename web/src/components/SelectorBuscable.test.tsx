@@ -2,8 +2,20 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, expect, it, vi } from 'vitest';
 import { SelectorBuscable } from './SelectorBuscable';
 import { api } from '../api/client';
-
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+it('permite reintentar después de error de red sin perder búsqueda', async () => {
+  const get = vi.spyOn(api, 'get').mockResolvedValueOnce({ data: { datos: [], total: 0 } }).mockRejectedValueOnce(new Error('Sin conexión')).mockResolvedValue({ data: { datos: [{ id: 1, nombre: 'Uno' }], total: 1 } });
+  render(<SelectorBuscable<{ id: number; nombre: string }> ruta="/academico/grupos" valor="" cambiar={() => undefined} etiqueta="Grupo" texto={g => g.nombre} />);
+  await waitFor(() => expect(screen.getByLabelText('Grupo').getAttribute('aria-busy')).toBe('false'));
+  fireEvent.change(screen.getByLabelText('Buscar grupo'), { target: { value: 'Uno' } });
+  await screen.findByRole('button', { name: 'Reintentar búsqueda' });
+  fireEvent.click(screen.getByRole('button', { name: 'Reintentar búsqueda' }));
+  await screen.findByRole('option', { name: 'Uno' });
+  expect((screen.getByLabelText('Buscar grupo') as HTMLInputElement).value).toBe('Uno');
+  expect(get).toHaveBeenCalledTimes(3);
+  expect(get).toHaveBeenLastCalledWith('/academico/grupos', expect.objectContaining({ params: expect.objectContaining({ buscar: 'Uno', pagina: 1, porPagina: 10 }) }));
+});
+
 it('consulta diez de 115, navega en servidor y busca fuera de la primera página', async () => {
   const get = vi.spyOn(api, 'get').mockImplementation(async (_ruta, config) => {
     const { pagina, porPagina, buscar } = config!.params as { pagina: number; porPagina: number; buscar: string };
