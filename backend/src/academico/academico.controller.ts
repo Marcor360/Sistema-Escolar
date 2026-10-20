@@ -1,3 +1,4 @@
+import { CicloFichaService, ConsultarFichaDto } from './ciclo-ficha.service';
 import { ListarMateriasDto } from './listar-materias.dto';
 import { ApiErroresOperacion } from '../common/api-operacion';
 import { PreviewPromocionRespuestaDto, ConfirmacionPromocionRespuestaDto, CicloRespuestaDto, ResumenCierreRespuestaDto } from './respuestas.dto';
@@ -21,7 +22,7 @@ import { CurrentUser, JwtUser } from '../common/current-user.decorator';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('academico')
 export class AcademicoController {
-  constructor(private readonly promocion: PromocionService, private readonly service: AcademicoService, private readonly ciclos: CiclosService) {}
+  constructor(private readonly ficha: CicloFichaService, private readonly promocion: PromocionService, private readonly service: AcademicoService, private readonly ciclos: CiclosService) {}
 
   // ---- Panel maestro ----
   @Get('bitacora') @Roles('ADMINISTRATIVO') bitacora(@CurrentUser() user: JwtUser, @Query() query: ListarGruposDto) { return this.service.bitacoraAcademica(user, query); }
@@ -37,6 +38,9 @@ export class AcademicoController {
   misGrupos(@CurrentUser() user: JwtUser) {
     return this.service.misGrupos(user.sub);
   }
+
+  @Get('ciclos/:id/ficha') @Roles('ADMINISTRATIVO', 'FINANZAS', 'MAESTRO')
+  fichaCiclo(@Param('id', ParseIntPipe) id: number, @Query() q: ConsultarFichaDto, @CurrentUser() user: JwtUser) { return this.ficha.consultar(id, q, user); }
 
   // ---- Ciclos ----
   @Get('ciclos/listado') @Roles('ADMINISTRATIVO', 'FINANZAS', 'MAESTRO')

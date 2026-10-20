@@ -1,0 +1,5 @@
+.temario-form { display: grid; gap: 12px; width: 100%; min-width: 0; max-width: 100%; }
+.temario-form fieldset { display: grid; gap: 12px; min-width: 0; max-width: 100%; padding: 16px; }
+.temario-form :is(input, select, textarea) { box-sizing: border-box; width: 100%; min-width: 0; max-width: 100%; }
+.temario-form :is(label, legend, p, button) { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.temario-detalle :is(p, h2, a, button, summary, pre) { overflow-wrap: anywhere; max-width: 100%; }

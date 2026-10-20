@@ -1,0 +1,25 @@
+import React, { useEffect } from 'react';
+import { act, create, type ReactTestRenderer } from 'react-test-renderer';
+import { afterEach, expect, it, vi } from 'vitest';
+import { TemarioClase } from './TemarioClase';
+import { api } from '../api/client';
+const sesion = vi.hoisted(() => ({ sub: 1 }));
+vi.mock('../sesion', () => ({ useSesion: () => ({ sesion }) }));
+vi.mock('../api/client', () => ({ api: { get: vi.fn() }, archivosBase: 'https://example.test', mensajeDeError: (e: Error) => e.message }));
+vi.mock('../screens/comunes', () => ({ base: { tarjeta: {} } }));
+vi.mock('./Texto', () => ({ Text: 'Text' }));
+vi.mock('react-native', () => ({ View: 'View', TouchableOpacity: 'TouchableOpacity', Linking: { openURL: vi.fn() } }));
+vi.mock('@react-navigation/native', () => ({ useFocusEffect: (efecto: () => void | (() => void)) => useEffect(efecto, [efecto]) }));
+let vista: ReactTestRenderer;
+afterEach(async () => { if (vista) await act(async () => vista.unmount()); vi.resetAllMocks(); sesion.sub = 1; });
+const temas = [{ id: 1, indice: 1, titulo: 'Tema publicado', contenido: 'Solo lectura', parcial: null, enlace: null, hasta: null, adjuntos: [] }];
+it('carga el temario solo a petición, pagina en servidor y vuelve a página uno al cambiar identidad', async () => {
+  vi.mocked(api.get).mockResolvedValue({ data: { datos: temas, total: 12 } });
+  await act(async () => { vista = create(<TemarioClase claseId={7} />); }); expect(api.get).not.toHaveBeenCalled();
+  await act(async () => vista.root.findAllByType('TouchableOpacity' as never)[0].props.onPress());
+  expect(api.get).toHaveBeenLastCalledWith('/grupo-materias/7/temario', { params: { pagina: 1, porPagina: 10 } });
+  await act(async () => vista.root.findByProps({ accessibilityLabel: 'Página siguiente' }).props.onPress());
+  expect(api.get).toHaveBeenLastCalledWith('/grupo-materias/7/temario', { params: { pagina: 2, porPagina: 10 } });
+  sesion.sub = 2; await act(async () => vista.update(<TemarioClase claseId={7} />));
+  expect(api.get).toHaveBeenLastCalledWith('/grupo-materias/7/temario', { params: { pagina: 1, porPagina: 10 } });
+});

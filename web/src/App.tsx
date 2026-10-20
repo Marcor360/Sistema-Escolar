@@ -7,6 +7,8 @@ import { RutaProtegida } from './auth/RutaProtegida';
 import { Shell } from './layout/Shell';
 
 // Cada página se descarga solo cuando se visita (code splitting)
+const TemariosPage = lazy(() => import('./pages/Temarios'));
+const CicloFichaPage = lazy(() => import('./pages/CicloFicha'));
 const AperturaCarteraPage = lazy(() => import('./pages/AperturaCartera'));
 const RecursamientosPage = lazy(() => import('./pages/Recursamientos'));
 const ProgramasEspecialesPage = lazy(() => import('./pages/ProgramasEspeciales'));
@@ -89,7 +91,9 @@ export default function App() {
             <Route path="/maestro" element={<ModuloTrabajo titulo="Mis clases" acciones={[{titulo:'Consultar mis clases',detalle:'Abrir las operaciones disponibles según tu alcance',vista:'consulta'}]}><MaestroPage /></ModuloTrabajo>} />
           </Route>
 
+          <Route element={<RutaProtegida roles={['MAESTRO', 'ADMINISTRATIVO', 'FINANZAS']} />}><Route path="/ciclos/:id" element={<CicloFichaPage />} /></Route>
           <Route element={<RutaProtegida roles={['MAESTRO', 'ADMINISTRATIVO']} />}>
+            <Route path="/temarios" element={<ModuloTrabajo titulo="Temarios" acciones={[{titulo:'Consultar temarios',detalle:'Consultar temas de una clase y su publicación',vista:'consulta'},{titulo:'Crear tema',detalle:'Preparar contenido independiente de tareas',vista:'nuevo'}]} vistas={['detalle','editar','adjuntar']}><TemariosPage /></ModuloTrabajo>} />
             <Route path="/conducta" element={<ModuloTrabajo titulo="Conducta" acciones={[{titulo:'Consultar incidencias',detalle:'Historial y seguimiento interno por ciclo',vista:'consulta'},{titulo:'Registrar incidencia',detalle:'Registrar una nota interna de alumno inscrito',vista:'nuevo'}]} vistas={['seguimiento']}><ConductaPage /></ModuloTrabajo>} />
             <Route path="/calificaciones" element={<ModuloTrabajo titulo="Calificaciones" acciones={[{titulo:'Consultar calificaciones',detalle:'Notas, reportes e historial autorizado',vista:'consulta'},{titulo:'Capturar calificaciones',detalle:'Registrar o corregir notas con justificación',vista:'nuevo'},{titulo:'Importar calificaciones',detalle:'Previsualizar y confirmar un lote',vista:'importar'}]}><CalificacionesPage /></ModuloTrabajo>} />
             <Route path="/calendario" element={<ModuloTrabajo titulo="Calendario" acciones={[{titulo:'Consultar calendario',detalle:'Buscar eventos por intervalo y plantel',vista:'consulta'},{titulo:'Registrar evento',detalle:'Agregar un evento autorizado',vista:'nuevo'}]} vistas={['editar']}><CalendarioPage /></ModuloTrabajo>} />

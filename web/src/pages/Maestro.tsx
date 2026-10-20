@@ -161,6 +161,8 @@ export default function MaestroPage() {
         </tbody>
       </table></div>
 
+      {claseActiva?.grupo.ciclo.id && <Link className="boton secundario" to={`/ciclos/${claseActiva.grupo.ciclo.id}`}>Ficha del ciclo de esta clase</Link>}
+      {claseActiva && <Link className="boton secundario" to={`/temarios?vista=consulta&clase=${claseActiva.id}`}>Temario de esta clase</Link>}
       {claseActiva && <Link className="boton secundario" to={`/recursamientos?clase=${claseActiva.id}`}>Recursantes y notas de esta materia</Link>}
       {claseActiva && (
         <ActividadesClase claseActiva={claseActiva} crearActividad={crearActividad} form={form} setForm={setForm} enviando={enviando} editandoActividad={editandoActividad} actividades={actividades} verEntregas={verEntregas} setEditandoActividad={setEditandoActividad} confirmacion={confirmacion} setEnviando={setEnviando} abrirClase={abrirClase} setError={setError} />

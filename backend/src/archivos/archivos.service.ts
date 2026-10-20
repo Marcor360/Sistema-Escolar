@@ -1,3 +1,4 @@
+import { TemariosService } from '../temarios/temarios.service';
 import { recursaClase } from '../recursamientos/acceso-recursamiento';
 import { BibliotecaArchivo } from '../entities/biblioteca.entity';
 import { contentDisposition } from '../common/content-disposition';
@@ -20,7 +21,7 @@ import { grupoVigente } from '../common/contexto-academico';
 import { ScopeService } from '../planteles/scope.service';
 import { JwtUser } from '../common/current-user.decorator';
 
-type RecursoArchivo = 'material' | 'entrega' | 'biblioteca' | 'boleta';
+type RecursoArchivo = 'temario' | 'material' | 'entrega' | 'biblioteca' | 'boleta';
 
 interface EnlacePayload {
   sub: number;
@@ -64,7 +65,20 @@ export class ArchivosService {
     private readonly scope: ScopeService,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
+    private readonly temarios: TemariosService,
   ) {}
+
+  async enlaceTemario(id: number, user: JwtUser) {
+    await this.temarios.archivo(id, user);
+    return { url: '/api/archivos/temarios/' + id + '?t=' + this.firmar({ sub: user.sub, rec: 'temario', id }, user) };
+  }
+  async descargarTemario(id: number, token: string, res: Response) {
+    const payload = this.verificarToken(token, 'temario', id);
+    const a = await this.temarios.archivo(id, await this.usuarioDesdeToken(payload));
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    this.enviarArchivo(res, a.archivoRuta, a.archivoNombre, undefined, 'attachment');
+  }
 
   // ---- Materiales ----
   async enlaceMaterial(id: number, user: JwtUser) {

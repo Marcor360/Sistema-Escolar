@@ -23,6 +23,7 @@ const secciones = [
   { destino: '/catalogos-academicos', etiqueta: 'Catálogos académicos', roles: ['ADMINISTRATIVO'] },
   { destino: '/materias', etiqueta: 'Materias', roles: ['ADMINISTRATIVO'] },
   { destino: '/grupos', etiqueta: 'Grupos', roles: ['ADMINISTRATIVO'] },
+  { destino: '/temarios', etiqueta: 'Temarios', roles: ['MAESTRO', 'ADMINISTRATIVO'] },
   { destino: '/maestro', etiqueta: 'Mis clases', roles: ['MAESTRO'] },
   { destino: '/calificaciones', etiqueta: 'Calificaciones', roles: ['MAESTRO', 'ADMINISTRATIVO'] },
   { destino: '/calendario', etiqueta: 'Calendario', roles: ['MAESTRO', 'ADMINISTRATIVO'] },
@@ -35,7 +36,7 @@ const secciones = [
 const gruposMenu = [
   { titulo: 'Inicio y seguimiento', rutas: ['/', '/calendario', '/avisos'] },
   { titulo: 'Control escolar', rutas: ['/alumnos', '/docentes', '/catalogos-academicos', '/apertura-cartera', '/recursamientos', '/programas-especiales', '/materias', '/grupos', '/operaciones'] },
-  { titulo: 'Docencia', rutas: ['/maestro', '/calificaciones', '/conducta'] },
+  { titulo: 'Docencia', rutas: ['/maestro', '/temarios', '/calificaciones', '/conducta'] },
   { titulo: 'Finanzas e informes', rutas: ['/finanzas', '/analitica'] },
   { titulo: 'Administración', rutas: ['/planteles', '/biblioteca', '/usuarios', '/configuracion'] },
 ];
@@ -56,6 +57,7 @@ const iconosPorRuta: Record<string, NombreIcono> = {
   '/programas-especiales': 'school',
   '/grupos': 'users',
   '/maestro': 'school',
+  '/temarios': 'book',
   '/calificaciones': 'clipboard-check',
   '/calendario': 'calendar',
   '/avisos': 'bell',

@@ -154,6 +154,11 @@ async function esperarServidor() {
       if (path.endsWith('/usuarios/listado')) data = { datos: [{ id: 1, matricula: 'US-QA-001', nombre: 'Usuario con nombre largo de prueba', correo: 'correo.extenso.de.prueba@example.invalid', plantel: 'Plantel Beta', estatus: 'ACTIVO' }], total: 1, pagina: 1, porPagina: 10 };
       if (path.endsWith('/academico/mis-grupos') || path.endsWith('/academico/grupo-materias')) data = [claseBeta];
       if (path.endsWith('/academico/clases-seleccion')) data = { datos: [claseBeta], total: 1 };
+      const temaBeta = {id:1,grupoMateriaId:1,indice:1,titulo:'Unidad temática de prueba con un título extenso',contenido:'Contenido independiente de tareas y calificaciones. '.repeat(8),estado:'PUBLICADO',revision:1,desde:null,hasta:null,parcial:null,enlace:null,adjuntos:[]};
+      if(path.endsWith('/grupo-materias/1/temario')) data={datos:[temaBeta],total:12,pagina:1,porPagina:10};
+      if(path.endsWith('/temarios/1')) data=temaBeta;
+      if(path.endsWith('/academico/ciclos/1/ficha')) data={ciclo:{id:1,clave:'2026',nombre:'Ciclo escolar de prueba',estado:'ACTIVO',fechaInicio:'2026-01-01',fechaFin:'2026-12-31'},resumen:{grupos:12,planteles:1,niveles:1,planes:1,periodos:1,clases:12,materias:2,docentes:3},datos:[{id:1,nombre:'Grupo de prueba',tipo:'REGULAR',turno:'MATUTINO',activo:true,plantel:{nombre:'Plantel Beta'},nivel:'Nivel académico',carrera:'Carrera de prueba',plan:'Plan vigente',periodo:'Primer periodo'}],total:12,pagina:1,porPagina:10,clases:{datos:[{id:1,grupo:'Grupo de prueba',materia:'Matemáticas',clave:'MAT',docente:{nombre:'Docente de prueba'}}],total:12,pagina:1,porPagina:10}};
+
       if (path.endsWith('/academico/grupos/1/alumnos')) data = [{ id: 1, alumno: { id: 1, matricula: 'NO-QA-001', usuario: { nombre: 'Alumno Beta', apellidoPaterno: 'Prueba' } } }];
       if (path.endsWith('/calificaciones/periodos/1/1')) data = { estatus: 'ABIERTO', inscritos: 1, capturados: 0, faltantes: 1 };
       if (path.endsWith('/calificaciones/periodos/1/1/historial')) data = { datos: [{ id: 1, alumnoId: 1, fecha: '2026-10-13T12:00:00Z', valorAnterior: 80, valorNuevo: 90, usuarioId: 1, motivo: 'Corrección autorizada de prueba' }], total: 1, pagina: 1, porPagina: 10 };
@@ -531,7 +536,7 @@ async function esperarServidor() {
   }
   for (const [width, height, escala] of [[320, 568, 1], [375, 667, 2], [568, 320, 1], [768, 1024, 1], [1024, 768, 1], [1440, 900, 2]]) {
     await page.setViewportSize({ width, height });
-    for (const ruta of ['/cuenta', '/configuracion', '/conducta', '/calendario', '/avisos', '/finanzas', '/pago-completado']) {
+    for (const ruta of ['/cuenta', '/configuracion', '/conducta', '/calendario', '/avisos', '/finanzas', '/pago-completado', '/temarios?vista=consulta&clase=1', '/temarios?vista=nuevo&clase=1', '/temarios?vista=detalle&id=1', '/temarios?vista=adjuntar&id=1', '/ciclos/1']) {
       console.log('CHECK extended', ruta, width, height, escala);
       await page.goto(baseUrl + ruta);
       const accion = {'/conducta':'Consultar incidencias','/calendario':'Consultar calendario','/avisos':'Redactar aviso'}[ruta];

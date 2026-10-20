@@ -53,7 +53,7 @@ api.interceptors.response.use((res) => res, async (error: AxiosError) => {
 });
 
 /** Pide un enlace firmado de corta vida y lo abre en una pestaña nueva (sin exponer /uploads). */
-export async function abrirArchivo(tipo: 'materiales' | 'entregas', id: number): Promise<void> {
+export async function abrirArchivo(tipo: 'materiales' | 'entregas' | 'temarios', id: number): Promise<void> {
   // La pestaña se abre durante el clic; después de await el navegador puede bloquearla.
   const pestaña = window.open('about:blank', '_blank');
   if (!pestaña) throw new Error('Permite abrir pestañas para consultar el archivo.');
