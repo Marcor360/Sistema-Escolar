@@ -1,5 +1,6 @@
+import { ConsentimientoInstitucionalService } from './consentimiento-institucional.service';
 import { SesionesLimpiezaService } from './sesiones-limpieza.service';
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
@@ -16,6 +17,7 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { NotificacionesModule } from '../notificaciones/notificaciones.module';
 
+@Global()
 @Module({
   imports: [
     TypeOrmModule.forFeature([Usuario, Alumno, Docente, PasswordResetToken, BitacoraActividad]),
@@ -32,8 +34,8 @@ import { NotificacionesModule } from '../notificaciones/notificaciones.module';
       },
     }),
   ],
-  providers: [CorreoAccesoOutboxService, AuthService, ActivacionService, JwtStrategy, SesionesLimpiezaService],
+  providers: [ConsentimientoInstitucionalService, CorreoAccesoOutboxService, AuthService, ActivacionService, JwtStrategy, SesionesLimpiezaService],
   controllers: [AuthController],
-  exports: [ActivacionService, CorreoAccesoOutboxService],
+  exports: [ConsentimientoInstitucionalService, ActivacionService, CorreoAccesoOutboxService],
 })
 export class AuthModule {}

@@ -3,6 +3,8 @@ import type { Request, Response } from 'express';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
+import { ConsentimientoInstitucionalService } from './consentimiento-institucional.service';
+import { AceptarConsentimientoDto } from './dto/consentimiento.dto';
 import { ActivacionService } from './activacion.service';
 import { ActivarCuentaDto, CambiarPasswordDto, ForgotPasswordDto, LoginDto, ResetPasswordDto, RefreshDto } from './dto/auth.dto';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
@@ -14,7 +16,7 @@ const LIMITE_ESTRICTO = { default: { limit: 5, ttl: 60_000 } };
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly auth: AuthService, private readonly activacion: ActivacionService) {}
+  constructor(private readonly auth: AuthService, private readonly activacion: ActivacionService, private readonly consentimiento: ConsentimientoInstitucionalService) {}
 
   @ApiOperation({ summary: 'Iniciar sesión: access 15 minutos; refresh web en cookie HttpOnly o móvil en respuesta' })
   @ApiResponse({ status: 400, description: 'Datos o transición inválidos' })
@@ -50,6 +52,20 @@ export class AuthController {
     }
     if (!token) throw new UnauthorizedException('No hay sesión para renovar');
     return this.responder(await this.auth.refresh(token, portal), portal, res);
+  }
+
+  @Get('consentimiento')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Consultar los documentos y la aceptación institucional registrada del alumno' })
+  @UseGuards(JwtAuthGuard)
+  consultarConsentimiento(@CurrentUser() user: JwtUser) { return this.consentimiento.estado(user); }
+
+  @Post('consentimiento')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Registrar fecha UTC y versiones aceptadas por el alumno' })
+  @UseGuards(JwtAuthGuard)
+  aceptarConsentimiento(@CurrentUser() user: JwtUser, @Body() dto: AceptarConsentimientoDto) {
+    return this.consentimiento.aceptar(user, dto.versiones);
   }
 
   @Post('actividad')

@@ -36,7 +36,8 @@
         "migracion_recursamiento_asignatura.sql",
         "migracion_auth_correo_outbox.sql",
         "migracion_materias_contexto.sql",
-        "migracion_temarios.sql"
+        "migracion_temarios.sql",
+        "migracion_aceptaciones_institucionales.sql"
       ]
     },
     "sqlserver": {
@@ -73,7 +74,8 @@
         "migracion_recursamiento_asignatura.sql",
         "migracion_auth_correo_outbox.sql",
         "migracion_materias_contexto.sql",
-        "migracion_temarios.sql"
+        "migracion_temarios.sql",
+        "migracion_aceptaciones_institucionales.sql"
       ]
     }
   }
