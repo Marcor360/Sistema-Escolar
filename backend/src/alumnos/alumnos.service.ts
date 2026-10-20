@@ -130,10 +130,32 @@ export class AlumnosService {
     const alumno = await this.obtener(id, user);
     const inscripciones = await this.inscripciones.find({ where: { alumnoId: alumno.id }, order: { id: 'DESC' } });
     const permitidos = await this.scope.plantelesDe(user);
-    return inscripciones.filter((i) => permitidos === null || permitidos.includes(i.grupo.plantelId)).map((i) => ({
+    return inscripciones.filter((i) => permitidos === null || permitidos.includes(i.grupo.plantelId)).map((i) => this.proyectarHistorial(i));
+  }
+
+  async historialPaginado(id: number, user: JwtUser, query: PaginacionDto) {
+    await this.obtener(id, user);
+    const permitidos = await this.scope.plantelesDe(user);
+    if (permitidos !== null && permitidos.length === 0) {
+      return { datos: [], total: 0, pagina: query.pagina, porPagina: query.porPagina };
+    }
+    const qb = this.inscripciones.createQueryBuilder('i')
+      .innerJoinAndSelect('i.grupo', 'g')
+      .innerJoinAndSelect('g.ciclo', 'c')
+      .innerJoinAndSelect('g.plantel', 'p')
+      .where('i.alumnoId = :alumnoId', { alumnoId: id });
+    if (permitidos !== null) qb.andWhere('g.plantelId IN (:...planteles)', { planteles: permitidos });
+    const [inscripciones, total] = await qb.orderBy('i.id', 'DESC')
+      .skip((query.pagina - 1) * query.porPagina).take(query.porPagina).getManyAndCount();
+    return { datos: inscripciones.map((i) => this.proyectarHistorial(i)), total, pagina: query.pagina, porPagina: query.porPagina };
+  }
+
+  private proyectarHistorial(i: Inscripcion) {
+    return {
       id: i.id, grupoId: i.grupoId, estatus: i.estatus, fechaInscripcion: i.fechaInscripcion,
-      grupo: { id: i.grupo.id, nombre: i.grupo.nombre, ciclo: i.grupo.ciclo, plantel: { id: i.grupo.plantelId, nombre: i.grupo.plantel.nombre } },
-    }));
+      grupo: { id: i.grupo.id, nombre: i.grupo.nombre, ciclo: i.grupo.ciclo,
+        plantel: { id: i.grupo.plantelId, nombre: i.grupo.plantel.nombre } },
+    };
   }
 
   async perfilPropio(usuarioId: number) {
