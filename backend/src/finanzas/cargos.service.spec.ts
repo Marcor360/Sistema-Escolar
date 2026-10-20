@@ -1,7 +1,7 @@
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { CargosService } from './cargos.service';
-import { CrearCargoDto, GenerarColegiaturasDto } from './finanzas.dto';
+import { AplicarRecargosDto, CrearCargoDto, GenerarColegiaturasDto } from './finanzas.dto';
 import { Cargo, CicloEscolar, Alumno } from '../entities';
 
 describe('CargosService.saldoDeCargo / totalDeCargo', () => {
@@ -62,6 +62,16 @@ describe('CargosService.adeudos minimiza datos del alumno', () => {
     for (const datoPrivado of ['CURP-PRIVADA', 'Tutor privado', '5550000000', 'Dirección privada', 'ana@example.invalid']) {
       expect(JSON.stringify(respuesta)).not.toContain(datoPrivado);
     }
+  });
+});
+
+describe('Recargos de importe nulo', () => {
+  it('rechaza un porcentaje de 0 en el contrato de la API y en el servicio', async () => {
+    const dto = plainToInstance(AplicarRecargosDto, { porcentaje: 0, plantelId: 4, confirmado: true });
+    expect((await validate(dto)).some((error) => error.property === 'porcentaje')).toBe(true);
+    const servicio = Object.create(CargosService.prototype) as CargosService;
+    await expect(servicio.aplicarRecargos(dto, { sub: 1, roles: ['FINANZAS'] } as Parameters<CargosService['aplicarRecargos']>[1]))
+      .rejects.toThrow('mayor que cero');
   });
 });
 
