@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.27.10`** · Estado: revisión técnica y aceptación institucional pendientes. Esta versión documenta el proyecto; **no demuestra despliegue adicional**. Staging confirmado por el operador en **1.27.1** (commit `b464d40`), con API `/health/ready` local y HTTPS correctas. La app Expo instalada en dispositivos **no se actualiza automáticamente**.
+**Versión candidata: `1.27.11`** · Estado: revisión técnica y aceptación institucional pendientes. Esta versión documenta el proyecto; **no demuestra despliegue adicional**. Staging confirmado por el operador en **1.27.1** (commit `b464d40`), con API `/health/ready` local y HTTPS correctas. La app Expo instalada en dispositivos **no se actualiza automáticamente**.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -167,3 +167,7 @@ Acta digital por clase y evaluación, Excel para rellenar o con notas guardadas;
 ## Recargos de importe cero · 1.27.10
 
 Se rechaza el porcentaje cero y no se marcan como vencidos cargos cuyo recargo redondea a cero. Se conservan alcance financiero y tarifas. Sin migraciones ni despliegue.
+
+## Política de inscripción ordinaria · 1.27.11
+
+El interruptor `INSCRIPCION_ORDINARIA_SOLO_CARTERA` permanece apagado por defecto. Con valor `true`, las altas ordinarias nuevas pasan por cartera y la vía académica solo reactiva bajas previas del mismo grupo, conservando alcance, cupo y auditoría. Activación institucional y UAT pendientes. Sin migraciones, cobros retroactivos ni despliegue.
