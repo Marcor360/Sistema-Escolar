@@ -1,3 +1,4 @@
+import { ActaEscolar } from '../components/ActaEscolar';
 import { useModuloTrabajo } from '../components/ModuloTrabajo';
 import { ImportarCalificaciones } from '../components/ImportarCalificaciones';
 import '../components/tabla-adaptable.css';
@@ -104,6 +105,7 @@ export default function CalificacionesPage() {
       <div><dt>Periodo académico</dt><dd>{clase.grupo.periodoAcademico?.nombre ?? 'Sin periodo registrado'}</dd></div><div><dt>Turno</dt><dd>{clase.grupo.turno ?? 'Sin turno registrado'}</dd></div>
     </dl><p>Evaluación seleccionada: {parcial === '0' ? 'Final independiente' : `Parcial ${parcial}`}. Se conserva la escala actual de 0 a 100.</p></section>}
     {!legado && clase && <div className="fila">{trabajo.modo!=='nuevo' && <button type="button" disabled={ocupado} onClick={()=>trabajo.ir('nuevo')}>Capturar esta evaluación</button>}{trabajo.modo!=='importar' && <button type="button" disabled={ocupado} onClick={()=>trabajo.ir('importar')}>Importar esta evaluación</button>}</div>}
+    {claseId && <ActaEscolar key={`${claseId}-${parcial}`} claseId={claseId} parcial={parcial} />}
     {claseId && (legado || importando) && <div onChangeCapture={()=>setBorradorImportacion(true)}><ImportarCalificaciones claseId={claseId} parcial={parcial} deshabilitado={ocupado || periodo?.estatus === 'CERRADO'} alConfirmar={() => { setBorradorImportacion(false);trabajo.guardado(); void cargarAlumnos(); }} /></div>}
     {periodo && <section className="panel"><p role="status">Periodo {periodo.estatus.toLowerCase()} · Inscritos: {periodo.inscritos} · Capturados: {periodo.capturados} · Faltantes: {periodo.faltantes}</p>
       {tieneRol('ADMINISTRATIVO') && <button className="boton secundario" disabled={ocupado} onClick={cambiarEstado}>{periodo.estatus === 'ABIERTO' ? 'Cerrar periodo' : 'Reabrir periodo'}</button>}

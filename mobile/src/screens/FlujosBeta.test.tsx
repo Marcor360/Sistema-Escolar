@@ -446,12 +446,15 @@ it('boleta móvil obtiene enlace propio y no abre una descarga si la pantalla se
   expect(Linking.openURL).not.toHaveBeenCalled();
 });
 it('boleta móvil selecciona inscripción propia para distinguir traslados del mismo ciclo', async () => {
-  vi.mocked(api.get).mockImplementation(async (ruta) => ({ data: ruta === '/reportes/mis-boletas' ? [{ inscripcionId: 9, cicloId: 2, ciclo: '2026', grupo: '1-A', plantel: 'Centro' }] : ruta === '/reportes/mi-boleta/enlace' ? { url: '/api/reportes/boleta-descarga/1?t=firmado' } : ruta==='/calificaciones/mias/listado'?{datos:[],total:0}:[] }));
+  vi.mocked(api.get).mockImplementation(async (ruta) => ({ data: ruta === '/reportes/mis-boletas' ? [{ inscripcionId: 9, cicloId: 2, ciclo: '2026', grupo: '1-A', plantel: 'Centro' }] : ruta === '/reportes/mi-boleta/enlace' ? { url: '/api/reportes/boleta-descarga/1?t=firmado' } : ruta === '/reportes/formatos/mi-boleta' ? {disponible:true,institucion:'Escuela',alumno:'QA',matricula:'QA1',filas:[],promedioGeneral:80,aviso:''} : ruta==='/calificaciones/mias/listado'?{datos:[],total:0}:[] }));
   await montar(<Calificaciones />);
-  await act(async () => vista.root.findByProps({ accessibilityLabel: 'Descargar boleta de 2026, 1-A' }).props.onPress());
-  expect(api.get).toHaveBeenCalledWith('/reportes/mi-boleta/enlace', { params: { cicloId: 2, inscripcionId: 9 } });
+  await act(async () => vista.root.findByProps({ accessibilityLabel: 'Ver boleta de 2026, 1-A' }).props.onPress());
+  expect(api.get).toHaveBeenCalledWith('/reportes/formatos/mi-boleta', expect.objectContaining({ params: { inscripcionId: 9 } }));
+  await act(async () => vista.root.findByProps({ accessibilityLabel: 'Descargar mi boleta Excel' }).props.onPress());
+  expect(api.get).toHaveBeenCalledWith('/reportes/mi-boleta/enlace', { params: { inscripcionId: 9, formato:'informativa-excel' } });
   expect(Linking.openURL).toHaveBeenCalledWith('https://e.test/api/reportes/boleta-descarga/1?t=firmado');
 });
+
 
 
 it("calificaciones descarta notas y consultas pendientes al cambiar de identidad", async () => {
