@@ -34,6 +34,7 @@ import { colores, textoSobreFondo } from "./src/theme";
 import CambioPasswordInicial from "./src/screens/CambioPasswordInicial";
 import LoginScreen from "./src/screens/Login";
 import InicioScreen from "./src/screens/Inicio";
+import ConsentimientoInstitucional, { EstadoConsentimiento } from "./src/screens/ConsentimientoInstitucional";
 import MateriasScreen from "./src/screens/Materias";
 import CalificacionesScreen from "./src/screens/Calificaciones";
 import EstadoCuentaScreen from "./src/screens/EstadoCuenta";
@@ -85,6 +86,13 @@ const iconos: Record<string, string> = {
 function AppInterna() {
   const fuenteLista = useContext(FuenteContext);
   const [sesion, setSesion] = useState<Sesion | null>(null);
+  const [consentimiento, setConsentimiento] = useState<EstadoConsentimiento | null>(null);
+  const [errorConsentimiento, setErrorConsentimiento] = useState("");
+  const consultarConsentimiento = useCallback(async () => {
+    setConsentimiento(null); setErrorConsentimiento("");
+    try { const { data } = await api.get<EstadoConsentimiento>("/auth/consentimiento"); setConsentimiento(data); }
+    catch (e) { setErrorConsentimiento(mensajeDeError(e)); }
+  }, []);
   const [avisoCierre, setAvisoCierre] = useState("");
   const ultimaActividadGuardada = useRef(Date.now());
   const ultimaActividadPersistida = useRef(0);
@@ -95,6 +103,10 @@ function AppInterna() {
   ));
   const controlInactividad = useRef<ReturnType<typeof crearControlInactividad> | null>(null);
   const guardarActividad = (fecha: number) => { void persistenciaActividad.current.guardar(fecha); };
+  useEffect(() => {
+    if (sesion?.sub && !sesion.passwordChangeRequired) void consultarConsentimiento();
+    else setConsentimiento(null);
+  }, [sesion?.sub, sesion?.passwordChangeRequired, consultarConsentimiento]);
   useEffect(() => {
     configurarCacheAcademica(sesion?.sub ?? null);
     return () => limpiarCacheAcademica();
@@ -207,9 +219,9 @@ function AppInterna() {
   }, []);
 
   useEffect(() => {
-    if (sesion && !sesion.passwordChangeRequired)
+    if (sesion && !sesion.passwordChangeRequired && consentimiento && !consentimiento.pendiente)
       void activarPush(sesion.sub, false).catch(() => undefined);
-  }, [sesion]);
+  }, [sesion, consentimiento?.pendiente]);
 
   const iniciar = async (email: string, password: string) => {
     const { data } = await api.post("/auth/login", { email, password });
@@ -239,6 +251,7 @@ function AppInterna() {
     const borrarTokens = eliminarTokensSesion();
     const borrarActividad = persistenciaActividad.current.borrar();
     setSesion(null);
+    setConsentimiento(null);
     setAvisoCierre(motivo === "inactividad"
       ? "La sesión se cerró tras 30 minutos sin actividad. Ingresa nuevamente." : "");
     await Notifications.dismissAllNotificationsAsync().catch(() => undefined);
@@ -286,7 +299,7 @@ function AppInterna() {
     );
     controlInactividad.current = control;
     const app = AppState.addEventListener("change", (estado) => {
-      if (estado === "active") control.comprobar();
+      if (estado === "active") { control.comprobar(); void consultarConsentimiento(); }
       else guardarActividad(control.ultimaActividad());
     });
     const atras = BackHandler.addEventListener("hardwareBackPress", () => {
@@ -299,7 +312,7 @@ function AppInterna() {
       app.remove();
       atras.remove();
     };
-  }, [sesion?.sub]);
+  }, [sesion?.sub, consultarConsentimiento]);
 
   const registrarInteraccion = () => {
     const control = controlInactividad.current;
@@ -343,6 +356,18 @@ function AppInterna() {
         }}
       />
     );
+
+  if (sesion && !sesion.passwordChangeRequired && (consentimiento === null || consentimiento.pendiente)) {
+    return <MarcaContext.Provider value={{ marca }}><View style={{ flex: 1, backgroundColor: colores.papel }}>
+      {consentimiento?.pendiente ? <ConsentimientoInstitucional estado={consentimiento} actualizar={setConsentimiento} salir={() => void cerrar()} /> :
+      <View style={{ flex: 1, justifyContent: "center", padding: 24, gap: 14 }}>
+        <Text accessibilityRole="header">Verificando documentos institucionales</Text>
+        {errorConsentimiento ? <Text accessibilityRole="alert">{errorConsentimiento}</Text> : <ActivityIndicator accessibilityLabel="Comprobando consentimiento" />}
+        <TouchableOpacity accessibilityRole="button" onPress={() => void consultarConsentimiento()} style={{ minHeight: 48 }}><Text>Reintentar</Text></TouchableOpacity>
+        <TouchableOpacity accessibilityRole="button" onPress={() => void cerrar()} style={{ minHeight: 48 }}><Text>Cerrar sesión</Text></TouchableOpacity>
+      </View>}
+    </View></MarcaContext.Provider>;
+  }
 
   if (errorInicio) {
     return (

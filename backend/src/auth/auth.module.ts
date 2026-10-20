@@ -1,6 +1,6 @@
 import { ConsentimientoInstitucionalService } from './consentimiento-institucional.service';
 import { SesionesLimpiezaService } from './sesiones-limpieza.service';
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
@@ -17,6 +17,7 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { NotificacionesModule } from '../notificaciones/notificaciones.module';
 
+@Global()
 @Module({
   imports: [
     TypeOrmModule.forFeature([Usuario, Alumno, Docente, PasswordResetToken, BitacoraActividad]),
