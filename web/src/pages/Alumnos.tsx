@@ -72,7 +72,7 @@ export default function AlumnosPage() {
       if (solicitud !== historialSolicitud.current) return;
       setHistorial({ alumno, registros: data.datos, total: data.total, pagina: data.pagina, porPagina: data.porPagina });
       setNotas(null);
-    } catch (err) { setError(mensajeDeError(err)); }
+    } catch (err) { if (solicitud === historialSolicitud.current) setError(mensajeDeError(err)); }
     finally { if (solicitud === historialSolicitud.current) setHistorialCargando(false); }
   };
   const editar = async (alumno: Pick<Alumno, 'id'>) => {
