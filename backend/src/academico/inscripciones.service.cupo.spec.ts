@@ -18,7 +18,9 @@ function prepararInscripcion(ocupados: number, conBajaPrevia = false) {
     id: 10, plantelId: 2, estatus: 'ACTIVO', usuario: { activo: true },
   }) };
   const inscripciones = {
-    findOne: jest.fn().mockResolvedValue(null),
+    findOne: jest.fn().mockImplementation(({ where }: { where: { grupoId?: number } }) => Promise.resolve(
+      where.grupoId === 9 && conBajaPrevia ? { id: 11, grupoId: 9, alumnoId: 10, estatus: 'BAJA' } : null,
+    )),
     findOneBy: jest.fn().mockResolvedValue(conBajaPrevia ? { id: 11, grupoId: 9, alumnoId: 10, estatus: 'BAJA' } : null),
     countBy: jest.fn().mockResolvedValue(ocupados),
     create: jest.fn((datos: object) => datos),
