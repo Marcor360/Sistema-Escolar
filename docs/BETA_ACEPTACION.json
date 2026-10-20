@@ -1,5 +1,5 @@
 {
-  "version": "1.27.3",
+  "version": "1.27.4",
   "alcance": "Puertas de aceptación institucional; pruebas locales se documentan aparte y no sustituyen firmas de UAT.",
   "puertas": [
     {

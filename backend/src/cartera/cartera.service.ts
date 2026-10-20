@@ -33,7 +33,7 @@ export class CarteraService {
     return { conceptos: precios, total: Math.round(precios.reduce((n,c) => n+c.monto, 0)*100)/100, cotizacion: hash({ contexto, precios }), contexto };
   }
   previsualizar(d: PrevisualizarCarteraDto, u: JwtUser) { return this.ds.transaction('READ COMMITTED', m => this.cotizar(m, d, u)); }
-  private proyectar(a: AperturaCartera) { return { id: a.id, alumnoId: a.alumnoId, plantelId: a.plantelId, cicloId: a.cicloId, estado: a.solicitud?.estado === 'ANULADA' ? 'REQUIERE_REVISION' : a.estado, grupoId: a.solicitud?.grupoId ?? null, solicitudId: a.solicitudId, conceptos: a.conceptos, fecha: a.createdAt }; }
+  private proyectar(a: AperturaCartera) { return { id: a.id, alumnoId: a.alumnoId, matricula: a.alumno?.matricula ?? null, nombreAlumno: a.alumno?.usuario?.nombreCompleto ?? null, total: Math.round(a.conceptos.reduce((sum,c) => sum + c.monto,0)*100)/100, plantelId: a.plantelId, cicloId: a.cicloId, estado: a.solicitud?.estado === 'ANULADA' ? 'REQUIERE_REVISION' : a.estado, grupoId: a.solicitud?.grupoId ?? null, solicitudId: a.solicitudId, conceptos: a.conceptos, fecha: a.createdAt }; }
   async confirmar(d: ConfirmarCarteraDto, u: JwtUser) {
     const peticionHash = hash({ ...d, conceptoIds: [...d.conceptoIds].sort((a,b) => a-b) });
     try {
@@ -76,14 +76,14 @@ export class CarteraService {
   }
   async listar(q: ListarCarteraDto, u: JwtUser) {
     const planteles = await this.scope.resolverFiltro(u, q.plantelId);
-    const qb = this.ds.getRepository(AperturaCartera).createQueryBuilder('a').leftJoinAndSelect('a.solicitud','s').innerJoin('a.alumno','al').innerJoin('al.usuario','u');
+    const qb = this.ds.getRepository(AperturaCartera).createQueryBuilder('a').leftJoinAndSelect('a.solicitud','s').innerJoinAndSelect('a.alumno','al').innerJoinAndSelect('al.usuario','u');
     if (planteles !== null) qb.andWhere('a.plantel_id IN (:...planteles)', { planteles });
     if (q.buscar) qb.andWhere('(al.matricula LIKE :buscar OR u.nombre LIKE :buscar OR u.apellido_paterno LIKE :buscar OR u.apellido_materno LIKE :buscar)', { buscar: `%${q.buscar}%` });
     const [filas,total] = await qb.orderBy('a.id','DESC').skip((q.pagina-1)*q.porPagina).take(q.porPagina).getManyAndCount();
     return { datos: filas.map(a => this.proyectar(a)), total, pagina: q.pagina, porPagina: q.porPagina };
   }
   async obtener(id: number, u: JwtUser) {
-    const a = await this.ds.getRepository(AperturaCartera).findOne({ where: { id }, relations: { solicitud: true } });
+    const a = await this.ds.getRepository(AperturaCartera).findOne({ where: { id }, relations: { solicitud: true, alumno: { usuario: true } } });
     if (!a) throw new NotFoundException('Apertura no encontrada'); await this.scope.validarGestion(u, a.plantelId); return this.proyectar(a);
   }
 }
