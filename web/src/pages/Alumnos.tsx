@@ -61,16 +61,19 @@ export default function AlumnosPage() {
       setNotas(data.filter((n) => n.grupoMateria.grupo.id === inscripcion.grupo.id));
     } catch (err) { setError(mensajeDeError(err)); } finally { setCargandoNotas(false); }
   };
+  const historialSolicitud = useRef(0);
   const verHistorial = async (alumno: Alumno, pagina = 1) => {
+    const solicitud = ++historialSolicitud.current;
     setHistorialCargando(true);
     try {
       const { data } = await api.get<{ datos: Historial[]; total: number; pagina: number; porPagina: number }>(
         `/alumnos/${alumno.id}/historial/listado`, { params: { pagina, porPagina: 10 } },
       );
+      if (solicitud !== historialSolicitud.current) return;
       setHistorial({ alumno, registros: data.datos, total: data.total, pagina: data.pagina, porPagina: data.porPagina });
       setNotas(null);
     } catch (err) { setError(mensajeDeError(err)); }
-    finally { setHistorialCargando(false); }
+    finally { if (solicitud === historialSolicitud.current) setHistorialCargando(false); }
   };
   const editar = async (alumno: Pick<Alumno, 'id'>) => {
     if (enviando) return;
@@ -196,7 +199,7 @@ export default function AlumnosPage() {
       {!puedeGestionar && error && <p role="alert" className="mensaje-error">{error}</p>}
       {!mostrarFormulario && error && puedeGestionar && <p role="alert">{error}</p>}
       {!mostrarFormulario && mensaje && <p role="status">{mensaje}</p>}
-      {consultaVisible && <>{historial && <HistorialAlumno historial={historial} boleta={boleta} cargandoNotas={cargandoNotas} verNotas={verNotas} notas={notas} setHistorial={setHistorial} cargando={historialCargando} cambiarPagina={(pagina) => void verHistorial(historial.alumno, pagina)} />}
+      {consultaVisible && <>{historial && <HistorialAlumno key={`${historial.alumno.id}-${historial.pagina}`} historial={historial} boleta={boleta} cargandoNotas={cargandoNotas} verNotas={verNotas} notas={notas} setHistorial={(valor) => { historialSolicitud.current++; setHistorialCargando(false); setHistorial(valor); }} cargando={historialCargando} cambiarPagina={(pagina) => void verHistorial(historial.alumno, pagina)} />}
       {transferencia && <TransferirAlumno transferencia={transferencia} transferir={transferir} destino={destino} setDestino={setDestino} planteles={planteles} enviando={enviando} setTransferencia={setTransferencia} />}
 
       <section className="panel panel-filtros" aria-label="Filtros de alumnos"><div className="fila">
