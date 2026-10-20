@@ -31,6 +31,15 @@ export function registrarCicloOperativo(ctx: ContextoIntegracion) {
       }
       const alumnoToken = await ctx.emitirToken(`ocal_${ctx.sufijo}@example.invalid`);
       const notas = await ctx.api('/calificaciones/mias',{ token: alumnoToken }); expect(notas.data).toHaveLength(3); expect(notas.data.every((n: { promedioOficial: number }) => n.promedioOficial === 90)).toBe(true);
+      const boletaDigital = await ctx.api(`/reportes/formatos/mi-boleta?inscripcionId=${inscripcionB.data.id}`,{token:alumnoToken});
+      expect(boletaDigital.response.status).toBe(200);expect(boletaDigital.data).toMatchObject({disponible:true,promedioGeneral:90,matricula:alumno.data.matricula});
+      for(const formato of ['informativa-pdf','informativa-excel']) {
+        const enlace = await ctx.api(`/reportes/mi-boleta/enlace?inscripcionId=${inscripcionB.data.id}&formato=${formato}`,{token:alumnoToken});
+        expect(enlace.response.status).toBe(200);const archivo=await fetch(new URL(enlace.data.url,ctx.baseUrl));expect(archivo.status).toBe(200);
+        const buffer=Buffer.from(await archivo.arrayBuffer());
+        if(formato==='informativa-pdf')expect(buffer.subarray(0,4).toString()).toBe('%PDF');
+        else {const wb=new ExcelJS.Workbook();await wb.xlsx.load(buffer as never);expect(wb.getWorksheet('Boleta')!.getCell('G8').value).toBe(90);}
+      }
       const pdf = await fetch(`${ctx.baseUrl}/reportes/boleta/${alumno.data.id}?cicloId=${ciclo.data.id}&inscripcionId=${inscripcionB.data.id}`,{ headers: { authorization: `Bearer ${token}` } }); expect(pdf.status).toBe(200); expect(Buffer.from(await pdf.arrayBuffer()).subarray(0,4).toString()).toBe('%PDF');
       const excel = await fetch(`${ctx.baseUrl}/reportes/grupo-materias/${claseB.data.id}/calificaciones.xlsx`,{ headers: { authorization: `Bearer ${token}` } }); expect(excel.status).toBe(200); const libro = new ExcelJS.Workbook(); await libro.xlsx.load(Buffer.from(await excel.arrayBuffer()) as any); expect(JSON.stringify(libro.worksheets[0].getSheetValues())).toContain(`OC${ctx.sufijo}`.toUpperCase()); expect(JSON.stringify(libro.worksheets[0].getSheetValues())).toContain('90');
       expect((await post(`/academico/ciclos/${ciclo.data.id}/iniciar-cierre`,{ confirmado: true })).response.status).toBe(201);

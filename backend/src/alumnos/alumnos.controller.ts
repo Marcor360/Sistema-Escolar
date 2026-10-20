@@ -39,6 +39,12 @@ export class AlumnosController {
     return this.service.listar(query, user);
   }
 
+  @ApiOperation({ summary: 'Historial académico paginado del alumno dentro del alcance de Control Escolar' })
+  @Get(':id/historial/listado') @Roles('ADMINISTRATIVO')
+  historialPaginado(@Param('id', ParseIntPipe) id: number, @Query() query: PaginacionDto, @CurrentUser() user: JwtUser) {
+    return this.service.historialPaginado(id, user, query);
+  }
+
   @Get(':id/historial')
   @Roles('ADMINISTRATIVO')
   historial(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) {

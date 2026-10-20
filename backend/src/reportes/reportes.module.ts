@@ -1,3 +1,5 @@
+import { FormatosEscolaresController } from './formatos-escolares.controller';
+import { FormatosEscolaresService } from './formatos-escolares.service';
 import { CalificacionesModule } from '../calificaciones/calificaciones.module';
 import { BoletaMovilController } from './boleta-movil.controller';
 import { ArchivosModule } from '../archivos/archivos.module';
@@ -28,7 +30,7 @@ import { PlantelesModule } from '../planteles/planteles.module';
     PlantelesModule,
     ConfiguracionModule,
   ],
-  providers: [ReportesService],
-  controllers: [ReportesController, BoletaMovilController],
+  providers: [ReportesService, FormatosEscolaresService],
+  controllers: [ReportesController, BoletaMovilController, FormatosEscolaresController],
 })
 export class ReportesModule {}

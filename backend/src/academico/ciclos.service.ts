@@ -27,9 +27,29 @@ export class CiclosService {
     const clases = await manager.getRepository(GrupoMateria).find({ where: { grupo: { cicloId: id, activo: true } }, select: { id: true, grupoId: true }, loadEagerRelations: false });
     const grupos = await manager.getRepository(Grupo).find({ where: { cicloId: id, activo: true }, select: { id: true }, loadEagerRelations: false });
     const grupoIds = grupos.map((g) => g.id);
-    const inscripciones = grupoIds.length ? await manager.getRepository(Inscripcion).find({ where: { grupoId: In(grupoIds), estatus: 'ACTIVA', alumno: { estatus: 'ACTIVO', usuario: { activo: true } } }, select: { grupoId: true, alumnoId: true }, loadEagerRelations: false }) : [];
-    const periodos = clases.length ? await manager.getRepository(PeriodoCalificacion).find({ where: { grupoMateriaId: In(clases.map((c) => c.id)) }, select: { grupoMateriaId: true, parcial: true, estatus: true }, loadEagerRelations: false }) : [];
-    const notas = clases.length ? await manager.getRepository(Calificacion).find({ where: { grupoMateriaId: In(clases.map((c) => c.id)) }, select: { grupoMateriaId: true, parcial: true, alumnoId: true }, loadEagerRelations: false }) : [];
+    // Los parámetros de IN son limitados en SQL Server; los lotes son compatibles con ambos motores.
+    const TAMANO_LOTE = 500;
+    const inscripciones: Inscripcion[] = [];
+    for (let inicio = 0; inicio < grupoIds.length; inicio += TAMANO_LOTE) {
+      inscripciones.push(...await manager.getRepository(Inscripcion).find({
+        where: { grupoId: In(grupoIds.slice(inicio, inicio + TAMANO_LOTE)), estatus: 'ACTIVA', alumno: { estatus: 'ACTIVO', usuario: { activo: true } } },
+        select: { grupoId: true, alumnoId: true }, loadEagerRelations: false,
+      }));
+    }
+    const idsClases = clases.map((clase) => clase.id);
+    const periodos: PeriodoCalificacion[] = [];
+    const notas: Calificacion[] = [];
+    for (let inicio = 0; inicio < idsClases.length; inicio += TAMANO_LOTE) {
+      const idsLote = idsClases.slice(inicio, inicio + TAMANO_LOTE);
+      periodos.push(...await manager.getRepository(PeriodoCalificacion).find({
+        where: { grupoMateriaId: In(idsLote) },
+        select: { grupoMateriaId: true, parcial: true, estatus: true }, loadEagerRelations: false,
+      }));
+      notas.push(...await manager.getRepository(Calificacion).find({
+        where: { grupoMateriaId: In(idsLote) },
+        select: { grupoMateriaId: true, parcial: true, alumnoId: true }, loadEagerRelations: false,
+      }));
+    }
     const inscritosPorGrupo = new Map<number, number[]>();
     for (const i of inscripciones) { const ids = inscritosPorGrupo.get(i.grupoId) ?? []; ids.push(i.alumnoId); inscritosPorGrupo.set(i.grupoId,ids); }
     const gruposConMaterias = new Set(clases.map((c) => c.grupoId));

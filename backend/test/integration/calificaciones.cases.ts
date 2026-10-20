@@ -189,11 +189,12 @@ it('separa notas de ciclos, calcula P1-P3 sin Final y exporta inscritos sin nota
     expect(enlace.response.status).toBe(200);
     expect(enlace.data.url).toMatch(/^\/api\/reportes\/boleta-descarga\/\d+\?t=/);
     const descarga = await fetch(new URL(enlace.data.url, ctx.baseUrl));
-    expect(descarga.status).toBe(200);
-    expect(descarga.headers.get('content-type')).toContain('application/pdf');
+    // El grupo todavía tiene alumnos sin nota y periodos abiertos: no se publica una boleta incompleta.
+    expect(descarga.status).toBe(409);
+    expect(descarga.headers.get('content-type')).toContain('application/json');
     expect(descarga.headers.get('cache-control')).toContain('no-store');
-    const contenidoPdf = Buffer.from(await descarga.arrayBuffer());
-    expect(contenidoPdf.subarray(0, 5).toString()).toBe('%PDF-');
+    const pendiente = await descarga.json();
+    expect(pendiente.message).toContain('P1–P3');
     // Ni una boleta solicitada con ID explícito permite cambiar de expediente.
     expect((await ctx.api(`/reportes/boleta/${sinNota.data.id}`, { token: movil })).response.status).toBe(403);
   });
