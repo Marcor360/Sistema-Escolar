@@ -58,10 +58,12 @@ export class AgrupacionRegularService {
           await m.getRepository(BitacoraAcademica).insert({ usuarioId: u.sub, plantelId: s.plantelId, accion: 'SOLICITUD_ORDINARIA_ANULADA', entidadId: s.id, detalle: 'Alumno inactivo o trasladado antes de agrupación', fecha: new Date() });
         } else validas.push(s);
       }
+      const ocupacionCompatible = new Map<number, number>();
       for (const g of compatibles) {
         let total = await inscripciones.countBy({ grupoId: g.id, estatus: 'ACTIVA' });
         const limite = Math.min(50, await limiteRegulares(m, g.id));
         while (validas.length && total < limite) { await asignar(validas.shift()!, g); total++; }
+        ocupacionCompatible.set(g.id, total);
       }
       const plan = planificarGruposRegulares(validas.length);
       for (const cantidad of plan.grupos) {
@@ -70,7 +72,7 @@ export class AgrupacionRegularService {
       }
       // Solo el remanente de 1–4 puede usar la excepción; nunca se toca historial.
       for (const g of compatibles) {
-        let total = await inscripciones.countBy({ grupoId: g.id, estatus: 'ACTIVA' });
+        let total = ocupacionCompatible.get(g.id) ?? 0;
         const limite = Math.min(54, await limiteRegulares(m, g.id));
         while (validas.length && total >= 50 && total < limite) { await asignar(validas.shift()!, g); total++; }
       }
