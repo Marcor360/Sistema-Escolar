@@ -1,4 +1,5 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { api } from '../api/client';
 import GruposPage from './Grupos';
@@ -34,7 +35,7 @@ async function administrar(indice: number) {
 }
 
 it('paginar no recarga catálogos y conserva el filtro aplicado aunque se edite el selector', async () => {
-  render(<GruposPage />); await screen.findByText('Grupo 1');
+  render(<MemoryRouter><GruposPage /></MemoryRouter>); await screen.findByText('Grupo 1');
   const filtro = screen.getByLabelText('Filtrar por plantel');
   fireEvent.change(filtro, { target: { value: '1' } });
   fireEvent.click(screen.getByRole('button', { name: 'Aplicar' }));
@@ -51,7 +52,7 @@ it('un error de catálogos permanece visible y permite recuperar los tres catál
     if (url === '/academico/ciclos') throw new Error('Sin catálogos');
     return { data: datos(url) };
   });
-  render(<GruposPage />); await screen.findByRole('alert');
+  render(<MemoryRouter><GruposPage /></MemoryRouter>); await screen.findByRole('alert');
   fireEvent.click(screen.getByRole('button', { name: 'Aplicar' }));
   expect(screen.getByRole('alert')).toBeTruthy();
   vi.mocked(api.get).mockImplementation(async (url) => ({ data: datos(url) }));
@@ -65,7 +66,7 @@ it('descarta el listado y error anteriores al cambiar rápidamente de ciclo', as
   vi.mocked(api.get).mockImplementation((url, config) => url !== '/academico/grupos'
     ? Promise.resolve({ data: datos(url) })
     : (config?.params as { cicloId?: string })?.cicloId === '2' ? reciente.promesa : anterior.promesa);
-  render(<GruposPage />);
+  render(<MemoryRouter><GruposPage /></MemoryRouter>);
   await screen.findByRole('option', { name: '2027 · PREPARACION' });
   fireEvent.change(screen.getByLabelText('Consultar ciclo'), { target: { value: '2' } });
   await act(async () => { reciente.resolver({ data: resultado('Grupo reciente') }); });
@@ -76,7 +77,7 @@ it('descarta el listado y error anteriores al cambiar rápidamente de ciclo', as
 });
 
 it('la selección nueva descarta el detalle anterior y limpia selecciones de asignación', async () => {
-  render(<GruposPage />); await screen.findByText('Grupo 1');
+  render(<MemoryRouter><GruposPage /></MemoryRouter>); await screen.findByText('Grupo 1');
   await administrar(0); await screen.findByRole('button', { name: 'Asignar materia' });
   fireEvent.change(screen.getByLabelText('Materia'), { target: { value: '1' } });
   fireEvent.change(screen.getByLabelText('Docente'), { target: { value: '9' } });
@@ -94,7 +95,7 @@ it('la selección nueva descarta el detalle anterior y limpia selecciones de asi
 });
 
 it('un error de detalle no se presenta como grupo vacío y ofrece reintento', async () => {
-  render(<GruposPage />); await screen.findByText('Grupo 1');
+  render(<MemoryRouter><GruposPage /></MemoryRouter>); await screen.findByText('Grupo 1');
   vi.mocked(api.get).mockRejectedValue(new Error('Detalle no disponible'));
   await administrar(0); await screen.findByRole('button', { name: 'Reintentar detalle del grupo' });
   expect(screen.queryByText('Sin materias asignadas.')).toBeNull();
@@ -105,14 +106,23 @@ it('un error de detalle no se presenta como grupo vacío y ofrece reintento', as
 });
 
 it('explica el orden de preparación académica antes de crear grupos', async () => {
-  render(<GruposPage />);
+  render(<MemoryRouter><GruposPage /></MemoryRouter>);
   expect(screen.getByText(/Orden recomendado: prepara el ciclo y las materias/)).toBeTruthy();
   await screen.findByRole('heading', { name: 'Nuevo grupo' });
 });
 
 it('expone el ID numérico de grupo requerido por las inscripciones masivas', async () => {
-  render(<GruposPage />);
+  render(<MemoryRouter><GruposPage /></MemoryRouter>);
   const listado = await screen.findByRole('region', { name: 'Listado de grupos' });
   expect(within(listado).getByRole('columnheader', { name: 'ID' })).toBeTruthy();
   expect(await within(listado).findByText('1')).toBeTruthy();
+});
+
+
+it('indica que las altas ordinarias usan cartera y que el alta directa no crea cargos', async () => {
+  render(<MemoryRouter><GruposPage /></MemoryRouter>);
+  await screen.findByText('Grupo 1');
+  await administrar(0);
+  expect(screen.getByRole('link', { name: 'Apertura de cartera' }).getAttribute('href')).toBe('/apertura-cartera/nueva');
+  expect(screen.getByRole('button', { name: 'Inscribir académicamente sin cargos' })).toBeTruthy();
 });
