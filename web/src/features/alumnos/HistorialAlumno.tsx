@@ -18,7 +18,7 @@ export function HistorialAlumno({ historial, boleta, cargandoNotas, verNotas, no
           <button disabled={cargandoNotas} onClick={() => verNotas(historial.alumno, i)}>Ver calificaciones</button></p>)}
         <Paginador total={historial.total} pagina={historial.pagina} porPagina={historial.porPagina} deshabilitado={cargando} onCambio={cambiarPagina} />
         {cargando && <p role="status">Cargando historial…</p>}
-        {cargandoNotas && <p role="status">Cargando calificaciones…</p>
+        {cargandoNotas && <p role="status">Cargando calificaciones…</p>}
         {notas && <div className="tabla-contenedor" role="region" aria-label="Calificaciones de la inscripción" tabIndex={0}><table className="tabla"><thead><tr><th>Materia</th><th>Parcial</th><th>Nota</th><th>Promedio oficial P1-P3</th></tr></thead>
           <tbody>{notas.map((n) => <tr key={n.id}><td>{n.grupoMateria.materia.nombre}</td><td>{n.parcial === 0 ? 'Final' : `P${n.parcial}`}</td><td>{n.calificacion}</td><td>{n.promedioOficial ?? 'Pendiente'}</td></tr>)}</tbody></table></div>}
         {notas?.length === 0 && <p>Sin calificaciones en esta inscripción.</p>}
