@@ -484,10 +484,10 @@ Object.keys(casos).map(Number).sort((a,b) => a-b).forEach((id) => casos[id](cont
       const root = await emitirToken((await dataSource.getRepository(Usuario).findOneByOrFail({ id: superadminId })).email);
       const usuario = await dataSource.getRepository(Usuario).findOneByOrFail({ id: tipo === 'altas' ? superadminId : adminId }); await emitirToken(usuario.email);
       const docente = await api('/docentes', { method: 'POST', token: root, body: { email: `browserdoc_${tipo}_${sufijo}@example.invalid`, password: 'Integracion_Segura_42!', nombre: 'Docente', apellidoPaterno: 'Navegador', cedulaPendiente: true, numEmpleado: `BW${tipo.slice(0,2)}${sufijo}`, plantelIds: [plantelId] } }); expect(docente.response.status).toBe(201);
-      if (tipo === 'academico') await emitirToken(docente.data.usuario.email);
+      if (tipo === 'academico') await emitirToken(`browserdoc_${tipo}_${sufijo}@example.invalid`);
       const clase = await dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: grupoMateriaIdMaestro });
       const concepto = await dataSource.getRepository(ConceptoPago).findOneByOrFail({ clave: `CW${sufijo}` });
-      await (await import('./recorridos-web')).recorridoWeb({ baseUrl, email: usuario.email, password: passwords.get(usuario.email) ?? 'Integracion_Segura_42!', sufijo, plantelId, cicloId: clase.grupo.cicloId, materiaId: clase.materiaId, docenteId: docente.data.id, docenteEmail: docente.data.usuario.email, docentePassword: passwords.get(docente.data.usuario.email) ?? 'Integracion_Segura_42!', conceptoId: concepto.id }, tipo);
+      await (await import('./recorridos-web')).recorridoWeb({ baseUrl, email: usuario.email, password: passwords.get(usuario.email) ?? 'Integracion_Segura_42!', sufijo, plantelId, cicloId: clase.grupo.cicloId, materiaId: clase.materiaId, docenteId: docente.data.id, docenteEmail: `browserdoc_${tipo}_${sufijo}@example.invalid`, docentePassword: passwords.get(`browserdoc_${tipo}_${sufijo}@example.invalid`) ?? 'Integracion_Segura_42!', conceptoId: concepto.id }, tipo);
     });
   }
   registrarCicloOperativo(contexto);
