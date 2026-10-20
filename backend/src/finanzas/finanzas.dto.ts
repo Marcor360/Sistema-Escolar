@@ -57,7 +57,7 @@ export class GenerarColegiaturasDto {
 export class AplicarRecargosDto {
   @OpcionalNoNulo() @IsBoolean() confirmado?: boolean;
   @IsOptional() @Type(() => Number) @IsInt() plantelId?: number;
-  @OpcionalNoNulo() @IsNumber() @Min(0) @Max(100) porcentaje?: number; // por defecto 10%
+  @OpcionalNoNulo() @IsNumber() @Min(0.01) @Max(100) porcentaje?: number; // por defecto 10%
 }
 
 export class RegistrarPagoDto {
