@@ -1,6 +1,10 @@
 # Contrato condicionado de calificaciones y actas — versión objetivo 1.28.0
 
-**Estado:** propuesta de especificación, sin reglamento institucional aprobado. **No liberar ni activar cambios funcionales.** El issue #139 mantiene pendientes fórmula, escala, periodos, asistencias, cierres, firmas y actas. La versión actual de código sigue en 1.27.5 hasta aprobación e implementación real.
+**Estado:** propuesta de especificación, sin reglamento institucional aprobado. **No liberar ni activar cambios funcionales.** El issue #139 mantiene pendientes fórmula, escala, periodos, asistencias, cierres, firmas y actas. Esta entrega documental se versiona como 1.27.12. La versión objetivo 1.28.0 corresponde a una implementación futura aprobada; no representa una norma vigente.
+
+## Formatos recibidos y alcance técnico actual
+
+Se recibieron los PDF de acta y boleta. La entrega 1.27.9 ofrece formatos informativos y descargas privadas, conservando 0–100 y el promedio vigente P1–P3. El ejemplo usa 0–10, pero falta aprobar equivalencia o cambio de escala. Asistencia, evaluación continua, examen desglosado, seriación, firmas y ponderaciones continúan pendientes; no se infieren del diseño. Ver [formatos escolares](FORMATOS_ESCOLARES.md).
 
 ## Qué existe
 - Escala 0–100, P1/P2/P3 y Final independiente en las rutas actuales.
