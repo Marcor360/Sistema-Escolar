@@ -60,9 +60,9 @@ it('un fallo de materiales termina la carga y permite reintentar esa materia', a
   await pulsar('MAT1: Materia 1. Ver materiales');
   expect(textos()).toContain('Sin red');
   expect(textos()).not.toContain('Cargando materiales de clase');
-  vi.mocked(api.get).mockResolvedValueOnce({ data: [] });
+  vi.mocked(api.get).mockResolvedValueOnce({ data: {datos:[],total:0} });
   await pulsar('Reintentar carga');
-  expect(api.get).toHaveBeenLastCalledWith('/grupo-materias/1/materiales');
+  expect(api.get).toHaveBeenLastCalledWith('/grupo-materias/1/materiales/listado', {params:{pagina:1,porPagina:10}});
   expect(textos()).toContain('El maestro aún no sube materiales.');
   expect(textos()).not.toContain('Sin red');
 });
@@ -73,7 +73,7 @@ it('volver a la pantalla cancela la materia incompleta y permite cargarla otra v
   await pulsar('MAT1: Materia 1. Ver materiales');
   contexto.enfocada = false; await actualizar();
   contexto.enfocada = true; await actualizar();
-  vi.mocked(api.get).mockResolvedValueOnce({ data: [material] });
+  vi.mocked(api.get).mockResolvedValueOnce({ data: {datos:[material],total:1} });
   await pulsar('MAT1: Materia 1. Ver materiales');
   await act(async () => { anterior.rechazar(new Error('Error antiguo')); });
   expect(textos()).toContain('Abrir material: Guía, guia.pdf');
@@ -82,7 +82,7 @@ it('volver a la pantalla cancela la materia incompleta y permite cargarla otra v
 
 it('cambiar de alumno limpia materiales y vuelve a consultar el catálogo sin perder el foco', async () => {
   await montar();
-  vi.mocked(api.get).mockResolvedValueOnce({ data: [material] });
+  vi.mocked(api.get).mockResolvedValueOnce({ data: {datos:[material],total:1} });
   await pulsar('MAT1: Materia 1. Ver materiales');
   const nueva = pendiente(); vi.mocked(api.get).mockReturnValueOnce(nueva.promesa);
   contexto.sesion = { sub: 2 }; await actualizar();
@@ -96,20 +96,20 @@ it('cambiar de alumno limpia materiales y vuelve a consultar el catálogo sin pe
 
 it('una materia anterior no publica materiales cuando se cambia a otra ya almacenada', async () => {
   await montar();
-  vi.mocked(api.get).mockResolvedValueOnce({ data: [] });
+  vi.mocked(api.get).mockResolvedValueOnce({ data: {datos:[],total:0} });
   await pulsar('MAT2: Materia 2. Ver materiales');
   const anterior = pendiente(); vi.mocked(api.get).mockReturnValueOnce(anterior.promesa);
   await pulsar('MAT1: Materia 1. Ver materiales');
   await pulsar('MAT2: Materia 2. Ver materiales');
-  await act(async () => { anterior.resolver({ data: [material] }); });
-  vi.mocked(api.get).mockResolvedValueOnce({ data: [] });
+  await act(async () => { anterior.resolver({ data: {datos:[material],total:1} }); });
+  vi.mocked(api.get).mockResolvedValueOnce({ data: {datos:[],total:0} });
   await pulsar('MAT1: Materia 1. Ver materiales');
-  expect(api.get).toHaveBeenLastCalledWith('/grupo-materias/1/materiales');
+  expect(api.get).toHaveBeenLastCalledWith('/grupo-materias/1/materiales/listado', {params:{pagina:1,porPagina:10}});
   expect(textos()).not.toContain('guia.pdf');
 });
 
 it('no abre un enlace privado que termina después de cambiar de alumno', async () => {
-  await montar(); vi.mocked(api.get).mockResolvedValueOnce({ data: [material] });
+  await montar(); vi.mocked(api.get).mockResolvedValueOnce({ data: {datos:[material],total:1} });
   await pulsar('MAT1: Materia 1. Ver materiales');
   const enlace = pendiente(); vi.mocked(api.get).mockReturnValueOnce(enlace.promesa);
   const boton = vista.root.findByProps({ accessibilityLabel: 'Abrir material: Guía, guia.pdf' });
@@ -122,22 +122,22 @@ it('no abre un enlace privado que termina después de cambiar de alumno', async 
 
 it('actualizar materias invalida los materiales antiguos y vuelve a consultarlos', async () => {
   await montar();
-  vi.mocked(api.get).mockResolvedValueOnce({ data: [material] });
+  vi.mocked(api.get).mockResolvedValueOnce({ data: {datos:[material],total:1} });
   await pulsar('MAT1: Materia 1. Ver materiales');
   expect(textos()).toContain('guia.pdf');
   vi.mocked(api.get).mockResolvedValueOnce({ data: {datos:materias,total:materias.length} });
   const refrescar = vista.root.findByType(RefreshControl);
   await act(async () => refrescar.props.onRefresh());
   expect(textos()).not.toContain('guia.pdf');
-  vi.mocked(api.get).mockResolvedValueOnce({ data: [] });
+  vi.mocked(api.get).mockResolvedValueOnce({ data: {datos:[],total:0} });
   await pulsar('MAT1: Materia 1. Ver materiales');
   expect(textos()).toContain('El maestro aún no sube materiales.');
-  expect(api.get).toHaveBeenLastCalledWith('/grupo-materias/1/materiales');
+  expect(api.get).toHaveBeenLastCalledWith('/grupo-materias/1/materiales/listado', {params:{pagina:1,porPagina:10}});
 });
 
 it('pagina desde API sin conservar materiales de la página anterior',async()=>{
  vi.mocked(api.get).mockResolvedValueOnce({data:{datos:[materias[0]],total:11}});await montar();
- vi.mocked(api.get).mockResolvedValueOnce({data:[material]});await pulsar('MAT1: Materia 1. Ver materiales');
+ vi.mocked(api.get).mockResolvedValueOnce({data:{datos:[material],total:1}});await pulsar('MAT1: Materia 1. Ver materiales');
  vi.mocked(api.get).mockResolvedValueOnce({data:{datos:[materias[1]],total:11}});await pulsar('Página siguiente');
  expect(api.get).toHaveBeenLastCalledWith('/alumnos/me/materias/listado',{params:{pagina:2,porPagina:10}});expect(textos()).toContain('MAT2');expect(textos()).not.toContain('MAT1');expect(textos()).not.toContain('guia.pdf');expect(textos()).toContain('registros');
 });
@@ -146,4 +146,13 @@ it('cambiar de alumno desde página dos vuelve a uno sin mostrar datos anteriore
  vi.mocked(api.get).mockResolvedValueOnce({data:{datos:[materias[1]],total:11}});await pulsar('Página siguiente');
  vi.mocked(api.get).mockResolvedValue({data:{datos:[],total:0}});contexto.sesion={sub:2};await actualizar();
  expect(api.get).toHaveBeenLastCalledWith('/alumnos/me/materias/listado',{params:{pagina:1,porPagina:10}});expect(textos()).not.toContain('MAT2');
+});
+
+it('los materiales también paginan en servidor y no conservan otra página como copia', async () => {
+  await montar(); vi.mocked(api.get).mockResolvedValueOnce({data:{datos:[material],total:12}}); await pulsar('MAT1: Materia 1. Ver materiales');
+  const siguiente = vista.root.findAllByProps({accessibilityLabel:'Página siguiente'})[1];
+  const pendientePagina = pendiente(); vi.mocked(api.get).mockReturnValueOnce(pendientePagina.promesa);
+  await act(async () => siguiente.props.onPress()); expect(textos()).not.toContain('guia.pdf');
+  expect(api.get).toHaveBeenLastCalledWith('/grupo-materias/1/materiales/listado',{params:{pagina:2,porPagina:10}});
+  await act(async () => pendientePagina.resolver({data:{datos:[],total:12}})); expect(vista.root.findAllByProps({accessibilityLabel:'Página anterior'})[1].props.disabled).toBe(false);
 });

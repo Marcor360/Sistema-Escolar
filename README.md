@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma
 
-**Versión candidata: `1.27.0`** · API, web y app del alumno alineadas. Aceptación institucional y despliegue pendientes.
+**Versión candidata: `1.27.1`** · API, web y app del alumno alineadas. Aceptación institucional y despliegue pendientes.
 
 API, portal administrativo/docente y app del alumno para gestión académica y financiera con alcance por plantel. Las versiones de backend, web, móvil, lockfiles y Expo están alineadas. Este README describe una única versión actual; los informes históricos permanecen en `docs/`.
 
@@ -13,7 +13,13 @@ API, portal administrativo/docente y app del alumno para gestión académica y f
 
 La versión 1.26.4 aclara en apertura de cartera la vigencia del ciclo frente al mes de cobro y la fecha de vencimiento. Conserva la guía de ciclos de 1.26.3 y la política de versiones de 1.26.2. No cambia tarifas ni reglas de la API y no acredita un despliegue. La versión del repositorio identifica el código; la disponibilidad en el VPS o en un APK depende del despliegue correspondiente. La evidencia histórica conserva su versión y fecha originales.
 
-## Novedades de 1.27.0
+## Novedades de 1.27.1
+
+- Mis clases separa consulta, actividades, materiales y entregas; los formularios de actividad, material y calificación de entrega se abren enfocados.
+- Clases, actividades, materiales, entregas y tareas propias usan páginas del servidor. Se conservan filtros, borradores ante fallos, confirmación de salida y validación antes de entregar desde Expo.
+- Conserva API anteriores, permisos y reglas de notas. No requiere nuevas migraciones respecto de 1.27.0 ni acredita despliegue o UAT institucional.
+
+### Entregado previamente en 1.27.0
 
 - Temario independiente por clase: borradores, publicación con fechas, cancelación, revisiones históricas y adjuntos privados; consulta de temas publicados en Expo.
 - Ficha integral del ciclo: conteos reales y grupos/asignaturas paginados, dentro del alcance de plantel y docente.

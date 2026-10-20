@@ -51,6 +51,7 @@ export default function MateriasScreen() {
   const [cargando, setCargando] = useState(false);
   const [cargaInicialCompleta, setCargaInicialCompleta] = useState(false);
   const [abierta, setAbierta] = useState<number | null>(null);
+  const [paginasMateriales, setPaginasMateriales] = useState<Record<number, number>>({}), [totalesMateriales, setTotalesMateriales] = useState<Record<number, number>>({});
   const [materialesPor, setMaterialesPor] = useState<
     Record<number, Material[]>
   >({});
@@ -87,7 +88,7 @@ export default function MateriasScreen() {
     lectura.current.invalidar();
     setMaterias([]);
     setAbierta(null);
-    setMaterialesPor({});
+    setMaterialesPor({}); setPaginasMateriales({}); setTotalesMateriales({});
     setErroresMateriales({});
     setCargandoMateriales(null);
     setCargaInicialCompleta(false);
@@ -101,7 +102,7 @@ export default function MateriasScreen() {
     if (!sesion?.sub) return;
     consultaMateriales.current += 1;
     setAbierta(null);
-    setMaterialesPor({});
+    setMaterialesPor({}); setPaginasMateriales({}); setTotalesMateriales({});
     setErroresMateriales({});
     setCargandoMateriales(null);
     setError("");
@@ -136,16 +137,16 @@ export default function MateriasScreen() {
     }, [cargar]),
   );
 
-  const cargarMateriales = async (materiaId: number) => {
+  const cargarMateriales = async (materiaId: number, paginaMaterial = paginasMateriales[materiaId] || 1) => {
     const actual = ++consultaMateriales.current;
-    setCargandoMateriales(materiaId);
+    setCargandoMateriales(materiaId); setPaginasMateriales(prev => ({ ...prev, [materiaId]: paginaMaterial })); setMaterialesPor(prev => { const n = { ...prev }; delete n[materiaId]; return n; });
     setErroresMateriales((previos) => ({ ...previos, [materiaId]: "" }));
     try {
-      const { data } = await api.get<Material[]>(
-        `/grupo-materias/${materiaId}/materiales`,
+      const { data } = await api.get<{datos: Material[]; total: number}>(
+        `/grupo-materias/${materiaId}/materiales/listado`, {params:{pagina:paginaMaterial,porPagina:10}}
       );
       if (actual === consultaMateriales.current) {
-        setMaterialesPor((previos) => ({ ...previos, [materiaId]: data }));
+        setMaterialesPor((previos) => ({ ...previos, [materiaId]: data.datos })); setTotalesMateriales(prev => ({...prev,[materiaId]:data.total}));
       }
     } catch (fallo) {
       if (actual === consultaMateriales.current) {
@@ -252,7 +253,7 @@ export default function MateriasScreen() {
 
                 {desplegada && (
                   <View style={estilos.materiales}>
-                    <TemarioClase claseId={item.id} /><Text style={estilos.subtitulo}>Materiales de clase</Text>
+                    <TemarioClase claseId={item.id} />{(totalesMateriales[item.id] || 0) > 10 && <Paginador pagina={paginasMateriales[item.id] || 1} total={totalesMateriales[item.id]} ocupado={cargandoMateriales === item.id} cambiar={p => { void cargarMateriales(item.id,p); }} />}<Text style={estilos.subtitulo}>Materiales de clase</Text>
                     {!materiales && cargandoMateriales === item.id && (
                       <ActivityIndicator accessibilityLabel="Cargando materiales de clase" />
                     )}

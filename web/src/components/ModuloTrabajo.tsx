@@ -22,13 +22,13 @@ function Bloqueo({ sucio, ocupado, guardado }: { sucio: boolean; ocupado: React.
 function Guardia({ children }: { children: ReactNode }) {
   return useContext(UNSAFE_DataRouterContext) ? children : null;
 }
-export const esFormularioModulo = (vista: string) => ['nuevo', 'editar', 'adjuntar', 'ciclo-nuevo', 'ciclo-editar', 'cargo-nuevo', 'pago-nuevo', 'colegiaturas', 'carpeta-nueva', 'archivo-nuevo', 'seguimiento', 'importar', 'promover'].includes(vista);
+export const esFormularioModulo = (vista: string) => ['nuevo', 'editar', 'adjuntar', 'actividad-nueva', 'actividad-editar', 'material-nuevo', 'material-editar', 'calificar-entrega', 'ciclo-nuevo', 'ciclo-editar', 'cargo-nuevo', 'pago-nuevo', 'colegiaturas', 'carpeta-nueva', 'archivo-nuevo', 'seguimiento', 'importar', 'promover'].includes(vista);
 
 export function ModuloTrabajo({ titulo, acciones, vistas = [], permisos = {}, children }: { titulo: string; acciones: Accion[]; vistas?: string[]; permisos?: Record<string,string[]>; children: ReactNode }) {
   const { tieneRol } = useAuth(), [query, setQuery] = useSearchParams();
   const permitidas = acciones.filter(a => !a.roles || tieneRol(...a.roles));
   const solicitada = query.get('vista') || '';
-  const necesitaId = ['editar','ciclo-editar','contextos','detalle','adjuntar','administrar','seguimiento'].includes(solicitada);
+  const necesitaId = ['editar','ciclo-editar','contextos','detalle','adjuntar','actividad-editar','material-editar','calificar-entrega','administrar','seguimiento'].includes(solicitada);
   const idValido = Number.isSafeInteger(Number(query.get('id'))) && Number(query.get('id')) > 0;
   const autorizada = !permisos[solicitada] || tieneRol(...permisos[solicitada]);
   const modo = autorizada && (!necesitaId || idValido) && (permitidas.some(a => a.vista === solicitada) || vistas.includes(solicitada)) ? solicitada : '';
@@ -51,7 +51,7 @@ export function ModuloTrabajo({ titulo, acciones, vistas = [], permisos = {}, ch
     <Guardia><Bloqueo sucio={sucio} ocupado={ocupado} guardado={guardado} /></Guardia>
     <div className={esFormularioModulo(modo) ? 'trabajo-enfocado' : ''} onChangeCapture={() => { if (esFormularioModulo(modo)) { guardado.current = false; setSucio(true); } }}>
       <h2 ref={foco} tabIndex={-1} className="solo-lector">{titulo}: {esFormularioModulo(modo) ? 'Formulario' : 'Consulta'}</h2>
-      <button type="button" className="boton secundario" disabled={ocupadoVisible} onClick={() => ir(({ 'cargo-nuevo': 'cargos', 'pago-nuevo': 'pagos', 'colegiaturas': 'cargos', 'ciclo-nuevo': 'ciclos', 'ciclo-editar': 'ciclos' } as Record<string, string>)[modo] || (esFormularioModulo(modo) ? 'consulta' : ''))}>{esFormularioModulo(modo) ? 'Cancelar y volver a consulta' : 'Volver a opciones'}</button>
+      <button type="button" className="boton secundario" disabled={ocupadoVisible} onClick={() => ir(({ 'actividad-nueva': 'actividades', 'actividad-editar': 'actividades', 'material-nuevo': 'materiales', 'material-editar': 'materiales', 'calificar-entrega': 'entregas', 'cargo-nuevo': 'cargos', 'pago-nuevo': 'pagos', 'colegiaturas': 'cargos', 'ciclo-nuevo': 'ciclos', 'ciclo-editar': 'ciclos' } as Record<string, string>)[modo] || (esFormularioModulo(modo) ? 'consulta' : ''))}>{esFormularioModulo(modo) ? 'Cancelar y volver a consulta' : 'Volver a opciones'}</button>
       <Suspense fallback={<Cargando />}>{children}</Suspense>
     </div>
   </TrabajoContext.Provider>;

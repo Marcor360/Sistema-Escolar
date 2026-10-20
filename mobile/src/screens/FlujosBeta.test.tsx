@@ -189,7 +189,7 @@ it("cambio inicial no envía contraseñas distintas y permite corregir", async (
 });
 it("reemplazar entrega requiere confirmación antes de abrir selector", async () => {
   vi.mocked(api.get).mockResolvedValue({
-    data: [
+    data: {datos: [
       {
         id: 1,
         titulo: "Ensayo",
@@ -198,7 +198,7 @@ it("reemplazar entrega requiere confirmación antes de abrir selector", async ()
         fechaEntrega: null,
         entrega: { estatus: "ENTREGADA", calificacion: null },
       },
-    ],
+    ], total:1},
   });
   await montar(<Tareas />);
   await act(async () =>
@@ -266,7 +266,7 @@ it("cerrar sesión requiere confirmación", async () => {
 });
 it("confirmar reemplazo permite elegir archivo y cancelar no envía entrega", async () => {
   vi.mocked(api.get).mockResolvedValue({
-    data: [
+    data: {datos: [
       {
         id: 1,
         titulo: "Ensayo",
@@ -275,7 +275,7 @@ it("confirmar reemplazo permite elegir archivo y cancelar no envía entrega", as
         fechaEntrega: null,
         entrega: { estatus: "ENTREGADA", calificacion: null },
       },
-    ],
+    ], total:1},
   });
   vi.mocked(DocumentPicker.getDocumentAsync).mockResolvedValue({
     canceled: true,
@@ -352,7 +352,7 @@ it("confirmar cierre evita envíos simultáneos", async () => {
 });
 it("no envía archivo si el selector termina después de desmontar la pantalla", async () => {
   vi.mocked(api.get).mockResolvedValue({
-    data: [
+    data: {datos: [
       {
         id: 1,
         titulo: "Ensayo",
@@ -361,7 +361,7 @@ it("no envía archivo si el selector termina después de desmontar la pantalla",
         fechaEntrega: null,
         entrega: null,
       },
-    ],
+    ], total:1},
   });
   let resolver!: (value: DocumentPicker.DocumentPickerResult) => void;
   vi.mocked(DocumentPicker.getDocumentAsync).mockReturnValue(
@@ -511,7 +511,7 @@ it("revalida el importe antes de generar una orden y rechaza saldos modificados"
 
 it("tareas conserva datos solo como referencia y bloquea entregas con información obsoleta", async () => {
   const tarea = { id: 3, titulo: "Trabajo", tipo: "TAREA", parcial: 1, fechaEntrega: null, entrega: null };
-  vi.mocked(api.get).mockResolvedValue({ data: [tarea] });
+  vi.mocked(api.get).mockResolvedValue({ data: {datos:[tarea],total:1} });
   await montar(<Tareas />);
   expect(vista.root.findByProps({ accessibilityLabel: "Entregar archivo: Trabajo" }).props.disabled).toBe(false);
   vi.mocked(api.get).mockRejectedValueOnce(new Error("Red interrumpida"));
@@ -522,7 +522,7 @@ it("tareas conserva datos solo como referencia y bloquea entregas con informaci�
   expect(texto()).toContain("desactualizados");
   expect(DocumentPicker.getDocumentAsync).not.toHaveBeenCalled();
 
-  vi.mocked(api.get).mockResolvedValueOnce({ data: [tarea] });
+  vi.mocked(api.get).mockResolvedValueOnce({ data: {datos:[tarea],total:1} });
   await act(async () =>
     vista.root.findByProps({ accessibilityLabel: "Actualizar tareas" }).props.onPress(),
   );
@@ -532,7 +532,7 @@ it("tareas conserva datos solo como referencia y bloquea entregas con informaci�
 
 it("bloquea el envío si la consulta vence mientras el selector está abierto", async () => {
   const tarea = { id: 3, titulo: "Trabajo", tipo: "TAREA", parcial: 1, fechaEntrega: null, entrega: null };
-  vi.mocked(api.get).mockResolvedValue({ data: [tarea] });
+  vi.mocked(api.get).mockResolvedValue({ data: {datos:[tarea],total:1} });
   await montar(<Tareas />);
   let resolver!: (valor: Awaited<ReturnType<typeof DocumentPicker.getDocumentAsync>>) => void;
   vi.mocked(DocumentPicker.getDocumentAsync).mockReturnValueOnce(new Promise(r => { resolver = r; }));
@@ -547,7 +547,7 @@ it("bloquea el envío si la consulta vence mientras el selector está abierto", 
 
 it("rechaza crear una copia temporal del adjunto cuando el preflight online falla", async () => {
   const tarea = { id: 8, titulo: "Informe", tipo: "TAREA", parcial: 1, fechaEntrega: null, entrega: null };
-  vi.mocked(api.get).mockResolvedValueOnce({ data: [tarea] }).mockRejectedValueOnce(new Error("Sin red"));
+  vi.mocked(api.get).mockResolvedValueOnce({ data: {datos:[tarea],total:1} }).mockRejectedValueOnce(new Error("Sin red"));
   await montar(<Tareas />);
   await act(async () => vista.root.findByProps({ accessibilityLabel: "Entregar archivo: Informe" }).props.onPress());
   expect(DocumentPicker.getDocumentAsync).not.toHaveBeenCalled();
@@ -584,13 +584,13 @@ it("activa una cuenta de alumno, impide duplicados y limpia los secretos al term
 
 it("no abre el selector si la pantalla se desmonta durante el preflight", async () => {
   const tarea = { id: 3, titulo: "Trabajo", tipo: "TAREA", parcial: 1, fechaEntrega: null, entrega: null };
-  vi.mocked(api.get).mockResolvedValueOnce({ data: [tarea] });
+  vi.mocked(api.get).mockResolvedValueOnce({ data: {datos:[tarea],total:1} });
   await montar(<Tareas />);
-  let resolver!: (valor: { data: typeof tarea[] }) => void;
+  let resolver!: (valor: { data: {datos: typeof tarea[]; total: number} }) => void;
   vi.mocked(api.get).mockReturnValueOnce(new Promise(r => { resolver = r; }));
   await act(async () => vista.root.findByProps({ accessibilityLabel: "Entregar archivo: Trabajo" }).props.onPress());
   await act(async () => vista.unmount());
-  await act(async () => resolver({ data: [tarea] }));
+  await act(async () => resolver({ data: {datos:[tarea],total:1} }));
   expect(DocumentPicker.getDocumentAsync).not.toHaveBeenCalled();
   expect(api.post).not.toHaveBeenCalled();
 });
@@ -658,4 +658,15 @@ it('el caché de calificaciones no usa la página uno para suplir una página do
  });
  await montar(<Calificaciones/>);expect(texto()).toContain('Nota cacheada');
  await act(async()=>vista.root.findByProps({accessibilityLabel:'Página siguiente'}).props.onPress());expect(texto()).not.toContain('Nota cacheada');expect(vista.root.findByProps({accessibilityLabel:'Reintentar carga'})).toBeTruthy();expect(texto()).not.toContain('copia de calificaciones de esta sesión');configurarCacheAcademica(null);
+});
+
+it('pagina tareas en servidor y vuelve a validar solo la página visible antes de entregar', async () => {
+  const tarea = {id:3,titulo:'Trabajo paginado',tipo:'TAREA',parcial:1,fechaEntrega:null,entrega:null};
+  vi.mocked(api.get).mockResolvedValue({data:{datos:[tarea],total:12}}); await montar(<Tareas />);
+  await act(async () => vista.root.findByProps({accessibilityLabel:'Página siguiente'}).props.onPress());
+  expect(api.get).toHaveBeenLastCalledWith('/alumnos/me/tareas/listado',{params:{pagina:2,porPagina:10}});
+  vi.mocked(DocumentPicker.getDocumentAsync).mockResolvedValue({canceled:true,assets:null});
+  await act(async () => vista.root.findByProps({accessibilityLabel:'Entregar archivo: Trabajo paginado'}).props.onPress());
+  expect(api.get).toHaveBeenLastCalledWith('/alumnos/me/tareas/listado',{params:{pagina:2,porPagina:10}});
+  expect(DocumentPicker.getDocumentAsync).toHaveBeenCalled();
 });

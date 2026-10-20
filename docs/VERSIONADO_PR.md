@@ -26,6 +26,7 @@ Si un PR anterior sigue abierto al entrar en vigor el control, debe actualizarse
 | 1.26.4 | Vigencia de ciclo y contexto visible de cotización en apertura de cartera | PR apilado sobre 1.26.3; sin despliegue |
 | 1.26.5 | Consulta propia paginada en API y Expo | PR apilado; sin despliegue |
 | 1.26.6 | Consulta, captura e importación enfocadas de calificaciones | PR apilado; sin despliegue |
-| 1.27.0 | Temario independiente, consulta de alumno y ficha agregada del ciclo | En revisión; sin despliegue ni aceptación institucional |
+| 1.27.0 | Temario independiente, consulta de alumno y ficha agregada del ciclo | Integrado en #137; sin despliegue ni aceptación institucional |
+| 1.27.1 | Formularios docentes enfocados y paginación de actividades/materiales/entregas/tareas | En revisión; sin despliegue |
 
 No confundir `versión`, número de PR GitHub, SHA integrado o versión de servidor: son identificadores distintos.

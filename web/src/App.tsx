@@ -88,7 +88,7 @@ export default function App() {
 
           <Route element={<RutaProtegida roles={['ADMINISTRATIVO', 'MAESTRO']} />}><Route path="/recursamientos" element={<RecursamientosPage />} /><Route path="/recursamientos/:id" element={<RecursamientosPage />} /></Route>
           <Route element={<RutaProtegida roles={['MAESTRO']} />}>
-            <Route path="/maestro" element={<ModuloTrabajo titulo="Mis clases" acciones={[{titulo:'Consultar mis clases',detalle:'Abrir las operaciones disponibles según tu alcance',vista:'consulta'}]}><MaestroPage /></ModuloTrabajo>} />
+            <Route path="/maestro" element={<ModuloTrabajo titulo="Mis clases" acciones={[{titulo:'Consultar mis clases',detalle:'Abrir las operaciones disponibles según tu alcance',vista:'consulta'}]} vistas={['clase','actividades','actividad-nueva','actividad-editar','materiales','material-nuevo','material-editar','entregas','calificar-entrega']}><MaestroPage /></ModuloTrabajo>} />
           </Route>
 
           <Route element={<RutaProtegida roles={['MAESTRO', 'ADMINISTRATIVO', 'FINANZAS']} />}><Route path="/ciclos/:id" element={<CicloFichaPage />} /></Route>

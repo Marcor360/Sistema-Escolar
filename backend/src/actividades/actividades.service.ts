@@ -17,7 +17,7 @@ import { Inscripcion } from '../entities/inscripcion.entity';
 import { AlumnosService } from '../alumnos/alumnos.service';
 import { DocentesService } from '../docentes/docentes.service';
 import { JwtUser } from '../common/current-user.decorator';
-import { ActualizarActividadDto, CalificarEntregaDto, CrearActividadDto, EntregarDto } from './actividades.dto';
+import { ActualizarActividadDto, CalificarEntregaDto, ConsultarClaseDto, CrearActividadDto, EntregarDto } from './actividades.dto';
 import { ScopeService } from '../planteles/scope.service';
 import { uploadsPath } from '../common/uploads-path';
 
@@ -72,6 +72,46 @@ export class ActividadesService {
     });
     if (!inscripcion && !await recursaClase(this.dataSource.manager, user.sub, gm.id)) throw new ForbiddenException('El alumno no está inscrito en esta clase');
     return { alumno, gm };
+  }
+
+  async detalleClase(id: number, user: JwtUser) {
+    const gm = await this.validarPropiedad(id, user);
+    return { id: gm.id, grupo: { id: gm.grupo.id, nombre: gm.grupo.nombre, ciclo: { id: gm.grupo.cicloId, clave: gm.grupo.ciclo.clave } }, materia: { id: gm.materiaId, clave: gm.materia.clave, nombre: gm.materia.nombre } };
+  }
+  async detalleActividad(id: number, user: JwtUser) {
+    const actividad = await this.obtener(id); await this.validarPropiedad(actividad.grupoMateriaId, user);
+    return { id: actividad.id, grupoMateriaId: actividad.grupoMateriaId, titulo: actividad.titulo, descripcion: actividad.descripcion, tipo: actividad.tipo, parcial: actividad.parcial, ponderacion: actividad.ponderacion, fechaEntrega: actividad.fechaEntrega, activo: actividad.activo };
+  }
+  async detalleMaterial(id: number, user: JwtUser) {
+    const material = await this.materiales.findOneBy({ id }); if (!material) throw new NotFoundException('Material no encontrado');
+    await this.validarPropiedad(material.grupoMateriaId, user); return material;
+  }
+  async detalleEntrega(id: number, user: JwtUser) {
+    const entrega = await this.entregas.findOne({ where: { id }, relations: { actividad: true } });
+    if (!entrega) throw new NotFoundException('Entrega no encontrada');
+    await this.validarPropiedad(entrega.actividad.grupoMateriaId, user); return this.proyectarEntrega(entrega);
+  }
+  private proyectarEntrega(e: Entrega) {
+    return { id: e.id, actividadId: e.actividadId, estatus: e.estatus, calificacion: e.calificacion, comentarioAlumno: e.comentarioAlumno, comentarioDocente: e.comentarioDocente, fechaEntregado: e.fechaEntregado, archivoRuta: e.archivoRuta ? 'privado' : null, alumno: { id: e.alumno.id, matricula: e.alumno.matricula, usuario: { nombre: e.alumno.usuario.nombre, apellidoPaterno: e.alumno.usuario.apellidoPaterno } } };
+  }
+  async consultarActividades(id: number, q: ConsultarClaseDto, user: JwtUser) {
+    await this.validarPropiedad(id, user);
+    const qb = this.actividades.createQueryBuilder('a').where('a.grupoMateriaId = :id', { id }).andWhere('a.activo = :activo', { activo: true });
+    if (q.buscar?.trim()) qb.andWhere("a.titulo LIKE :buscar ESCAPE '!'", { buscar: '%' + q.buscar.trim().replace(/[!%_[]/g, '!$&') + '%' });
+    const [datos, total] = await qb.orderBy('a.id', 'DESC').skip((q.pagina - 1) * q.porPagina).take(q.porPagina).getManyAndCount(); return { datos, total, pagina: q.pagina, porPagina: q.porPagina };
+  }
+  async consultarMateriales(id: number, q: ConsultarClaseDto, user: JwtUser) {
+    const gm = await this.grupoMaterias.findOneBy({ id });
+    const gestiona = user.roles.some(r => ['SUPERADMIN', 'ADMINISTRATIVO'].includes(r)) || (user.roles.includes('MAESTRO') && gm?.docente?.usuarioId === user.sub);
+    if (!gestiona && user.roles.includes('ALUMNO')) await this.validarAlumnoEnGrupoMateria(id, user); else await this.validarPropiedad(id, user);
+    const qb = this.materiales.createQueryBuilder('m').where('m.grupoMateriaId = :id', { id });
+    if (q.buscar?.trim()) qb.andWhere("m.titulo LIKE :buscar ESCAPE '!'", { buscar: '%' + q.buscar.trim().replace(/[!%_[]/g, '!$&') + '%' });
+    const [datos, total] = await qb.orderBy('m.id', 'DESC').skip((q.pagina - 1) * q.porPagina).take(q.porPagina).getManyAndCount(); return { datos, total, pagina: q.pagina, porPagina: q.porPagina };
+  }
+  async consultarEntregas(id: number, q: ConsultarClaseDto, user: JwtUser) {
+    const actividad = await this.obtener(id); await this.validarPropiedad(actividad.grupoMateriaId, user);
+    const [datos, total] = await this.entregas.findAndCount({ where: { actividadId: id }, order: { id: 'ASC' }, skip: (q.pagina - 1) * q.porPagina, take: q.porPagina });
+    return { datos: datos.map(e => this.proyectarEntrega(e)), total, pagina: q.pagina, porPagina: q.porPagina };
   }
 
   async listarPorGrupoMateria(grupoMateriaId: number, user: JwtUser) {
@@ -195,6 +235,20 @@ export class ActividadesService {
       actual.estatus = 'CALIFICADA';
       return entregas.save(actual);
     });
+  }
+
+  async consultarMisTareas(user: JwtUser, q: ConsultarClaseDto) {
+    const alumno = await this.alumnos.obtenerPorUsuario(user.sub);
+    const inscripciones = await this.inscripciones.find({ where: { ...inscripcionVigente, alumnoId: alumno.id } });
+    const recursadas = await clasesRecursadas(this.dataSource.manager, alumno.id);
+    if (!inscripciones.length && !recursadas.length) return { datos: [], total: 0, pagina: q.pagina, porPagina: q.porPagina };
+    const gms = await this.grupoMaterias.find({ where: [...(inscripciones.length ? [{ grupoId: In(inscripciones.map(i => i.grupoId)) }] : []), ...(recursadas.length ? [{ id: In(recursadas) }] : [])] });
+    const ids = gms.filter(g => g.grupo.activo).map(g => g.id);
+    if (!ids.length) return { datos: [], total: 0, pagina: q.pagina, porPagina: q.porPagina };
+    const [datos, total] = await this.actividades.findAndCount({ where: { grupoMateriaId: In(ids), activo: true }, order: { fechaEntrega: 'ASC', id: 'ASC' }, skip: (q.pagina - 1) * q.porPagina, take: q.porPagina });
+    const entregas = datos.length ? await this.entregas.find({ where: { alumnoId: alumno.id, actividadId: In(datos.map(a => a.id)) } }) : [];
+    const porActividad = new Map(entregas.map(e => [e.actividadId, e]));
+    return { datos: datos.map(a => ({ ...a, entrega: porActividad.get(a.id) ?? null })), total, pagina: q.pagina, porPagina: q.porPagina };
   }
 
   /** Tareas del alumno autenticado con el estado de su entrega. */
