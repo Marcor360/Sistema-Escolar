@@ -15,6 +15,7 @@ it('reutiliza el cupo contado dentro de la misma transacción y asigna el remane
   const contexto = { alumnoId: 41, plantelId: 2, cicloId: 3, nivelId: 1, carreraId: 1, periodoAcademicoId: 1, turno: 'MATUTINO' as const };
   const solicitud = { id: 19, ...contexto, alumno: { plantelId: 2, estatus: 'ACTIVO', usuario: { activo: true } } };
   const solicitudes = {
+    create: jest.fn((datos: object) => datos),
     findOneBy: jest.fn().mockResolvedValue(null),
     findOneByOrFail: jest.fn().mockResolvedValue({ id: 19, estado: 'ASIGNADA', grupoId: 5 }),
     save: jest.fn().mockResolvedValue(solicitud),
