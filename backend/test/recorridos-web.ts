@@ -1,7 +1,7 @@
 import { spawn } from 'child_process';
 import { resolve } from 'path';
 import { strict as assert } from 'assert';
-interface Datos { baseUrl: string; email: string; password: string; sufijo: string; plantelId: number; cicloId: number; materiaId: number; docenteId: number; conceptoId: number }
+interface Datos { baseUrl: string; email: string; password: string; sufijo: string; plantelId: number; cicloId: number; materiaId: number; docenteId: number; docenteEmail: string; docentePassword: string; conceptoId: number }
 /** Navegador real + API real + DB migrada. Sin interceptar respuestas ni simular usuarios. */
 export async function recorridoWeb(d: Datos, tipo: 'academico' | 'financiero' | 'altas') {
   const webRoot = resolve(process.cwd(), '../web');
@@ -81,11 +81,18 @@ export async function recorridoWeb(d: Datos, tipo: 'academico' | 'financiero' | 
       await page.getByRole('button',{name:'Consultar historial del tema',exact:true}).click(); await expect(page.getByText(/Revisión 2/)).toBeVisible();
       await page.getByRole('button',{name:'Cancelar tema',exact:true}).click(); await page.getByRole('dialog').getByLabel('Motivo',{exact:true}).fill('Contenido sustituido conservando revisiones'); await page.getByRole('dialog').getByRole('button',{name:'Confirmar',exact:true}).click(); await expect(page.getByText(/CANCELADO/).first()).toBeVisible();
       await page.goto('http://127.0.0.1:5181/ciclos/'+d.cicloId); await expect(page.getByRole('heading',{name:'Asignaturas y docentes',exact:true})).toBeVisible();
+      // Mis clases es una ruta de MAESTRO: usar el docente realmente asignado, sin ampliar permisos administrativos.
+      {
+      const page = await browser.newPage({ extraHTTPHeaders: { 'x-forwarded-for': '203.0.113.4' } });
+      page.on('pageerror', (e: Error) => errores.push(e.message)); page.on('dialog', (dialog: { accept: () => Promise<void> }) => { void dialog.accept(); });
+      await page.goto('http://127.0.0.1:5181/login'); await page.getByLabel('Correo institucional').fill(d.docenteEmail); await page.getByLabel('Contraseña', { exact: true }).fill(d.docentePassword); await page.getByRole('button', { name: 'Entrar', exact: true }).click(); await expect(page.getByRole('link', { name: 'Mis clases', exact: true })).toBeVisible();
       await page.goto('http://127.0.0.1:5181/maestro?vista=clase&clase='+claseImportacion); await page.getByRole('button',{name:'Crear actividad',exact:true}).click(); await page.getByLabel('Título',{exact:true}).fill('Actividad enfocada de navegador'); await page.getByRole('button',{name:'Crear actividad',exact:true}).click(); await expect(page.getByRole('heading',{name:'Actividad enfocada de navegador',exact:true})).toBeVisible();
       await page.getByRole('button',{name:'Editar actividad Actividad enfocada de navegador',exact:true}).click(); await page.getByLabel('Descripción',{exact:true}).fill('Texto corregido'); await page.getByRole('button',{name:'Guardar corrección',exact:true}).click(); await expect(page.getByRole('heading',{name:'Actividad enfocada de navegador',exact:true})).toBeVisible();
       await page.getByRole('button',{name:'Entregas de Actividad enfocada de navegador',exact:true}).click(); await expect(page.getByText('Sin registros para esta consulta.',{exact:true})).toBeVisible(); await page.getByRole('button',{name:'Volver a operaciones de la clase',exact:true}).click();
       await page.getByRole('button',{name:'Subir material',exact:true}).click(); await page.getByLabel('Título del material',{exact:true}).fill('Material enfocado de navegador'); await page.getByLabel('Archivo privado del material').setInputFiles({name:'material.txt',mimeType:'text/plain',buffer:Buffer.from('Material privado')}); await page.getByRole('button',{name:'Subir material',exact:true}).click(); await expect(page.getByRole('heading',{name:'Material enfocado de navegador',exact:true})).toBeVisible();
       await page.getByRole('button',{name:'Editar título de Material enfocado de navegador',exact:true}).click(); await page.getByLabel('Título del material',{exact:true}).fill('Material corregido'); await page.getByRole('button',{name:'Guardar título',exact:true}).click(); await expect(page.getByRole('heading',{name:'Material corregido',exact:true})).toBeVisible();
+      await page.close();
+      }
 
 
     } else if (tipo === 'financiero') {
