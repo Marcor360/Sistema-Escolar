@@ -1,5 +1,5 @@
 {
-  "version": "1.27.15",
+  "version": "1.27.16",
   "alcance": "Escenarios de aceptación institucional sin resultados fabricados",
   "escenarios": [
     {
@@ -152,6 +152,21 @@
       "canales": [
         "web",
         "ux"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable institucional por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-13",
+      "rol": "SUPERADMIN",
+      "escenario": "En staging IIS seleccionar y previsualizar logotipos PNG, JPG y WebP válidos menores de 2 MiB, guardar, recargar y comprobar persistencia y visibilidad web y alumno; rechazar archivo inválido o mayor al límite",
+      "canales": [
+        "web",
+        "api",
+        "windows",
+        "android",
+        "ios"
       ],
       "estado": "pendiente",
       "responsable": "Responsable institucional por designar",

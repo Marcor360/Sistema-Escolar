@@ -4,7 +4,7 @@ const { validarMatriz } = require('./check-uat-matrix.cjs');
 const original = require('../docs/UAT_MATRIZ_2026-10-15.json');
 const copia = () => structuredClone(original);
 test('la matriz institucional continúa pendiente y bloquea release', () => {
-  assert.equal(validarMatriz(copia(), original.version).pendientes, 12);
+  assert.equal(validarMatriz(copia(), original.version).pendientes, 13);
   assert.throws(() => validarMatriz(copia(), original.version, true), /incompleta/);
 });
 test('rechaza eliminación de escenarios, duplicados y canales desconocidos', () => {

@@ -22,7 +22,7 @@ function validarMatriz(matriz, version, release = false) {
         throw Error('Aprobación UAT sin fecha, SHA, firma y evidencia válidas: ' + caso.id);
     }
   }
-  for (let i = 1; i <= 12; i++) if (!ids.has('UAT-' + String(i).padStart(2, '0'))) throw Error('Falta un escenario institucional obligatorio.');
+  for (let i = 1; i <= 13; i++) if (!ids.has('UAT-' + String(i).padStart(2, '0'))) throw Error('Falta un escenario institucional obligatorio.');
   for (const rol of roles) if (!matriz.escenarios.some(c => c.rol === rol)) throw Error('Falta rol: ' + rol);
   for (const canal of canales) if (!matriz.escenarios.some(c => c.canales.includes(canal))) throw Error('Falta canal: ' + canal);
   const pendientes = matriz.escenarios.filter(c => c.estado !== 'aprobada').length;
