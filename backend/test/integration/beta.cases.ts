@@ -293,12 +293,8 @@ export function registrarBeta(ctx: ContextoIntegracion) {
     expect(enlace.response.status).toBe(200);
     const url = new URL(enlace.data.url, ctx.baseUrl);
     const descarga = await fetch(url);
-    expect(descarga.status).toBe(200);
-    expect(
-      Buffer.from(await descarga.arrayBuffer())
-        .subarray(0, 4)
-        .toString(),
-    ).toBe('%PDF');
+    // La inscripción no tiene P1–P3 cerrados; incluso el enlace firmado debe rechazar la publicación.
+    expect(descarga.status).toBe(409);
     expect(descarga.headers.get('cache-control')).toContain('no-store');
     const ajeno = new URL(url);
     ajeno.pathname = ajeno.pathname.replace(`/${alumno.id}`, `/${ctx.alumnoId}`);

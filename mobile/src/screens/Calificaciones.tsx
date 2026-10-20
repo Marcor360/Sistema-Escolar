@@ -1,3 +1,4 @@
+import { BoletaInformativa } from './BoletaInformativa';
 import { Paginador } from '../components/Paginador';
 import { ordenarPeriodos } from "../utils/orden-calificaciones";
 import { useSesion } from "../sesion";
@@ -43,6 +44,7 @@ export default function CalificacionesScreen() {
   useEffect(()=>{setPagina(1);setTotal(0);},[sesion?.sub]);
 
   const [boletas, setBoletas] = useState<Boleta[]>([]);
+  const [inscripcionBoleta,setInscripcionBoleta]=useState<number|null>(null);
   const [errorBoletas, setErrorBoletas] = useState("");
   const lecturaBoletas = useRef(crearControlLectura());
   const cargarBoletas = useCallback(() => {
@@ -88,7 +90,7 @@ export default function CalificacionesScreen() {
     try {
       const { data } = await api.get<{ url: string }>(
         "/reportes/mi-boleta/enlace",
-        { params: { cicloId, inscripcionId } },
+        { params: { cicloId, inscripcionId, formato: "informativa-pdf" } },
       );
       if (actual === descargaVigente.current)
         await Linking.openURL(resolverEnlacePrivado(archivosBase, data.url, "boleta"));
@@ -105,6 +107,7 @@ export default function CalificacionesScreen() {
     descargaVigente.current++;
     setRegistros([]);
     setBoletas([]);
+    setInscripcionBoleta(null);
     setErrorBoletas("");
     lecturaBoletas.current.invalidar();
     setError("");
@@ -203,19 +206,20 @@ export default function CalificacionesScreen() {
               titulo="Mis calificaciones"
               detalle="El promedio oficial usa los parciales 1, 2 y 3. La evaluación Final se muestra por separado; un parcial pendiente no equivale a cero."
             />
+            {inscripcionBoleta !== null && <BoletaInformativa key={`${sesion?.sub}-${inscripcionBoleta}`} inscripcionId={inscripcionBoleta}/>}
             {boletas.map((b) => (
               <TouchableOpacity
                 key={b.inscripcionId}
                 accessibilityRole="button"
-                accessibilityLabel={`Descargar boleta de ${b.ciclo}, ${b.grupo}`}
+                accessibilityLabel={`Ver boleta de ${b.ciclo}, ${b.grupo}`}
                 disabled={descargando || offline}
-                onPress={() => descargar(b.cicloId, b.inscripcionId)}
+                onPress={() => setInscripcionBoleta(b.inscripcionId)}
                 style={base.tarjeta}
               >
                 <Text>
                   {descargando
                     ? "Abriendo boleta…"
-                    : `Boleta PDF · ${b.ciclo} · ${b.grupo} · ${b.plantel}`}
+                    : `Ver boleta · ${b.ciclo} · ${b.grupo} · ${b.plantel}`}
                 </Text>
               </TouchableOpacity>
             ))}

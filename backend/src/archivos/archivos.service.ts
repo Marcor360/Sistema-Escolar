@@ -32,6 +32,7 @@ interface EnlacePayload {
   kind: 'FILE';
   cicloId?: number;
   inscripcionId?: number;
+  formatoBoleta?: 'informativa-pdf' | 'informativa-excel';
 }
 
 /** Deducción de Content-Type para entregas (los materiales ya guardan su `mime`). */
@@ -128,16 +129,16 @@ export class ArchivosService {
     this.enviarArchivo(res, archivo.archivoRuta, archivo.archivoNombre, archivo.mime, 'attachment');
   }
 
-  enlaceBoleta(alumnoId: number, cicloId: number | undefined, inscripcionId: number | undefined, user: JwtUser) {
+  enlaceBoleta(alumnoId: number, cicloId: number | undefined, inscripcionId: number | undefined, user: JwtUser, formatoBoleta?: 'informativa-pdf' | 'informativa-excel') {
     if (!user.sid || !Number.isInteger(user.ver)) throw new UnauthorizedException('Sesión no válida');
-    const token = this.jwt.sign({ sub: user.sub, rec: 'boleta', id: alumnoId, cicloId, inscripcionId, sid: user.sid, ver: user.ver, kind: 'FILE' }, { expiresIn: '2m' });
+    const token = this.jwt.sign({ sub: user.sub, rec: 'boleta', id: alumnoId, cicloId, inscripcionId, formatoBoleta, sid: user.sid, ver: user.ver, kind: 'FILE' }, { expiresIn: '2m' });
     return { url: `/api/reportes/boleta-descarga/${alumnoId}?t=${token}`, expiraEn: 120 };
   }
   async usuarioBoleta(alumnoId: number, token: string) {
     const payload = this.verificarToken(token, 'boleta', alumnoId);
     const user = await this.usuarioDesdeToken(payload);
     if (!user.roles.includes('ALUMNO')) throw new ForbiddenException('Boleta reservada al alumno');
-    return { user, cicloId: payload.cicloId, inscripcionId: payload.inscripcionId };
+    return { user, cicloId: payload.cicloId, inscripcionId: payload.inscripcionId, formatoBoleta: payload.formatoBoleta };
   }
 
   // ---- Carga y validación ----
