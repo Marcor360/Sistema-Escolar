@@ -5,6 +5,7 @@ export interface JwtUser {
   email: string;
   nombre: string;
   roles: string[];
+  portal?: 'WEB' | 'MOVIL';
   ver?: number;
   sid?: string;
   kind?: 'ACCESS';
