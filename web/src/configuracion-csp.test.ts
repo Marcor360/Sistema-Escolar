@@ -1,8 +1,7 @@
-import { readFileSync } from 'node:fs';
+import configuracion from '../public/web.config?raw';
 import { expect, it } from 'vitest';
 
 it('permite previsualizar imágenes locales blob: sin ampliar otras directivas de CSP', () => {
-  const configuracion = readFileSync(new URL('../public/web.config', import.meta.url), 'utf8');
   const politica = configuracion.match(/<add name="Content-Security-Policy" value="([^"]+)"\s*\/>/)?.[1];
   expect(politica).toBeDefined();
 
