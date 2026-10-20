@@ -14,7 +14,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       throw new ForbiddenException('Debes cambiar la contraseña temporal antes de continuar');
     }
     if (request.user.portal === 'MOVIL' && request.user.roles.includes('ALUMNO') &&
-        !['/api/auth/me', '/api/auth/logout', '/api/auth/actividad', '/api/auth/consentimiento'].includes(request.path) &&
+        !['/api/auth/me', '/api/auth/cambiar-password', '/api/auth/logout', '/api/auth/actividad', '/api/auth/consentimiento'].includes(request.path) &&
         await this.consentimiento.pendiente(request.user)) {
       throw new ForbiddenException('CONSENTIMIENTO_INSTITUCIONAL_PENDIENTE');
     }
