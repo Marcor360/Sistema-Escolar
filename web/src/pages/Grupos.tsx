@@ -202,18 +202,18 @@ export default function GruposPage() {
     if (!seleccionado) return;
     if (enviando) return; setEnviando(true); setError('');
     try {
-      if (!await confirmacion.solicitar('Esta acción únicamente reactiva una inscripción previa dada de baja en este grupo. No genera cargos nuevos. ¿Confirmas la reactivación?')) return;
+      if (!await confirmacion.solicitar('Esta acción no genera cargos y está sujeta a la política institucional de altas ordinarias. Para nuevas altas usa Apertura de cartera. ¿Confirmas la corrección?')) return;
       await api.post(`/academico/grupos/${seleccionado.id}/alumnos`, { alumnoId: Number(alumnoId) });
       setAlumnoId('');
       await abrirGrupo(seleccionado);
-      setMensaje('Inscripción previa reactivada. Revisa el expediente y los cargos existentes en Finanzas.');
+      setMensaje('Inscripción académica confirmada sin generar cargos. Revisa el expediente y su apertura de cartera.');
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
   return (
     <>{confirmacion.elemento}
       <Encabezado titulo="Grupos" detalle="Grupos por ciclo, materias asignadas e inscripciones" />
-      <p className="texto-ayuda">Orden recomendado: prepara el ciclo y las materias, registra docentes y alumnos. Para una inscripción ordinaria con cargos usa Apertura de cartera; Grupos permite consultar clases y reactivar una inscripción anterior en baja, sin generar cargos.</p>
+      <p className="texto-ayuda">Orden recomendado: prepara el ciclo y las materias, registra docentes y alumnos. Para una inscripción ordinaria con cargos usa Apertura de cartera; Grupos permite consultar clases y corregir inscripciones existentes según la política institucional, sin generar cargos.</p>
       {error && <p role="alert" className="mensaje-error">{error}</p>}{mensaje && <p role="status" className="mensaje-ok">{mensaje}</p>}
       {cargandoCatalogos && <p role="status">Cargando catálogos…</p>}
       {errorCatalogos && <div role="alert"><p>{errorCatalogos}</p><button className="boton secundario" onClick={() => { void cargarCatalogos(); }}>Reintentar catálogos</button></div>}

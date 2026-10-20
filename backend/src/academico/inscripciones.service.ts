@@ -47,12 +47,18 @@ async inscribirAlumno(grupoId: number, alumnoId: number, user: JwtUser) {
           throw new ConflictException('El grupo alcanzó el cupo de inscripción directa; revisa la apertura de cartera y las reservas por recursamiento');
         }
         const duplicada = await inscripciones.findOne({ where: { grupoId, alumnoId } });
-        if (!duplicada || duplicada.estatus !== 'BAJA') {
+        // Política opt-in mientras se acuerdan las excepciones históricas y los tests institucionales.
+        if (process.env.INSCRIPCION_ORDINARIA_SOLO_CARTERA === 'true' && (!duplicada || duplicada.estatus !== 'BAJA')) {
           throw new ConflictException('Las altas ordinarias requieren Apertura de cartera; aquí solo se reactiva una inscripción previa en baja del mismo grupo');
         }
-        duplicada.estatus = 'ACTIVA';
-        const guardada = await inscripciones.save(duplicada);
-        await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId: grupo.plantelId, accion: 'INSCRIPCION_REACTIVADA', entidadId: guardada.id, detalle: `alumnoId=${alumnoId}; grupoId=${grupoId}`, fecha: new Date() });
+        if (duplicada) {
+          duplicada.estatus = 'ACTIVA';
+          const guardada = await inscripciones.save(duplicada);
+          await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId: grupo.plantelId, accion: 'INSCRIPCION_REACTIVADA', entidadId: guardada.id, detalle: `alumnoId=${alumnoId}; grupoId=${grupoId}`, fecha: new Date() });
+          return guardada;
+        }
+        const guardada = await inscripciones.save(inscripciones.create({ grupoId, alumnoId }));
+        await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId: grupo.plantelId, accion: 'INSCRIPCION_CREADA', entidadId: guardada.id, detalle: `alumnoId=${alumnoId}; grupoId=${grupoId}`, fecha: new Date() });
         return guardada;
       });
     } catch (error) {

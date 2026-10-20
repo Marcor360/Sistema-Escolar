@@ -17,7 +17,7 @@ Sistema escolar multiplataforma para operación académica, administrativa y fin
 
 ### Funcionalidad destacada de versiones recientes
 
-- **1.27.11:** Inscripción directa reservada a reactivación de baja previa; las altas ordinarias se canalizan a cartera. Requiere definición y UAT institucional.
+- **1.27.11:** Se prepara un bloqueo de altas directas detrás de INSCRIPCION_ORDINARIA_SOLO_CARTERA=false hasta aprobar la política institucional. Requiere definición y UAT institucional.
 - **1.27.8:** Grupos marca las denominaciones AUTO como generación automática y presenta el estado de preparación según materias, asignaciones docentes y alumnos inscritos, sin confundirlo con la situación financiera. La denominación institucional sigue requiriendo revisión; sin nueva migración.
 - **1.27.7:** Alumnos orienta al alta ordinaria mediante Apertura de cartera y distingue el expediente de la inscripción y cargos. Grupos solicita confirmación para la inscripción académica directa y comunica que no genera cargos. Pruebas de navegación añadidas; pendiente UAT.
 - **1.27.6:** la inscripción directa limita el grupo regular a 50 alumnos activos (o menos cuando hay reservas de recursamiento); el remanente excepcional 51–54 sigue reservado al motor automático de cartera. Inscripción directa todavía no genera cargos; no usarla como alta financiera. Validación institucional pendiente.
