@@ -1,3 +1,4 @@
+import { ConsentimientoInstitucionalService } from './consentimiento-institucional.service';
 import { SesionesLimpiezaService } from './sesiones-limpieza.service';
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -32,8 +33,8 @@ import { NotificacionesModule } from '../notificaciones/notificaciones.module';
       },
     }),
   ],
-  providers: [CorreoAccesoOutboxService, AuthService, ActivacionService, JwtStrategy, SesionesLimpiezaService],
+  providers: [ConsentimientoInstitucionalService, CorreoAccesoOutboxService, AuthService, ActivacionService, JwtStrategy, SesionesLimpiezaService],
   controllers: [AuthController],
-  exports: [ActivacionService, CorreoAccesoOutboxService],
+  exports: [ConsentimientoInstitucionalService, ActivacionService, CorreoAccesoOutboxService],
 })
 export class AuthModule {}
