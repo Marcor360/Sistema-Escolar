@@ -1,3 +1,4 @@
+import { registrarMaestroPaginado } from './integration/maestro-paginado.cases';
 import { registrarTemarios } from './integration/temarios.cases';
 import { registrarAlumnoPaginado } from './integration/alumno-paginado.cases';
 import { registrarMateriasContexto } from './integration/materias-contexto.cases';
@@ -468,6 +469,7 @@ Object.keys(casos).map(Number).sort((a,b) => a-b).forEach((id) => casos[id](cont
   registrarRecursamientos(contexto);
   registrarEliminacion(contexto);
   registrarTemarios(contexto);
+  registrarMaestroPaginado(contexto);
 
   afterAll(async () => {
     if (archivoPrueba) {

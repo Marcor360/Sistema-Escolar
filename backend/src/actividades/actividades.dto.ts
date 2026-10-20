@@ -1,3 +1,4 @@
+import { PaginacionDto } from '../common/paginacion.dto';
 import { OpcionalNoNulo } from '../common/opcional-no-nulo';
 import { Transform } from 'class-transformer';
 const limpiar = ({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value;
@@ -35,4 +36,8 @@ export class CalificarEntregaDto {
 
 export class ActualizarMaterialDto {
   @Transform(limpiar) @IsString() @MinLength(1) @MaxLength(150) titulo!: string;
+}
+
+export class ConsultarClaseDto extends PaginacionDto {
+  @IsOptional() @IsString() @MaxLength(150) buscar?: string;
 }

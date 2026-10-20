@@ -1,180 +1,61 @@
+import './temarios.css';
 import '../components/tabla-adaptable.css';
-import { Link } from 'react-router-dom';
-import { ActividadesClase } from '../features/maestro/ActividadesClase';
-import { MaterialesClase } from '../features/maestro/MaterialesClase';
-import { EntregasClase } from '../features/maestro/EntregasClase';
-import type { GrupoMateria, Actividad, Material, Entrega } from '../features/maestro/tipos';
-import { useConfirmacion } from '../components/useConfirmacion';
-import { useDialogoMotivo } from '../components/useDialogoMotivo';
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import { api, mensajeDeError } from '../api/client';
+import { Link, useSearchParams } from 'react-router-dom';
+import { api, abrirArchivo, mensajeDeError } from '../api/client';
+import { useModuloTrabajo } from '../components/ModuloTrabajo';
 import { Encabezado } from '../components/Encabezado';
-import { useDatos } from '../hooks/useDatos';
-
-
-
-
-
-
-
-const FORM_INICIAL = { titulo: '', descripcion: '', tipo: 'TAREA', parcial: '1', ponderacion: '0', fechaEntrega: '' };
-
+import { SelectorBuscable } from '../components/SelectorBuscable';
+import { Paginador } from '../components/Paginador';
+import { useConfirmacion } from '../components/useConfirmacion';
+import type { GrupoMateria, Actividad, Material, Entrega } from '../features/maestro/tipos';
+const INICIAL = { titulo: '', descripcion: '', tipo: 'TAREA', parcial: '1', ponderacion: '0', fechaEntrega: '' };
 export default function MaestroPage() {
-  const confirmacion = useConfirmacion();
-  const dialogoMotivo = useDialogoMotivo();
-  const { datos: clases, cargando, error: errorClases, recargar } = useDatos<GrupoMateria[]>(
-    () => api.get('/academico/mis-grupos').then((r) => r.data),
-    [],
-  );
-  const [claseActiva, setClaseActiva] = useState<GrupoMateria | null>(null);
-  const [actividades, setActividades] = useState<Actividad[]>([]);
-  const [actividadActiva, setActividadActiva] = useState<Actividad | null>(null);
-  const [entregas, setEntregas] = useState<Entrega[] | null>(null);
-  const [notas, setNotas] = useState<Record<number, string>>({});
-  const [guardadas, setGuardadas] = useState<Set<number>>(new Set());
-  const [form, setForm] = useState(FORM_INICIAL);
-  const [materiales, setMateriales] = useState<Material[]>([]);
-  const [tituloMaterial, setTituloMaterial] = useState('');
-  const archivoMaterial = useRef<HTMLInputElement>(null);
-  const [error, setError] = useState('');
-  const [editandoActividad, setEditandoActividad] = useState<number | null>(null);
-  const [enviando, setEnviando] = useState(false);
-  const [comentarios, setComentarios] = useState<Record<number, string>>({});
-
-  const consultaClase = useRef(0);
-  const consultaEntregas = useRef(0);
-  useEffect(() => () => { consultaClase.current++; consultaEntregas.current++; }, []);
-  const abrirClase = async (clase: GrupoMateria) => {
-    const actual = ++consultaClase.current;
-    consultaEntregas.current++;
-    setClaseActiva(clase);
-    setEntregas(null);
-    setActividadActiva(null);
-    setError('');
-    setActividades([]);
-    setMateriales([]);
-    try {
-      const [acts, mats] = await Promise.all([
-        api.get<Actividad[]>(`/grupo-materias/${clase.id}/actividades`),
-        api.get<Material[]>(`/grupo-materias/${clase.id}/materiales`),
-      ]);
-      if (actual !== consultaClase.current) return;
-      setActividades(acts.data);
-      setMateriales(mats.data);
-    } catch (err) { if (actual === consultaClase.current) setError(mensajeDeError(err)); }
-  };
-
-  /** Sube material de apoyo (PDF, documentos, imágenes) para la clase activa. */
-  const subirMaterial = async (e: FormEvent) => {
-    e.preventDefault();
-    const archivo = archivoMaterial.current?.files?.[0];
-    if (!claseActiva || !archivo || enviando) return;
-    setEnviando(true);
-    setError('');
-    const datos = new FormData();
-    datos.append('archivo', archivo);
-    datos.append('titulo', tituloMaterial || archivo.name);
-    try {
-      await api.post(`/grupo-materias/${claseActiva.id}/materiales`, datos, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      setTituloMaterial('');
-      if (archivoMaterial.current) archivoMaterial.current.value = '';
-      const { data } = await api.get<Material[]>(`/grupo-materias/${claseActiva.id}/materiales`);
-      setMateriales(data);
-    } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
-  };
-
-  const crearActividad = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!claseActiva || enviando) return;
-    setEnviando(true); setError('');
-    try {
-      const datos = {
-        grupoMateriaId: claseActiva.id,
-        titulo: form.titulo, descripcion: form.descripcion,
-        tipo: form.tipo,
-        parcial: Number(form.parcial),
-        ponderacion: Number(form.ponderacion),
-        fechaEntrega: form.fechaEntrega ? new Date(form.fechaEntrega).toISOString() : null,
-      };
-      if (editandoActividad) await api.patch(`/actividades/${editandoActividad}`, datos);
-      else await api.post('/actividades', datos);
-      setEditandoActividad(null); setForm(FORM_INICIAL);
-      await abrirClase(claseActiva);
-    } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
-  };
-
-  const verEntregas = async (actividad: Actividad) => {
-    const actual = ++consultaEntregas.current;
-    setEntregas(null); setError('');
-    setActividadActiva(actividad);
-    try {
-    const { data } = await api.get<Entrega[]>(`/actividades/${actividad.id}/entregas`);
-    if (actual !== consultaEntregas.current) return;
-    setEntregas(data);
-    setNotas(Object.fromEntries(data.map((e) => [e.id, e.calificacion?.toString() ?? ''])));
-    setGuardadas(new Set());
-    setComentarios(Object.fromEntries(data.map((e) => [e.id, e.comentarioDocente ?? ''])));
-    } catch (e) { if (actual === consultaEntregas.current) setError(mensajeDeError(e)); }
-  };
-
-  /** Guarda la calificación capturada en la propia fila. */
-  const guardarNota = async (entrega: Entrega) => {
-    if (enviando) return;
-    const valor = notas[entrega.id];
-    if (valor === '' || valor === undefined) return;
-    setEnviando(true); setError('');
-    try {
-      await api.patch(`/entregas/${entrega.id}/calificar`, { calificacion: Number(valor), comentario: comentarios[entrega.id] ?? '' });
-      setGuardadas((previas) => new Set(previas).add(entrega.id));
-      setEntregas((previas) =>
-        previas?.map((e) =>
-          e.id === entrega.id ? { ...e, calificacion: Number(valor), estatus: 'CALIFICADA', comentarioDocente: comentarios[entrega.id] ?? '' } : e,
-        ) ?? null,
-      );
-    } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
-  };
-
-  return (
-    <>{confirmacion.elemento}{dialogoMotivo.elemento}
-      <Encabezado titulo="Mis clases" detalle="Actividades, entregas y calificación por grupo-materia" />
-      <p className="texto-ayuda">Abre una clase asignada para crear actividades y materiales y revisar entregas. Las notas oficiales y sus correcciones se capturan en <Link to="/calificaciones">Calificaciones</Link>. El cierre de periodos corresponde a Control escolar.</p>
-      {error && <p role="alert" className="mensaje-error">{error}</p>}
-
-      {errorClases && <p role="alert">{errorClases}<button type="button" onClick={recargar}>Reintentar clases</button></p>}
-      <div className="tabla-contenedor" role="region" aria-label="Maestro" tabIndex={0}><table className="tabla tabla-adaptable" style={{ marginBottom: 24 }}>
-        <thead><tr><th scope="col">Ciclo</th><th scope="col">Grupo</th><th scope="col">Materia</th><th scope="col" /></tr></thead>
-        <tbody>
-          {clases.map((c) => (
-            <tr key={c.id}>
-              <td data-etiqueta="Ciclo">{c.grupo.ciclo.clave}</td><td data-etiqueta="Grupo">{c.grupo.nombre}</td>
-              <td data-etiqueta="Materia">{c.materia.clave} — {c.materia.nombre}</td>
-              <td data-etiqueta="Acciones" className="derecha">
-                <button className="boton secundario chico" onClick={() => abrirClase(c)}>Abrir</button>
-              </td>
-            </tr>
-          ))}
-          {!cargando && clases.length === 0 && (
-            <tr><td className="vacio" colSpan={4}>Aún no tienes materias asignadas. Solicítalo a control escolar.</td></tr>
-          )}
-        </tbody>
-      </table></div>
-
-      {claseActiva?.grupo.ciclo.id && <Link className="boton secundario" to={`/ciclos/${claseActiva.grupo.ciclo.id}`}>Ficha del ciclo de esta clase</Link>}
-      {claseActiva && <Link className="boton secundario" to={`/temarios?vista=consulta&clase=${claseActiva.id}`}>Temario de esta clase</Link>}
-      {claseActiva && <Link className="boton secundario" to={`/recursamientos?clase=${claseActiva.id}`}>Recursantes y notas de esta materia</Link>}
-      {claseActiva && (
-        <ActividadesClase claseActiva={claseActiva} crearActividad={crearActividad} form={form} setForm={setForm} enviando={enviando} editandoActividad={editandoActividad} actividades={actividades} verEntregas={verEntregas} setEditandoActividad={setEditandoActividad} confirmacion={confirmacion} setEnviando={setEnviando} abrirClase={abrirClase} setError={setError} />
-      )}
-
-      {claseActiva && (
-        <MaterialesClase claseActiva={claseActiva} subirMaterial={subirMaterial} tituloMaterial={tituloMaterial} setTituloMaterial={setTituloMaterial} archivoMaterial={archivoMaterial} enviando={enviando} materiales={materiales} dialogoMotivo={dialogoMotivo} abrirClase={abrirClase} confirmacion={confirmacion} setEnviando={setEnviando} setError={setError} />
-      )}
-
-      {entregas && actividadActiva && (
-        <EntregasClase actividadActiva={actividadActiva} entregas={entregas} comentarios={comentarios} setComentarios={setComentarios} notas={notas} setNotas={setNotas} enviando={enviando} guardarNota={guardarNota} guardadas={guardadas} />
-      )}
-    </>
-  );
+  const [q, setQ] = useSearchParams(), [listo, setListo] = useState(false), [cargando, setCargando] = useState(false), [enviando, setEnviando] = useState(false), [error, setError] = useState(''), [intento, setIntento] = useState(0);
+  const trabajo = useModuloTrabajo(cargando || enviando), modo = trabajo.modo, id = trabajo.id, claseId = q.get('clase') || '', actividadId = q.get('actividad') || '';
+  const pagina = Number(q.get(modo + 'Pagina')) || 1, buscar = q.get(modo + 'Buscar') || '';
+  const [clase, setClase] = useState<GrupoMateria | null>(null), [actividades, setActividades] = useState<Actividad[]>([]), [materiales, setMateriales] = useState<Material[]>([]), [entregas, setEntregas] = useState<Entrega[]>([]), [total, setTotal] = useState(0), [form, setForm] = useState(INICIAL), [titulo, setTitulo] = useState(''), [nota, setNota] = useState(''), [comentario, setComentario] = useState(''), [entrega, setEntrega] = useState<Entrega | null>(null), [termino, setTermino] = useState(buscar);
+  const archivo = useRef<HTMLInputElement>(null), ocupado = useRef(false), confirmar = useConfirmacion();
+  const ir = (vista: string, registro?: number, extras: Record<string, string> = {}) => setQ(prev => { const n = new URLSearchParams(prev); n.set('vista', vista); if (registro) n.set('id', String(registro)); else n.delete('id'); for (const [k, v] of Object.entries(extras)) { if (v) n.set(k, v); else n.delete(k); } return n; });
+  useEffect(() => {
+    let vigente = true; setListo(false); setError(''); setClase(null); setActividades([]); setMateriales([]); setEntregas([]); setEntrega(null); setTotal(0); setForm(INICIAL); setTitulo(''); setNota(''); setComentario(''); setTermino(buscar); setCargando(false);
+    if (modo === 'consulta' || !claseId) return;
+    setCargando(true);
+    void (async () => {
+      try {
+        const c = await api.get<GrupoMateria>(`/grupo-materias/${claseId}/detalle`); if (!vigente) return; setClase(c.data);
+        if (modo === 'actividades') { const r = await api.get(`/grupo-materias/${claseId}/actividades/listado`, { params: { pagina, porPagina: 10, buscar } }); if (vigente) { setActividades(r.data.datos); setTotal(r.data.total); } }
+        if (modo === 'materiales') { const r = await api.get(`/grupo-materias/${claseId}/materiales/listado`, { params: { pagina, porPagina: 10, buscar } }); if (vigente) { setMateriales(r.data.datos); setTotal(r.data.total); } }
+        if (modo === 'actividad-editar') { const r = await api.get<Actividad & { grupoMateriaId: number }>(`/actividades/${id}`); if (r.data.grupoMateriaId !== Number(claseId)) throw new Error('La actividad no corresponde a la clase'); if (vigente) { const a = r.data; setForm({ titulo: a.titulo, descripcion: a.descripcion ?? '', tipo: a.tipo, parcial: String(a.parcial), ponderacion: String(a.ponderacion), fechaEntrega: a.fechaEntrega ? new Date(new Date(a.fechaEntrega).getTime() - new Date(a.fechaEntrega).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '' }); } }
+        if (modo === 'material-editar') { const r = await api.get<Material & { grupoMateriaId: number }>(`/materiales/${id}`); if (r.data.grupoMateriaId !== Number(claseId)) throw new Error('El material no corresponde a la clase'); if (vigente) setTitulo(r.data.titulo); }
+        if (modo === 'entregas' || modo === 'calificar-entrega') {
+          const a = await api.get<Actividad & { grupoMateriaId: number }>(`/actividades/${actividadId}`); if (a.data.grupoMateriaId !== Number(claseId)) throw new Error('La actividad no corresponde a la clase');
+          if (modo === 'entregas') { const r = await api.get(`/actividades/${actividadId}/entregas/listado`, { params: { pagina, porPagina: 10 } }); if (vigente) { setEntregas(r.data.datos); setTotal(r.data.total); } }
+          else { const r = await api.get<Entrega & { actividadId: number }>(`/entregas/${id}`); if (r.data.actividadId !== Number(actividadId)) throw new Error('La entrega no corresponde a la actividad'); if (vigente) { setEntrega(r.data); setNota(r.data.calificacion?.toString() ?? ''); setComentario(r.data.comentarioDocente ?? ''); } }
+        }
+        if (vigente) setListo(true);
+      } catch (e) { if (vigente) setError(mensajeDeError(e)); } finally { if (vigente) setCargando(false); }
+    })(); return () => { vigente = false; };
+  }, [modo, id, claseId, actividadId, pagina, buscar, intento]);
+  const ejecutar = async (accion: () => Promise<void>, volver?: string) => { if (ocupado.current) return; ocupado.current = true; setEnviando(true); setError(''); try { await accion(); if (volver) { trabajo.guardado(); ir(volver); } else setIntento(v => v + 1); } catch (e) { setError(mensajeDeError(e)); } finally { ocupado.current = false; setEnviando(false); } };
+  const guardarActividad = (e: FormEvent) => { e.preventDefault(); void ejecutar(async () => { const datos = { titulo: form.titulo, descripcion: form.descripcion, tipo: form.tipo, parcial: Number(form.parcial), ponderacion: Number(form.ponderacion), fechaEntrega: form.fechaEntrega ? new Date(form.fechaEntrega).toISOString() : null }; if (modo === 'actividad-editar') await api.patch(`/actividades/${id}`, datos); else await api.post('/actividades', { ...datos, grupoMateriaId: Number(claseId) }); }, 'actividades'); };
+  return <>{confirmar.elemento}<Encabezado titulo="Mis clases" detalle="Consulta una clase y elige una operación" />{error && <p role="alert">{error}{!['actividad-nueva', 'actividad-editar', 'material-nuevo', 'material-editar', 'calificar-entrega'].includes(modo) && <button disabled={enviando} onClick={() => setIntento(v => v + 1)}>Reintentar</button>}</p>}{cargando && <p role="status">Cargando clase…</p>}
+    {modo === 'consulta' && <><SelectorBuscable<GrupoMateria> ruta="/academico/clases-seleccion" valor={claseId} cambiar={v => trabajo.actualizar({ clase: v, actividad: '' })} etiqueta="Clase asignada" texto={c => c.grupo.ciclo.clave + ' · ' + c.grupo.nombre + ' · ' + c.materia.clave + ' ' + c.materia.nombre} /><button disabled={!claseId} onClick={() => ir('clase')}>Abrir clase</button></>}
+    {!claseId && modo !== 'consulta' && <p>Selecciona una clase desde la consulta.</p>}
+    {clase && <><section className="panel"><h2>{clase.grupo.nombre} · {clase.materia.nombre}</h2><p>Clase {clase.id} · Ciclo {clase.grupo.ciclo.clave}</p>{modo !== 'clase' && <button disabled={cargando || enviando} onClick={() => ir('clase')}>Volver a operaciones de la clase</button>}</section>
+      {modo === 'clase' && <section className="panel"><h2>Operaciones de esta clase</h2><div className="fila"><button onClick={() => ir('actividades')}>Consultar actividades</button><button onClick={() => ir('actividad-nueva')}>Crear actividad</button><button onClick={() => ir('materiales')}>Consultar materiales</button><button onClick={() => ir('material-nuevo')}>Subir material</button><Link to={`/temarios?vista=consulta&clase=${clase.id}`}>Temario de esta clase</Link><Link to={`/recursamientos?clase=${clase.id}`}>Recursantes y notas de esta materia</Link><Link to="/calificaciones">Calificaciones oficiales</Link>{clase.grupo.ciclo.id && <Link to={`/ciclos/${clase.grupo.ciclo.id}`}>Ficha del ciclo de esta clase</Link>}</div></section>}
+      {['actividades', 'materiales', 'entregas'].includes(modo) && <section className="panel"><h2>{modo === 'entregas' ? 'Entregas de la actividad ' + actividadId : modo === 'actividades' ? 'Actividades de la clase' : 'Materiales de la clase'}</h2>
+        {modo !== 'entregas' && <form onSubmit={e => { e.preventDefault(); trabajo.actualizar({ [modo + 'Buscar']: termino, [modo + 'Pagina']: '1' }); }}><label htmlFor="maestro-buscar">Buscar título</label><input id="maestro-buscar" value={termino} maxLength={150} onChange={e => setTermino(e.target.value)} /><button disabled={cargando}>Buscar</button></form>}
+        <Paginador total={total} pagina={pagina} porPagina={10} deshabilitado={cargando || enviando} onCambio={p => trabajo.actualizar({ [modo + 'Pagina']: String(p) })} />
+        {!cargando && !error && total === 0 && <p>Sin registros para esta consulta.</p>}
+        {modo === 'actividades' && actividades.map(a => <article key={a.id}><h3>{a.titulo}</h3><p>{a.tipo} · Parcial {a.parcial} · {a.fechaEntrega ? new Date(a.fechaEntrega).toLocaleString() : 'Sin fecha'}</p><button disabled={enviando} onClick={() => ir('actividad-editar', a.id)}>Editar actividad {a.titulo}</button><button disabled={enviando} onClick={() => ir('entregas', undefined, { actividad: String(a.id) })}>Entregas de {a.titulo}</button><button disabled={enviando} onClick={async () => { if (await confirmar.solicitar('¿Desactivar esta actividad conservando historial?')) void ejecutar(async () => { await api.delete(`/actividades/${a.id}`); }); }}>Desactivar {a.titulo}</button></article>)}
+        {modo === 'materiales' && materiales.map(m => <article key={m.id}><h3>{m.titulo}</h3><button onClick={() => { void abrirArchivo('materiales', m.id).catch(e => setError(mensajeDeError(e))); }}>{m.archivoNombre} · {m.tamanoKb} KB</button><button disabled={enviando} onClick={() => ir('material-editar', m.id)}>Editar título de {m.titulo}</button><button disabled={enviando} onClick={async () => { if (await confirmar.solicitar('¿Retirar material y su archivo?')) void ejecutar(async () => { await api.delete(`/materiales/${m.id}`); }); }}>Retirar {m.titulo}</button></article>)}
+        {modo === 'entregas' && entregas.map(e => <article key={e.id}><h3>{e.alumno.matricula} · {e.alumno.usuario.nombre} {e.alumno.usuario.apellidoPaterno}</h3><p>{e.estatus} · {e.calificacion ?? 'Sin calificar'}</p><p>{e.comentarioAlumno || 'Sin comentario del alumno'}</p>{e.archivoRuta && <button onClick={() => { void abrirArchivo('entregas', e.id).catch(err => setError(mensajeDeError(err))); }}>Ver archivo de {e.alumno.matricula}</button>}<button disabled={enviando} onClick={() => ir('calificar-entrega', e.id)}>Calificar entrega de {e.alumno.matricula}</button></article>)}
+      </section>}
+      {['actividad-nueva', 'actividad-editar'].includes(modo) && listo && <form className="temario-form" onSubmit={guardarActividad}><fieldset disabled={enviando}><legend>{modo === 'actividad-editar' ? 'Editar actividad' : 'Nueva actividad'}</legend><label htmlFor="actividad-titulo">Título</label><input id="actividad-titulo" required maxLength={150} value={form.titulo} onChange={e => setForm({ ...form, titulo: e.target.value })} /><label htmlFor="actividad-desc">Descripción</label><textarea id="actividad-desc" maxLength={4000} value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} /><label htmlFor="actividad-tipo">Tipo</label><select id="actividad-tipo" value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value })}>{['TAREA', 'EXAMEN', 'PROYECTO', 'PARTICIPACION'].map(t => <option key={t}>{t}</option>)}</select><label htmlFor="actividad-parcial">Parcial</label><select id="actividad-parcial" value={form.parcial} onChange={e => setForm({ ...form, parcial: e.target.value })}>{[0, 1, 2, 3].map(p => <option key={p} value={p}>{p === 0 ? 'Final' : 'Parcial ' + p}</option>)}</select><label htmlFor="actividad-peso">Peso de seguimiento (sin efecto en la nota oficial)</label><input id="actividad-peso" type="number" min={0} max={100} step="0.01" value={form.ponderacion} onChange={e => setForm({ ...form, ponderacion: e.target.value })} /><label htmlFor="actividad-fecha">Fecha de entrega</label><input id="actividad-fecha" type="datetime-local" value={form.fechaEntrega} onChange={e => setForm({ ...form, fechaEntrega: e.target.value })} /><button disabled={enviando}>{modo === 'actividad-editar' ? 'Guardar corrección' : 'Crear actividad'}</button></fieldset></form>}
+      {modo === 'material-nuevo' && listo && <form className="temario-form" onSubmit={e => { e.preventDefault(); const a = archivo.current?.files?.[0]; if (a) void ejecutar(async () => { const datos = new FormData(); datos.append('archivo', a); datos.append('titulo', titulo || a.name); await api.post(`/grupo-materias/${claseId}/materiales`, datos); }, 'materiales'); }}><label htmlFor="material-titulo">Título del material</label><input id="material-titulo" maxLength={150} value={titulo} onChange={e => setTitulo(e.target.value)} /><label htmlFor="material-archivo">Archivo privado del material</label><input id="material-archivo" type="file" required ref={archivo} disabled={enviando} /><button disabled={enviando}>Subir material</button></form>}
+      {modo === 'material-editar' && listo && <form className="temario-form" onSubmit={e => { e.preventDefault(); void ejecutar(async () => { await api.patch(`/materiales/${id}`, { titulo }); }, 'materiales'); }}><label htmlFor="material-corregir">Título del material</label><input id="material-corregir" required maxLength={150} value={titulo} onChange={e => setTitulo(e.target.value)} /><button disabled={enviando}>Guardar título</button></form>}
+      {modo === 'calificar-entrega' && entrega && <form className="temario-form" onSubmit={e => { e.preventDefault(); void ejecutar(async () => { await api.patch(`/entregas/${id}/calificar`, { calificacion: Number(nota), comentario }); }, 'entregas'); }}><p>{entrega.alumno.matricula} · {entrega.alumno.usuario.nombre}</p><p>{entrega.comentarioAlumno || 'Sin comentario del alumno'}</p><label htmlFor="entrega-nota">Calificación de la entrega</label><input id="entrega-nota" required type="number" min={0} max={100} step="0.01" value={nota} onChange={e => setNota(e.target.value)} /><label htmlFor="entrega-comentario">Retroalimentación</label><textarea id="entrega-comentario" maxLength={500} value={comentario} onChange={e => setComentario(e.target.value)} /><button disabled={enviando}>Guardar calificación de entrega</button></form>}
+    </>}
+  </>;
 }

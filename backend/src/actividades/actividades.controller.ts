@@ -1,12 +1,12 @@
 import { LimpiezaUploadInterceptor } from '../common/limpieza-upload.interceptor';
 import {
   Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post,
-  UploadedFile, UseGuards, UseInterceptors,
+  Query, UploadedFile, UseGuards, UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { ActividadesService } from './actividades.service';
-import { ActualizarActividadDto, CalificarEntregaDto, ActualizarMaterialDto, CrearActividadDto, EntregarDto } from './actividades.dto';
+import { ActualizarActividadDto, CalificarEntregaDto, ConsultarClaseDto, ActualizarMaterialDto, CrearActividadDto, EntregarDto } from './actividades.dto';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { RolesGuard } from '../common/roles.guard';
 import { Roles } from '../common/roles.decorator';
@@ -19,6 +19,24 @@ import { uploadConfig } from '../common/upload.config';
 @Controller()
 export class ActividadesController {
   constructor(private readonly service: ActividadesService) {}
+
+  @Get('grupo-materias/:id/detalle') @Roles('MAESTRO', 'ADMINISTRATIVO')
+  detalleClase(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) { return this.service.detalleClase(id, user); }
+  @Get('actividades/:id') @Roles('MAESTRO', 'ADMINISTRATIVO')
+  detalleActividad(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) { return this.service.detalleActividad(id, user); }
+  @Get('materiales/:id') @Roles('MAESTRO', 'ADMINISTRATIVO')
+  detalleMaterial(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) { return this.service.detalleMaterial(id, user); }
+  @Get('entregas/:id') @Roles('MAESTRO', 'ADMINISTRATIVO')
+  detalleEntrega(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) { return this.service.detalleEntrega(id, user); }
+  @Get('grupo-materias/:id/actividades/listado') @Roles('MAESTRO', 'ADMINISTRATIVO')
+  consultarActividades(@Param('id', ParseIntPipe) id: number, @Query() q: ConsultarClaseDto, @CurrentUser() user: JwtUser) { return this.service.consultarActividades(id, q, user); }
+  @Get('grupo-materias/:id/materiales/listado') @Roles('MAESTRO', 'ADMINISTRATIVO', 'ALUMNO')
+  consultarMateriales(@Param('id', ParseIntPipe) id: number, @Query() q: ConsultarClaseDto, @CurrentUser() user: JwtUser) { return this.service.consultarMateriales(id, q, user); }
+  @Get('actividades/:id/entregas/listado') @Roles('MAESTRO', 'ADMINISTRATIVO')
+  consultarEntregas(@Param('id', ParseIntPipe) id: number, @Query() q: ConsultarClaseDto, @CurrentUser() user: JwtUser) { return this.service.consultarEntregas(id, q, user); }
+
+  @Get('alumnos/me/tareas/listado') @Roles('ALUMNO')
+  consultarTareas(@Query() q: ConsultarClaseDto, @CurrentUser() user: JwtUser) { return this.service.consultarMisTareas(user, q); }
 
   // ---- Alumno ----
   @Get('alumnos/me/tareas')

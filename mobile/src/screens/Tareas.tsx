@@ -1,3 +1,4 @@
+import { Paginador } from '../components/Paginador';
 import { crearControlLectura } from "../api/lectura-vigente";
 import { validarArchivoEntrega } from "../utils/archivos-entrega";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -41,7 +42,9 @@ interface Tarea {
 }
 
 export default function TareasScreen() {
+  const [pagina, setPagina] = useState(1), [total, setTotal] = useState(0);
   const [tareas, setTareas] = useState<Tarea[]>([]);
+  useEffect(() => { setTareas([]); setTotal(0); }, [pagina]);
   const [cargando, setCargando] = useState(false);
   const [cargaInicialCompleta, setCargaInicialCompleta] = useState(false);
   const [datosVigentes, setDatosVigentes] = useState(false);
@@ -77,10 +80,10 @@ export default function TareasScreen() {
     setDatosVigentes(false);
     setCargando(true);
     void lectura.current.cargar(
-      () => api.get<Tarea[]>("/alumnos/me/tareas"),
+      () => api.get<{datos:Tarea[];total:number}>("/alumnos/me/tareas/listado",{params:{pagina,porPagina:10}}),
       (r) => {
         vigencia.current = Date.now();
-        setTareas(r.data);
+        setTareas(r.data.datos); setTotal(r.data.total);
         setDatosVigentes(true);
         setFechaConsulta(Date.now());
         setUltimaActualizacion(new Date().toLocaleString());
@@ -92,7 +95,7 @@ export default function TareasScreen() {
       },
       () => setCargando(false),
     );
-  }, []);
+  }, [pagina]);
 
   useFocusEffect(
     useCallback(() => {
@@ -109,9 +112,9 @@ export default function TareasScreen() {
     try {
       setEntregandoId(tarea.id);
       // Evitar crear otra copia privada en caché cuando la API no está disponible.
-      const { data: disponibles } = await api.get<Tarea[]>("/alumnos/me/tareas");
+      const { data: disponibles } = await api.get<{datos:Tarea[];total:number}>("/alumnos/me/tareas/listado",{params:{pagina,porPagina:10}});
       if (!activa.current) return;
-      const actual = disponibles.find((item) => item.id === tarea.id);
+      const actual = disponibles.datos.find((item) => item.id === tarea.id);
       if (!actual || actual.entrega?.estatus === "CALIFICADA") {
         Alert.alert("Entrega no disponible", "La tarea cambió. Actualiza la lista antes de seleccionar otro archivo.");
         cargar();
@@ -216,6 +219,7 @@ export default function TareasScreen() {
           Los datos de tus tareas pueden estar desactualizados. Actualiza antes de entregar.
         </Text>
       )}
+      {total > 10 && <Paginador pagina={pagina} total={total} ocupado={cargando || entregandoId !== null} cambiar={setPagina} />}
       <FlatList
         ListHeaderComponent={
           <GuiaPantalla
