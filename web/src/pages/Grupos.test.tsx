@@ -126,3 +126,17 @@ it('indica que las altas ordinarias usan cartera y que el alta directa no crea c
   expect(screen.getByRole('link', { name: 'Apertura de cartera' }).getAttribute('href')).toBe('/apertura-cartera/nueva');
   expect(screen.getByRole('button', { name: 'Inscribir académicamente sin cargos' })).toBeTruthy();
 });
+
+it('identifica grupos automáticos y sus tareas de preparación pendientes', async () => {
+  vi.mocked(api.get).mockImplementation(async (url) => ({
+    data: url === '/academico/grupos'
+      ? { datos: [{ ...grupos[0], nombre: 'AUTO-prueba' }], total: 1, pagina: 1, porPagina: 10 }
+      : datos(url),
+  }));
+  render(<MemoryRouter><GruposPage /></MemoryRouter>);
+  await screen.findByText('AUTO-prueba');
+  expect(screen.getByText('Generado automáticamente')).toBeTruthy();
+  await administrar(0);
+  expect(await screen.findByText(/Su clave es provisional/)).toBeTruthy();
+  expect(screen.getByText(/Preparación pendiente: registra las materias/)).toBeTruthy();
+});
