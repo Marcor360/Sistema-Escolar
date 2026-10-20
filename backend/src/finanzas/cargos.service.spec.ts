@@ -276,3 +276,19 @@ describe('CargosService.generarColegiaturas', () => {
     expect(guardar).not.toHaveBeenCalled();
   });
 });
+
+
+describe('Recargos que redondean a cero', () => {
+  it.each([true, false])('no cambia estado ni audita un cargo sin importe positivo (preview=%s)', async (preview) => {
+    const cargo = { id: 10, monto: 0.01, descuento: 0, recargo: 0, estatus: 'PENDIENTE' };
+    const qb = { innerJoinAndSelect: jest.fn().mockReturnThis(), where: jest.fn().mockReturnThis(), andWhere: jest.fn().mockReturnThis(), getMany: jest.fn().mockResolvedValue([cargo]) };
+    const repo = { createQueryBuilder: jest.fn().mockReturnValue(qb), save: jest.fn() };
+    const transaccion = { transaction: jest.fn() }, bitacora = { registrar: jest.fn() };
+    const service = new CargosService(repo as any, {} as any, {} as any, {} as any, {} as any, {} as any,
+      bitacora as any, { resolverFiltro: jest.fn().mockResolvedValue(null) } as any, transaccion as any);
+    const resultado = await service.aplicarRecargos({ porcentaje: 10, plantelId: 4, confirmado: true }, { sub: 1, roles: ['FINANZAS'] } as any, preview);
+    expect(resultado).toMatchObject(preview ? { registros: 0, totalEstimado: 0 } : { aplicados: 0 });
+    expect(cargo.estatus).toBe('PENDIENTE'); expect(repo.save).not.toHaveBeenCalled();
+    expect(transaccion.transaction).not.toHaveBeenCalled(); expect(bitacora.registrar).not.toHaveBeenCalled();
+  });
+});
