@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { EliminarRegistro } from '../components/EliminarRegistro';
 import { FORM_INICIAL } from '../features/alumnos/tipos';
 import { FormularioAlumno } from '../features/alumnos/FormularioAlumno';
-import { HistorialAlumno } from '../features/alumnos/HistorialAlumno';
+import { HistorialAlumno, type HistorialConsulta } from '../features/alumnos/HistorialAlumno';
 import { TransferirAlumno } from '../features/alumnos/TransferirAlumno';
 import type { Alumno, Historial, Nota, Plantel, Resultado } from '../features/alumnos/tipos';
 import { useConfirmacion } from '../components/useConfirmacion';
@@ -50,7 +50,8 @@ export default function AlumnosPage() {
   const mostrarFormulario = modo === 'legado' ? puedeCrear || (puedeGestionar && editando !== null) : (modo === 'nuevo' && puedeCrear) || (modo === 'editar' && puedeGestionar && editando !== null);
   const [transferencia, setTransferencia] = useState<Alumno | null>(null);
   const [destino, setDestino] = useState('');
-  const [historial, setHistorial] = useState<{ alumno: Alumno; registros: Historial[] } | null>(null);
+  const [historial, setHistorial] = useState<HistorialConsulta | null>(null);
+  const [historialCargando, setHistorialCargando] = useState(false);
   const [notas, setNotas] = useState<Nota[] | null>(null);
   const [cargandoNotas, setCargandoNotas] = useState(false);
   const verNotas = async (alumno: Alumno, inscripcion: Historial) => {
@@ -60,9 +61,16 @@ export default function AlumnosPage() {
       setNotas(data.filter((n) => n.grupoMateria.grupo.id === inscripcion.grupo.id));
     } catch (err) { setError(mensajeDeError(err)); } finally { setCargandoNotas(false); }
   };
-  const verHistorial = async (alumno: Alumno) => {
-    try { const { data } = await api.get<Historial[]>(`/alumnos/${alumno.id}/historial`); setHistorial({ alumno, registros: data }); setNotas(null); }
-    catch (err) { setError(mensajeDeError(err)); }
+  const verHistorial = async (alumno: Alumno, pagina = 1) => {
+    setHistorialCargando(true);
+    try {
+      const { data } = await api.get<{ datos: Historial[]; total: number; pagina: number; porPagina: number }>(
+        `/alumnos/${alumno.id}/historial/listado`, { params: { pagina, porPagina: 10 } },
+      );
+      setHistorial({ alumno, registros: data.datos, total: data.total, pagina: data.pagina, porPagina: data.porPagina });
+      setNotas(null);
+    } catch (err) { setError(mensajeDeError(err)); }
+    finally { setHistorialCargando(false); }
   };
   const editar = async (alumno: Pick<Alumno, 'id'>) => {
     if (enviando) return;
@@ -188,7 +196,7 @@ export default function AlumnosPage() {
       {!puedeGestionar && error && <p role="alert" className="mensaje-error">{error}</p>}
       {!mostrarFormulario && error && puedeGestionar && <p role="alert">{error}</p>}
       {!mostrarFormulario && mensaje && <p role="status">{mensaje}</p>}
-      {consultaVisible && <>{historial && <HistorialAlumno historial={historial} boleta={boleta} cargandoNotas={cargandoNotas} verNotas={verNotas} notas={notas} setHistorial={setHistorial} />}
+      {consultaVisible && <>{historial && <HistorialAlumno historial={historial} boleta={boleta} cargandoNotas={cargandoNotas} verNotas={verNotas} notas={notas} setHistorial={setHistorial} cargando={historialCargando} cambiarPagina={(pagina) => void verHistorial(historial.alumno, pagina)} />}
       {transferencia && <TransferirAlumno transferencia={transferencia} transferir={transferir} destino={destino} setDestino={setDestino} planteles={planteles} enviando={enviando} setTransferencia={setTransferencia} />}
 
       <section className="panel panel-filtros" aria-label="Filtros de alumnos"><div className="fila">
