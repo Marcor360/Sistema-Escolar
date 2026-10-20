@@ -249,6 +249,7 @@ export class CargosService {
     if (!dto.plantelId) throw new BadRequestException('Selecciona un plantel para esta operación');
     if (!preview && !dto.confirmado) throw new BadRequestException('Revisa la previsualización y confirma la operación');
     const porcentaje = dto.porcentaje ?? 10;
+    if (!Number.isFinite(porcentaje) || porcentaje <= 0) throw new BadRequestException('El porcentaje de recargo debe ser mayor que cero');
     const hoy = new Intl.DateTimeFormat('en-CA', {
       timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit',
     }).format(new Date());
@@ -260,7 +261,7 @@ export class CargosService {
       .where('c.estatus IN (:...estatus)', { estatus: ['PENDIENTE', 'PARCIAL'] })
       .andWhere('c.fecha_vencimiento < :hoy', { hoy });
     if (planteles !== null) qb.andWhere('c.plantel_id IN (:...planteles)', { planteles });
-    const candidatos = (await qb.getMany()).filter((c) => c.recargo === 0);
+    const candidatos = (await qb.getMany()).filter((c) => c.recargo === 0 && redondear((c.monto - c.descuento) * porcentaje / 100) > 0);
     if (preview) return { plantelId: dto.plantelId, porcentaje, registros: candidatos.length,
       totalEstimado: redondear(candidatos.reduce((s, c) => s + redondear((c.monto - c.descuento) * porcentaje / 100), 0)) };
     if (candidatos.length === 0) return { aplicados: 0, porcentaje };
@@ -275,7 +276,9 @@ export class CargosService {
         if (!cargo || !cargo.concepto.aplicaRecargo || !cargo.concepto.activo || !['PENDIENTE', 'PARCIAL'].includes(cargo.estatus) ||
             !cargo.fechaVencimiento || cargo.fechaVencimiento >= hoy || cargo.recargo > 0 ||
             (planteles !== null && !planteles.includes(cargo.plantelId))) continue;
-        cargo.recargo = redondear((cargo.monto - cargo.descuento) * (porcentaje / 100));
+        const recargoCalculado = redondear((cargo.monto - cargo.descuento) * (porcentaje / 100));
+        if (recargoCalculado <= 0) continue;
+        cargo.recargo = recargoCalculado;
         cargo.estatus = 'VENCIDO';
         await cargos.save(cargo);
         aplicados++;
