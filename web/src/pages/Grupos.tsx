@@ -277,7 +277,7 @@ export default function GruposPage() {
           {resultado.datos.map((g) => (
             <tr key={g.id}>
               <td data-etiqueta="ID"><code>{g.id}</code></td>
-              <td data-etiqueta="Grupo">{g.nombre}</td>
+              <td data-etiqueta="Grupo">{g.nombre}{g.nombre.startsWith('AUTO-') && <span className="sello neutro">Generado automáticamente</span>}</td>
               <td data-etiqueta="Plantel">{g.plantel?.nombre ?? <span className="sello neutro">Sin plantel</span>}</td>
               <td data-etiqueta="Ciclo">{g.ciclo?.clave}</td>
               <td data-etiqueta="Grado">{g.grado ?? '—'}</td>
@@ -302,7 +302,19 @@ export default function GruposPage() {
       {(legado || trabajo.modo === 'administrar') && seleccionado && !cargandoGrupo && !detalleGrupoCompleto && <button className="boton secundario" onClick={() => { void abrirGrupo(seleccionado); }}>Reintentar detalle del grupo</button>}
       {seleccionado && !cargandoGrupo && detalleGrupoCompleto && (
         <>
-          <section className="panel" aria-label="Preparación del grupo"><h2>{seleccionado.nombre}: siguientes pasos</h2><ol><li>Grupo registrado en {seleccionado.ciclo.clave}.</li><li>{asignaciones.length} materias asignadas; {asignaciones.filter((a) => !a.docente).length} pendientes de docente.</li><li>{inscritos.length} alumnos inscritos. El expediente se registra por separado.</li></ol></section>
+          <section className="panel" aria-label="Preparación del grupo">
+            <h2>{seleccionado.nombre}: preparación académica</h2>
+            {seleccionado.nombre.startsWith('AUTO-') && <p className="texto-ayuda">Este grupo fue generado automáticamente. Su clave es provisional: Control Escolar debe revisar la denominación institucional antes del inicio de clases.</p>}
+            <ol>
+              <li>Grupo registrado en el ciclo {seleccionado.ciclo.clave}.</li>
+              <li>{asignaciones.length} materias asignadas; {asignaciones.filter((a) => !a.docente).length} pendientes de docente.</li>
+              <li>{inscritos.length} alumnos inscritos; el expediente y la cartera se verifican en módulos separados.</li>
+            </ol>
+            {asignaciones.length === 0 ? <p role="status">Preparación pendiente: registra las materias y sus docentes desde este panel.</p>
+              : asignaciones.some((a) => !a.docente) ? <p role="status">Preparación pendiente: asigna los profesores que faltan antes de impartir clases.</p>
+              : inscritos.length === 0 ? <p role="status">Materias y profesores asignados; todavía no hay alumnos inscritos.</p>
+              : <p role="status">Asignaciones académicas completas en este grupo. Verifica por separado ciclo vigente, cartera y documentación institucional.</p>}
+          </section>
           <MateriasGrupo seleccionado={seleccionado} reasignando={reasignando} nuevoDocente={nuevoDocente} setNuevoDocente={setNuevoDocente} enviando={enviando} operar={operar} setReasignando={setReasignando} asignarMateria={asignarMateria} materiaId={materiaId} setMateriaId={setMateriaId} materias={materias} docenteId={docenteId} setDocenteId={setDocenteId} asignaciones={asignaciones} />
 
           <InscripcionesGrupo seleccionado={seleccionado} inscribir={inscribir} alumnoId={alumnoId} setAlumnoId={setAlumnoId} enviando={enviando} inscritos={inscritos} operar={operar} />
