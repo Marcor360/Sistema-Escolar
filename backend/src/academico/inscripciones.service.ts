@@ -50,14 +50,9 @@ async inscribirAlumno(grupoId: number, alumnoId: number, user: JwtUser) {
         if (!duplicada || duplicada.estatus !== 'BAJA') {
           throw new ConflictException('Las altas ordinarias requieren Apertura de cartera; aquí solo se reactiva una inscripción previa en baja del mismo grupo');
         }
-        if (duplicada) {
-          duplicada.estatus = 'ACTIVA';
-          const guardada = await inscripciones.save(duplicada);
-          await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId: grupo.plantelId, accion: 'INSCRIPCION_REACTIVADA', entidadId: guardada.id, detalle: `alumnoId=${alumnoId}; grupoId=${grupoId}`, fecha: new Date() });
-          return guardada;
-        }
-        const guardada = await inscripciones.save(inscripciones.create({ grupoId, alumnoId }));
-        await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId: grupo.plantelId, accion: 'INSCRIPCION_CREADA', entidadId: guardada.id, detalle: `alumnoId=${alumnoId}; grupoId=${grupoId}`, fecha: new Date() });
+        duplicada.estatus = 'ACTIVA';
+        const guardada = await inscripciones.save(duplicada);
+        await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId: grupo.plantelId, accion: 'INSCRIPCION_REACTIVADA', entidadId: guardada.id, detalle: `alumnoId=${alumnoId}; grupoId=${grupoId}`, fecha: new Date() });
         return guardada;
       });
     } catch (error) {
