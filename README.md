@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.27.8`** · Estado: revisión técnica y aceptación institucional pendientes. Esta versión documenta el proyecto; **no demuestra despliegue adicional**. Staging confirmado por el operador en **1.27.1** (commit `b464d40`), con API `/health/ready` local y HTTPS correctas. La app Expo instalada en dispositivos **no se actualiza automáticamente**.
+**Versión candidata: `1.27.9`** · Estado: revisión técnica y aceptación institucional pendientes. Esta versión documenta el proyecto; **no demuestra despliegue adicional**. Staging confirmado por el operador en **1.27.1** (commit `b464d40`), con API `/health/ready` local y HTTPS correctas. La app Expo instalada en dispositivos **no se actualiza automáticamente**.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -159,3 +159,7 @@ Antes de marcar un PR como listo:
 - [Calificaciones](docs/CALIFICACIONES_CONTEXTO.md) · [preparación de beta](docs/PREPARACION_BETA_1.24.0-beta.1.md)
 
 **Historial:** los informes de versiones anteriores en `docs/` son evidencia histórica; sus fechas y versiones no deben modificarse retroactivamente.
+
+## Formatos escolares informativos · 1.27.9
+
+Acta digital por clase y evaluación, Excel para rellenar o con notas guardadas; boleta informativa digital, Excel y PDF propios del alumno, disponibles con P1–P3 completos y cerrados. [Alcance, permisos y campos pendientes](docs/FORMATOS_ESCOLARES.md). Se conserva la escala 0–100 sin inferir reglas de los ejemplos. Sin despliegue ni firma institucional.
