@@ -17,7 +17,26 @@ function entorno({ falta = false, abierto = false } = {}) {
   const repos = new Map<unknown, unknown>([[Grupo, { find: jest.fn().mockResolvedValue([{ id: 4 }]) }], [CicloEscolar, ciclos], [GrupoMateria, { find: jest.fn().mockResolvedValue([{ id: 5, grupoId: 4 }]) }], [Inscripcion, { find: jest.fn().mockResolvedValue([{ grupoId: 4, alumnoId: 7 }]) }], [Calificacion, { find: jest.fn().mockResolvedValue(notas) }], [PeriodoCalificacion, { find: jest.fn().mockResolvedValue(periodos) }], [BitacoraAcademica, audit]]);
   const manager = { getRepository: (t: unknown) => repos.get(t) } as unknown as EntityManager;
   const ds = { transaction: (isolation: unknown, fn?: (m: EntityManager) => Promise<unknown>) => fn ? fn(manager) : (isolation as (m: EntityManager) => Promise<unknown>)(manager) } as unknown as DataSource;
-  return { service: new CiclosService(ds), ciclos, audit };
+  return { service: new CiclosService(ds), ciclos, audit, repos };
 }
 it.each([{ falta: true }, { abierto: true }])('rechaza cierre con notas faltantes o parcial abierto: %j', async (config) => { const { service, ciclos, audit } = entorno(config); await expect(service.transicion(1, 'cerrar', true, user)).rejects.toThrow('faltantes'); expect(ciclos.save).not.toHaveBeenCalled(); expect(audit.insert).not.toHaveBeenCalled(); });
 it('cierra únicamente después de completar y cerrar P1-P3', async () => { const { service, audit } = entorno(); await expect(service.transicion(1, 'cerrar', true, user)).resolves.toMatchObject({ activo: false, estado: 'CERRADO' }); expect(audit.insert).toHaveBeenCalledWith(expect.objectContaining({ usuarioId: 1, accion: 'CICLO_CERRAR' })); });
+
+it('divide en lotes de 500 IDs la consulta de periodos y notas para ciclos grandes', async () => {
+  const { service, repos } = entorno();
+  const clases = repos.get(GrupoMateria) as { find: jest.Mock };
+  const periodos = repos.get(PeriodoCalificacion) as { find: jest.Mock };
+  const notas = repos.get(Calificacion) as { find: jest.Mock };
+  clases.find.mockResolvedValue(Array.from({ length: 1001 }, (_, indice) => ({ id: indice + 1, grupoId: 4 })));
+  periodos.find.mockResolvedValue([]);
+  notas.find.mockResolvedValue([]);
+
+  const resumen = await service.resumen(1);
+
+  expect(resumen.clases).toBe(1001);
+  expect(periodos.find).toHaveBeenCalledTimes(3);
+  expect(notas.find).toHaveBeenCalledTimes(3);
+  for (const [opciones] of periodos.find.mock.calls) {
+    expect(opciones.where.grupoMateriaId.value.length).toBeLessThanOrEqual(500);
+  }
+});

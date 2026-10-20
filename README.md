@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.27.12`** · Estado: revisión técnica y aceptación institucional pendientes. Esta versión documenta el proyecto; **no demuestra despliegue adicional**. Staging confirmado por el operador en **1.27.1** (commit `b464d40`), con API `/health/ready` local y HTTPS correctas. La app Expo instalada en dispositivos **no se actualiza automáticamente**.
+**Versión candidata: `1.27.13`** · Estado: revisión técnica y aceptación institucional pendientes. Esta versión documenta el proyecto; **no demuestra despliegue adicional**. Staging confirmado por el operador en **1.27.1** (commit `b464d40`), con API `/health/ready` local y HTTPS correctas. La app Expo instalada en dispositivos **no se actualiza automáticamente**.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -17,6 +17,7 @@ Sistema escolar multiplataforma para operación académica, administrativa y fin
 
 ### Funcionalidad destacada de versiones recientes
 
+- **1.27.12:** Cierre de ciclos: consulta inscripciones, periodos y notas en lotes de hasta 500 IDs; regresión para cohortes amplias. CI/UAT pendientes.
 - **1.27.8:** Grupos marca las denominaciones AUTO como generación automática y presenta el estado de preparación según materias, asignaciones docentes y alumnos inscritos, sin confundirlo con la situación financiera. La denominación institucional sigue requiriendo revisión; sin nueva migración.
 - **1.27.7:** Alumnos orienta al alta ordinaria mediante Apertura de cartera y distingue el expediente de la inscripción y cargos. Grupos solicita confirmación para la inscripción académica directa y comunica que no genera cargos. Pruebas de navegación añadidas; pendiente UAT.
 - **1.27.6:** la inscripción directa limita el grupo regular a 50 alumnos activos (o menos cuando hay reservas de recursamiento); el remanente excepcional 51–54 sigue reservado al motor automático de cartera. Inscripción directa todavía no genera cargos; no usarla como alta financiera. Validación institucional pendiente.
