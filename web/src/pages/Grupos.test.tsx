@@ -123,6 +123,6 @@ it('indica que las altas ordinarias usan cartera y que el alta directa no crea c
   render(<MemoryRouter><GruposPage /></MemoryRouter>);
   await screen.findByText('Grupo 1');
   await administrar(0);
-  expect(screen.getByRole('link', { name: 'Apertura de cartera' }).getAttribute('href')).toBe('/apertura-cartera/nueva');
+  expect((await screen.findByRole('link', { name: 'Apertura de cartera' })).getAttribute('href')).toBe('/apertura-cartera/nueva');
   expect(screen.getByRole('button', { name: 'Inscribir académicamente sin cargos' })).toBeTruthy();
 });
