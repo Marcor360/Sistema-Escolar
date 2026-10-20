@@ -45,9 +45,9 @@ function prepararInscripcion(ocupados: number) {
     inscripciones as unknown as Repository<Inscripcion>,
     scope,
     dataSource,
-    {} as GruposService,
+    {} as unknown as GruposService,
   );
-  const actor = { sub: 1, roles: ['ADMINISTRATIVO'] } as JwtUser;
+  const actor = { sub: 1, roles: ['ADMINISTRATIVO'] } as unknown as JwtUser;
   return { servicio, actor, inscripciones, bitacora };
 }
 
