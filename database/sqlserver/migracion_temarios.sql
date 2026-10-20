@@ -6,13 +6,13 @@ CREATE TABLE temas (
  titulo NVARCHAR(150) NOT NULL,
  contenido NVARCHAR(MAX) NOT NULL,
  estado NVARCHAR(12) NOT NULL DEFAULT 'BORRADOR',
- desde DATETIME NULL,
- hasta DATETIME NULL,
+ desde DATETIME2 NULL,
+ hasta DATETIME2 NULL,
  parcial INT NULL,
  enlace NVARCHAR(1000) NULL,
  revision INT NOT NULL DEFAULT 1,
  creador_id INT NOT NULL,
- created_at DATETIME NOT NULL DEFAULT SYSUTCDATETIME(),
+ created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
  CONSTRAINT uq_tema_clase_indice UNIQUE (grupo_materia_id, indice),
  CONSTRAINT ck_tema_estado CHECK (estado IN ('BORRADOR','PUBLICADO','CANCELADO')),
  CONSTRAINT ck_tema_numeros CHECK (indice BETWEEN 1 AND 10000 AND revision >= 1 AND (parcial IS NULL OR parcial BETWEEN 1 AND 3)),
@@ -29,7 +29,7 @@ CREATE TABLE tema_adjuntos (
  mime NVARCHAR(100) NOT NULL,
  tamano_kb INT NOT NULL,
  activo BIT NOT NULL DEFAULT 1,
- created_at DATETIME NOT NULL DEFAULT SYSUTCDATETIME(),
+ created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
  CONSTRAINT fk_tema_adjunto FOREIGN KEY (tema_id) REFERENCES temas(id)
 );
 CREATE INDEX idx_tema_adjunto ON tema_adjuntos(tema_id, activo);
@@ -41,7 +41,7 @@ CREATE TABLE tema_revisiones (
  usuario_id INT NOT NULL,
  accion NVARCHAR(40) NOT NULL,
  detalle NVARCHAR(MAX) NOT NULL,
- fecha DATETIME NOT NULL DEFAULT SYSUTCDATETIME(),
+ fecha DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
  CONSTRAINT uq_tema_revision UNIQUE (tema_id,revision),
  CONSTRAINT fk_revision_tema FOREIGN KEY (tema_id) REFERENCES temas(id),
  CONSTRAINT fk_revision_tema_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id)

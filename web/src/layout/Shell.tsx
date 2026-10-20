@@ -36,7 +36,7 @@ const secciones = [
 const gruposMenu = [
   { titulo: 'Inicio y seguimiento', rutas: ['/', '/calendario', '/avisos'] },
   { titulo: 'Control escolar', rutas: ['/alumnos', '/docentes', '/catalogos-academicos', '/apertura-cartera', '/recursamientos', '/programas-especiales', '/materias', '/grupos', '/operaciones'] },
-  { titulo: 'Docencia', rutas: ['/maestro', '/calificaciones', '/conducta'] },
+  { titulo: 'Docencia', rutas: ['/maestro', '/temarios', '/calificaciones', '/conducta'] },
   { titulo: 'Finanzas e informes', rutas: ['/finanzas', '/analitica'] },
   { titulo: 'Administración', rutas: ['/planteles', '/biblioteca', '/usuarios', '/configuracion'] },
 ];
@@ -57,6 +57,7 @@ const iconosPorRuta: Record<string, NombreIcono> = {
   '/programas-especiales': 'school',
   '/grupos': 'users',
   '/maestro': 'school',
+  '/temarios': 'book',
   '/calificaciones': 'clipboard-check',
   '/calendario': 'calendar',
   '/avisos': 'bell',
