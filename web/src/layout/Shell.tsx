@@ -162,7 +162,7 @@ export function Shell() {
 
   // Alta y edición tienen el mismo control de sesión/rol y un área sin navegación lateral.
   if (location.pathname === '/recursamientos/nuevo' || location.pathname === '/apertura-cartera/nueva' || /^\/programas-especiales\/(nuevo|\d+\/grupos\/nuevo)\/?$/.test(location.pathname) || /^\/docentes\/(nuevo|\d+\/editar)\/?$/.test(location.pathname) || /^\/catalogos-academicos\/(niveles|carreras|periodos)\/(nuevo|\d+)\/?$/.test(location.pathname)) {
-    return <><a className="skip-link" href="#contenido-principal">Saltar al formulario</a><Suspense fallback={<Cargando />}><Outlet /></Suspense></>;
+    return <><a className="skip-link" href="#contenido-principal">Saltar al formulario</a><div id="contenido-principal" tabIndex={-1}><Suspense fallback={<Cargando />}><Outlet /></Suspense></div></>;
   }
 
   return (

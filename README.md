@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata de código: `1.27.4`** · Estado: revisión técnica y aceptación institucional pendientes. Esta versión documenta el proyecto; **no demuestra despliegue adicional**. Staging confirmado por el operador en **1.27.1** (commit `b464d40`), con API `/health/ready` local y HTTPS correctas. La app Expo instalada en dispositivos **no se actualiza automáticamente**.
+**Versión candidata de código: `1.27.5`** · Estado: revisión técnica y aceptación institucional pendientes. Esta versión documenta el proyecto; **no demuestra despliegue adicional**. Staging confirmado por el operador en **1.27.1** (commit `b464d40`), con API `/health/ready` local y HTTPS correctas. La app Expo instalada en dispositivos **no se actualiza automáticamente**.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -17,6 +17,7 @@ Sistema escolar multiplataforma para operación académica, administrativa y fin
 
 ### Funcionalidad destacada de versiones recientes
 
+- **1.27.5:** accesibilidad base de navegación enfocada, reintentos de búsqueda y ancho de formularios; UAT con usuarios todavía pendiente.
 - **1.27.4:** apertura de cartera con estados explicados, resumen de cotizaciones, tabla adaptable y matrícula/nombre autorizados; no cambia agrupación ni tarifas.
 - **1.27.3:** reorganización integral de README y mapa de operación; no añade reglas de negocio.
 - **1.27.2:** consentimiento institucional versionado en API/Expo, pendiente de habilitación administrativa.
