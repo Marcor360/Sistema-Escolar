@@ -281,7 +281,7 @@ describe('CargosService.generarColegiaturas', () => {
 describe('Recargos que redondean a cero', () => {
   it.each([true, false])('no cambia estado ni audita un cargo sin importe positivo (preview=%s)', async (preview) => {
     const cargo = { id: 10, monto: 0.01, descuento: 0, recargo: 0, estatus: 'PENDIENTE' };
-    const qb = { innerJoinAndSelect: jest.fn().mockReturnThis(), where: jest.fn().mockReturnThis(), andWhere: jest.fn().mockReturnThis(), getMany: jest.fn().mockResolvedValue([cargo]) };
+    const qb = { innerJoin: jest.fn().mockReturnThis(), where: jest.fn().mockReturnThis(), andWhere: jest.fn().mockReturnThis(), getMany: jest.fn().mockResolvedValue([cargo]) };
     const repo = { createQueryBuilder: jest.fn().mockReturnValue(qb), save: jest.fn() };
     const transaccion = { transaction: jest.fn() }, bitacora = { registrar: jest.fn() };
     const service = new CargosService(repo as any, {} as any, {} as any, {} as any, {} as any, {} as any,
