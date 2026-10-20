@@ -124,7 +124,7 @@ it('indica que las altas ordinarias usan cartera y que el alta directa no crea c
   await screen.findByText('Grupo 1');
   await administrar(0);
   expect((await screen.findByRole('link', { name: 'Apertura de cartera' })).getAttribute('href')).toBe('/apertura-cartera/nueva');
-  expect(screen.getByRole('button', { name: 'Inscribir académicamente sin cargos' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Reactivar inscripción previa en baja' })).toBeTruthy();
 });
 
 it('identifica grupos automáticos y sus tareas de preparación pendientes', async () => {
