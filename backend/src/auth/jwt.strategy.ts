@@ -62,6 +62,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       email: usuario.email,
       nombre: usuario.nombreCompleto,
       roles,
+      portal: sesion.portal,
       ver: usuario.sessionVersion ?? 0,
       sid: payload.sid, kind: 'ACCESS', passwordChangeRequired: usuario.passwordChangeRequired,
     };
