@@ -14,6 +14,7 @@ it('abrir clase muestra operaciones sin descargar actividades, materiales ni ent
 });
 it('consulta una página remota y abrir formulario conserva filtros, sin directorio secundario', async () => {
   const r = montar('vista=actividades&clase=7&actividadesPagina=3&actividadesBuscar=prueba'); await screen.findByText('Actividad de prueba'); expect(api.get).toHaveBeenCalledWith('/grupo-materias/7/actividades/listado', { params: { pagina: 3, porPagina: 10, buscar: 'prueba' } });
+  await waitFor(() => expect(screen.queryByText('Cargando clase…')).toBeNull());
   fireEvent.click(screen.getByRole('button', { name: 'Volver a operaciones de la clase' })); await screen.findByRole('button', { name: 'Crear actividad' }); fireEvent.click(screen.getByRole('button', { name: 'Crear actividad' })); await screen.findByLabelText('Título'); expect(r.state.location.search).toContain('actividadesPagina=3'); expect(screen.queryByText('Actividad de prueba')).toBeNull(); expect(screen.queryByLabelText('Archivo privado del material')).toBeNull();
 });
 it('fallo de guardado conserva borrador; cancelar salida conserva el formulario', async () => {
