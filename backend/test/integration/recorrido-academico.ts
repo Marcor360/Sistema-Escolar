@@ -25,6 +25,14 @@ export function registrarCicloOperativo(ctx: ContextoIntegracion) {
       expect(await ctx.dataSource.getRepository(Inscripcion).countBy({ alumnoId: alumno.data.id,grupoId: grupoA.data.id,estatus: 'ACTIVA' })).toBe(0);
       const inscripcionB = await post(`/academico/grupos/${grupoB.data.id}/alumnos`,{ alumnoId: alumno.data.id }); expect(inscripcionB.response.status).toBe(201);
       expect((await post(`/academico/grupos/${grupoB.data.id}/alumnos`,{ alumnoId: alumno.data.id })).response.status).toBe(409);
+      const historialRuta = `/alumnos/${alumno.data.id}/historial/listado`;
+      const historialPagina1 = await ctx.api(`${historialRuta}?pagina=1&porPagina=1`, { token });
+      expect(historialPagina1.response.status).toBe(200);
+      expect(historialPagina1.data).toMatchObject({ total: 2, pagina: 1, porPagina: 1, datos: [{ id: inscripcionB.data.id }] });
+      const historialPagina2 = await ctx.api(`${historialRuta}?pagina=2&porPagina=1`, { token });
+      expect(historialPagina2.data).toMatchObject({ total: 2, pagina: 2, datos: [{ id: inscripcionA.data.id }] });
+      expect((await ctx.api(`${historialRuta}?pagina=0`, { token })).response.status).toBe(400);
+      expect((await ctx.api(historialRuta, { token: await ctx.emitirToken(`ocal_${ctx.sufijo}@example.invalid`) })).response.status).toBe(403);
       for (const parcial of [1,2,3]) {
         expect((await post('/calificaciones/captura',{ grupoMateriaId: claseB.data.id,parcial,items: [{ alumnoId: alumno.data.id,calificacion: [80,90,100][parcial-1] }] })).response.status).toBe(201);
         expect((await ctx.api(`/calificaciones/periodos/${claseB.data.id}/${parcial}`,{ method: 'PATCH',token,body: { estatus: 'CERRADO' } })).response.status).toBe(200);
