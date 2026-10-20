@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma
 
-**Versión candidata: `1.27.2`** · API, web y app del alumno alineadas. Aceptación institucional y despliegue pendientes.
+**Versión candidata: `1.27.3`** · API, web y app del alumno alineadas. Aceptación institucional y despliegue pendientes.
 
 API, portal administrativo/docente y app del alumno para gestión académica y financiera con alcance por plantel. Las versiones de backend, web, móvil, lockfiles y Expo están alineadas. Este README describe una única versión actual; los informes históricos permanecen en `docs/`.
 
@@ -13,7 +13,13 @@ API, portal administrativo/docente y app del alumno para gestión académica y f
 
 La versión 1.26.4 aclara en apertura de cartera la vigencia del ciclo frente al mes de cobro y la fecha de vencimiento. Conserva la guía de ciclos de 1.26.3 y la política de versiones de 1.26.2. No cambia tarifas ni reglas de la API y no acredita un despliegue. La versión del repositorio identifica el código; la disponibilidad en el VPS o en un APK depende del despliegue correspondiente. La evidencia histórica conserva su versión y fecha originales.
 
-## Novedades de 1.27.2
+## Novedades de 1.27.3
+
+- Inscripción directa desde Grupos limitada a **50 alumnos regulares por grupo**, además de las reservas por recursamiento; el excedente ordinario de 51–54 solo se gestiona desde la agrupación automática en apertura de cartera.
+- Pruebas unitarias de rechazo de cupo y alta bajo el límite. La ruta directa aún no produce cargos: para nuevas inscripciones se debe utilizar Apertura de cartera; unificar el contrato de excepciones y compatibilidad de inscripciones históricas requiere UAT y PR específico.
+- No introduce migraciones ni acredita despliegue o aceptación institucional.
+
+### Entregado previamente en 1.27.2
 
 - Consentimiento institucional versionado para la app del alumno: API registra aceptación UTC y aplica restricciones hasta aceptación; Expo presenta documentos oficiales enlazados y exige consentimiento cuando está habilitado.
 - Nuevo esquema `migracion_aceptaciones_institucionales.sql` espejo MySQL/SQL Server. **Deshabilitado por defecto hasta aprobación de documentos por nivel, URL oficial de políticas y tratamiento de menores.**
