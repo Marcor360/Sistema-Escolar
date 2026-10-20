@@ -1,3 +1,6 @@
+import { ConflictException } from '@nestjs/common';
+import { PeriodoCalificacion } from '../entities/periodo-calificacion.entity';
+import { boletaPublicable } from './publicacion-boleta';
 import { contentDisposition } from '../common/content-disposition';
 import { promedioOficial } from '../common/promedio-oficial';
 import { Inscripcion } from '../entities/inscripcion.entity';
@@ -82,8 +85,8 @@ export class ReportesService {
   }
 
   /** El maestro solo exporta sus clases; ADMINISTRATIVO y SUPERADMIN, cualquiera. */
-  private async validarAccesoAClase(grupoMateriaId: number, user: JwtUser): Promise<GrupoMateria> {
-    const gm = await this.grupoMaterias.findOne({ where: { id: grupoMateriaId } });
+  async validarAccesoAClase(grupoMateriaId: number, user: JwtUser): Promise<GrupoMateria> {
+    const gm = await this.grupoMaterias.findOne({ where: { id: grupoMateriaId }, relations: ['grupo.carrera', 'grupo.periodoAcademico'] });
     if (!gm) throw new NotFoundException('Grupo-materia no encontrado');
     if (user.roles.includes('SUPERADMIN')) return gm;
     if (user.roles.includes('ADMINISTRATIVO')) {
@@ -190,8 +193,13 @@ export class ReportesService {
       order: { grupoMateriaId: 'ASC', parcial: 'ASC' },
     });
 
+    const clasesBoleta = await this.grupoMaterias.find({ where: { grupoId: inscripcion.grupoId } });
+    if (user.roles.includes('ALUMNO')) {
+      const periodos = await this.grupos.manager.getRepository(PeriodoCalificacion).find({ where: { grupoMateria: { grupoId: inscripcion.grupoId } } });
+      if (!boletaPublicable(clasesBoleta,calificaciones,periodos)) throw new ConflictException('La boleta estará disponible cuando Control Escolar cierre P1–P3 completos');
+    }
     const materias = new Map<number, { nombre: string; parciales: Map<number, number> }>();
-    for (const clase of await this.grupoMaterias.find({ where: { grupoId: inscripcion.grupoId } })) {
+    for (const clase of clasesBoleta) {
       materias.set(clase.id, { nombre: clase.materia.nombre, parciales: new Map() });
     }
     for (const c of calificaciones) {

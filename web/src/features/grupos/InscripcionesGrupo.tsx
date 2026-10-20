@@ -14,11 +14,11 @@ operar: (ruta: string, metodo: 'delete' | 'patch', datos?: object) => Promise<vo
 }
 export function InscripcionesGrupo({ seleccionado, inscribir, alumnoId, setAlumnoId, enviando, inscritos, operar }: Props) { return (<section className="panel">
             <h2>Alumnos inscritos en {seleccionado.nombre}</h2>
-            <p className="texto-ayuda">Esta acción registra una inscripción académica directa, pero no abre cartera ni genera cargos. Para altas ordinarias utiliza <Link to="/apertura-cartera/nueva">Apertura de cartera</Link>. Las correcciones directas requieren autorización de Control Escolar.</p>
+            <p className="texto-ayuda">Las altas ordinarias deben realizarse mediante cartera. Esta corrección académica no genera cargos y puede quedar restringida a reactivaciones de bajas previas según la política institucional. Utiliza <Link to="/apertura-cartera/nueva">Apertura de cartera</Link>. Las correcciones directas requieren autorización de Control Escolar.</p>
             <form onSubmit={inscribir} className="fila" style={{ marginBottom: 14 }}>
               <SelectorBuscable<Alumno> ruta="/alumnos" valor={alumnoId} cambiar={setAlumnoId} etiqueta="Alumno"
                 filtros={{ plantelId: seleccionado.plantel?.id }} texto={(a) => `${a.matricula} — ${a.usuario.nombre} ${a.usuario.apellidoPaterno}`} />
-              <button disabled={enviando} className="boton">Inscribir académicamente sin cargos</button>
+              <button disabled={enviando} className="boton">Corrección académica sin cargos</button>
             </form>
             <div className="tabla-contenedor" role="region" aria-label="Inscripciones del grupo" tabIndex={0}><table className="tabla">
               <thead><tr><th>Matrícula</th><th>Alumno</th><th>Correcciones</th></tr></thead>

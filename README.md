@@ -160,3 +160,19 @@ Antes de marcar un PR como listo:
 - [Calificaciones](docs/CALIFICACIONES_CONTEXTO.md) · [preparación de beta](docs/PREPARACION_BETA_1.24.0-beta.1.md)
 
 **Historial:** los informes de versiones anteriores en `docs/` son evidencia histórica; sus fechas y versiones no deben modificarse retroactivamente.
+
+## Formatos escolares informativos · 1.27.9
+
+Acta digital por clase y evaluación, Excel para rellenar o con notas guardadas; boleta informativa digital, Excel y PDF propios del alumno, disponibles con P1–P3 completos y cerrados. [Alcance, permisos y campos pendientes](docs/FORMATOS_ESCOLARES.md). Se conserva la escala 0–100 sin inferir reglas de los ejemplos. Sin despliegue ni firma institucional.
+
+## Recargos de importe cero · 1.27.10
+
+Se rechaza el porcentaje cero y no se marcan como vencidos cargos cuyo recargo redondea a cero. Se conservan alcance financiero y tarifas. Sin migraciones ni despliegue.
+
+## Política de inscripción ordinaria · 1.27.11
+
+El interruptor `INSCRIPCION_ORDINARIA_SOLO_CARTERA` permanece apagado por defecto. Con valor `true`, las altas ordinarias nuevas pasan por cartera y la vía académica solo reactiva bajas previas del mismo grupo, conservando alcance, cupo y auditoría. Activación institucional y UAT pendientes. Sin migraciones, cobros retroactivos ni despliegue.
+
+## Plan condicionado de calificaciones y actas · 1.27.12
+
+Se integra únicamente la propuesta documental actualizada con los formatos recibidos. No cambia escalas, promedios, firmas ni activa la política de inscripción. [Decisiones pendientes para la versión objetivo 1.28.0](docs/PLAN_CALIFICACIONES_ACTAS_1.28.0.md).
