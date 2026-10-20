@@ -176,7 +176,7 @@ export default function GruposPage() {
       });
       trabajo.guardado(); if(!legado) trabajo.ir('consulta');
       setContexto(CONTEXTO_VACIO); setUsarContexto(false);
-      setEditando(null); setMensaje(editando ? 'Grupo actualizado.' : 'Grupo creado. Ahora selecciona Administrar para asignar materias, docente e inscribir alumnos.');
+      setEditando(null); setMensaje(editando ? 'Grupo actualizado.' : 'Grupo creado. Ahora selecciona Administrar para asignar materias y docentes. Las nuevas aperturas se realizan en Apertura de cartera.');
       setFormGrupo({ cicloId: '', plantelId: '', nombre: '', grado: '', turno: 'MATUTINO' });
       if(legado) void cargar(1, plantelAplicado);
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
@@ -202,17 +202,18 @@ export default function GruposPage() {
     if (!seleccionado) return;
     if (enviando) return; setEnviando(true); setError('');
     try {
+      if (!await confirmacion.solicitar('La inscripción directa solo registra la relación académica y NO genera cargos financieros. Para nuevas altas usa Apertura de cartera. ¿Confirmas esta corrección?')) return;
       await api.post(`/academico/grupos/${seleccionado.id}/alumnos`, { alumnoId: Number(alumnoId) });
       setAlumnoId('');
       await abrirGrupo(seleccionado);
-      setMensaje('Inscripción registrada. El alumno podrá consultar las materias y actividades vigentes que le correspondan.');
+      setMensaje('Inscripción académica registrada sin generar cargos. Comprueba el expediente y la cartera financiera por separado.');
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
   return (
     <>{confirmacion.elemento}
       <Encabezado titulo="Grupos" detalle="Grupos por ciclo, materias asignadas e inscripciones" />
-      <p className="texto-ayuda">Orden recomendado: prepara el ciclo y las materias, registra docentes y alumnos, crea el grupo, asígnale materias con docente e inscribe a los alumnos. Cada paso es independiente y conserva las reglas de autorización del servidor.</p>
+      <p className="texto-ayuda">Orden recomendado: prepara el ciclo y las materias, registra docentes y alumnos. Para una inscripción ordinaria con cargos usa Apertura de cartera; Grupos permite consultar clases y hacer correcciones académicas directas sin generar cargos.</p>
       {error && <p role="alert" className="mensaje-error">{error}</p>}{mensaje && <p role="status" className="mensaje-ok">{mensaje}</p>}
       {cargandoCatalogos && <p role="status">Cargando catálogos…</p>}
       {errorCatalogos && <div role="alert"><p>{errorCatalogos}</p><button className="boton secundario" onClick={() => { void cargarCatalogos(); }}>Reintentar catálogos</button></div>}

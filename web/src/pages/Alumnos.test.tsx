@@ -138,3 +138,16 @@ it('limpiar descarta el filtro aplicado y los cambios que todavía no se buscaro
   expect((screen.getByLabelText('Buscar por matrícula') as HTMLInputElement).value).toBe('');
   expect(screen.queryByRole('button', { name: 'Limpiar filtros' })).toBeNull();
 });
+
+it('tras registrar un alumno ofrece continuar con apertura de cartera y no con Grupos', async () => {
+  contexto.gestionar = true;
+  vi.spyOn(api, 'get').mockImplementation(async (url) => ({ data: url === '/alumnos' ? resultado('IUA-001') : [{ id: 1, nombre: 'Plantel QA' }] }));
+  vi.spyOn(api, 'post').mockResolvedValue({ data: { id: 8 } });
+  render(<MemoryRouter><AlumnosPage /></MemoryRouter>);
+  await screen.findByText('IUA-001');
+  fireEvent.change(screen.getByLabelText('Matrícula *'), { target: { value: 'IUA-002' } });
+  fireEvent.submit(screen.getByLabelText('Matrícula *').closest('form')!);
+  const enlace = await screen.findByRole('link', { name: 'Continuar con apertura de cartera' });
+  expect(enlace.getAttribute('href')).toBe('/apertura-cartera/nueva');
+  expect(screen.queryByRole('link', { name: /Ir a Grupos para inscribir/ })).toBeNull();
+});
