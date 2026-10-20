@@ -7,6 +7,14 @@
 - `backend/src/archivos/logo-publico.controller.ts`: GET exclusivo para nombre de archivo logo.
 - `scripts/windows/Test-IUA-Logo-Staging.ps1`: diagnóstico no destructivo existente.
 
+## Causa reproducible desde el código (20/oct/2026)
+
+En la pantalla de Configuración institucional, `URL.createObjectURL(archivo)` produce una URL `blob:` para la vista previa. El encabezado CSP enviado por IIS, definido en `web/public/web.config`, permitía `img-src 'self' data: https:` pero no incluía `blob:`. Esto puede impedir que el navegador represente un PNG/JPG/WebP válido y activar el mensaje «La imagen seleccionada no se puede mostrar», bloqueando «Guardar cambios» **antes de realizar POST**.
+
+Se agrega `blob:` exclusivamente a `img-src`. No se amplía `script-src`, `connect-src`, `object-src` ni el acceso público a `uploads`. La prueba automatizada impide una regresión del encabezado versionado.
+
+**Validación obligatoria después del despliegue:** inspeccionar el CSP efectivo del documento HTML servido por IIS (debe incluir `img-src 'self' data: blob: https:`), abrir una sesión nueva y seleccionar PNG, JPG y WebP reales (menos de 2 MiB); confirmar que aparecen, se habilita Guardar, se completan PUT/POST, y el logo permanece visible tras recargar/reiniciar. Probar además archivo falso, >2 MiB, errores de acceso/ACL y lectura pública. Ninguna de estas verificaciones en staging ha sido ejecutada aquí. La incidencia #106 no se cierra hasta contar con evidencia.
+
 ## Secuencia de diagnóstico y reparación
 1. Confirmar versión API/web activa y el `UPLOADS_DIR` de la configuración efectiva NSSM; **no revelar secretos**.
 2. Capturar **solo** estado HTTP, `x-request-id`, tamaño, tipo de archivo y error sanitizado para `POST /api/configuracion/marca/logo` con PNG válido <2 MiB.
