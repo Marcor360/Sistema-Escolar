@@ -1,6 +1,6 @@
 # Documentación de Sistema Escolar
 
-Entrada de lectura para la candidata 1.27.19. Revisión documental: 21 de octubre de 2026. Las guías vigentes describen el código consolidado; las auditorías anteriores conservan su propio corte. El README principal resume las funciones y los requisitos de desarrollo, operación y validación.
+Entrada de lectura para la candidata 1.27.20. Revisión documental: 21 de octubre de 2026. Las guías vigentes describen el código consolidado; las auditorías anteriores conservan su propio corte. El README principal resume las funciones y los requisitos de desarrollo, operación y validación.
 
 ## Leer según la tarea
 
@@ -28,7 +28,7 @@ Entrada de lectura para la candidata 1.27.19. Revisión documental: 21 de octubr
 | Evidencia beta.2 | [Ejecución](EJECUCION_BETA_1.24.0-beta.2.md), [documentos/cache Expo](../mobile/docs/AUDITORIA_DOCUMENTOS_CACHE_2026-10-14.md) |
 | Aceptación institucional | [Puertas](BETA_ACEPTACION.json) y [QA UX](VALIDACION_UX_ONEST.md) |
 | Temarios y ficha integral de ciclo | [Temarios y ciclos](TEMARIOS_CICLOS.md) |
-| Evaluación y actas: decisiones pendientes | [Propuesta condicionada 1.28.0](PLAN_CALIFICACIONES_ACTAS_1.28.0.md) |
+| Evaluación y actas: decisiones pendientes | [Plan condicionado](PLAN_CALIFICACIONES_ACTAS_1.28.0.md) y [anexo técnico propuesto](IMPLEMENTACION_EVALUACIONES_1.28.0.md) |
 
 ## Mantenimiento
 

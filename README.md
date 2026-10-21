@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.27.19`** · Estado: candidata documental; aceptación institucional pendiente. Esta entrega actualiza documentación y metadatos de versión; **no demuestra despliegue adicional**. Staging confirmado por el operador en **1.27.17** (commit `8579ab4`), con API `/health/ready` local y HTTPS correctas. La app Expo instalada en dispositivos **no se actualiza automáticamente**.
+**Versión candidata: `1.27.20`** · Estado: candidata preparatoria; aceptación institucional pendiente. Esta entrega actualiza documentación, herramientas de pruebas y metadatos de versión; **no demuestra despliegue adicional**. Staging confirmado por el operador en **1.27.17** (commit `8579ab4`), con API `/health/ready` local y HTTPS correctas. La app Expo instalada en dispositivos **no se actualiza automáticamente**.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -19,6 +19,7 @@ Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [ín
 
 ### Funcionalidad destacada de versiones recientes
 
+- **1.27.20:** contrato técnico propuesto para la versión objetivo 1.28.0: cuatro parciales, NP y asistencia informativa, transición histórica y permisos. Sin cambio de notas ni migraciones; requiere aprobación institucional. Actualiza Vitest para resolver avisos de seguridad en pruebas. [Anexo y límites](docs/IMPLEMENTACION_EVALUACIONES_1.28.0.md).
 - **1.27.19:** limpieza documental: se retiran doce resúmenes/inventarios históricos recuperables en Git, se simplifican índice y estado y se actualizan contratos de referencia. Sin cambios funcionales ni migraciones.
 - **1.27.18:** Web admite PNG/JPG/WebP de hasta 20 MiB, convierte en el navegador a WebP de hasta 10 MiB y verifica lectura pública tras cargar. API admite solo WebP optimizado, almacena temporalmente fuera de la ruta pública y protege la referencia anterior en fallos. Identidad pública sincronizada entre pestañas web y al volver a primer plano o cada minuto activo en Expo; web conserva marca válida en localStorage, Expo en SecureStore, metadatos sin caché HTTP y logos únicos con caché inmutable. IIS exige límite efectivo ≥11 MiB y UAT de archivos/ACL; sin migraciones.
 

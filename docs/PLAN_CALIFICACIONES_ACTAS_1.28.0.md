@@ -2,6 +2,8 @@
 
 **Estado:** propuesta de especificación, sin reglamento institucional aprobado. **No liberar ni activar cambios funcionales.** El issue #139 mantiene pendientes fórmula, escala, periodos, asistencias, cierres, firmas y actas. Esta entrega documental se versiona como 1.27.12. La versión objetivo 1.28.0 corresponde a una implementación futura aprobada; no representa una norma vigente.
 
+El [anexo técnico de transición](IMPLEMENTACION_EVALUACIONES_1.28.0.md), incorporado en la entrega documental 1.27.20, desarrolla una propuesta de cuatro parciales, NP y asistencia informativa. Sigue pendiente de aprobación institucional; no sustituye la escala 0–100, P1–P3 ni Final vigentes.
+
 ## Formatos recibidos y alcance técnico actual
 
 Se recibieron los PDF de acta y boleta. La entrega 1.27.9 ofrece formatos informativos y descargas privadas, conservando 0–100 y el promedio vigente P1–P3. El ejemplo usa 0–10, pero falta aprobar equivalencia o cambio de escala. Asistencia, evaluación continua, examen desglosado, seriación, firmas y ponderaciones continúan pendientes; no se infieren del diseño. Ver [formatos escolares](FORMATOS_ESCOLARES.md).

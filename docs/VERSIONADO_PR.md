@@ -1,6 +1,6 @@
 # Política de versiones por pull request
 
-**Corte: 21/oct/2026.** Base de esta limpieza: `main` **1.27.18** (`fd2b9dc`, #163). Candidata: **1.27.19**. Tras integrarla, la siguiente entrega pequeña usará **1.27.20** o una versión semántica superior; comprobar siempre la base remota.
+**Corte: 21/oct/2026.** Base de #165: `main` **1.27.19** (`9a09ed6`). Entrega preparatoria: **1.27.20**. **1.28.0** identifica solo la versión objetivo futura del reglamento; no la entrega de este PR. La siguiente entrega pequeña deberá usar 1.27.21 o una versión superior, comprobando siempre la base remota.
 
 ## Numeración
 
