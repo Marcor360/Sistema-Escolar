@@ -151,3 +151,26 @@ it('tras registrar un alumno ofrece continuar con apertura de cartera y no con G
   expect(enlace.getAttribute('href')).toBe('/apertura-cartera/nueva');
   expect(screen.queryByRole('link', { name: /Ir a Grupos para inscribir/ })).toBeNull();
 });
+
+it.each(['respuesta', 'error'])('ignora %s de notas después de cerrar el historial', async (tipo) => {
+  contexto.gestionar = true;
+  let resolver!: (value: unknown) => void;
+  let rechazar!: (error: Error) => void;
+  const lenta = new Promise((resolve, reject) => { resolver = resolve; rechazar = reject; });
+  vi.spyOn(api, 'get').mockImplementation((url) => {
+    if (url.startsWith('/calificaciones/alumno/')) return lenta as ReturnType<typeof api.get>;
+    if (url.endsWith('/historial/listado')) return Promise.resolve({ data: { datos: [{ id: 8, grupo: { id: 2, nombre: 'Grupo QA', ciclo: { id: 3, nombre: '2026' }, plantel: { nombre: 'Centro' } } }], total: 1, pagina: 1, porPagina: 10 } });
+    return Promise.resolve({ data: url === '/alumnos' ? resultado('QA') : [] });
+  });
+  render(<MemoryRouter><AlumnosPage /></MemoryRouter>);
+  fireEvent.click(await screen.findByRole('button', { name: 'Historial y boleta' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Ver calificaciones' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Cerrar historial' }));
+  await act(async () => { if (tipo === 'error') rechazar(new Error('Error obsoleto')); else resolver({ data: [{ id: 1, grupoMateria: { grupo: { id: 2 }, materia: { nombre: 'Nota obsoleta' } } }] }); });
+  expect(screen.queryByText('Nota obsoleta')).toBeNull();
+  expect(screen.queryByText('Error obsoleto')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Historial y boleta' }));
+  await screen.findByRole('button', { name: 'Ver calificaciones' });
+  expect(screen.queryByRole('table', { name: 'Calificaciones de la inscripción' })).toBeNull();
+  expect(screen.queryByText('Nota obsoleta')).toBeNull();
+});

@@ -32,7 +32,7 @@ function preparar(cerrado=true,completo=true){
  const service=new FormatosEscolaresService(ds as unknown as DataSource,reportes as unknown as ReportesService,
  {obtenerPorUsuario:jest.fn().mockResolvedValue(alumno)} as unknown as AlumnosService,scope as unknown as ScopeService,
  {obtener:jest.fn().mockResolvedValue({nombreInstitucion:'Institución QA'})} as unknown as ConfiguracionService);
- return {service,ds,scope,reportes,inscripciones};
+ return {service,ds,scope,reportes,inscripciones,periodos};
 }
 describe('Formatos escolares privados',()=>{
  it('rechaza al alumno que solicita otra identidad antes de consultar expedientes',async()=>{
@@ -64,4 +64,25 @@ describe('Formatos escolares privados',()=>{
   const {service,reportes,ds}=preparar();await expect(service.acta(3,4,administrativo)).rejects.toThrow('Selecciona');expect(ds.getRepository).not.toHaveBeenCalled();
   reportes.validarAccesoAClase.mockRejectedValue(new Error('Clase ajena'));await expect(service.acta(3,1,administrativo)).rejects.toThrow('Clase ajena');expect(ds.getRepository).not.toHaveBeenCalled();
  });
+});
+
+it('publica boleta y Excel únicamente al cerrar todos los parciales completos', async () => {
+ const {service,periodos}=preparar(false);
+ expect(await service.boleta(1,estudiante,8)).toMatchObject({disponible:false,filas:[]});
+ for(const periodo of periodos) periodo.estatus='CERRADO';
+ expect(await service.boleta(1,estudiante,8)).toMatchObject({disponible:true,promedioGeneral:60});
+ const wb=new ExcelJS.Workbook();await wb.xlsx.load(await service.boletaExcel(1,estudiante,8) as never);
+ expect(wb.getWorksheet('Boleta')!.getCell('G8').value).toBe(60);
+});
+it('no entrega Excel ni PDF al alumno con notas incompletas aunque todos los periodos estén cerrados', async () => {
+ const {service}=preparar(true,false);
+ expect(await service.boleta(1,estudiante,8)).toMatchObject({disponible:false,filas:[]});
+ await expect(service.boletaExcel(1,estudiante,8)).rejects.toThrow('P1–P3');
+ await expect(service.boletaPdf(1,estudiante,8)).rejects.toThrow('P1–P3');
+});
+it('el acta Final no reutiliza P1 y exporta la nota pendiente vacía', async () => {
+ const {service}=preparar();
+ expect(await service.acta(3,0,administrativo)).toMatchObject({evaluacion:'Final',faltantes:1,filas:[{calificacion:null}]});
+ const wb=new ExcelJS.Workbook();await wb.xlsx.load(await service.actaExcel(3,0,administrativo,false) as never);
+ expect(wb.getWorksheet('Acta')!.getCell('W8').value).toBe('');
 });

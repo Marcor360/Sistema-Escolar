@@ -18,7 +18,7 @@ export function HistorialAlumno({ historial, boleta, cargandoNotas, verNotas, no
         {historial.registros.map((i) => <p key={i.id}>{i.grupo.ciclo.nombre} · {i.grupo.nombre} · {i.grupo.plantel.nombre} · {i.estatus}
           <button onClick={() => boleta(historial.alumno, i.grupo.ciclo.id, i.id)}>Boleta de esta inscripción</button>
           <button onClick={()=>setBoletaId(i.id)}>Ver boleta informativa y Excel</button>
-          <button disabled={cargandoNotas} onClick={() => verNotas(historial.alumno, i)}>Ver calificaciones</button></p>)}
+          <button disabled={cargandoNotas || cargando} onClick={() => verNotas(historial.alumno, i)}>Ver calificaciones</button></p>)}
         <Paginador total={historial.total} pagina={historial.pagina} porPagina={historial.porPagina} deshabilitado={cargando} onCambio={cambiarPagina} />
         {cargando && <p role="status">Cargando historial…</p>}
         {boletaId!==null && <BoletaEscolar key={`${historial.alumno.id}-${boletaId}`} alumnoId={historial.alumno.id} inscripcionId={boletaId}/>}

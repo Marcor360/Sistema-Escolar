@@ -36,35 +36,34 @@ export class CiclosService {
         select: { grupoId: true, alumnoId: true }, loadEagerRelations: false,
       }));
     }
-    const idsClases = clases.map((clase) => clase.id);
-    const periodos: PeriodoCalificacion[] = [];
-    const notas: Calificacion[] = [];
-    for (let inicio = 0; inicio < idsClases.length; inicio += TAMANO_LOTE) {
-      const idsLote = idsClases.slice(inicio, inicio + TAMANO_LOTE);
-      periodos.push(...await manager.getRepository(PeriodoCalificacion).find({
-        where: { grupoMateriaId: In(idsLote) },
-        select: { grupoMateriaId: true, parcial: true, estatus: true }, loadEagerRelations: false,
-      }));
-      notas.push(...await manager.getRepository(Calificacion).find({
-        where: { grupoMateriaId: In(idsLote) },
-        select: { grupoMateriaId: true, parcial: true, alumnoId: true }, loadEagerRelations: false,
-      }));
-    }
     const inscritosPorGrupo = new Map<number, number[]>();
     for (const i of inscripciones) { const ids = inscritosPorGrupo.get(i.grupoId) ?? []; ids.push(i.alumnoId); inscritosPorGrupo.set(i.grupoId,ids); }
     const gruposConMaterias = new Set(clases.map((c) => c.grupoId));
-    const notasExistentes = new Set(notas.map((n) => `${n.grupoMateriaId}:${n.parcial}:${n.alumnoId}`));
-    const cerrados = new Set(periodos.filter((p) => p.estatus === 'CERRADO').map((p) => `${p.grupoMateriaId}:${p.parcial}`));
     const faltantes: { grupoId?: number; grupoMateriaId: number; parcial: number; inscritos: number; sinNota: number; cerrado: boolean }[] = [];
     for (const grupo of grupos) {
       const inscritos = (inscritosPorGrupo.get(grupo.id) ?? []).length;
       if (inscritos && !gruposConMaterias.has(grupo.id)) faltantes.push({ grupoId: grupo.id, grupoMateriaId: 0, parcial: 0, inscritos, sinNota: inscritos, cerrado: false });
     }
-    for (const clase of clases) for (const parcial of [1, 2, 3]) {
-      const inscritos = inscritosPorGrupo.get(clase.grupoId) ?? [];
-      const sinNota = inscritos.filter((id) => !notasExistentes.has(`${clase.id}:${parcial}:${id}`)).length;
-      const cerrado = cerrados.has(`${clase.id}:${parcial}`);
-      if (inscritos.length && (sinNota || !cerrado)) faltantes.push({ grupoMateriaId: clase.id, parcial, inscritos: inscritos.length, sinNota, cerrado });
+    // Reducir cada lote antes de consultar el siguiente: no conservar todas las notas del ciclo.
+    for (let inicio = 0; inicio < clases.length; inicio += TAMANO_LOTE) {
+      const lote = clases.slice(inicio, inicio + TAMANO_LOTE);
+      const idsLote = lote.map((clase) => clase.id);
+      const periodos = await manager.getRepository(PeriodoCalificacion).find({
+        where: { grupoMateriaId: In(idsLote) },
+        select: { grupoMateriaId: true, parcial: true, estatus: true }, loadEagerRelations: false,
+      });
+      const notas = await manager.getRepository(Calificacion).find({
+        where: { grupoMateriaId: In(idsLote), parcial: In([1, 2, 3]) },
+        select: { grupoMateriaId: true, parcial: true, alumnoId: true }, loadEagerRelations: false,
+      });
+      const notasExistentes = new Set(notas.map((n) => `${n.grupoMateriaId}:${n.parcial}:${n.alumnoId}`));
+      const cerrados = new Set(periodos.filter((p) => p.estatus === 'CERRADO').map((p) => `${p.grupoMateriaId}:${p.parcial}`));
+      for (const clase of lote) for (const parcial of [1, 2, 3]) {
+        const inscritos = inscritosPorGrupo.get(clase.grupoId) ?? [];
+        const sinNota = inscritos.filter((alumnoId) => !notasExistentes.has(`${clase.id}:${parcial}:${alumnoId}`)).length;
+        const cerrado = cerrados.has(`${clase.id}:${parcial}`);
+        if (inscritos.length && (sinNota || !cerrado)) faltantes.push({ grupoMateriaId: clase.id, parcial, inscritos: inscritos.length, sinNota, cerrado });
+      }
     }
     return { ciclo, grupos: grupoIds.length, clases: clases.length, inscritos: inscripciones.length, faltantes, puedeCerrar: faltantes.length === 0 };
   }
