@@ -174,3 +174,23 @@ it.each(['respuesta', 'error'])('ignora %s de notas después de cerrar el histor
   expect(screen.queryByRole('table', { name: 'Calificaciones de la inscripción' })).toBeNull();
   expect(screen.queryByText('Nota obsoleta')).toBeNull();
 });
+
+it('no muestra notas de un alumno después de abrir otro expediente', async () => {
+  contexto.gestionar = true;
+  let resolver!: (value: unknown) => void;
+  const lenta = new Promise(resolve => { resolver = resolve; });
+  vi.spyOn(api, 'get').mockImplementation(url => {
+    if (url.startsWith('/calificaciones/alumno/')) return lenta as ReturnType<typeof api.get>;
+    if (url.endsWith('/historial/listado')) return Promise.resolve({ data: { datos: [{ id: 8, grupo: { id: 2, nombre: 'Grupo QA', ciclo: { id: 3, nombre: '2026' }, plantel: { nombre: 'Centro' } } }], total: 1, pagina: 1, porPagina: 10 } });
+    const lista = resultado('QA1'); lista.datos.push({ ...lista.datos[0], id: 2, matricula: 'QA2' });
+    return Promise.resolve({ data: url === '/alumnos' ? lista : [] });
+  });
+  render(<MemoryRouter><AlumnosPage /></MemoryRouter>);
+  fireEvent.click((await screen.findAllByRole('button', { name: 'Historial y boleta' }))[0]);
+  fireEvent.click(await screen.findByRole('button', { name: 'Ver calificaciones' }));
+  fireEvent.click(screen.getAllByRole('button', { name: 'Historial y boleta' })[1]);
+  await screen.findByRole('heading', { name: 'Historial de QA2' });
+  await act(async () => { resolver({ data: [{ id: 1, grupoMateria: { grupo: { id: 2 }, materia: { nombre: 'Notas del anterior' } } }] }); });
+  expect(screen.queryByText('Notas del anterior')).toBeNull();
+  expect(screen.queryByText('Cargando calificaciones…')).toBeNull();
+});
