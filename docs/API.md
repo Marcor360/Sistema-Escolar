@@ -258,3 +258,16 @@ Solo SUPERADMIN/ADMINISTRATIVO con alcance del plantel: `GET /cartera`, `GET /ca
 Aplicar migraciones incrementales de agrupación ordinaria, apertura de cartera y recursamiento conforme al manifiesto, con DB_SYNC=false; no ejecutar schema.sql sobre bases existentes. Ver contratos y límites operativos en [cartera](prs/02-APERTURA-CARTERA.md), [agrupación](prs/03-AGRUPACION-TRANSACCIONAL.md) y [recursamiento](prs/04-RECURSAMIENTO-MATERIA.md).
 
 - `GET /api/academico/materias/listado?pagina=1&porPagina=10&buscar=texto`: catálogo global activo, búsqueda literal por clave/nombre, respuesta `{datos,total,pagina,porPagina}`, máximo 100. ADMINISTRATIVO/FINANZAS/MAESTRO y SUPERADMIN. El endpoint `GET /api/academico/materias` conserva el arreglo compatible con selectores existentes; la asignación de materias a clases mantiene alcance por plantel.
+
+## Identidad institucional — candidata 1.27.18 (#163)
+
+| Método | Ruta (prefijo /api) | Acceso y contrato |
+|---|---|---|
+| GET | `/configuracion/marca` | Público; nombres, logoUrl, colores y actualizadoEn. `Cache-Control: no-store`. |
+| PUT | `/configuracion/marca` | SUPERADMIN; nombres y colores, conservando el logo. |
+| POST | `/configuracion/marca/logo` | SUPERADMIN; multipart `logo`, solo WebP ≤10 MiB. El portal convierte PNG/JPEG/WebP de entrada ≤20 MiB. |
+| DELETE | `/configuracion/marca/logo` | SUPERADMIN; retira la referencia y programa limpieza. |
+
+El logo se consulta fuera del prefijo API, en `/uploads/marca-logo-UUID.webp`, mediante el controlador público del módulo archivos: UUID nuevo por actualización, caché pública de un año e inmutable y `nosniff`. Logos previos PNG/JPEG/WebP mantienen lectura. Los documentos privados siguen requiriendo enlaces firmados y autorización; no habilitar estáticos de uploads ni publicar su directorio en IIS.
+
+La API inspecciona firma RIFF/WEBP; no decodifica ni optimiza la imagen. Tras validar, renombra el temporal, verifica lectura y guarda la referencia en transacción. Los fallos conservan la referencia anterior y limpian el archivo nuevo. Tamaño excesivo devuelve 413; formato inválido, 400. IIS debe permitir al menos 11 MiB de solicitud multipart para este contrato. [Diagnóstico y UAT pendiente](LOGO_WEBP_STAGING_1.27.18.md).

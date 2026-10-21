@@ -15,6 +15,8 @@ Sistema escolar multiplataforma para operación académica, administrativa y fin
 | MySQL / SQL Server | Baseline `v1` y migraciones incrementales del manifiesto | Restauración ensayada, historial exacto de cada ambiente |
 | ETL legado | Herramientas parciales | Diseño y conciliación de datos de origen; no migración general |
 
+Barrido vigente: [estado, evidencias y pendientes de 1.27.18](docs/BARRIDO_1.27.18_2026-10-21.md).
+
 ### Funcionalidad destacada de versiones recientes
 
 - **1.27.18:** Web admite PNG/JPG/WebP de hasta 20 MiB, convierte en el navegador a WebP de hasta 10 MiB y verifica lectura pública tras cargar. API admite solo WebP optimizado, almacena temporalmente fuera de la ruta pública y protege la referencia anterior en fallos. Identidad pública sincronizada entre pestañas web y al volver a primer plano o cada minuto activo en Expo; web conserva marca válida en localStorage, Expo en SecureStore, metadatos sin caché HTTP y logos únicos con caché inmutable. IIS exige límite efectivo ≥11 MiB y UAT de archivos/ACL; sin migraciones.

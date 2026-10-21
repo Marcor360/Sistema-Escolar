@@ -1,6 +1,6 @@
 # Política de versiones por pull request
 
-**Corte: 18/oct/2026.** La versión ya existente en `main` es **1.26.1**. La siguiente entrega debe ser **1.26.2**, no otra 1.26.1.
+**Corte: 21/oct/2026.** Base de #163: `main` **1.27.17**, commit `8579ab4`. Candidata de #163: **1.27.18**. Tras integrarla, la siguiente entrega pequeña deberá usar **1.27.19** o una versión semántica superior; confirmar siempre la base remota antes de numerar.
 
 ## Numeración
 
@@ -16,7 +16,7 @@ En título/cuerpo del PR, especificar versión, propósito, archivos/módulos, v
 
 Si un PR anterior sigue abierto al entrar en vigor el control, debe actualizarse a una versión superior a la que esté en su rama base. La comprobación relativa no reemplaza la revisión humana del tipo de incremento.
 
-## Registro inicial
+## Registro histórico inicial
 
 | Versión | Contenido | Estado |
 | --- | --- | --- |
@@ -28,5 +28,7 @@ Si un PR anterior sigue abierto al entrar en vigor el control, debe actualizarse
 | 1.26.6 | Consulta, captura e importación enfocadas de calificaciones | PR apilado; sin despliegue |
 | 1.27.0 | Temario independiente, consulta de alumno y ficha agregada del ciclo | Integrado en #137; sin despliegue ni aceptación institucional |
 | 1.27.1 | Formularios docentes enfocados y paginación de actividades/materiales/entregas/tareas | En revisión; sin despliegue |
+
+Los estados de la tabla anterior corresponden a su corte original; para el estado vigente consultar [el barrido de 1.27.18](BARRIDO_1.27.18_2026-10-21.md).
 
 No confundir `versión`, número de PR GitHub, SHA integrado o versión de servidor: son identificadores distintos.

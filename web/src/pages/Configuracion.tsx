@@ -84,7 +84,7 @@ export default function ConfiguracionPage() {
     } catch (err) {
       const detalle = mensajeDeError(err);
       const mensaje = detalle === 'File too large'
-        ? 'El logotipo supera los 20 MB permitidos. Selecciona una imagen más ligera.'
+        ? 'El WebP optimizado supera los 10 MiB permitidos por la API. Selecciona una imagen más ligera.'
         : detalle;
       setError(logoGuardado
         ? `Los datos y el logotipo se guardaron, pero no se pudo actualizar la vista: ${mensaje}`

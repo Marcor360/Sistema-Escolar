@@ -1,12 +1,14 @@
-# Estado de implementación — 1.25.0-beta.1
+# Estado de implementación — candidata 1.27.18
 
-Corte documental: 14 de octubre de 2026. Código de referencia: main, commit 54a5759cb098a856774e897c4f88dcccebfd2a4b, tras integrar #42, #43 y #44. Esta revisión no modifica funcionalidades, contraseñas ni bases institucionales.
+Corte documental: 21 de octubre de 2026. Base de #163: `main` 1.27.17 (`8579ab4`); candidata 1.27.18 en #163. [Barrido y evidencias vigentes](BARRIDO_1.27.18_2026-10-21.md). Las secciones por PR y resultados antiguos conservan su corte histórico. La versión del código no acredita despliegue ni aceptación institucional.
 
 ## Clasificación
 
 Sistema de información escolar (SIS) multiplantel, con administración académica/financiera y funciones de aula virtual. Arquitectura de monolito modular NestJS, portal React/Vite y cliente Expo exclusivo para ALUMNO. Beta funcional avanzada, candidata a preparar un piloto controlado; pendiente de requisitos de seguridad y aceptación operativa. No es una certificación de producción ni de un ERP general.
 
 ## Funciones y límites actuales
+
+Marca en #163: entrada web PNG/JPEG/WebP ≤20 MiB, salida/API WebP ≤10 MiB, metadatos públicos `no-store`, logos UUID con caché inmutable y revalidación web/Expo cada minuto activo. Persistencia de metadatos públicos en localStorage/SecureStore; las imágenes no se guardan como caché offline propia. Requiere UAT IIS/ACL y recompilar la app instalada. [Contrato](LOGO_WEBP_STAGING_1.27.18.md).
 
 | Área | Implementado y localización | Pendiente |
 |---|---|---|
@@ -19,15 +21,15 @@ Sistema de información escolar (SIS) multiplantel, con administración académi
 | Biblioteca | Administración privada por plantel; carpetas, PNG/JPEG/PDF, firma/MIME, ClamAV obligatorio, cuota y enlaces revocables | Scanner real, ACL, conservación y restore; no concede acceso a alumno/maestro |
 | Importaciones | ALUMNOS/DOCENTES/PERSONAL/INSCRIPCIONES, hasta 500 filas/5 MB; plantillas legibles, IDs visibles, preview por actor 15 minutos y confirmación atómica | Ensayo institucional de entrega y activación por correo; cuentas nuevas permanecen pendientes sin SMTP operativo |
 | Web | Recorridos guiados, tablas adaptables, teclado/foco, estados y errores; permisos revalidados en API | UAT por rol/plantel, Edge y auditoría integral de accesibilidad |
-| Móvil | Seis pestañas; Perfil → Mis documentos; boletas y materiales por materia, enlaces restringidos al origen/ruta, lectura en memoria hasta cinco minutos, aislamiento por identidad | Build firmado y pruebas físicas; no guarda PDF ni firmas en caché y no confirma tareas/pagos offline |
+| Móvil | Cinco pestañas (Inicio, Materias, Calificaciones, Pagos y Perfil); tareas desde Materias; Perfil → Mis documentos; boletas y materiales por materia, enlaces restringidos al origen/ruta, lectura en memoria hasta cinco minutos, aislamiento por identidad | Build firmado y pruebas físicas; no guarda PDF ni firmas en caché y no confirma tareas/pagos offline |
 | Finanzas | Cargos/pagos, idempotencia, cancelación/anulación, conciliación, origen estable tras traslado y cobranza auditable | Openpay sandbox real, SMTP y aceptación contable |
 | Conducta y analítica | Incidencias internas, seguimiento y métricas por capacidad/alcance | Política de conservación y validación de indicadores; sin objetivos académicos implementados |
 | Push | Opt-in, dispositivo/sesión, cola y recibos; deshabilitado por defecto | EAS/FCM/APNs y entrega física |
-| Base | Baseline v1 y nueve incrementales espejo; DB_SYNC=false, runner y pruebas de ambos motores | Estado del servidor real y ensayo en copia histórica |
+| Base | Baseline v1 y 19 incrementales espejo según el manifiesto; DB_SYNC=false, runner y pruebas de ambos motores | Estado del servidor real y ensayo en copia histórica |
 | ETL | Planteles/alumnos, dry-run y siete pruebas | Esquema certweb sanitizado, TLS/mapeos/conciliación; no apto para migración general |
-| Operación | Scripts Windows/IIS, despliegue manual, health live/ready, rollback de código | Instalación real, alertas, respaldo cifrado externo y restore con RPO/RTO observado |
+| Operación | Scripts Windows/IIS, despliegue manual, health live/ready, rollback de código; README informa staging 1.27.17 | Verificar versión efectiva del host, alertas, respaldo cifrado externo y restore con RPO/RTO observado |
 
-## Evidencia técnica
+## Evidencia técnica histórica
 
 - #43: backend 208 pruebas en 43 suites y web 97 en 26 archivos; lint, tipos y builds aprobados. CI de main: [38602709436](https://github.com/Marcor360/Sistema-Escolar/actions/runs/38602709436).
 - #44: móvil 82 pruebas en 15 archivos, 11 auxiliares, TypeScript y export Android. Los ocho controles del PR aprobaron: [38606558189](https://github.com/Marcor360/Sistema-Escolar/actions/runs/38606558189).

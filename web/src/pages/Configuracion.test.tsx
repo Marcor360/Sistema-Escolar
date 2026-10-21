@@ -44,7 +44,7 @@ it('informa el guardado parcial y conserva el archivo para reintentar', async ()
   const input = screen.getByLabelText(/Logo \(PNG/) as HTMLInputElement;
   fireEvent.change(input, { target: { files: [new File(['png'], 'logo.png')] } });
   fireEvent.submit(input.closest('form')!);
-  expect((await screen.findByRole('alert')).textContent).toContain('Los datos institucionales se guardaron, pero el logotipo no: El logotipo supera los 20 MB');
+  expect((await screen.findByRole('alert')).textContent).toContain('Los datos institucionales se guardaron, pero el logotipo no: El WebP optimizado supera los 10 MiB');
   await waitFor(() => expect((screen.getByText('Guardar cambios') as HTMLButtonElement).disabled).toBe(false));
   fireEvent.submit(input.closest('form')!);
   await screen.findByRole('status');
