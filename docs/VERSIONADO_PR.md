@@ -1,6 +1,6 @@
 # Política de versiones por pull request
 
-**Corte: 21/oct/2026.** Base de #163: `main` **1.27.17**, commit `8579ab4`. Candidata de #163: **1.27.18**. Tras integrarla, la siguiente entrega pequeña deberá usar **1.27.19** o una versión semántica superior; confirmar siempre la base remota antes de numerar.
+**Corte: 21/oct/2026.** Base de esta limpieza: `main` **1.27.18** (`fd2b9dc`, #163). Candidata: **1.27.19**. Tras integrarla, la siguiente entrega pequeña usará **1.27.20** o una versión semántica superior; comprobar siempre la base remota.
 
 ## Numeración
 
@@ -16,19 +16,6 @@ En título/cuerpo del PR, especificar versión, propósito, archivos/módulos, v
 
 Si un PR anterior sigue abierto al entrar en vigor el control, debe actualizarse a una versión superior a la que esté en su rama base. La comprobación relativa no reemplaza la revisión humana del tipo de incremento.
 
-## Registro histórico inicial
+## Historial
 
-| Versión | Contenido | Estado |
-| --- | --- | --- |
-| 1.26.1 | Seguridad de cuentas, cartera/catálogos consolidados y UX previa | Ya en main antes de este PR |
-| 1.26.2 | Política de versiones y mapa de ejemplos académicos | Propuesta; no desplegada |
-| 1.26.3 | Guía contextual de ciclos en web y acceso a grupos por ciclo | PR apilado sobre 1.26.2; sin despliegue |
-| 1.26.4 | Vigencia de ciclo y contexto visible de cotización en apertura de cartera | PR apilado sobre 1.26.3; sin despliegue |
-| 1.26.5 | Consulta propia paginada en API y Expo | PR apilado; sin despliegue |
-| 1.26.6 | Consulta, captura e importación enfocadas de calificaciones | PR apilado; sin despliegue |
-| 1.27.0 | Temario independiente, consulta de alumno y ficha agregada del ciclo | Integrado en #137; sin despliegue ni aceptación institucional |
-| 1.27.1 | Formularios docentes enfocados y paginación de actividades/materiales/entregas/tareas | En revisión; sin despliegue |
-
-Los estados de la tabla anterior corresponden a su corte original; para el estado vigente consultar [el barrido de 1.27.18](BARRIDO_1.27.18_2026-10-21.md).
-
-No confundir `versión`, número de PR GitHub, SHA integrado o versión de servidor: son identificadores distintos.
+La historia de versiones y PR se consulta en Git y GitHub. Los resúmenes retirados conservan [enlaces al contenido original](HISTORIAL.md). La versión de código, el número de PR, el SHA y la versión de servidor son identificadores distintos. Un merge no acredita despliegue.

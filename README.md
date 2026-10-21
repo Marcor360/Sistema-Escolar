@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.27.18`** · Estado: revisión técnica y aceptación institucional pendientes. Esta versión incorpora mejoras de código y documentación; **no demuestra despliegue adicional**. Staging confirmado por el operador en **1.27.17** (commit `8579ab4`), con API `/health/ready` local y HTTPS correctas. La app Expo instalada en dispositivos **no se actualiza automáticamente**.
+**Versión candidata: `1.27.19`** · Estado: candidata documental; aceptación institucional pendiente. Esta entrega actualiza documentación y metadatos de versión; **no demuestra despliegue adicional**. Staging confirmado por el operador en **1.27.17** (commit `8579ab4`), con API `/health/ready` local y HTTPS correctas. La app Expo instalada en dispositivos **no se actualiza automáticamente**.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -15,31 +15,12 @@ Sistema escolar multiplataforma para operación académica, administrativa y fin
 | MySQL / SQL Server | Baseline `v1` y migraciones incrementales del manifiesto | Restauración ensayada, historial exacto de cada ambiente |
 | ETL legado | Herramientas parciales | Diseño y conciliación de datos de origen; no migración general |
 
-Barrido vigente: [estado, evidencias y pendientes de 1.27.18](docs/BARRIDO_1.27.18_2026-10-21.md).
+Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [índice documental](docs/README.md) e [historial de documentos retirados](docs/HISTORIAL.md).
 
 ### Funcionalidad destacada de versiones recientes
 
+- **1.27.19:** limpieza documental: se retiran doce resúmenes/inventarios históricos recuperables en Git, se simplifican índice y estado y se actualizan contratos de referencia. Sin cambios funcionales ni migraciones.
 - **1.27.18:** Web admite PNG/JPG/WebP de hasta 20 MiB, convierte en el navegador a WebP de hasta 10 MiB y verifica lectura pública tras cargar. API admite solo WebP optimizado, almacena temporalmente fuera de la ruta pública y protege la referencia anterior en fallos. Identidad pública sincronizada entre pestañas web y al volver a primer plano o cada minuto activo en Expo; web conserva marca válida en localStorage, Expo en SecureStore, metadatos sin caché HTTP y logos únicos con caché inmutable. IIS exige límite efectivo ≥11 MiB y UAT de archivos/ACL; sin migraciones.
-- **1.27.17:** Calificaciones descarta respuestas obsoletas al cambiar/cerrar historial; cierre reduce notas por lote sin acumular el ciclo completo; diagnóstico de logo exporta fallos y revisa CSP. Pruebas automáticas ampliadas; sin nuevas reglas académicas.
-- **1.27.16:** Vista previa de logos: permite `blob:` exclusivamente en imágenes bajo CSP de IIS; requiere despliegue y UAT de #106.
-- **1.27.15:** Agrupación regular reutiliza ocupación dentro de la transacción, conservando límites y reservas.
-- **1.27.14:** Historial de alumnos paginado y filtrado por alcance; conserva boletas y Excel.
-- **1.27.13:** Cierre de ciclos: consulta inscripciones, periodos y notas en lotes de hasta 500 IDs; regresión para cohortes amplias. CI/UAT pendientes.
-- **1.27.8:** Grupos marca las denominaciones AUTO como generación automática y presenta el estado de preparación según materias, asignaciones docentes y alumnos inscritos, sin confundirlo con la situación financiera. La denominación institucional sigue requiriendo revisión; sin nueva migración.
-- **1.27.7:** Alumnos orienta al alta ordinaria mediante Apertura de cartera y distingue el expediente de la inscripción y cargos. Grupos solicita confirmación para la inscripción académica directa y comunica que no genera cargos. Pruebas de navegación añadidas; pendiente UAT.
-- **1.27.6:** la inscripción directa limita el grupo regular a 50 alumnos activos (o menos cuando hay reservas de recursamiento); el remanente excepcional 51–54 sigue reservado al motor automático de cartera. Inscripción directa todavía no genera cargos; no usarla como alta financiera. Validación institucional pendiente.
-- **1.27.5:** accesibilidad base de navegación enfocada, reintentos de búsqueda y ancho de formularios; UAT con usuarios todavía pendiente.
-- **1.27.4:** apertura de cartera con estados explicados, resumen de cotizaciones, tabla adaptable y matrícula/nombre autorizados; no cambia agrupación ni tarifas.
-- **1.27.3:** reorganización integral de README y mapa de operación; no añade reglas de negocio.
-- **1.27.2:** consentimiento institucional versionado en API/Expo, pendiente de habilitación administrativa.
-- **1.27.1:** `Mis clases` por operación (actividades, materiales, entregas); consultas paginadas y formularios enfocados.
-- **1.27.0:** temarios independientes por clase, publicaciones con fechas, historial, adjuntos privados y ficha de ciclo.
-- **1.26.6:** consulta, captura e importación de calificaciones separadas.
-- **1.26.5:** consultas paginadas de materias y calificaciones propias.
-- **1.26.4:** distingue vigencia de ciclo, mes de cobro y vencimiento en cartera.
-- **1.26.3:** guía contextual y navegación de ciclos y grupos.
-- **1.26.2:** control de versionado por PR.
-- **1.26.1 / 1.26.0:** invitaciones por correo, activación y recuperación seguras, plantillas SMTP, permisos y mejoras de UI.
 
 ## Arquitectura
 
@@ -164,22 +145,12 @@ Antes de marcar un PR como listo:
 - [Arquitectura](docs/ARQUITECTURA.md) · [API](docs/API.md) · [matriz de acceso](docs/MATRIZ_ACCESO.md)
 - [Catálogos académicos](docs/CATALOGOS_ACADEMICOS.md) · [materias](docs/MATERIAS_Y_ASIGNACIONES.md) · [temarios y ciclos](docs/TEMARIOS_CICLOS.md)
 - [Reglas del piloto](docs/REGLAS_PILOTO.md) · [versionado](docs/VERSIONADO_PR.md) · [operación de producción](docs/OPERACION_PRODUCCION.md)
-- [Calificaciones](docs/CALIFICACIONES_CONTEXTO.md) · [preparación de beta](docs/PREPARACION_BETA_1.24.0-beta.1.md)
+- [Calificaciones](docs/CALIFICACIONES_CONTEXTO.md) · [formatos escolares](docs/FORMATOS_ESCOLARES.md) · [decisiones pendientes para 1.28.0](docs/PLAN_CALIFICACIONES_ACTAS_1.28.0.md)
 
-**Historial:** los informes de versiones anteriores en `docs/` son evidencia histórica; sus fechas y versiones no deben modificarse retroactivamente.
+**Historial:** los informes retirados se recuperan desde [enlaces a Git](docs/HISTORIAL.md). Las auditorías fechadas conservadas describen únicamente su corte.
 
-## Formatos escolares informativos · 1.27.9
+## Políticas y formatos pendientes de aceptación
 
-Acta digital por clase y evaluación, Excel para rellenar o con notas guardadas; boleta informativa digital, Excel y PDF propios del alumno, disponibles con P1–P3 completos y cerrados. [Alcance, permisos y campos pendientes](docs/FORMATOS_ESCOLARES.md). Se conserva la escala 0–100 sin inferir reglas de los ejemplos. Sin despliegue ni firma institucional.
+Los formatos escolares son informativos, con escala 0–100 y promedio vigente P1–P3; [alcance y permisos](docs/FORMATOS_ESCOLARES.md). Reglamento, asistencia, ponderaciones y firmas siguen sujetos a [aprobación institucional](docs/PLAN_CALIFICACIONES_ACTAS_1.28.0.md).
 
-## Recargos de importe cero · 1.27.10
-
-Se rechaza el porcentaje cero y no se marcan como vencidos cargos cuyo recargo redondea a cero. Se conservan alcance financiero y tarifas. Sin migraciones ni despliegue.
-
-## Política de inscripción ordinaria · 1.27.11
-
-El interruptor `INSCRIPCION_ORDINARIA_SOLO_CARTERA` permanece apagado por defecto. Con valor `true`, las altas ordinarias nuevas pasan por cartera y la vía académica solo reactiva bajas previas del mismo grupo, conservando alcance, cupo y auditoría. Activación institucional y UAT pendientes. Sin migraciones, cobros retroactivos ni despliegue.
-
-## Plan condicionado de calificaciones y actas · 1.27.12
-
-Se integra únicamente la propuesta documental actualizada con los formatos recibidos. No cambia escalas, promedios, firmas ni activa la política de inscripción. [Decisiones pendientes para la versión objetivo 1.28.0](docs/PLAN_CALIFICACIONES_ACTAS_1.28.0.md).
+`INSCRIPCION_ORDINARIA_SOLO_CARTERA` permanece apagado por defecto. Con `true`, las altas ordinarias nuevas pasan por cartera y la vía académica solo reactiva bajas previas del mismo grupo. Requiere activación institucional y UAT; no genera cobros retroactivos.

@@ -1,4 +1,6 @@
-# Reglas de operación — 1.24.0-beta.2
+# Reglas de operación
+
+Referencia para la candidata 1.27.19, revisión del 21/oct/2026.
 
 Estas reglas son el comportamiento del código y requieren aceptación institucional antes del piloto.
 
@@ -11,8 +13,8 @@ Estas reglas son el comportamiento del código y requieren aceptación instituci
 - **Reactivación docente:** únicamente de BAJA, con motivo y planteles seleccionados/activos dentro del alcance. Reactiva la cuenta; ninguna clase se restaura automáticamente.
 - **Docente:** baja desactiva cuenta y planteles; sus clases quedan sin docente para reasignación. Las notas y actividades conservan sus autores. Reasignación verifica docente y cuenta activos y pertenencia al plantel.
 - **Eventos:** global sin plantel ni grupo; plantel sin grupo; grupo solo para integrantes autorizados. No basta compartir plantel para ver un evento de otro grupo. Fecha final mayor o igual a inicial; consultas por intervalo de hasta 366 días.
-- **Usuarios:** ALUMNO se crea desde Alumnos y MAESTRO desde Docentes. Personal genérico requiere plantel, salvo SUPERADMIN. Contraseña temporal en campos enmascarados y cambio obligatorio antes de operar.
-- **Sesión:** acceso de 15 minutos, refresh rotativo con vencimiento máximo de 30 días; hash persistido. Reutilizar un refresh anterior revoca ese dispositivo. Logout revoca la sesión actual; baja/cambio de contraseña o roles invalidan todas las sesiones por versión. Web: bearer en memoria y refresh en cookie HttpOnly/SameSite Strict/Secure en producción. Móvil: SecureStore. Tokens de versiones anteriores requieren nuevo login.
+- **Usuarios:** ALUMNO se crea desde Alumnos y MAESTRO desde Docentes. Personal genérico requiere plantel, salvo SUPERADMIN. ALUMNOS nuevos activan su cuenta mediante código privado y eligen contraseña; las cuentas de personal con contraseña temporal exigen cambio antes de operar.
+- **Sesión:** acceso de 15 minutos, refresh rotativo con vencimiento máximo de 30 días; hash persistido. Reutilizar un refresh anterior revoca ese dispositivo. Logout revoca la sesión actual; baja/cambio de contraseña o roles invalidan todas las sesiones por versión. Web: bearer en memoria y refresh en cookie HttpOnly/SameSite Strict/Secure en producción. Móvil: SecureStore. Sesiones revocadas o sin actividad vigente requieren nuevo login; una actualización de versión del producto por sí sola no revoca tokens.
 - **Boleta:** alumno propio o control escolar con alcance; maestro usa concentrado de sus clases. Identifica ciclo e inscripción, evitando mezclar grupos tras transferencia. Varias inscripciones en un ciclo requieren seleccionar una.
 - **Entregas:** una entrega calificada no puede reemplazarse. Una entrega sin calificar reemplaza su archivo y elimina el anterior después del commit. La referencia a archivos sustituidos/retirados se guarda en una cola persistente dentro de la transacción; la eliminación ocurre tras commit y se reintenta si falla el disco. Un DTO de archivo rechazado limpia también el temporal. No se ponen entregas ni pagos en cola offline.
 - **Origen financiero:** cargos, órdenes y pagos conservan el plantel donde se originaron. Una transferencia no mueve deudas, pagos ni permisos financieros; el alumno sigue viendo lo propio. Pagos no aplicados solo se concilian con un cargo del mismo origen. El backfill recupera la primera bitácora de creación, después el cargo/orden; cuando no hay evidencia usa el plantel actual y requiere revisión institucional de ese dato legado.
@@ -47,5 +49,5 @@ Las cuentas con hash anterior conservan compatibilidad. Si alguna utilizaba más
 - **Eventos editables:** PATCH requiere revision completa y revalida alcance de origen/destino. La edición web conserva plantel/grupo; ante conflicto mantiene datos y exige recarga.
 - **Notas por archivo:** XLSX o CSV por clase/parcial, preview del actor 15 minutos, motivo al corregir y confirmación transaccional única. Cambios de notas/periodo/ciclo desde el preview se rechazan. El archivo vacío de clase sin inscritos no se genera.
 - **Biblioteca:** solo administración autorizada por plantel; PNG/JPEG/PDF con firma/MIME, scanner obligatorio, cuota y descarga firmada. No es biblioteca compartida del alumno/maestro.
-- **Móvil:** seis pestañas; Mis documentos dentro de Perfil, boletas por ciclo/inscripción y materiales por materia. Lecturas en memoria hasta cinco minutos, sin escritura offline. PDF y URL firmada no se guardan en caché; abrir mediante el sistema no garantiza guardar en una carpeta local.
+- **Móvil:** cinco pestañas (Inicio, Materias, Calificaciones, Pagos y Perfil), tareas desde Materias; Mis documentos dentro de Perfil, boletas por ciclo/inscripción y materiales por materia. Lecturas en memoria hasta cinco minutos, sin escritura offline. PDF y URL firmada no se guardan en caché; abrir mediante el sistema no garantiza guardar en una carpeta local.
 - **Acceso inicial:** ALUMNOS nuevos deben completar la [activación segura](REQUERIMIENTO_ACTIVACION_SEGURA.md) desde web o Expo. Sin correo operativo siguen pendientes; las cuentas históricas no se bloquean retroactivamente.

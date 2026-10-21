@@ -1,6 +1,6 @@
-# Estado de implementación — candidata 1.27.18
+# Estado de implementación — candidata 1.27.19
 
-Corte documental: 21 de octubre de 2026. Base de #163: `main` 1.27.17 (`8579ab4`); candidata 1.27.18 en #163. [Barrido y evidencias vigentes](BARRIDO_1.27.18_2026-10-21.md). Las secciones por PR y resultados antiguos conservan su corte histórico. La versión del código no acredita despliegue ni aceptación institucional.
+Corte documental: 21 de octubre de 2026. Base: `main` 1.27.18 (`fd2b9dc`), tras integrar #163. La candidata 1.27.19 depura documentación y actualiza metadatos de versión; conserva el comportamiento funcional. [Contrato de marca](LOGO_WEBP_STAGING_1.27.18.md) e [informes retirados](HISTORIAL.md). La versión del código no acredita despliegue ni aceptación institucional.
 
 ## Clasificación
 
@@ -29,73 +29,21 @@ Marca en #163: entrada web PNG/JPEG/WebP ≤20 MiB, salida/API WebP ≤10 MiB, m
 | ETL | Planteles/alumnos, dry-run y siete pruebas | Esquema certweb sanitizado, TLS/mapeos/conciliación; no apto para migración general |
 | Operación | Scripts Windows/IIS, despliegue manual, health live/ready, rollback de código; README informa staging 1.27.17 | Verificar versión efectiva del host, alertas, respaldo cifrado externo y restore con RPO/RTO observado |
 
-## Evidencia técnica histórica
+## Evidencia técnica
 
-- #43: backend 208 pruebas en 43 suites y web 97 en 26 archivos; lint, tipos y builds aprobados. CI de main: [38602709436](https://github.com/Marcor360/Sistema-Escolar/actions/runs/38602709436).
-- #44: móvil 82 pruebas en 15 archivos, 11 auxiliares, TypeScript y export Android. Los ocho controles del PR aprobaron: [38606558189](https://github.com/Marcor360/Sistema-Escolar/actions/runs/38606558189).
-- CI del merge #44, SHA de referencia: [38609744655](https://github.com/Marcor360/Sistema-Escolar/actions/runs/38609744655). Los ocho controles aprobaron para ese SHA. Cada SHA nuevo debe comprobar su propia ejecución; la evidencia no se transfiere automáticamente.
-- Integración beta.2 documentada: MySQL 80 casos, SQL Server 77, recorridos Chromium/API/DB y responsive 320–3840. Son suites distintas, no una suma de cobertura única.
-- Pruebas con proveedores simulados, exportación Expo y scripts Windows no certifican servicios, teléfonos ni restauración institucional.
+- [CI de #163, ejecución 39644029772](https://github.com/Marcor360/Sistema-Escolar/actions/runs/39644029772): ocho jobs aprobados para `301d7f1a94bdd296b7048cfb9be41e9fb03925c0`, integrado mediante `fd2b9dc`. Incluye backend/web/mobile, MySQL, SQL Server, ETL, scripts Windows y recorridos web.
+- Verificación local de esa entrega: backend 365 pruebas en 68 suites; web 200 en 50 archivos; móvil 117 en 21 archivos y 11 controles auxiliares; lint/tipos/build web satisfactorios. Son resultados de ese código, no una ejecución nueva de cada versión.
+- La CI de 1.27.19 debe comprobar su SHA final; los resultados previos no certifican commits posteriores. Las pruebas automatizadas no certifican IIS/ACL, teléfonos, proveedores externos ni restore institucional.
 
-## Orden de preparación
+## Pendientes actuales
 
-1. Validar institucionalmente la [activación segura incorporada](REQUERIMIENTO_ACTIVACION_SEGURA.md), con SMTP real y dispositivos objetivo.
-2. Staging HTTPS y esquema conciliado; SMTP, Openpay y antivirus reales según servicios habilitados.
-3. UAT por rol en al menos dos planteles; archivos/reportes institucionales y pruebas físicas Android/iOS.
-4. Restore aislado, monitoreo, responsables, privacidad y aceptación formal.
+| Pendiente | Fuente y validación necesaria |
+|---|---|
+| Logo en staging (#106) | [Contrato WebP/IIS](LOGO_WEBP_STAGING_1.27.18.md): POST real, GET 200, permisos y persistencia tras reinicio/redeploy. |
+| Correo institucional (#107) | [SMTP staging](SMTP_STAGING_IUA.md) y [dominio compartido](SMTP_DOMINIO_COMPARTIDO_MICROSOFT365.md): recepción real y seguimiento de entrega. |
+| Permisos definitivos (#140) | [Matriz de acceso](MATRIZ_ACCESO.md), revisión por institución/plantel. |
+| Evaluación, escala y actas (#139) | [Plan condicionado](PLAN_CALIFICACIONES_ACTAS_1.28.0.md); conservar escala vigente y no emitir actas oficiales sin norma/firmas aprobadas. |
+| Accesibilidad y app física (#141) | [Matriz UAT](UAT_MATRIZ_2026-10-15.json), Android/iOS, lectores de pantalla, red y sesiones. |
+| Operación y datos | [Puertas beta](BETA_ACEPTACION.json): SMTP, antivirus real, restore y UAT. ETL requiere esquema sanitizado, TLS y conciliación. |
 
-[Puertas institucionales](BETA_ACEPTACION.json) conserva pendientes sin evidencia firmada. Su estado no se cambia por depurar documentación. [Ejecución beta.2](EJECUCION_BETA_1.24.0-beta.2.md) conserva la historia de las entregas; [índice](README.md) distingue guías vigentes e informes históricos.
-
-## Actualización de sesión y consultas — #46
-
-Web y Expo cierran localmente después de 30 minutos sin interacción humana. Consultas y refresh automáticos no reinician ese plazo; se comprueba al reanudar. Web comparte actividad/cierre entre pestañas; móvil serializa escritura y limpieza de la marca temporal para que un logout anterior no borre la actividad del login nuevo.
-
-Estado de cuenta invalida saldo anterior al recargar, después de cinco minutos o ante fallo; antes de ordenar consulta otra vez y detecta cambios. Materias retira listados de materiales al actualizar. Eventos móviles usan America/Mexico_City.
-
-Esta política es del cliente: sin red la revocación remota no puede confirmarse y el backend conserva access de 15 minutos y refresh máximo de 30 días. No equivale a inactividad absoluta en API. [Contrato, regresiones y QA física pendiente](CIERRE_INACTIVIDAD_30M_2026-10-14.md).
-
-## Ampliación de inactividad en API — #47–51
-
-El conjunto añade comprobación de última señal autenticada en JWT, refresh y enlaces firmados, con revocación a los 30 minutos. Login inicializa la marca y clientes web/Expo notifican interacción limitada a un pulso por minuto. Peticiones de fondo no renuevan. La revocación es condicional frente a actividad concurrente.
-
-Esto amplía el cierre local descrito en #46; sus límites anteriores son históricos respecto de esta entrega. Access sigue 15 minutos y refresh máximo 30 días. La señal del cliente no demuestra presencia humana. Requiere la novena migración y clientes coordinados; sesiones históricas NULL exigen reingreso. [Contrato y aceptación](SESIONES_INACTIVIDAD_PLAN.md).
-
-## Recorridos y adjuntos del alumno — #52–56
-
-Se amplían las regresiones API/base real: lectura propia de notas sin acceso a captura/listados del personal; entrega evaluada visible en tareas; PDF propio por inscripción con no-store y firma de contenido, rechazo de expediente ajeno; saldo después de pago parcial sin permiso para registrar pagos manuales.
-
-Expo comprueba URI local file/content cuando está presente, tamaño finito y nombre sin rutas ni controles, conservando Unicode. El envío real valida el asset del selector nativo; las comprobaciones del servidor siguen siendo definitivas. [Detalle de privacidad](../mobile/docs/PRIVACIDAD_SELECTOR_ARCHIVOS_2026-10-14.md). No se certifica limpieza física de la copia temporal ni pruebas en dispositivos.
-
-### Cierre IUA 11–12: navegación y recuperación de tareas
-
-Las seis pestañas de alumno incluyen etiquetas explícitas para lectores de pantalla. Tareas conserva la última consulta como referencia ante un fallo, permite reintentar y bloquea entregas mientras se actualiza o al vencer cinco minutos. La vigencia se comprueba también después de cerrar el selector de archivos, evitando enviar con una consulta vencida durante la selección. Las pruebas cubren fallo y recuperación de red y vencimiento durante el selector. Continúa pendiente la validación en dispositivos con TalkBack, VoiceOver, fuentes ampliadas y pantallas de 320 px.
-
-### Barrido responsivo del 15 de octubre de 2026
-
-Se corrige el reflujo de paginación y campos financieros con texto al 200 %, se añaden regiones accesibles a quince tablas pendientes y se adaptan los diálogos a pantallas bajas. La [matriz reproducible y sus límites](BARRIDO_RESPONSIVO_2026-10-15.md) amplía las comprobaciones de navegación/listados con siete pantallas adicionales, pestañas financieras con datos largos y recuperación de contraseña. La presentación web automatizada y los contratos móviles no reemplazan QA física ni aceptación institucional.
-
-### Activación segura: estructura y API (#60–#61)
-
-Se incorpora la décima migración incremental, con estado pendiente default false y tokens SHA-256 de un uso. La API permite solicitar invitación genérica por SMTP y activar con contraseña validada, bloquea login/refresh/JWT/restablecimiento/descargas de cuentas pendientes y revoca sesiones previas por versión. Reemisión y consumo se serializan por usuario. Los endpoints públicos tienen límite por IP; la columna de intentos queda reservada, sin contador por cuenta implementado.
-
-Esta etapa no conecta altas individuales/lotes ni pantallas: aún no cierra el requisito de eliminar la contraseña inicial de matrícula. No se aplica migración ni se despliega a la institución; requiere respaldo y esquema previo al código, clientes y aceptación de SMTP real. Véase [requisito y estado de implementación](REQUERIMIENTO_ACTIVACION_SEGURA.md).
-
-Revisión adicional de #61: entrega de invitaciones en cola acotada de memoria, respuesta HTTP independiente de consultas/SMTP y emisión/aceptación SMTP serializada por usuario. Activar invalida también recuperaciones anteriores; emitir recuperación revalida estado y versión bajo bloqueo. La cola no acredita entrega ni sobrevive reinicios; ante falta de correo el titular solicita de nuevo. No cambia el pendiente de altas/clientes ni la aceptación SMTP institucional.
-
-### Integración #62–#66: altas y clientes de activación
-
-Altas nuevas individuales y masivas de ALUMNO generan hashes de contraseñas aleatorias no entregadas; ninguna deriva de matrícula. La cuenta queda pendiente hasta consumir el código y establecer contraseña. Web y Expo ofrecen solicitud, activación y vuelta al login; la respuesta genérica no acredita entrega SMTP. Las cuentas anteriores no se bloquean retroactivamente. Esto completa la conexión pendiente de #60–#61 en el código, con aceptación institucional y despliegue aún pendientes.
-
-Push omite sesiones inactivas y cuentas pendientes. El preflight de entregas comprueba tarea vigente/no calificada antes del selector y cancela si se desmontó la pantalla; no elimina copias nativas existentes. Toda compilación web, también con modo development, exige VITE_API_URL HTTPS absoluta terminada en /api, sin credenciales, parámetros ni loopback. El servidor dev conserva configuración local. CI usa un dominio de ejemplo solo para compilar; no es un servicio desplegado.
-
-### Privacidad de perfil y preparación institucional (#67–#69)
-
-Expo muestra la CURP enmascarada por defecto, con revelación explícita por hasta 30 segundos y ocultación al recargar, salir del perfil o pasar a segundo plano. No cambia el alcance de la API ni bloquea capturas de pantalla del sistema operativo. Requiere QA física.
-
-El diagnóstico Windows valida live/ready y, si se indica, la versión; rechaza contratos incompletos y redirecciones, no modifica datos ni despliega y crea informes sin sobrescritura. CI comprueba comportamiento con transporte simulado en Windows, no conectividad institucional. La matriz UAT añade doce escenarios por roles y canales, todos pendientes; valida firma/fecha/SHA/referencias al aprobar y bloquea --release incompleto. La revisión humana de evidencias y las puertas institucionales siguen siendo necesarias.
-
-### Consolidación 1.25.0-beta.1 (#75)
-
-Se alinean backend, web, Expo y sus lockfiles en 1.25.0-beta.1, conservando las mejoras ya integradas en main, incluida la preparación de APK Windows. Las puertas de beta y la matriz UAT corresponden a esta candidata y mantienen todas sus aceptaciones pendientes. La documentación distingue la versión del código del estado del despliegue; no acredita recuperación de logos en IIS ni ensayo físico de treinta minutos de inactividad.
-
-Sin cambios de esquema ni aplicación de migraciones: baseline v1, diez incrementales espejo y 42 tablas documentales por motor. CI con bases aisladas valida el esquema de prueba; el historial real de un servidor institucional debe consultarse por separado, tras respaldo y conforme al runbook.
+Las ocho puertas institucionales y los trece escenarios UAT permanecen pendientes. El consentimiento institucional y la política de inscripción ordinaria conservan su habilitación explícita; esta limpieza no los activa. Staging 1.27.17 sigue siendo la última versión informada por el operador en README; no se obtuvo evidencia nueva del host. La app instalada requiere compilación/actualización para ejecutar cambios nuevos.

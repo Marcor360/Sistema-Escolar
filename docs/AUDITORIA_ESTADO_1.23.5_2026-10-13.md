@@ -16,7 +16,7 @@ El sistema supera un prototipo visual: existen reglas de negocio, persistencia, 
 
 ## Alcance y trazabilidad del barrido
 
-El [inventario CSV](auditoria/INVENTARIO_1.23.5_2026-10-13.csv) registra los **495 archivos versionados** del SHA fuente, con tamaño, líneas, SHA-256, área y controles aplicados. Son 491 archivos de texto y cuatro binarios: una fuente tipográfica y tres paquetes de dependencias corregidas. No incluye los nuevos documentos de esta auditoría ni archivos locales, secretos, dependencias instaladas o artefactos de compilación.
+El [inventario CSV](https://github.com/Marcor360/Sistema-Escolar/blob/fd2b9dc405c1f8bba1c63c7452b1b3e38884534d/docs/auditoria/INVENTARIO_1.23.5_2026-10-13.csv) registra los **495 archivos versionados** del SHA fuente, con tamaño, líneas, SHA-256, área y controles aplicados. Son 491 archivos de texto y cuatro binarios: una fuente tipográfica y tres paquetes de dependencias corregidas. No incluye los nuevos documentos de esta auditoría ni archivos locales, secretos, dependencias instaladas o artefactos de compilación.
 
 | Área | Archivos |
 |---|---:|

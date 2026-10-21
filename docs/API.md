@@ -1,4 +1,6 @@
-# API — Sistema Escolar 1.24.0-beta.2
+# API — Sistema Escolar
+
+Contrato de referencia para la candidata 1.27.19, revisión del 21/oct/2026. Los apartados con número de PR identifican la incorporación de cada contrato.
 
 Base: `http://localhost:3000/api` · Autenticación: `Authorization: Bearer <token>` ·
 Documentación interactiva: `/api/docs` (Swagger), solo fuera de producción. Los DTO anotados con validadores generan sus esquemas al compilar mediante el plugin oficial `@nestjs/swagger`. `SUPERADMIN` accede a todo.
@@ -10,7 +12,9 @@ Para el resumen por rol y las decisiones que requieren validación institucional
 
 | Método | Ruta | Acceso | Descripción |
 |---|---|---|---|
-| GET | /health | público | Consulta la conexión de base de datos; devuelve `200` si responde o `503` si no está disponible |
+| GET | /health | público | Comprueba conexión de base de datos: 200 o 503. |
+| GET | /health/live | público | Proceso activo y versión; no comprueba base ni almacenamiento. |
+| GET | /health/ready | público | Base, historial de migraciones y uploads legibles/escribibles; 200 con versión o 503 si no está lista. |
 
 ## Autenticación
 | Método | Ruta | Rol | Descripción |
@@ -38,8 +42,7 @@ Los intentos fallidos se registran sin almacenar contraseñas ni tokens.
 Los listados paginados responden `{ datos, total, pagina, porPagina }` (`pagina` inicia
 en 1, `porPagina` por defecto 10, máximo 100). Aplica a: `GET /usuarios`, `GET /usuarios/listado`,
 `GET /alumnos`, `GET /academico/grupos`, `GET /docentes`, `GET /finanzas/cargos` y
-`GET /finanzas/pagos`, `GET /finanzas/adeudos` y `GET /academico/clases-seleccion`. No aplica a `/calendario` (acotado por rango de fechas), a
-los endpoints móviles; el dashboard calcula su resumen en servidor. Conciliación y envíos de cobranza también responden con páginas.
+`GET /finanzas/pagos`, `GET /finanzas/adeudos` y `GET /academico/clases-seleccion`. El calendario se acota por rango de fechas. En móvil, las rutas propias `listado` se paginan; otros endpoints conservan su contrato específico. El dashboard calcula su resumen en servidor. Conciliación y envíos de cobranza también responden con páginas.
 
 ## Usuarios (SUPERADMIN)
 CRUD en `/usuarios`. Regla de dominio: `ALUMNO` no se combina con roles de personal.
