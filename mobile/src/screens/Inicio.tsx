@@ -20,9 +20,11 @@ import { api, mensajeDeError } from "../api/client";
 import { useSesion } from "../sesion";
 import { colores, radio, espacio, tipografia, textoSobreFondo } from "../theme";
 import { pesos } from "../formato";
+import { useMarca } from "../marca";
 import { base, Tarjeta } from "./comunes";
 
 export default function InicioScreen() {
+  const { marca } = useMarca();
   const { sesion } = useSesion();
   const navigation = useNavigation();
   const [saldo, setSaldo] = useState<number | null>(null);
@@ -95,12 +97,12 @@ export default function InicioScreen() {
         <RefreshControl refreshing={cargando} onRefresh={cargar} />
       }
     >
-      <View style={estilos.encabezado}>
-        <Text style={estilos.distintivo}>IUA · TU ESPACIO ESCOLAR</Text>
-        <Text style={estilos.saludo} accessibilityRole="header">
+      <View style={[estilos.encabezado, { backgroundColor: marca.colorPrimario, borderBottomColor: marca.colorAcento }]}>
+        <Text style={[estilos.distintivo, { color: marca.colorAcento }]}>{marca.nombreCorto} · TU ESPACIO ESCOLAR</Text>
+        <Text style={[estilos.saludo, { color: textoSobreFondo(marca.colorPrimario) }]} accessibilityRole="header">
           Hola, {nombre}
         </Text>
-        <Text style={estilos.introduccion}>
+        <Text style={[estilos.introduccion, { color: textoSobreFondo(marca.colorPrimario) }]}>
           Elige qué necesitas consultar. Tus avisos y próximos eventos aparecen más abajo.
         </Text>
       </View>
@@ -113,7 +115,7 @@ export default function InicioScreen() {
             accessibilityRole="button"
             accessibilityLabel="Reintentar cargar inicio"
           >
-            <Text style={estilos.reintentar}>Reintentar</Text>
+            <Text style={[estilos.reintentar, { color: marca.colorPrimario }]}>Reintentar</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -123,11 +125,11 @@ export default function InicioScreen() {
       )}
       {cargaInicialCompleta && (
         <View style={estilos.resumen}>
-          <View style={estilos.kpi}>
+          <View style={[estilos.kpi, { backgroundColor: marca.colorPrimario, borderLeftColor: marca.colorAcento }]}>
             <Text
               style={[
                 estilos.kpiValor,
-                { color: textoSobreFondo(colores.pizarra) },
+                { color: textoSobreFondo(marca.colorPrimario) },
               ]}
             >
               {saldo === null ? "—" : pesos(saldo)}
@@ -135,12 +137,12 @@ export default function InicioScreen() {
             <Text
               style={[
                 estilos.kpiEtiqueta,
-                { color: textoSobreFondo(colores.pizarra) },
+                { color: textoSobreFondo(marca.colorPrimario) },
               ]}
             >
               Saldo pendiente
             </Text>
-            <Text style={{ color: textoSobreFondo(colores.pizarra), marginTop: espacio.sm }}>
+            <Text style={{ color: textoSobreFondo(marca.colorPrimario), marginTop: espacio.sm }}>
               {saldo === null
                 ? 'No se pudo consultar tu saldo. Abre Estado de cuenta para reintentar.'
                 : saldo > 0
@@ -187,7 +189,7 @@ export default function InicioScreen() {
             accessibilityState={{ disabled: aviso.leida }}
             disabled={aviso.leida}
           >
-            <View style={[estilos.aviso, !aviso.leida && estilos.avisoSinLeer]}>
+            <View style={[estilos.aviso, !aviso.leida && estilos.avisoSinLeer, !aviso.leida && { borderLeftColor: marca.colorAcento }]}>
               <Text style={base.tituloTarjeta}>{aviso.titulo}</Text>
               <Text style={base.secundario}>{aviso.mensaje}</Text>
               <Text style={estilos.fecha}>
@@ -247,13 +249,13 @@ const estilos = StyleSheet.create({
   },
   saludo: {
     fontSize: tipografia.titulo,
-    color: textoSobreFondo(colores.pizarra),
+    color: textoSobreFondo(marca.colorPrimario),
     marginBottom: 4,
     fontWeight: "700",
   },
   introduccion: {
     fontSize: tipografia.secundaria,
-    color: textoSobreFondo(colores.pizarra),
+    color: textoSobreFondo(marca.colorPrimario),
     marginBottom: 0,
   },
   resumen: {

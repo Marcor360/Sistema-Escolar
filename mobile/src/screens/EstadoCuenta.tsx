@@ -15,6 +15,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { api, mensajeDeError } from "../api/client";
 import { colores, radio, espacio, tipografia, textoSobreFondo } from "../theme";
 import { pesos } from "../formato";
+import { useMarca } from "../marca";
 import {
   GuiaPantalla,
   base,
@@ -47,6 +48,7 @@ interface Estado {
 }
 
 export default function EstadoCuentaScreen() {
+  const { marca } = useMarca();
   const [estado, setEstado] = useState<Estado | null>(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
@@ -195,11 +197,11 @@ export default function EstadoCuentaScreen() {
       )}
       {estado && (
         <>
-          <View style={estilos.resumen}>
+          <View style={[estilos.resumen, { backgroundColor: marca.colorPrimario, borderLeftColor: marca.colorAcento }]}>
             <Text
               style={[
                 estilos.resumenEtiqueta,
-                { color: textoSobreFondo(colores.pizarra) },
+                { color: textoSobreFondo(marca.colorPrimario) },
               ]}
             >
               Saldo pendiente
@@ -207,7 +209,7 @@ export default function EstadoCuentaScreen() {
             <Text
               style={[
                 estilos.resumenValor,
-                { color: textoSobreFondo(colores.pizarra) },
+                { color: textoSobreFondo(marca.colorPrimario) },
               ]}
             >
               {pesos(estado.saldoTotal)}
@@ -232,7 +234,7 @@ export default function EstadoCuentaScreen() {
                 <TouchableOpacity
                   disabled={pagando || !datosVigentes}
                   accessibilityState={{ disabled: pagando || !datosVigentes, busy: pagando }}
-                  style={estilos.boton}
+                  style={[estilos.boton, { backgroundColor: marca.colorAcento }]}
                   onPress={() =>
                     Alert.alert(
                       "Confirmar pago en línea",
@@ -254,7 +256,7 @@ export default function EstadoCuentaScreen() {
                   <Text
                     style={[
                       estilos.botonTexto,
-                      { color: textoSobreFondo(colores.dorado) },
+                      { color: textoSobreFondo(marca.colorAcento) },
                     ]}
                   >
                     Pagar en línea

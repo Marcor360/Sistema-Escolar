@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "../components/Texto";
 import { colores, espacio, radio, tipografia } from "../theme";
+import { useMarca } from "../marca";
 
 export function GuiaPantalla({
   titulo,
@@ -58,6 +59,7 @@ export function ErrorCarga({
   mensaje: string;
   reintentar: () => void;
 }) {
+  const { marca } = useMarca();
   return (
     <View accessibilityRole="alert" style={base.errorCarga}>
       <Text style={base.errorTexto}>{mensaje}</Text>
@@ -67,7 +69,7 @@ export function ErrorCarga({
         accessibilityRole="button"
         accessibilityLabel="Reintentar carga"
       >
-        <Text style={base.reintentar}>Reintentar</Text>
+        <Text style={[base.reintentar, { color: marca.colorPrimario }]}>Reintentar</Text>
       </Pressable>
     </View>
   );
