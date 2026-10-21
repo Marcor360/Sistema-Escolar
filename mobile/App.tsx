@@ -40,7 +40,7 @@ import CalificacionesScreen from "./src/screens/Calificaciones";
 import EstadoCuentaScreen from "./src/screens/EstadoCuenta";
 import PerfilScreen from "./src/screens/Perfil";
 import DocumentosScreen from "./src/screens/Documentos";
-import { cargarMarca } from "./src/marca-carga";
+import { cargarMarca, esMarcaValida, mismaMarca } from "./src/marca-carga";
 import {
   aplicarColores,
   MARCA_CACHE_KEY,
@@ -113,8 +113,45 @@ function AppInterna() {
   }, [sesion?.sub]);
   const [listo, setListo] = useState(false);
   const [marca, setMarca] = useState<Marca>(MARCA_POR_DEFECTO);
+  const marcaActual = useRef<Marca>(MARCA_POR_DEFECTO);
+  const consultaMarca = useRef<Promise<void> | null>(null);
   const [marcaLista, setMarcaLista] = useState(false);
   const [errorInicio, setErrorInicio] = useState("");
+
+  const aplicarMarcaActual = useCallback((nueva: Marca) => {
+    if (mismaMarca(marcaActual.current, nueva)) return;
+    marcaActual.current = nueva;
+    aplicarColores(nueva);
+    setMarca(nueva);
+  }, []);
+
+  const revalidarMarca = useCallback((): Promise<void> => {
+    if (consultaMarca.current) return consultaMarca.current;
+    const consulta = (async () => {
+      try {
+        const { data } = await api.get<Marca>("/configuracion/marca");
+        if (!esMarcaValida(data)) return;
+        if (mismaMarca(marcaActual.current, data)) return;
+        aplicarMarcaActual(data);
+        await SecureStore.setItemAsync(MARCA_CACHE_KEY, JSON.stringify(data)).catch(() => undefined);
+      } catch {
+        /* Sin red: mostrar la última marca válida desde el dispositivo. */
+      }
+    })().finally(() => { if (consultaMarca.current === consulta) consultaMarca.current = null; });
+    consultaMarca.current = consulta;
+    return consulta;
+  }, [aplicarMarcaActual]);
+
+  useEffect(() => {
+    const activar = () => {
+      if (AppState.currentState === "active") void revalidarMarca();
+    };
+    const suscripcion = AppState.addEventListener("change", (estado) => {
+      if (estado === "active") void revalidarMarca();
+    });
+    const intervalo = setInterval(activar, 60_000);
+    return () => { suscripcion.remove(); clearInterval(intervalo); };
+  }, [revalidarMarca]);
 
   const tema = useMemo(
     () => ({
@@ -190,17 +227,13 @@ function AppInterna() {
       MARCA_POR_DEFECTO,
       (valor) => {
         if (activa) {
-          aplicarColores(valor);
-          setMarca(valor);
+          aplicarMarcaActual(valor);
           setMarcaLista(true);
         }
       },
     )
       .then((valor) => {
-        if (activa) {
-          aplicarColores(valor);
-          setMarca(valor);
-        }
+        if (activa) aplicarMarcaActual(valor);
       })
       .finally(() => {
         if (activa) setMarcaLista(true);
@@ -208,7 +241,7 @@ function AppInterna() {
     return () => {
       activa = false;
     };
-  }, []);
+  }, [aplicarMarcaActual]);
 
   useEffect(() => {
     registrarSesionExpirada(() => {
