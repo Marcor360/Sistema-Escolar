@@ -14,7 +14,7 @@ function Invoke-WebRequest {
     if ($script:modo -eq 'permite') { $headers['Content-Security-Policy'] = "default-src 'self'; img-src 'self' blob:" }
     if ($script:modo -eq 'defecto') { $headers['Content-Security-Policy'] = "default-src 'self'" }
     if ($script:modo -eq 'sin-csp') { $headers.Remove('Content-Security-Policy') }
-    $content = '<html></html>' 
+    $content = '<html></html>'
   }
   if ($Uri -like '*/configuracion/marca') { $content = '{"logoUrl":null}' }
   [pscustomobject]@{ StatusCode = 200; Headers = $headers; Content = $content; RawContentLength = $content.Length }
