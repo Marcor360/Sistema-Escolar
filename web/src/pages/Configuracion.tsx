@@ -1,6 +1,7 @@
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from 'react';
 import { api, archivosBase, mensajeDeError } from '../api/client';
 import { useMarca } from '../marca/MarcaContext';
+import { MAX_LOGO_ORIGINAL_BYTES, optimizarLogo } from '../utils/optimizar-logo';
 
 export default function ConfiguracionPage() {
   const { marca, recargar } = useMarca();
@@ -32,11 +33,11 @@ export default function ConfiguracionPage() {
     setError('');
     setLogoNoDisponible(false);
     setArchivoRechazado(false);
-    if (seleccionado && seleccionado.size > 2 * 1024 * 1024) {
+    if (seleccionado && seleccionado.size > MAX_LOGO_ORIGINAL_BYTES) {
       setArchivo(null);
       setVistaPrevia(null);
       setArchivoRechazado(true);
-      setError('El logotipo supera los 2 MB permitidos. Selecciona una imagen más ligera.');
+      setError('El logotipo supera los 20 MB permitidos. Selecciona una imagen más ligera.');
       return;
     }
     if (seleccionado && (!/\.(png|jpe?g|webp)$/i.test(seleccionado.name) || seleccionado.size === 0)) {
@@ -57,13 +58,22 @@ export default function ConfiguracionPage() {
     let datosInstitucionalesGuardados = false;
     let logoGuardado = false;
     try {
+      if (archivo) setMensaje('Optimizando el logotipo a WebP…');
+      const webp = archivo ? await optimizarLogo(archivo) : null;
+      setMensaje('');
       await api.put('/configuracion/marca', { nombreInstitucion, nombreCorto, colorPrimario, colorAcento });
       datosInstitucionalesGuardados = true;
-      if (archivo) {
+      if (webp) {
         const datos = new FormData();
-        datos.append('logo', archivo);
-        await api.post('/configuracion/marca/logo', datos);
+        datos.append('logo', webp);
+        const { data } = await api.post<{ logoUrl: string }>('/configuracion/marca/logo', datos);
         logoGuardado = true;
+        if (data.logoUrl) {
+          const respuesta = await fetch(archivosBase + data.logoUrl, { cache: 'no-store' });
+          if (!respuesta.ok || !/^image\/webp\b/i.test(respuesta.headers.get('content-type') ?? '')) {
+            throw new Error('El logotipo se registró, pero no está disponible en la URL pública. Verifica los archivos y permisos de staging.');
+          }
+        }
       }
       await recargar();
       setArchivo(null); setVistaPrevia(null);
@@ -74,7 +84,7 @@ export default function ConfiguracionPage() {
     } catch (err) {
       const detalle = mensajeDeError(err);
       const mensaje = detalle === 'File too large'
-        ? 'El logotipo supera los 2 MB permitidos. Selecciona una imagen más ligera.'
+        ? 'El logotipo supera los 20 MB permitidos. Selecciona una imagen más ligera.'
         : detalle;
       setError(logoGuardado
         ? `Los datos y el logotipo se guardaron, pero no se pudo actualizar la vista: ${mensaje}`
@@ -82,6 +92,7 @@ export default function ConfiguracionPage() {
         ? `Los datos institucionales se guardaron, pero el logotipo no: ${mensaje}`
         : mensaje);
     } finally {
+      setMensaje((actual) => actual === 'Optimizando el logotipo a WebP…' ? '' : actual);
       mutando.current = false; setGuardando(false);
     }
   };
@@ -115,7 +126,7 @@ export default function ConfiguracionPage() {
         <div className="campo"><label htmlFor="color-acento">Color de acento</label><input id="color-acento" type="color" value={colorAcento} onChange={(e) => setColorAcento(e.target.value)} /></div>
       </div>
       <div className="campo configuracion-logo">
-        <label htmlFor="logo">Logo (PNG, JPG o WebP; máximo 2 MB)</label>
+        <label htmlFor="logo">Logo (PNG, JPG o WebP; máximo 20 MB; se optimiza a WebP)</label>
         <input ref={selectorLogo} disabled={guardando} id="logo" type="file" accept=".png,.jpg,.jpeg,.webp" onChange={seleccionarLogo} />
         {logoVisible && !logoNoDisponible && <img className="logo-marca vista-logo" src={logoVisible} alt="Vista previa del logo" onError={() => setLogoNoDisponible(true)} />}
         {logoNoDisponible && <p role="alert" className="mensaje-error">{vistaPrevia

@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import ConfiguracionPage from './Configuracion';
 import { api } from '../api/client';
+vi.mock('../utils/optimizar-logo', () => ({ MAX_LOGO_ORIGINAL_BYTES: 20 * 1024 * 1024, optimizarLogo: vi.fn(async () => new File(['webp'], 'logo-institucional.webp', { type: 'image/webp' })) }));
 const { recargar, marca } = vi.hoisted(() => ({ recargar: vi.fn(), marca: { nombreInstitucion: 'Escuela', nombreCorto: 'SE', colorPrimario: '#14343B', colorAcento: '#C79A3C', logoUrl: null as string | null } }));
 vi.mock('../marca/MarcaContext', () => {
   return { useMarca: () => ({ marca, recargar }) };
@@ -24,13 +25,13 @@ it('preserva la edición después de un fallo y permite reintentar', async () =>
   fireEvent.submit(input.closest('form')!); await screen.findByRole('status'); expect(put).toHaveBeenLastCalledWith('/configuracion/marca',expect.objectContaining({ nombreInstitucion: 'Nombre corregido' }));
 });
 
-it('rechaza localmente logos de más de 2 MB sin modificar la marca ni enviar el archivo', () => {
+it('rechaza localmente logos de más de 20 MB sin modificar la marca ni enviar el archivo', () => {
   const put = vi.spyOn(api, 'put');
   const post = vi.spyOn(api, 'post');
   render(<ConfiguracionPage />);
-  const archivo = new File([new Uint8Array(2 * 1024 * 1024 + 1)], 'logo.png', { type: 'image/png' });
+  const archivo = new File([new Uint8Array(20 * 1024 * 1024 + 1)], 'logo.png', { type: 'image/png' });
   fireEvent.change(screen.getByLabelText(/Logo \(PNG, JPG o WebP/), { target: { files: [archivo] } });
-  expect(screen.getByRole('alert').textContent).toContain('supera los 2 MB');
+  expect(screen.getByRole('alert').textContent).toContain('supera los 20 MB');
   expect((screen.getByRole('button', { name: 'Guardar cambios' }) as HTMLButtonElement).disabled).toBe(true);
   expect(put).not.toHaveBeenCalled();
   expect(post).not.toHaveBeenCalled();
@@ -43,11 +44,13 @@ it('informa el guardado parcial y conserva el archivo para reintentar', async ()
   const input = screen.getByLabelText(/Logo \(PNG/) as HTMLInputElement;
   fireEvent.change(input, { target: { files: [new File(['png'], 'logo.png')] } });
   fireEvent.submit(input.closest('form')!);
-  expect((await screen.findByRole('alert')).textContent).toContain('Los datos institucionales se guardaron, pero el logotipo no: El logotipo supera los 2 MB');
+  expect((await screen.findByRole('alert')).textContent).toContain('Los datos institucionales se guardaron, pero el logotipo no: El logotipo supera los 20 MB');
   await waitFor(() => expect((screen.getByText('Guardar cambios') as HTMLButtonElement).disabled).toBe(false));
   fireEvent.submit(input.closest('form')!);
   await screen.findByRole('status');
   expect(post).toHaveBeenCalledTimes(2);
+  const primerForm = post.mock.calls[0][1] as FormData;
+  expect((primerForm.get('logo') as File).type).toBe('image/webp');
 });
 
 it('no informa fallo de carga si el logo se guardó y falla la actualización de la vista', async () => {
@@ -77,7 +80,7 @@ it.each(['logo.exe', 'vacio.png'])('rechaza %s y permite reemplazarlo por una im
   const input = screen.getByLabelText(/Logo \(PNG/);
   fireEvent.change(input, { target: { files: [new File(nombre === 'vacio.png' ? [] : ['exe'], nombre)] } });
   expect(screen.getByRole('alert').textContent).toContain('imagen PNG, JPG o WebP válida');
-  fireEvent.change(input, { target: { files: [new File([new Uint8Array(2 * 1024 * 1024)], 'logo.png')] } });
+  fireEvent.change(input, { target: { files: [new File([new Uint8Array(20 * 1024 * 1024)], 'logo.png')] } });
   expect(screen.queryByRole('alert')).toBeNull();
   expect((screen.getByText('Guardar cambios') as HTMLButtonElement).disabled).toBe(false);
 });
