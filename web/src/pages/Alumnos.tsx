@@ -54,15 +54,21 @@ export default function AlumnosPage() {
   const [historialCargando, setHistorialCargando] = useState(false);
   const [notas, setNotas] = useState<Nota[] | null>(null);
   const [cargandoNotas, setCargandoNotas] = useState(false);
+  const notasSolicitud = useRef(0);
+  const historialSolicitud = useRef(0);
+  const invalidarNotas = () => { notasSolicitud.current++; setNotas(null); setCargandoNotas(false); };
+  useEffect(() => () => { notasSolicitud.current++; historialSolicitud.current++; }, []);
   const verNotas = async (alumno: Alumno, inscripcion: Historial) => {
+    const solicitud = ++notasSolicitud.current;
     setCargandoNotas(true); setNotas(null); setError('');
     try {
       const { data } = await api.get<Nota[]>(`/calificaciones/alumno/${alumno.id}`, { params: { cicloId: inscripcion.grupo.ciclo.id } });
+      if (solicitud !== notasSolicitud.current) return;
       setNotas(data.filter((n) => n.grupoMateria.grupo.id === inscripcion.grupo.id));
-    } catch (err) { setError(mensajeDeError(err)); } finally { setCargandoNotas(false); }
+    } catch (err) { if (solicitud === notasSolicitud.current) setError(mensajeDeError(err)); } finally { if (solicitud === notasSolicitud.current) setCargandoNotas(false); }
   };
-  const historialSolicitud = useRef(0);
   const verHistorial = async (alumno: Alumno, pagina = 1) => {
+    invalidarNotas();
     const solicitud = ++historialSolicitud.current;
     setHistorialCargando(true);
     try {
@@ -70,6 +76,7 @@ export default function AlumnosPage() {
         `/alumnos/${alumno.id}/historial/listado`, { params: { pagina, porPagina: 10 } },
       );
       if (solicitud !== historialSolicitud.current) return;
+      invalidarNotas();
       setHistorial({ alumno, registros: data.datos, total: data.total, pagina: data.pagina, porPagina: data.porPagina });
       setNotas(null);
     } catch (err) { if (solicitud === historialSolicitud.current) setError(mensajeDeError(err)); }
@@ -199,7 +206,7 @@ export default function AlumnosPage() {
       {!puedeGestionar && error && <p role="alert" className="mensaje-error">{error}</p>}
       {!mostrarFormulario && error && puedeGestionar && <p role="alert">{error}</p>}
       {!mostrarFormulario && mensaje && <p role="status">{mensaje}</p>}
-      {consultaVisible && <>{historial && <HistorialAlumno key={`${historial.alumno.id}-${historial.pagina}`} historial={historial} boleta={boleta} cargandoNotas={cargandoNotas} verNotas={verNotas} notas={notas} setHistorial={(valor) => { historialSolicitud.current++; setHistorialCargando(false); setHistorial(valor); }} cargando={historialCargando} cambiarPagina={(pagina) => void verHistorial(historial.alumno, pagina)} />}
+      {consultaVisible && <>{historial && <HistorialAlumno key={`${historial.alumno.id}-${historial.pagina}`} historial={historial} boleta={boleta} cargandoNotas={cargandoNotas} verNotas={verNotas} notas={notas} setHistorial={(valor) => { historialSolicitud.current++; invalidarNotas(); setHistorialCargando(false); setHistorial(valor); }} cargando={historialCargando} cambiarPagina={(pagina) => void verHistorial(historial.alumno, pagina)} />}
       {transferencia && <TransferirAlumno transferencia={transferencia} transferir={transferir} destino={destino} setDestino={setDestino} planteles={planteles} enviando={enviando} setTransferencia={setTransferencia} />}
 
       <section className="panel panel-filtros" aria-label="Filtros de alumnos"><div className="fila">
@@ -240,7 +247,7 @@ export default function AlumnosPage() {
               <td data-etiqueta="Correo">{a.usuario.email}</td>
               <td data-etiqueta="Estatus"><span className={`sello ${a.estatus === 'ACTIVO' ? 'ok' : 'neutro'}`}>{a.estatus}</span></td>
               <td data-etiqueta="Acciones" className="derecha">
-                <span className="acciones-fila"><EliminarRegistro ruta={`/alumnos/${a.id}`} nombre={`alumno ${a.matricula}`} deshabilitado={enviando} alEliminar={() => { setEditando(null); setForm(FORM_INICIAL); setHistorial(null); setTransferencia(null); setMensaje('Alumno y cuenta eliminados definitivamente'); recargarListado(); }} />
+                <span className="acciones-fila"><EliminarRegistro ruta={`/alumnos/${a.id}`} nombre={`alumno ${a.matricula}`} deshabilitado={enviando} alEliminar={() => { setEditando(null); setForm(FORM_INICIAL); historialSolicitud.current++; invalidarNotas(); setHistorial(null); setTransferencia(null); setMensaje('Alumno y cuenta eliminados definitivamente'); recargarListado(); }} />
                   {puedeGestionar && <><button className="boton secundario chico" onClick={() => verHistorial(a)}>Historial y boleta</button><Link className="boton secundario chico" to={`/recursamientos/nuevo?alumno=${a.id}&plantel=${a.plantel?.id || ''}`}>Recursar materia</Link></>}
                   {puedeGestionar && <>
                     <button disabled={enviando} className="boton secundario chico" onClick={() => editar(a)}>Editar</button>

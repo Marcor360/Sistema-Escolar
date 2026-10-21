@@ -40,3 +40,19 @@ it('divide en lotes de 500 IDs la consulta de periodos y notas para ciclos grand
     expect(opciones.where.grupoMateriaId.value.length).toBeLessThanOrEqual(500);
   }
 });
+
+it('conserva faltantes y cierres en el límite entre lotes sin usar Final como parcial', async () => {
+  const { service, repos } = entorno();
+  const clases = repos.get(GrupoMateria) as { find: jest.Mock };
+  const periodos = repos.get(PeriodoCalificacion) as { find: jest.Mock };
+  const notas = repos.get(Calificacion) as { find: jest.Mock };
+  clases.find.mockResolvedValue(Array.from({ length: 501 }, (_, i) => ({ id: i + 1, grupoId: 4 })));
+  periodos.find.mockImplementation(({ where }) => Promise.resolve(where.grupoMateriaId.value.flatMap((id: number) => [1,2,3].map(parcial => ({ grupoMateriaId: id, parcial, estatus: id === 500 && parcial === 2 ? 'ABIERTO' : 'CERRADO' })))));
+  notas.find.mockImplementation(({ where }) => Promise.resolve(where.grupoMateriaId.value.flatMap((id: number) => [0,1,2,3].filter(parcial => !(id === 501 && parcial === 3)).map(parcial => ({ grupoMateriaId: id, parcial, alumnoId: 7 })))));
+  expect(await service.resumen(1)).toMatchObject({ puedeCerrar: false, faltantes: [
+    { grupoMateriaId: 500, parcial: 2, sinNota: 0, cerrado: false },
+    { grupoMateriaId: 501, parcial: 3, sinNota: 1, cerrado: true },
+  ] });
+  expect(notas.find).toHaveBeenCalledTimes(2);
+  expect(notas.find.mock.calls[0][0].where.parcial.value).toEqual([1,2,3]);
+});
