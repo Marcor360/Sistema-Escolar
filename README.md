@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.27.17`** · Estado: revisión técnica y aceptación institucional pendientes. Esta versión incorpora mejoras de código y documentación; **no demuestra despliegue adicional**. Staging confirmado por el operador en **1.27.1** (commit `b464d40`), con API `/health/ready` local y HTTPS correctas. La app Expo instalada en dispositivos **no se actualiza automáticamente**.
+**Versión candidata: `1.27.18`** · Estado: revisión técnica y aceptación institucional pendientes. Esta versión incorpora mejoras de código y documentación; **no demuestra despliegue adicional**. Staging confirmado por el operador en **1.27.17** (commit `8579ab4`), con API `/health/ready` local y HTTPS correctas. La app Expo instalada en dispositivos **no se actualiza automáticamente**.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -17,6 +17,7 @@ Sistema escolar multiplataforma para operación académica, administrativa y fin
 
 ### Funcionalidad destacada de versiones recientes
 
+- **1.27.18:** Web admite PNG/JPG/WebP de hasta 20 MiB, convierte en el navegador a WebP de hasta 10 MiB y verifica lectura pública tras cargar. API admite solo WebP optimizado, almacena temporalmente fuera de la ruta pública y protege la referencia anterior en fallos. IIS exige límite efectivo ≥11 MiB y UAT de archivos/ACL; sin migraciones.
 - **1.27.17:** Calificaciones descarta respuestas obsoletas al cambiar/cerrar historial; cierre reduce notas por lote sin acumular el ciclo completo; diagnóstico de logo exporta fallos y revisa CSP. Pruebas automáticas ampliadas; sin nuevas reglas académicas.
 - **1.27.16:** Vista previa de logos: permite `blob:` exclusivamente en imágenes bajo CSP de IIS; requiere despliegue y UAT de #106.
 - **1.27.15:** Agrupación regular reutiliza ocupación dentro de la transacción, conservando límites y reservas.
@@ -134,7 +135,7 @@ Operación documentada en [STAGING_WINDOWS_IIS.md](docs/STAGING_WINDOWS_IIS.md).
 
 El procedimiento oficial `scripts/windows/Deploy-Staging.ps1` compila API/web, respalda, valida y aplica migraciones, intercambia la junction y comprueba versiones local/pública. **No reutilizar nombre de release** si ya existe; una actualización del repositorio no actualiza el servidor por sí misma. Para producción usar entornos, bases, certificados, credenciales y respaldos separados.
 
-En la instalación de staging se confirmó **1.27.1** mediante health local y público, más enlace `current`. La restauración operativa del backup aún necesita evidencia. Versiones candidatas posteriores no están desplegadas.
+En la instalación de staging se confirmó **1.27.17** mediante health local y público, más enlace `current`. La restauración operativa del backup aún necesita evidencia. Versiones candidatas posteriores no están desplegadas.
 
 ## Calidad y aceptación
 
