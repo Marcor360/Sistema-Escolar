@@ -10,7 +10,7 @@ const dirDestino = () => uploadsPath();
 export const logoUploadConfig = {
   storage: diskStorage({
     destination: (_req, _file, cb) => cb(null, dirDestino()),
-    filename: (_req, file, cb) =>
+    filename: (_req, _file, cb) =>
       cb(null, `marca-temporal-${randomUUID()}.webp`),
   }),
   limits: { fileSize: 10 * 1024 * 1024, files: 1 },
