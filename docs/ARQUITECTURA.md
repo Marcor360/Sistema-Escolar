@@ -119,7 +119,7 @@ La analítica agrega en DB y devuelve filas por clase; no carga todas las notas/
 
 Calendario permite PATCH con revision completa y validación de alcance de origen/destino. Importación de notas reutiliza el servicio transaccional de captura, agrega preview cifrado, motivo/historial y rechazo de datos modificados desde el preview.
 
-Expo mantiene seis pestañas y un stack Perfil → Mis documentos. Consulta boletas por inscripción/ciclo y materiales por materia; verifica origen y ruta de enlaces antes de abrirlos. Caché académica y de índices solo en memoria, TTL de cinco minutos e invalidación por identidad/logout; sin escritura offline ni PDFs/URLs firmadas persistidos. SecureStore conserva secretos, no expedientes. Remontaje de navegación por alumno y cancelación de respuestas antiguas complementan la autorización de servidor.
+Expo mantiene cinco pestañas (Inicio, Materias, Calificaciones, Pagos y Perfil) y un stack Perfil → Mis documentos; tareas se consultan desde Materias. Consulta boletas por inscripción/ciclo y materiales por materia; verifica origen y ruta de enlaces antes de abrirlos. Caché académica y de índices solo en memoria, TTL de cinco minutos e invalidación por identidad/logout; sin escritura offline ni PDFs/URLs firmadas persistidos. SecureStore conserva secretos, no expedientes. Remontaje de navegación por alumno y cancelación de respuestas antiguas complementan la autorización de servidor.
 
 Biblioteca añade carpetas y archivos privados, con migración aditiva espejo. El detalle está en [API](API.md), [migraciones](MIGRACIONES.md) y [estado vigente](ESTADO_IMPLEMENTACION.md). El requisito de [activación segura](REQUERIMIENTO_ACTIVACION_SEGURA.md) está pendiente; la arquitectura de invitaciones no está implementada.
 
@@ -130,3 +130,9 @@ Además del cierre local, la API conserva sesiones.ultima_actividad_en y exige s
 Clientes web/Expo notifican interacción limitada a un pulso por minuto. Esta señal autenticada no prueba que un cliente modificado tenga una persona presente. La precisión del motor y la frecuencia del pulso delimitan el umbral respecto del reloj local. Access conserva 15 minutos y refresh máximo 30 días.
 
 Requiere la migración aditiva sesiones_inactividad y despliegue coordinado; NULL histórico exige reautenticación. [Contrato, pruebas y rollback](SESIONES_INACTIVIDAD_PLAN.md).
+
+## Marca pública y caché — 1.27.18 (#163)
+
+`configuracion_marca` es la fuente de nombre, logo y colores. Web revalida al iniciar, recuperar foco/visibilidad/conexión y cada 60 segundos visible; comparte metadatos entre pestañas por `storage` y conserva la última marca válida en localStorage. Expo conserva metadatos públicos en SecureStore y revalida al volver a primer plano y cada 60 segundos activa. Esta caché pública no contiene cuentas, expedientes, PDFs ni enlaces firmados y no garantiza disponibilidad offline de la imagen.
+
+Los metadatos se sirven con `no-store`; los logos con UUID único por cambio admiten caché inmutable de un año. Solo el controlador de logos del módulo archivos expone ese patrón público. El resto de uploads conserva autorización y firma temporal. Web optimiza a WebP y el backend valida firma/lectura antes de confirmar la referencia; no se agregan dependencias nativas de imágenes. La app instalada necesita una nueva compilación para incorporar esta lógica; icono y splash nativos siguen empaquetados. [Contrato y validación](LOGO_WEBP_STAGING_1.27.18.md).

@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { Text } from "../components/Texto";
 import { api, mensajeDeError } from "../api/client";
-import { colores, espacio, radio, tipografia } from "../theme";
+import { colores, espacio, radio, tipografia, textoSobreFondo } from "../theme";
+import { useMarca } from "../marca";
 
 export default function ActivarCuentaScreen({ volver, correoInicial = "" }: { volver: () => void; correoInicial?: string }) {
+  const { marca } = useMarca();
   const [paso, setPaso] = useState<"solicitar" | "activar">("solicitar");
   const [email, setEmail] = useState(correoInicial);
   const [token, setToken] = useState("");
@@ -38,7 +40,7 @@ export default function ActivarCuentaScreen({ volver, correoInicial = "" }: { vo
   };
   const bloqueado = enviando || (paso === "solicitar" ? !email.trim() : token.length !== 64 || password.length < 8 || !confirmacion);
   return (
-    <KeyboardAvoidingView style={styles.pantalla} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+    <KeyboardAvoidingView style={[styles.pantalla, { backgroundColor: marca.colorPrimario }]} behavior={Platform.OS === "ios" ? "padding" : "height"}>
       <ScrollView contentContainerStyle={styles.contenido} keyboardShouldPersistTaps="handled">
         <View style={styles.tarjeta}>
           <Text style={styles.titulo} accessibilityRole="header">Activar mi cuenta</Text>
@@ -68,11 +70,11 @@ export default function ActivarCuentaScreen({ volver, correoInicial = "" }: { vo
             </>
           )}
           {!terminado && (
-            <TouchableOpacity style={styles.boton} onPress={() => { void ejecutar(); }} accessibilityRole="button"
+            <TouchableOpacity style={[styles.boton, { backgroundColor: marca.colorPrimario }]} onPress={() => { void ejecutar(); }} accessibilityRole="button"
               accessibilityLabel={paso === "solicitar" ? "Solicitar código de activación" : "Activar cuenta"}
               accessibilityState={{ disabled: bloqueado, busy: enviando }}
               disabled={bloqueado}>
-              <Text style={styles.botonTexto}>{enviando ? "Procesando…" : paso === "solicitar" ? "Solicitar código" : "Activar cuenta"}</Text>
+              <Text style={[styles.botonTexto, { color: textoSobreFondo(marca.colorPrimario) }]}>{enviando ? "Procesando…" : paso === "solicitar" ? "Solicitar código" : "Activar cuenta"}</Text>
             </TouchableOpacity>
           )}
           {!terminado && paso === "activar" && (

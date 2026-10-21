@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { api } from '../api/client';
 
 export type Marca = {
@@ -36,6 +36,42 @@ export function textoAccesible(fondo: string): '#ffffff' | '#19272c' | '#000000'
   return contrasteAA(fondo, '#19272c') >= 4.5 ? '#19272c' : '#000000';
 }
 
+export const MARCA_CACHE_WEB = 'escolar_marca_publica_v1';
+const MARCA_INTERVALO_MS = 60_000;
+
+/** Únicamente la identidad pública, sin cuentas ni sesiones, puede almacenarse en el navegador. */
+export function esMarcaWebValida(valor: unknown): valor is Marca {
+  if (!valor || typeof valor !== 'object') return false;
+  const datos = valor as Partial<Marca>;
+  return typeof datos.nombreInstitucion === 'string' && datos.nombreInstitucion.trim().length > 0
+    && typeof datos.nombreCorto === 'string' && datos.nombreCorto.trim().length > 0
+    && [datos.colorPrimario, datos.colorPrimarioOscuro, datos.colorAcento].every(
+      (color) => typeof color === 'string' && /^#[a-f0-9]{6}$/i.test(color),
+    )
+    && (datos.logoUrl === null || (typeof datos.logoUrl === 'string'
+      && /^\/uploads\/marca-logo-[0-9a-f-]+\.(png|jpe?g|webp)$/i.test(datos.logoUrl)))
+    && typeof datos.actualizadoEn === 'string';
+}
+
+function leerMarcaGuardada(): Marca | null {
+  try {
+    const guardada = localStorage.getItem(MARCA_CACHE_WEB);
+    if (!guardada) return null;
+    const valor: unknown = JSON.parse(guardada);
+    return esMarcaWebValida(valor) ? valor : null;
+  } catch { return null; }
+}
+
+function marcaIgual(anterior: Marca, siguiente: Marca): boolean {
+  return anterior.nombreInstitucion === siguiente.nombreInstitucion
+    && anterior.nombreCorto === siguiente.nombreCorto
+    && anterior.logoUrl === siguiente.logoUrl
+    && anterior.colorPrimario === siguiente.colorPrimario
+    && anterior.colorPrimarioOscuro === siguiente.colorPrimarioOscuro
+    && anterior.colorAcento === siguiente.colorAcento
+    && anterior.actualizadoEn === siguiente.actualizadoEn;
+}
+
 const MarcaContext = createContext<{ marca: Marca; recargar: () => Promise<void> } | null>(null);
 
 function aplicarMarca(marca: Marca) {
@@ -50,13 +86,58 @@ function aplicarMarca(marca: Marca) {
 }
 
 export function MarcaProvider({ children }: { children: ReactNode }) {
-  const [marca, setMarca] = useState(MARCA_POR_DEFECTO);
-  const recargar = useCallback(async () => {
-    const { data } = await api.get<Marca>('/configuracion/marca');
-    setMarca(data);
-    aplicarMarca(data);
+  const [marca, setMarca] = useState<Marca>(() => leerMarcaGuardada() ?? MARCA_POR_DEFECTO);
+  const consultaActual = useRef<Promise<void> | null>(null);
+
+  const usarMarca = useCallback((nueva: Marca) => {
+    if (!esMarcaWebValida(nueva)) return;
+    setMarca((actual) => marcaIgual(actual, nueva) ? actual : nueva);
+    aplicarMarca(nueva);
   }, []);
-  useEffect(() => { void recargar().catch(() => aplicarMarca(MARCA_POR_DEFECTO)); }, [recargar]);
+
+  const recargar = useCallback((): Promise<void> => {
+    if (consultaActual.current) return consultaActual.current;
+    const consulta = api.get<Marca>('/configuracion/marca')
+      .then(({ data }) => {
+        if (!esMarcaWebValida(data)) throw new Error('La identidad recibida no es válida');
+        usarMarca(data);
+        try {
+          const serializada = JSON.stringify(data);
+          if (localStorage.getItem(MARCA_CACHE_WEB) !== serializada) localStorage.setItem(MARCA_CACHE_WEB, serializada);
+        } catch { /* Almacenamiento no disponible. */ }
+      })
+      .finally(() => { if (consultaActual.current === consulta) consultaActual.current = null; });
+    consultaActual.current = consulta;
+    return consulta;
+  }, [usarMarca]);
+
+  useEffect(() => {
+    aplicarMarca(marca);
+    void recargar().catch(() => undefined);
+    const actualizarSiVisible = () => {
+      if (document.visibilityState === 'visible') void recargar().catch(() => undefined);
+    };
+    const recibirCache = (evento: StorageEvent) => {
+      if (evento.key !== MARCA_CACHE_WEB || !evento.newValue) return;
+      try {
+        const valor: unknown = JSON.parse(evento.newValue);
+        if (esMarcaWebValida(valor)) usarMarca(valor);
+      } catch { /* No sustituir identidad válida por caché dañada. */ }
+    };
+    document.addEventListener('visibilitychange', actualizarSiVisible);
+    window.addEventListener('focus', actualizarSiVisible);
+    window.addEventListener('online', actualizarSiVisible);
+    window.addEventListener('storage', recibirCache);
+    const intervalo = window.setInterval(actualizarSiVisible, MARCA_INTERVALO_MS);
+    return () => {
+      window.clearInterval(intervalo);
+      document.removeEventListener('visibilitychange', actualizarSiVisible);
+      window.removeEventListener('focus', actualizarSiVisible);
+      window.removeEventListener('online', actualizarSiVisible);
+      window.removeEventListener('storage', recibirCache);
+    };
+  }, [recargar, usarMarca]);
+
   return <MarcaContext.Provider value={{ marca, recargar }}>{children}</MarcaContext.Provider>;
 }
 

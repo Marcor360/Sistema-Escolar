@@ -5,9 +5,10 @@ import {
   type AvisoInicio,
   type EventoInicio,
 } from "./inicio-resumen";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -16,13 +17,17 @@ import {
 } from "react-native";
 import { Text } from "../components/Texto";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
-import { api, mensajeDeError } from "../api/client";
+import { api, archivosBase, mensajeDeError } from "../api/client";
 import { useSesion } from "../sesion";
 import { colores, radio, espacio, tipografia, textoSobreFondo } from "../theme";
 import { pesos } from "../formato";
+import { useMarca } from "../marca";
 import { base, Tarjeta } from "./comunes";
 
 export default function InicioScreen() {
+  const { marca } = useMarca();
+  const [logoFallo, setLogoFallo] = useState(false);
+  useEffect(() => setLogoFallo(false), [marca.logoUrl]);
   const { sesion } = useSesion();
   const navigation = useNavigation();
   const [saldo, setSaldo] = useState<number | null>(null);
@@ -95,12 +100,20 @@ export default function InicioScreen() {
         <RefreshControl refreshing={cargando} onRefresh={cargar} />
       }
     >
-      <View style={estilos.encabezado}>
-        <Text style={estilos.distintivo}>IUA · TU ESPACIO ESCOLAR</Text>
-        <Text style={estilos.saludo} accessibilityRole="header">
+      <View style={[estilos.encabezado, { backgroundColor: marca.colorPrimario, borderBottomColor: marca.colorAcento }]}>
+        <View style={estilos.identidad}>
+          {marca.logoUrl && !logoFallo
+            ? <Image source={{ uri: archivosBase + marca.logoUrl }} style={estilos.logoInstitucional}
+                resizeMode="contain" accessibilityLabel={`Logo de ${marca.nombreInstitucion}`}
+                onError={() => setLogoFallo(true)} />
+            : <Text style={[estilos.monograma, { color: textoSobreFondo(marca.colorPrimario) }]}>{marca.nombreCorto}</Text>}
+          <Text style={[estilos.nombreInstitucion, { color: textoSobreFondo(marca.colorPrimario) }]}>{marca.nombreInstitucion}</Text>
+        </View>
+        <Text style={[estilos.distintivo, { color: marca.colorAcento }]}>{marca.nombreCorto} · TU ESPACIO ESCOLAR</Text>
+        <Text style={[estilos.saludo, { color: textoSobreFondo(marca.colorPrimario) }]} accessibilityRole="header">
           Hola, {nombre}
         </Text>
-        <Text style={estilos.introduccion}>
+        <Text style={[estilos.introduccion, { color: textoSobreFondo(marca.colorPrimario) }]}>
           Elige qué necesitas consultar. Tus avisos y próximos eventos aparecen más abajo.
         </Text>
       </View>
@@ -113,7 +126,7 @@ export default function InicioScreen() {
             accessibilityRole="button"
             accessibilityLabel="Reintentar cargar inicio"
           >
-            <Text style={estilos.reintentar}>Reintentar</Text>
+            <Text style={[estilos.reintentar, { color: marca.colorPrimario }]}>Reintentar</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -123,11 +136,11 @@ export default function InicioScreen() {
       )}
       {cargaInicialCompleta && (
         <View style={estilos.resumen}>
-          <View style={estilos.kpi}>
+          <View style={[estilos.kpi, { backgroundColor: marca.colorPrimario, borderLeftColor: marca.colorAcento }]}>
             <Text
               style={[
                 estilos.kpiValor,
-                { color: textoSobreFondo(colores.pizarra) },
+                { color: textoSobreFondo(marca.colorPrimario) },
               ]}
             >
               {saldo === null ? "—" : pesos(saldo)}
@@ -135,12 +148,12 @@ export default function InicioScreen() {
             <Text
               style={[
                 estilos.kpiEtiqueta,
-                { color: textoSobreFondo(colores.pizarra) },
+                { color: textoSobreFondo(marca.colorPrimario) },
               ]}
             >
               Saldo pendiente
             </Text>
-            <Text style={{ color: textoSobreFondo(colores.pizarra), marginTop: espacio.sm }}>
+            <Text style={{ color: textoSobreFondo(marca.colorPrimario), marginTop: espacio.sm }}>
               {saldo === null
                 ? 'No se pudo consultar tu saldo. Abre Estado de cuenta para reintentar.'
                 : saldo > 0
@@ -187,7 +200,7 @@ export default function InicioScreen() {
             accessibilityState={{ disabled: aviso.leida }}
             disabled={aviso.leida}
           >
-            <View style={[estilos.aviso, !aviso.leida && estilos.avisoSinLeer]}>
+            <View style={[estilos.aviso, !aviso.leida && estilos.avisoSinLeer, !aviso.leida && { borderLeftColor: marca.colorAcento }]}>
               <Text style={base.tituloTarjeta}>{aviso.titulo}</Text>
               <Text style={base.secundario}>{aviso.mensaje}</Text>
               <Text style={estilos.fecha}>
@@ -229,6 +242,10 @@ export default function InicioScreen() {
 }
 
 const estilos = StyleSheet.create({
+  identidad: { flexDirection: "row", alignItems: "center", gap: espacio.md, marginBottom: espacio.md },
+  logoInstitucional: { width: 88, height: 48 },
+  monograma: { minWidth: 56, fontSize: 18, fontWeight: "700" },
+  nombreInstitucion: { flex: 1, fontSize: 13, fontWeight: "600" },
   encabezado: { backgroundColor: colores.pizarra, borderRadius: radio.md, padding: espacio.xl, marginBottom: espacio.xl, borderBottomWidth: 3, borderBottomColor: colores.dorado },
   distintivo: { color: colores.dorado, fontSize: 11, fontWeight: '700', letterSpacing: 1.2, marginBottom: espacio.md },
   acceso: { backgroundColor: "#fff", borderWidth: 1, borderColor: colores.linea, borderRadius: radio.md, padding: espacio.lg, marginBottom: espacio.md, minHeight: 64 },

@@ -18,6 +18,7 @@ import { Text } from "../components/Texto";
 import { useFocusEffect } from "@react-navigation/native";
 import { api, archivosBase, mensajeDeError } from "../api/client";
 import { useSesion } from "../sesion";
+import { useMarca } from "../marca";
 import { colores, radio, espacio, tipografia } from "../theme";
 import {
   GuiaPantalla,
@@ -43,6 +44,7 @@ interface Material {
 }
 
 export default function MateriasScreen() {
+  const { marca } = useMarca();
   const { sesion } = useSesion();
   const [pagina,setPagina]=useState(1),[total,setTotal]=useState(0);
   useEffect(()=>{setPagina(1);setTotal(0);},[sesion?.sub]);
@@ -278,7 +280,7 @@ export default function MateriasScreen() {
                         accessibilityRole="button"
                         accessibilityLabel={`Abrir material: ${m.titulo}, ${m.archivoNombre}`}
                       >
-                        <Text style={estilos.materialTitulo}>
+                        <Text style={[estilos.materialTitulo, { color: marca.colorPrimario }]}>
                           📄 {m.titulo}
                         </Text>
                         <Text style={base.secundario}>

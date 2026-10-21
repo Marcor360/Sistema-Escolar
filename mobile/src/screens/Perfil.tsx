@@ -14,6 +14,7 @@ import { Text } from "../components/Texto";
 import { useFocusEffect } from "@react-navigation/native";
 import { api, mensajeDeError } from "../api/client";
 import { useSesion } from "../sesion";
+import { useMarca } from "../marca";
 import { colores, radio, espacio, tipografia, textoSobreFondo } from "../theme";
 import { base, ErrorCarga, Tarjeta } from "./comunes";
 import { ocultarCurp } from "../utils/curp-privada";
@@ -32,6 +33,7 @@ interface Perfil {
 }
 
 export default function PerfilScreen({ abrirDocumentos }: { abrirDocumentos?: () => void } = {}) {
+  const { marca } = useMarca();
   const { sesion, cerrar, finalizarSesionLocal } = useSesion();
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [mostrarCurp, setMostrarCurp] = useState(false);
@@ -235,7 +237,7 @@ export default function PerfilScreen({ abrirDocumentos }: { abrirDocumentos?: ()
           editable={!cambiandoPassword}
         />
         <TouchableOpacity
-          style={estilos.botonPrimario}
+          style={[estilos.botonPrimario, { backgroundColor: marca.colorPrimario }]}
           disabled={cambiandoPassword}
           onPress={cambiarPassword}
           accessibilityRole="button"
@@ -245,7 +247,7 @@ export default function PerfilScreen({ abrirDocumentos }: { abrirDocumentos?: ()
           <Text
             style={[
               estilos.botonPrimarioTexto,
-              { color: textoSobreFondo(colores.pizarra) },
+              { color: textoSobreFondo(marca.colorPrimario) },
             ]}
           >
             {cambiandoPassword ? "Actualizando…" : "Actualizar contraseña"}

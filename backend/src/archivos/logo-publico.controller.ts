@@ -10,6 +10,8 @@ export class LogoPublicoController {
     if (!/^marca-logo-[0-9a-f-]+\.(png|jpe?g|webp)$/i.test(filename)) {
       throw new BadRequestException('Archivo de marca no válido');
     }
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
     return res.sendFile(filename, { root: uploadsPath() });
   }
 }

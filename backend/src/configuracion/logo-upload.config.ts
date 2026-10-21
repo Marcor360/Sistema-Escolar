@@ -4,19 +4,19 @@ import { uploadsPath } from '../common/uploads-path';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 
-const EXTENSIONES_PERMITIDAS = ['.png', '.jpg', '.jpeg', '.webp'];
+const EXTENSIONES_PERMITIDAS = ['.webp'];
 const dirDestino = () => uploadsPath();
 
 export const logoUploadConfig = {
   storage: diskStorage({
     destination: (_req, _file, cb) => cb(null, dirDestino()),
-    filename: (_req, file, cb) =>
-      cb(null, `marca-logo-${randomUUID()}${extname(file.originalname).toLowerCase()}`),
+    filename: (_req, _file, cb) =>
+      cb(null, `marca-temporal-${randomUUID()}.webp`),
   }),
-  limits: { fileSize: 2 * 1024 * 1024 },
+  limits: { fileSize: 10 * 1024 * 1024, files: 1 },
   fileFilter: (_req: unknown, file: Express.Multer.File, cb: (e: Error | null, ok: boolean) => void) => {
     const ext = extname(file.originalname).toLowerCase();
     if (EXTENSIONES_PERMITIDAS.includes(ext)) return cb(null, true);
-    cb(new BadRequestException(`Formato no permitido: ${ext}`), false);
+    cb(new BadRequestException('El servidor requiere un logo WebP optimizado desde el portal'), false);
   },
 };

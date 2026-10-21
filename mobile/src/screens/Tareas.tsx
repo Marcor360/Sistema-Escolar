@@ -17,6 +17,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import * as DocumentPicker from "expo-document-picker";
 import { api, mensajeDeError } from "../api/client";
 import { colores, tipografia, textoSobreFondo } from "../theme";
+import { useMarca } from "../marca";
 import {
   GuiaPantalla,
   base,
@@ -42,6 +43,7 @@ interface Tarea {
 }
 
 export default function TareasScreen() {
+  const { marca } = useMarca();
   const [pagina, setPagina] = useState(1), [total, setTotal] = useState(0);
   const [tareas, setTareas] = useState<Tarea[]>([]);
   useEffect(() => { setTareas([]); setTotal(0); }, [pagina]);
@@ -283,7 +285,7 @@ export default function TareasScreen() {
               tono={tono(item)}
             />
             <TouchableOpacity
-              style={estilos.boton}
+              style={[estilos.boton, { backgroundColor: marca.colorPrimario }]}
               onPress={() => solicitarEntrega(item)}
               disabled={
                 entregandoId !== null || !datosVigentes || item.entrega?.estatus === "CALIFICADA"
@@ -300,7 +302,7 @@ export default function TareasScreen() {
               <Text
                 style={[
                   estilos.botonTexto,
-                  { color: textoSobreFondo(colores.pizarra) },
+                  { color: textoSobreFondo(marca.colorPrimario) },
                 ]}
               >
                 {entregandoId === item.id

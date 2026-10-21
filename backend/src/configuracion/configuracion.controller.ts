@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Delete, Get, Post, Put, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Header, Post, Put, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiConsumes, ApiPayloadTooLargeResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
@@ -15,6 +15,7 @@ export class ConfiguracionController {
   constructor(private readonly service: ConfiguracionService) {}
 
   @Get('marca')
+  @Header('Cache-Control', 'no-store')
   obtenerMarca() {
     return this.service.obtener();
   }
@@ -32,7 +33,7 @@ export class ConfiguracionController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('SUPERADMIN')
   @ApiConsumes('multipart/form-data')
-  @ApiPayloadTooLargeResponse({ description: 'El logotipo supera los 2 MiB (2,097,152 bytes) permitidos' })
+  @ApiPayloadTooLargeResponse({ description: 'El WebP optimizado supera los 10 MiB (10,485,760 bytes) permitidos' })
   @UseInterceptors(LogoUploadErrorInterceptor, FileInterceptor('logo', logoUploadConfig))
   guardarLogo(@UploadedFile() file?: Express.Multer.File) {
     if (!file) throw new BadRequestException('Debes seleccionar un logo válido');

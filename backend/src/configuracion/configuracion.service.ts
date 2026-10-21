@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { promises as fs } from 'fs';
+import { constants, promises as fs } from 'fs';
+import { randomUUID } from 'crypto';
+import { join } from 'path';
+import { uploadsPath } from '../common/uploads-path';
 import { validarContenidoArchivo } from '../common/validar-archivo';
 import { Repository } from 'typeorm';
 import { programarLimpieza } from '../archivos/archivo-limpieza.service';
@@ -36,12 +39,20 @@ export class ConfiguracionService {
   }
 
   async guardarLogo(file: Express.Multer.File): Promise<MarcaPublicaDto> {
+    const nombre = `marca-logo-${randomUUID()}.webp`;
+    const destino = join(uploadsPath(), nombre);
+    let publicado = false;
     try {
       await validarContenidoArchivo(file);
-      return await this.modificar((marca) => { marca.logoUrl = `/uploads/${file.filename}`; });
+      await fs.rename(file.path, destino);
+      publicado = true;
+      await fs.access(destino, constants.R_OK);
+      return await this.modificar((marca) => { marca.logoUrl = `/uploads/${nombre}`; });
     } catch (error) {
-      await fs.unlink(file.path).catch(() => undefined);
+      if (publicado) await fs.unlink(destino).catch(() => undefined);
       throw error;
+    } finally {
+      await fs.unlink(file.path).catch(() => undefined);
     }
   }
 

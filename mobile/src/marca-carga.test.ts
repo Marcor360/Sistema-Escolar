@@ -59,3 +59,11 @@ it("acepta logo generado por backend", () =>
   expect(
     esMarcaValida({ ...marca, logoUrl: "/uploads/marca-logo-123abc.png" }),
   ).toBe(true));
+
+it("detecta cambios de identidad y conserva la misma marca cuando no hay diferencias", async () => {
+  const { mismaMarca } = await import("./marca-carga");
+  const otra = { ...marca, logoUrl: "/uploads/marca-logo-123abc.webp" };
+  expect(mismaMarca(marca, { ...marca })).toBe(true);
+  expect(mismaMarca(marca, otra)).toBe(false);
+  expect(mismaMarca(otra, { ...otra, colorPrimario: "#FFFFFF" })).toBe(false);
+});

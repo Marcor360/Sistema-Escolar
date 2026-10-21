@@ -51,9 +51,13 @@ describe('ConfiguracionService', () => {
     await service.obtener();
     repo.save.mockRejectedValueOnce(new Error('DB no disponible'));
     const unlink = jest.spyOn(fs, 'unlink').mockResolvedValue(undefined);
+    const rename = jest.spyOn(fs, 'rename').mockResolvedValue(undefined);
+    jest.spyOn(fs, 'access').mockResolvedValue(undefined);
     await expect(service.guardarLogo({ path: '/tmp/logo-nuevo.png', filename: 'logo-nuevo.png' } as Express.Multer.File)).rejects.toThrow('DB no disponible');
     expect(validarContenidoArchivo).toHaveBeenCalled();
+    expect(rename).toHaveBeenCalledWith('/tmp/logo-nuevo.png', expect.stringMatching(/marca-logo-[0-9a-f-]+\.webp$/));
     expect(unlink).toHaveBeenCalledWith('/tmp/logo-nuevo.png');
+    expect(unlink).toHaveBeenCalledWith(expect.stringMatching(/marca-logo-[0-9a-f-]+\.webp$/));
   });
 
 });

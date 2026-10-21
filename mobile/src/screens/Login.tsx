@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useEffect, useState } from "react";
 import {
   Image,
   KeyboardAvoidingView,
@@ -26,6 +26,7 @@ export default function LoginScreen({ aviso = "" }: { aviso?: string } = {}) {
   const enCurso = useRef(false);
   const [mostrarPassword, setMostrarPassword] = useState(false);
   const [logoFallo, setLogoFallo] = useState(false);
+  useEffect(() => setLogoFallo(false), [marca.logoUrl]);
   const [activacionVisible, setActivacionVisible] = useState(false);
 
   const entrar = async () => {
