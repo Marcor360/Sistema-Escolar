@@ -1,6 +1,6 @@
 {
   "name": "escolar-mobile",
-  "version": "1.27.19",
+  "version": "1.27.20",
   "private": true,
   "main": "index.ts",
   "scripts": {
@@ -39,7 +39,7 @@
     "node-forge": "file:vendor/node-forge-1.4.1-escolar.0.tgz",
     "react-test-renderer": "19.2.3",
     "typescript": "~6.0.3",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.12"
   },
   "overrides": {
     "uuid": "11.1.1",

@@ -1,6 +1,6 @@
-# Estado de implementación — candidata 1.27.19
+# Estado de implementación — candidata 1.27.20
 
-Corte documental: 21 de octubre de 2026. Base: `main` 1.27.18 (`fd2b9dc`), tras integrar #163. La candidata 1.27.19 depura documentación y actualiza metadatos de versión; conserva el comportamiento funcional. [Contrato de marca](LOGO_WEBP_STAGING_1.27.18.md) e [informes retirados](HISTORIAL.md). La versión del código no acredita despliegue ni aceptación institucional.
+Corte documental: 21 de octubre de 2026. Base: `main` 1.27.19 (`9a09ed6`), tras integrar #164. La candidata 1.27.20 añade el [anexo técnico propuesto de evaluaciones](IMPLEMENTACION_EVALUACIONES_1.28.0.md) y actualiza Vitest en las herramientas de pruebas. Conserva las reglas funcionales de calificaciones, escala 0–100 y P1–P3/Final; no implementa NP ni asistencia. La versión objetivo 1.28.0 queda pendiente de aprobación y desarrollo.
 
 ## Clasificación
 
@@ -33,7 +33,7 @@ Marca en #163: entrada web PNG/JPEG/WebP ≤20 MiB, salida/API WebP ≤10 MiB, m
 
 - [CI de #163, ejecución 39644029772](https://github.com/Marcor360/Sistema-Escolar/actions/runs/39644029772): ocho jobs aprobados para `301d7f1a94bdd296b7048cfb9be41e9fb03925c0`, integrado mediante `fd2b9dc`. Incluye backend/web/mobile, MySQL, SQL Server, ETL, scripts Windows y recorridos web.
 - Verificación local de esa entrega: backend 365 pruebas en 68 suites; web 200 en 50 archivos; móvil 117 en 21 archivos y 11 controles auxiliares; lint/tipos/build web satisfactorios. Son resultados de ese código, no una ejecución nueva de cada versión.
-- La CI de 1.27.19 debe comprobar su SHA final; los resultados previos no certifican commits posteriores. Las pruebas automatizadas no certifican IIS/ACL, teléfonos, proveedores externos ni restore institucional.
+- Cada candidata debe comprobar su SHA final; los resultados previos no certifican commits posteriores. Las pruebas automatizadas no certifican IIS/ACL, teléfonos, proveedores externos ni restore institucional.
 
 ## Pendientes actuales
 
