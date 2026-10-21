@@ -32,7 +32,7 @@ export class ConfiguracionController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('SUPERADMIN')
   @ApiConsumes('multipart/form-data')
-  @ApiPayloadTooLargeResponse({ description: 'El logotipo supera los 2 MiB (2,097,152 bytes) permitidos' })
+  @ApiPayloadTooLargeResponse({ description: 'El WebP optimizado supera los 10 MiB (10,485,760 bytes) permitidos' })
   @UseInterceptors(LogoUploadErrorInterceptor, FileInterceptor('logo', logoUploadConfig))
   guardarLogo(@UploadedFile() file?: Express.Multer.File) {
     if (!file) throw new BadRequestException('Debes seleccionar un logo válido');

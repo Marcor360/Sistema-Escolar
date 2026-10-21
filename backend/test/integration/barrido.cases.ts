@@ -82,7 +82,7 @@ export function registrarBarrido(ctx: ContextoIntegracion) {
     const body = { nombreInstitucion: 'Marca Concurrente',nombreCorto: original.nombreCorto,colorPrimario: original.colorPrimario,colorAcento: original.colorAcento };
     const subir = () => {
       const form = new FormData();
-      form.append('logo',new Blob([Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l9sAAAAASUVORK5CYII=','base64')],{ type: 'image/png' }),'logo.png');
+      form.append('logo',new Blob([Buffer.from('UklGRjwAAABXRUJQVlA4IDAAAADQAQCdASoBAAEAAUAmJaACdLoB+AADsAD+8ut//NgVzXPv9//S4P0uD9Lg/9KQAAA=','base64')],{ type: 'image/webp' }),'logo.webp');
       return ctx.api('/configuracion/marca/logo',{ method: 'POST',token: root,body: form });
     };
     try {
@@ -91,11 +91,12 @@ export function registrarBarrido(ctx: ContextoIntegracion) {
       expect((await ctx.api('/configuracion/marca')).data).toMatchObject({ nombreInstitucion: body.nombreInstitucion,logoUrl: carga.data.logoUrl });
       const origin = ctx.baseUrl.replace(/\/api$/, '');
       const publico = await fetch(`${origin}${carga.data.logoUrl}`);
-      expect(publico.status).toBe(200); expect(publico.headers.get('content-type')).toMatch(/image\/png/);
-      expect(Buffer.from(await publico.arrayBuffer()).subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
-      const falsa = new FormData(); falsa.append('logo', new Blob(['contenido falso'], { type: 'image/png' }), 'falso.png');
+      expect(publico.status).toBe(200); expect(publico.headers.get('content-type')).toMatch(/image\/webp/);
+      expect(Buffer.from(await publico.arrayBuffer()).subarray(0, 4).toString()).toBe('RIFF');
+      expect(carga.data.logoUrl).toMatch(/^\/uploads\/marca-logo-[0-9a-f-]+\.webp$/);
+      const falsa = new FormData(); falsa.append('logo', new Blob(['contenido falso'], { type: 'image/webp' }), 'falso.webp');
       expect((await ctx.api('/configuracion/marca/logo', { method: 'POST', token: root, body: falsa })).response.status).toBe(400);
-      const grande = new FormData(); grande.append('logo', new Blob([Buffer.alloc(2 * 1024 * 1024 + 1)], { type: 'image/png' }), 'grande.png');
+      const grande = new FormData(); grande.append('logo', new Blob([Buffer.alloc(10 * 1024 * 1024 + 1)], { type: 'image/webp' }), 'grande.webp');
       expect((await ctx.api('/configuracion/marca/logo', { method: 'POST', token: root, body: grande })).response.status).toBe(413);
       const admin = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.adminId })).email);
       const ajeno = new FormData(); ajeno.append('logo', new Blob(['no permitido']), 'ajeno.png');

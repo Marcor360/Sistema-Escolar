@@ -7,7 +7,7 @@ it('conserva HTTP 413 y traduce el rechazo de Multer', async () => {
     handle: () => throwError(() => new PayloadTooLargeException('File too large')),
   });
   await expect(lastValueFrom(resultado)).rejects.toMatchObject({
-    response: { statusCode: 413, message: expect.stringContaining('supera los 2 MB') },
+    response: { statusCode: 413, message: expect.stringContaining('supera los 10 MB') },
   });
 });
 
