@@ -91,6 +91,7 @@ export function registrarBarrido(ctx: ContextoIntegracion) {
       expect((await ctx.api('/configuracion/marca')).data).toMatchObject({ nombreInstitucion: body.nombreInstitucion,logoUrl: carga.data.logoUrl });
       const origin = ctx.baseUrl.replace(/\/api$/, '');
       const publico = await fetch(`${origin}${carga.data.logoUrl}`);
+      expect(publico.headers.get('cache-control')).toContain('immutable');
       expect(publico.status).toBe(200); expect(publico.headers.get('content-type')).toMatch(/image\/webp/);
       expect(Buffer.from(await publico.arrayBuffer()).subarray(0, 4).toString()).toBe('RIFF');
       expect(carga.data.logoUrl).toMatch(/^\/uploads\/marca-logo-[0-9a-f-]+\.webp$/);

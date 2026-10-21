@@ -97,11 +97,14 @@ export function MarcaProvider({ children }: { children: ReactNode }) {
 
   const recargar = useCallback((): Promise<void> => {
     if (consultaActual.current) return consultaActual.current;
-    const consulta = api.get<Marca>('/configuracion/marca', { headers: { 'Cache-Control': 'no-cache' } })
+    const consulta = api.get<Marca>('/configuracion/marca')
       .then(({ data }) => {
         if (!esMarcaWebValida(data)) throw new Error('La identidad recibida no es válida');
         usarMarca(data);
-        try { localStorage.setItem(MARCA_CACHE_WEB, JSON.stringify(data)); } catch { /* Almacenamiento no disponible. */ }
+        try {
+          const serializada = JSON.stringify(data);
+          if (localStorage.getItem(MARCA_CACHE_WEB) !== serializada) localStorage.setItem(MARCA_CACHE_WEB, serializada);
+        } catch { /* Almacenamiento no disponible. */ }
       })
       .finally(() => { if (consultaActual.current === consulta) consultaActual.current = null; });
     consultaActual.current = consulta;

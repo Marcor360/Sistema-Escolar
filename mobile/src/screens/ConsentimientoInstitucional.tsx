@@ -1,3 +1,4 @@
+import { useMarca } from "../marca";
 import { useState } from 'react';
 import { ActivityIndicator, Linking, ScrollView, TouchableOpacity, View } from 'react-native';
 import { Text } from '../components/Texto';
@@ -16,6 +17,7 @@ export interface EstadoConsentimiento { habilitado: boolean; pendiente: boolean;
 export default function ConsentimientoInstitucional({ estado, actualizar, salir }: {
   estado: EstadoConsentimiento; actualizar: (estado: EstadoConsentimiento) => void; salir: () => void;
 }) {
+  const { marca } = useMarca();
   const [marcados, setMarcados] = useState<string[]>([]);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
@@ -37,7 +39,7 @@ export default function ConsentimientoInstitucional({ estado, actualizar, salir 
     {estado.documentos.map(d => <View key={d.clave} style={{ borderWidth: 1, borderColor: colores.linea, borderRadius: 12, padding: 16, gap: 10 }}>
       <Text style={{ fontWeight: '700' }}>{d.titulo} · versión {d.version}</Text>
       <TouchableOpacity accessibilityRole="link" accessibilityLabel={`Ver ${d.titulo}`} onPress={() => void Linking.openURL(d.url).catch(() => setError('No se pudo abrir la página institucional.'))} style={{ minHeight: 44, justifyContent: 'center' }}>
-        <Text style={{ color: colores.pizarra, textDecorationLine: 'underline' }}>Ver {d.titulo.toLowerCase()} en la página institucional</Text>
+        <Text style={{ color: marca.colorPrimario, textDecorationLine: 'underline' }}>Ver {d.titulo.toLowerCase()} en la página institucional</Text>
       </TouchableOpacity>
       {d.aceptadoEn ? <Text>Registrado: {new Date(d.aceptadoEn).toLocaleString('es-MX')}</Text> :
         <TouchableOpacity accessibilityRole="checkbox" accessibilityState={{ checked: marcados.includes(d.clave), disabled: enviando }} onPress={() => setMarcados(prev => prev.includes(d.clave) ? prev.filter(x => x !== d.clave) : [...prev, d.clave])} style={{ minHeight: 48, justifyContent: 'center' }}>
@@ -45,8 +47,8 @@ export default function ConsentimientoInstitucional({ estado, actualizar, salir 
         </TouchableOpacity>}
     </View>)}
     {error ? <Text accessibilityRole="alert" style={{ color: colores.peligro }}>{error}</Text> : null}
-    <TouchableOpacity accessibilityRole="button" accessibilityState={{ disabled: !completo || enviando }} disabled={!completo || enviando} onPress={() => void aceptar()} style={{ minHeight: 48, borderRadius: 10, justifyContent: 'center', alignItems: 'center', backgroundColor: !completo || enviando ? colores.gris : colores.pizarra }}>
-      <Text style={{ color: textoSobreFondo(colores.pizarra), fontWeight: '700' }}>{enviando ? 'Registrando…' : 'Aceptar y continuar'}</Text>
+    <TouchableOpacity accessibilityRole="button" accessibilityState={{ disabled: !completo || enviando }} disabled={!completo || enviando} onPress={() => void aceptar()} style={{ minHeight: 48, borderRadius: 10, justifyContent: 'center', alignItems: 'center', backgroundColor: !completo || enviando ? colores.gris : marca.colorPrimario }}>
+      <Text style={{ color: textoSobreFondo(marca.colorPrimario), fontWeight: '700' }}>{enviando ? 'Registrando…' : 'Aceptar y continuar'}</Text>
     </TouchableOpacity>
     {enviando && <ActivityIndicator accessibilityLabel="Registrando aceptación" />}
     <TouchableOpacity accessibilityRole="button" onPress={salir} style={{ minHeight: 48, justifyContent: 'center', alignItems: 'center' }}><Text>Salir sin aceptar</Text></TouchableOpacity>

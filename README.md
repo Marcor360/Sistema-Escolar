@@ -17,7 +17,7 @@ Sistema escolar multiplataforma para operación académica, administrativa y fin
 
 ### Funcionalidad destacada de versiones recientes
 
-- **1.27.18:** Web admite PNG/JPG/WebP de hasta 20 MiB, convierte en el navegador a WebP de hasta 10 MiB y verifica lectura pública tras cargar. API admite solo WebP optimizado, almacena temporalmente fuera de la ruta pública y protege la referencia anterior en fallos. IIS exige límite efectivo ≥11 MiB y UAT de archivos/ACL; sin migraciones.
+- **1.27.18:** Web admite PNG/JPG/WebP de hasta 20 MiB, convierte en el navegador a WebP de hasta 10 MiB y verifica lectura pública tras cargar. API admite solo WebP optimizado, almacena temporalmente fuera de la ruta pública y protege la referencia anterior en fallos. Identidad pública sincronizada entre pestañas web y al volver a primer plano o cada minuto activo en Expo; web conserva marca válida en localStorage, Expo en SecureStore, metadatos sin caché HTTP y logos únicos con caché inmutable. IIS exige límite efectivo ≥11 MiB y UAT de archivos/ACL; sin migraciones.
 - **1.27.17:** Calificaciones descarta respuestas obsoletas al cambiar/cerrar historial; cierre reduce notas por lote sin acumular el ciclo completo; diagnóstico de logo exporta fallos y revisa CSP. Pruebas automáticas ampliadas; sin nuevas reglas académicas.
 - **1.27.16:** Vista previa de logos: permite `blob:` exclusivamente en imágenes bajo CSP de IIS; requiere despliegue y UAT de #106.
 - **1.27.15:** Agrupación regular reutiliza ocupación dentro de la transacción, conservando límites y reservas.
