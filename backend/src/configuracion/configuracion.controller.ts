@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Delete, Get, Post, Put, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Header, Post, Put, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiConsumes, ApiPayloadTooLargeResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
@@ -15,6 +15,7 @@ export class ConfiguracionController {
   constructor(private readonly service: ConfiguracionService) {}
 
   @Get('marca')
+  @Header('Cache-Control', 'no-store')
   obtenerMarca() {
     return this.service.obtener();
   }

@@ -1,4 +1,4 @@
-import { FormEvent, useRef, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { api, archivosBase, mensajeDeError } from '../api/client';
@@ -23,6 +23,8 @@ export default function LoginPage() {
     return typeof mensaje === 'string' ? mensaje : '';
   });
   const [enviando, setEnviando] = useState(false);
+  const [logoFallo, setLogoFallo] = useState(false);
+  useEffect(() => setLogoFallo(false), [marca.logoUrl]);
 
   const limpiar = () => { setError(''); setAviso(''); };
 
@@ -100,8 +102,8 @@ export default function LoginPage() {
   return (
     <div className="login-fondo">
       <div className="login-caja">
-        {marca.logoUrl
-          ? <img className="logo-marca" src={archivosBase + marca.logoUrl} alt={marca.nombreInstitucion} />
+        {marca.logoUrl && !logoFallo
+          ? <img className="logo-marca" src={archivosBase + marca.logoUrl} alt={marca.nombreInstitucion} onError={() => setLogoFallo(true)} />
           : <div className="monograma" aria-hidden>{marca.nombreCorto}</div>}
         <h1>{marca.nombreInstitucion}</h1>
         {localStorage.getItem(CLAVE_CIERRE) === 'inactividad' && (
