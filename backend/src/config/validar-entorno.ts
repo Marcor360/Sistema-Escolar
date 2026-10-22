@@ -17,7 +17,12 @@ export function validarEntorno(entrada: Record<string, unknown>): Record<string,
   for (const n of ['DB_HOST','DB_USER','DB_PASS','DB_NAME','DB_PORT','JWT_SECRET','UPLOADS_DIR']) texto(n, true);
   for (const n of ['PORT','DB_PORT','SMTP_PORT']) puerto(n);
   if (texto('DB_SYNC', true) !== 'false') error('DB_SYNC (debe ser false; usa migraciones)');
-  for (const n of ['DB_SSL','DB_ENCRYPT','DB_TRUST_SERVER_CERTIFICATE','PUSH_ENABLED','ALLOW_DEV_SEED','SMTP_REQUIRED','INSCRIPCION_ORDINARIA_SOLO_CARTERA']) booleano(n);
+  for (const n of ['DB_SSL','DB_ENCRYPT','DB_TRUST_SERVER_CERTIFICATE','PUSH_ENABLED','ALLOW_DEV_SEED','SMTP_REQUIRED','INSCRIPCION_ORDINARIA_SOLO_CARTERA','COBRANZA_DIA3_HABILITADA','RECARGOS_AUTOMATICOS_HABILITADOS']) booleano(n);
+  if (booleano('COBRANZA_DIA3_HABILITADA') || booleano('RECARGOS_AUTOMATICOS_HABILITADOS')) {
+    const actor = texto('FINANZAS_AUTO_ACTOR_ID', true);
+    if (!/^[1-9][0-9]*$/.test(actor) || !Number.isSafeInteger(Number(actor))) error('FINANZAS_AUTO_ACTOR_ID');
+  }
+  if (booleano('COBRANZA_DIA3_HABILITADA')) for (const n of ['SMTP_HOST','SMTP_USER','SMTP_PASS','SMTP_FROM']) texto(n, true);
   if (prod && (texto('JWT_SECRET').length < 32 || texto('JWT_SECRET').includes('cambiar-en-produccion'))) error('JWT_SECRET');
   if (prod && motor === 'mysql' && !booleano('DB_SSL')) error('DB_SSL');
   if (prod && motor === 'mssql' && (texto('DB_ENCRYPT') === 'false' || booleano('DB_TRUST_SERVER_CERTIFICATE'))) error('DB_ENCRYPT / DB_TRUST_SERVER_CERTIFICATE');

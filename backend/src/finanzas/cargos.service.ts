@@ -258,7 +258,7 @@ export class CargosService {
       .createQueryBuilder('c')
       .innerJoin('c.alumno', 'a')
       .innerJoin('c.concepto', 'cp', 'cp.aplica_recargo = :aplicaRecargo AND cp.activo = :aplicaRecargo', { aplicaRecargo: true })
-      .where('c.estatus IN (:...estatus)', { estatus: ['PENDIENTE', 'PARCIAL'] })
+      .where('c.estatus IN (:...estatus)', { estatus: ['PENDIENTE', 'PARCIAL', 'VENCIDO'] })
       .andWhere('c.fecha_vencimiento < :hoy', { hoy });
     if (planteles !== null) qb.andWhere('c.plantel_id IN (:...planteles)', { planteles });
     const candidatos = (await qb.getMany()).filter((c) => c.recargo === 0 && redondear((c.monto - c.descuento) * porcentaje / 100) > 0);
@@ -273,7 +273,7 @@ export class CargosService {
         const cargo = await cargos.findOne({
           where: { id: candidato.id }, lock: { mode: 'pessimistic_write' },
         });
-        if (!cargo || !cargo.concepto.aplicaRecargo || !cargo.concepto.activo || !['PENDIENTE', 'PARCIAL'].includes(cargo.estatus) ||
+        if (!cargo || !cargo.concepto.aplicaRecargo || !cargo.concepto.activo || !['PENDIENTE', 'PARCIAL', 'VENCIDO'].includes(cargo.estatus) ||
             !cargo.fechaVencimiento || cargo.fechaVencimiento >= hoy || cargo.recargo > 0 ||
             (planteles !== null && !planteles.includes(cargo.plantelId))) continue;
         const recargoCalculado = redondear((cargo.monto - cargo.descuento) * (porcentaje / 100));
