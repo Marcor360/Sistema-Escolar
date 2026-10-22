@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { GraficaCobranza } from '../components/GraficaCobranza';
 import { api, mensajeDeError } from '../api/client';
 import { Encabezado } from '../components/Encabezado';
 import { useDatos } from '../hooks/useDatos';
@@ -224,6 +225,8 @@ export default function DashboardPage() {
           )}
         </section>
       )}
+
+      {tieneRol('FINANZAS') && <GraficaCobranza plantelId={plantelId} />}
 
       <div className="dashboard-columnas">
         <section className="panel panel-eventos" aria-labelledby="titulo-eventos">
