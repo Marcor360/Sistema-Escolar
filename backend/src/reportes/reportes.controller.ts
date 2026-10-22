@@ -52,4 +52,25 @@ export class ReportesController {
   adeudos(@CurrentUser() user: JwtUser, @Res() res: Response, @Query('plantelId') plantelId?: string) {
     return this.service.adeudosExcel(user, res, plantelId ? Number(plantelId) : undefined);
   }
+  @Get('me/estado-cuenta.pdf')
+  @ApiOperation({ summary: 'Descargar estado de cuenta PDF del alumno autenticado' })
+  @Roles('ALUMNO')
+  miEstadoCuentaPdf(@CurrentUser() user: JwtUser, @Res() res: Response) {
+    return this.service.miEstadoCuentaPdf(user, res);
+  }
+
+  @Get('estado-cuenta/:alumnoId/pdf')
+  @ApiOperation({ summary: 'Descargar estado de cuenta PDF de alumno dentro del alcance financiero' })
+  @Roles('FINANZAS', 'ADMINISTRATIVO')
+  estadoCuentaPdf(@Param('alumnoId', ParseIntPipe) alumnoId: number, @CurrentUser() user: JwtUser, @Res() res: Response) {
+    return this.service.estadoCuentaPdf(alumnoId, user, res);
+  }
+
+  @Get('bajas.xlsx')
+  @ApiOperation({ summary: 'Descargar listado de bajas actuales por plantel autorizado; no es historial de eventos' })
+  @Roles('FINANZAS', 'ADMINISTRATIVO')
+  bajasExcel(@CurrentUser() user: JwtUser, @Res() res: Response, @Query('plantelId', new ParseIntPipe({ optional: true })) plantelId?: number) {
+    return this.service.bajasExcel(user, res, plantelId);
+  }
+
 }

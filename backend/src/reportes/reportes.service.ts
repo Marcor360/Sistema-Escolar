@@ -304,4 +304,82 @@ export class ReportesService {
     await wb.xlsx.write(res);
     res.end();
   }
+  /** Reporte privado de saldos y pagos; el alumno se valida por el JWT en el controlador. */
+  async estadoCuentaPdf(alumnoId: number, user: JwtUser | undefined, res: Response) {
+    const estado = await this.cargos.estadoDeCuenta(alumnoId, user);
+    const institucion = (await this.configuracion.obtener()).nombreInstitucion;
+    const dinero = (importe: number) => ' + importe.toFixed(2) + ' MXN';
+    const abonado = estado.cargos.reduce((total, cargo) => total + (cargo.pagado ?? 0), 0);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', contentDisposition(`estado-cuenta-${estado.alumno.matricula}.pdf`, 'attachment'));
+    res.setHeader('Cache-Control', 'private, no-store');
+    const doc = new PDFDocument({ margin: 44, size: 'LETTER' });
+    doc.pipe(res);
+    doc.font('Helvetica-Bold').fontSize(16).text(institucion, { align: 'center' });
+    doc.font('Helvetica').fontSize(12).text('Estado de cuenta digital', { align: 'center' });
+    doc.moveDown();
+    doc.fontSize(10).text(`Alumno: ${estado.alumno.usuario?.nombreCompleto ?? estado.alumno.matricula}`);
+    doc.text(`Matrícula: ${estado.alumno.matricula}`);
+    doc.text(`Fecha de emisión: ${new Date().toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City' })}`);
+    doc.moveDown();
+    doc.font('Helvetica-Bold').text(`Pagado aplicado: ${dinero(abonado)}`);
+    doc.text(`Saldo pendiente: ${dinero(estado.saldoTotal)}`);
+    doc.moveDown();
+    doc.fontSize(11).text('Cargos y saldos');
+    doc.font('Helvetica').fontSize(9);
+    if (!estado.cargos.length) doc.text('No hay cargos registrados.');
+    for (const cargo of estado.cargos) {
+      doc.text(`#${cargo.id} | ${cargo.descripcion} | ${cargo.estatus}`);
+      doc.text(`Vence: ${cargo.fechaVencimiento ?? 'Sin fecha'} | Total: ${dinero(cargo.total ?? 0)} | Pagado: ${dinero(cargo.pagado ?? 0)} | Saldo: ${dinero(cargo.saldo ?? 0)}`);
+      doc.moveDown(0.45);
+    }
+    doc.moveDown();
+    doc.font('Helvetica-Bold').fontSize(11).text('Movimientos de pago');
+    doc.font('Helvetica').fontSize(9);
+    if (!estado.pagos.length) doc.text('No hay pagos registrados.');
+    for (const pago of estado.pagos) {
+      doc.text(`#${pago.id} | ${new Date(pago.fechaPago).toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City' })} | ${dinero(pago.monto)} | ${pago.metodo} | ${pago.estatus} | ${pago.aplicado ? 'Aplicado' : 'Sin aplicar'}`);
+    }
+    doc.moveDown();
+    doc.fontSize(8).text('Solo los pagos confirmados y aplicados disminuyen el saldo. Documento informativo, no comprobante fiscal.');
+    doc.end();
+  }
+
+  async miEstadoCuentaPdf(user: JwtUser, res: Response) {
+    const alumno = await this.alumnosService.obtenerPorUsuario(user.sub);
+    return this.estadoCuentaPdf(alumno.id, undefined, res);
+  }
+
+  /** Fotografía actual de alumnos en BAJA; updatedAt no es una fecha certificada de baja. */
+  async bajasExcel(user: JwtUser, res: Response, plantelId?: number) {
+    const planteles = await this.scope.resolverFiltro(user, plantelId);
+    const query = this.alumnos.createQueryBuilder('a')
+      .innerJoinAndSelect('a.usuario', 'u')
+      .innerJoinAndSelect('a.plantel', 'p')
+      .where('a.estatus = :estatus', { estatus: 'BAJA' });
+    if (planteles !== null) query.andWhere('a.plantel_id IN (:...planteles)', { planteles });
+    const alumnos = await query.orderBy('a.id', 'ASC').take(5001).getMany();
+    if (alumnos.length > 5000) throw new BadRequestException('El reporte supera 5000 registros; filtra por plantel');
+    const libro = new ExcelJS.Workbook();
+    const hoja = libro.addWorksheet('Bajas actuales');
+    hoja.columns = [
+      { header: 'Matrícula', key: 'matricula', width: 18 },
+      { header: 'Alumno', key: 'nombre', width: 36 },
+      { header: 'Plantel actual', key: 'plantel', width: 30 },
+      { header: 'Estatus', key: 'estatus', width: 14 },
+      { header: 'Última actualización (no fecha de baja)', key: 'actualizado', width: 38 },
+    ];
+    hoja.getRow(1).font = { bold: true };
+    for (const alumno of alumnos) hoja.addRow({
+      matricula: alumno.matricula, nombre: alumno.usuario.nombreCompleto,
+      plantel: alumno.plantel.nombre, estatus: alumno.estatus,
+      actualizado: alumno.updatedAt.toISOString().slice(0, 10),
+    });
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', contentDisposition('bajas-actuales.xlsx', 'attachment'));
+    res.setHeader('Cache-Control', 'private, no-store');
+    await libro.xlsx.write(res);
+    res.end();
+  }
+
 }
