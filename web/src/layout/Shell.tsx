@@ -186,7 +186,7 @@ export function Shell() {
       )}
       <aside
         ref={lateral}
-        className={`lateral${menuAbierto ? ' lateral-abierto' : ''}`}
+        className={`lateral${menuAbierto ? ' lateral-abierto' : ''}${marca.tamanoLogo === 'GRANDE' ? ' logo-amplio' : ''}`}
         role={menuAbierto ? 'dialog' : undefined}
         aria-modal={menuAbierto ? true : undefined}
         aria-label="Menú principal"

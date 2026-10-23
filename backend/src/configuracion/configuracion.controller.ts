@@ -1,10 +1,10 @@
 import { BadRequestException, Body, Controller, Delete, Get, Header, Post, Put, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBearerAuth, ApiConsumes, ApiPayloadTooLargeResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiPayloadTooLargeResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { Roles } from '../common/roles.decorator';
 import { RolesGuard } from '../common/roles.guard';
-import { ActualizarMarcaDto } from './configuracion.dto';
+import { ActualizarMarcaDto, ActualizarOpcionesGlobalesDto } from './configuracion.dto';
 import { ConfiguracionService } from './configuracion.service';
 import { LogoUploadErrorInterceptor } from './logo-upload-error.interceptor';
 import { logoUploadConfig } from './logo-upload.config';
@@ -28,6 +28,14 @@ export class ConfiguracionController {
     return this.service.actualizar(dto);
   }
 
+  @Put('opciones')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Cambiar opciones globales de presentación web (solo SUPERADMIN)' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPERADMIN')
+  actualizarOpciones(@Body() dto: ActualizarOpcionesGlobalesDto) {
+    return this.service.actualizarOpciones(dto);
+  }
   @Post('marca/logo')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)

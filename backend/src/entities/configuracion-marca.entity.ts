@@ -9,5 +9,7 @@ export class ConfiguracionMarca {
   @Column({ type: String, length: 255, nullable: true }) logoUrl!: string | null;
   @Column({ type: 'char', length: 7 }) colorPrimario!: string;
   @Column({ type: 'char', length: 7 }) colorAcento!: string;
+  @Column({ length: 180, default: '' }) mensajeBienvenida!: string;
+  @Column({ length: 10, default: 'NORMAL' }) tamanoLogo!: 'NORMAL' | 'GRANDE';
   @UpdateDateColumn() actualizadoEn!: Date;
 }

@@ -9,6 +9,11 @@ export default function ConfiguracionPage() {
   const [nombreCorto, setNombreCorto] = useState(marca.nombreCorto);
   const [colorPrimario, setColorPrimario] = useState(marca.colorPrimario);
   const [colorAcento, setColorAcento] = useState(marca.colorAcento);
+  const [mensajeBienvenida, setMensajeBienvenida] = useState(marca.mensajeBienvenida ?? '');
+  const [tamanoLogo, setTamanoLogo] = useState<'NORMAL' | 'GRANDE'>(marca.tamanoLogo ?? 'NORMAL');
+  const [guardandoOpciones, setGuardandoOpciones] = useState(false);
+  const [estadoOpciones, setEstadoOpciones] = useState('');
+  const [errorOpciones, setErrorOpciones] = useState('');
   const [archivo, setArchivo] = useState<File | null>(null);
   const [vistaPrevia, setVistaPrevia] = useState<string | null>(null);
   const [mensaje, setMensaje] = useState('');
@@ -24,7 +29,12 @@ export default function ConfiguracionPage() {
     setNombreCorto(marca.nombreCorto);
     setColorPrimario(marca.colorPrimario);
     setColorAcento(marca.colorAcento);
-  }, [marca]);
+  }, [marca.nombreInstitucion, marca.nombreCorto, marca.colorPrimario, marca.colorAcento]);
+
+  useEffect(() => {
+    setMensajeBienvenida(marca.mensajeBienvenida ?? '');
+    setTamanoLogo(marca.tamanoLogo ?? 'NORMAL');
+  }, [marca.mensajeBienvenida, marca.tamanoLogo]);
 
   useEffect(() => () => { if (vistaPrevia) URL.revokeObjectURL(vistaPrevia); }, [vistaPrevia]);
 
@@ -97,6 +107,20 @@ export default function ConfiguracionPage() {
     }
   };
 
+  const guardarOpciones = async (evento: FormEvent) => {
+    evento.preventDefault();
+    if (mutando.current) return;
+    mutando.current = true; setGuardandoOpciones(true); setEstadoOpciones(''); setErrorOpciones('');
+    try {
+      await api.put('/configuracion/opciones', { mensajeBienvenida, tamanoLogo });
+      await recargar();
+      setEstadoOpciones('Opciones globales guardadas.');
+    } catch (err) {
+      setErrorOpciones(mensajeDeError(err));
+    } finally {
+      mutando.current = false; setGuardandoOpciones(false);
+    }
+  };
   const quitarLogo = async () => {
     if (mutando.current) return; mutando.current = true;
     setError(''); setMensaje(''); setGuardando(true);
@@ -118,6 +142,11 @@ export default function ConfiguracionPage() {
   useEffect(() => { setLogoNoDisponible(false); }, [logoVisible]);
   return <>
     <header className="encabezado"><h1>Configuración institucional</h1><p className="detalle">Nombre, logo y colores de los clientes.</p></header>
+    <section className="panel" aria-labelledby="tutorial-configuracion">
+      <h2 id="tutorial-configuracion">Tutorial del portal</h2>
+      <p>Vuelve a consultar el recorrido de las secciones disponibles para tu cuenta.</p>
+      <button type="button" className="boton secundario" onClick={() => window.dispatchEvent(new Event('escolar:reiniciar-recorrido'))}>Ver nuevamente el tutorial</button>
+    </section>
     <form className="panel" onSubmit={guardar} aria-busy={guardando}>
       <div className="fila">
         <div className="campo"><label htmlFor="nombre-institucion">Nombre de la institución</label><input id="nombre-institucion" maxLength={150} minLength={2} value={nombreInstitucion} onChange={(e) => setNombreInstitucion(e.target.value)} required /></div>
@@ -139,6 +168,28 @@ export default function ConfiguracionPage() {
         <button className="boton" disabled={guardando || archivoRechazado || Boolean(archivo && logoNoDisponible)}>{guardando ? 'Guardando…' : 'Guardar cambios'}</button>
         {marca.logoUrl && <button type="button" className="boton peligro" onClick={quitarLogo} disabled={guardando}>Quitar logo</button>}
       </div>
+    </form>
+    <form className="panel configuracion-global" onSubmit={guardarOpciones} aria-busy={guardandoOpciones}>
+      <header><h2>Opciones globales del portal web</h2>
+        <p className="detalle">Solo el Superadministrador puede modificar esta configuración. No se presenta en la app del alumno.</p></header>
+      <div className="fila">
+        <div className="campo">
+          <label htmlFor="mensaje-bienvenida">Mensaje institucional de bienvenida</label>
+          <textarea id="mensaje-bienvenida" maxLength={180} value={mensajeBienvenida} onChange={(e) => setMensajeBienvenida(e.target.value)}
+            placeholder="Bienvenido al portal institucional" />
+          <small>Texto público del acceso; nunca incluyas información privada.</small>
+        </div>
+        <div className="campo">
+          <label htmlFor="tamano-logo">Tamaño del logo institucional</label>
+          <select id="tamano-logo" value={tamanoLogo} onChange={(e) => setTamanoLogo(e.target.value as 'NORMAL' | 'GRANDE')}>
+            <option value="NORMAL">Normal</option><option value="GRANDE">Grande</option>
+          </select>
+          <small>No cambia la imagen original; se adapta a la pantalla.</small>
+        </div>
+      </div>
+      {errorOpciones && <p role="alert" className="mensaje-error">{errorOpciones}</p>}
+      {estadoOpciones && <p role="status" className="mensaje-ok">{estadoOpciones}</p>}
+      <button type="submit" className="boton" disabled={guardandoOpciones || guardando}>Guardar opciones globales</button>
     </form>
   </>;
 }

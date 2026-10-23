@@ -1165,3 +1165,15 @@ dialog button { max-width: 100%; min-height: 44px; white-space: normal; overflow
 .cuenta-acciones { display: flex; gap: 10px; flex-wrap: wrap; }
 @media (max-width: 1000px) { .cuenta-rejilla { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 580px) { .cuenta-datos { grid-template-columns: minmax(0, 1fr); gap: 12px; } .cuenta-acciones > button { flex: 1 1 100%; } }
+
+/* 1.27.29 · Preferencias globales de presentación web. */
+.configuracion-global { margin-top: clamp(20px, 2vw, 32px); }
+.configuracion-global > header { margin-bottom: 20px; }
+.configuracion-global .fila { align-items: start; }
+.configuracion-global .campo { flex: 1 1 280px; }
+.configuracion-global .campo small { display: block; margin-top: 8px; color: var(--texto-secundario); }
+.configuracion-global textarea { min-height: 100px; width: 100%; }
+.lateral.logo-amplio .logo-marca { width: min(100%, 222px); max-width: 222px; height: 132px; max-height: 132px; }
+.login-caja.logo-amplio .logo-marca { width: min(100%, 204px); max-width: 204px; height: 136px; max-height: 136px; }
+@media (max-width: 800px) { .lateral.logo-amplio .logo-marca { max-width: min(100%, 176px); height: 102px; max-height: 102px; } }
+@media (max-width: 480px) { .lateral.logo-amplio .logo-marca { max-width: 148px; height: 88px; max-height: 88px; } .configuracion-global .campo { flex-basis: 100%; } }

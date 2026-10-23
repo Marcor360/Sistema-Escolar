@@ -8,7 +8,7 @@ import { validarContenidoArchivo } from '../common/validar-archivo';
 import { Repository } from 'typeorm';
 import { programarLimpieza } from '../archivos/archivo-limpieza.service';
 import { ConfiguracionMarca } from '../entities';
-import { ActualizarMarcaDto, MarcaPublicaDto } from './configuracion.dto';
+import { ActualizarMarcaDto, ActualizarOpcionesGlobalesDto, MarcaPublicaDto } from './configuracion.dto';
 
 const VALORES_INICIALES = {
   id: 1,
@@ -17,6 +17,8 @@ const VALORES_INICIALES = {
   logoUrl: null as string | null,
   colorPrimario: '#14343B',
   colorAcento: '#C79A3C',
+  mensajeBienvenida: '',
+  tamanoLogo: 'NORMAL' as const,
 };
 
 @Injectable()
@@ -38,6 +40,12 @@ export class ConfiguracionService {
     });
   }
 
+  async actualizarOpciones(dto: ActualizarOpcionesGlobalesDto): Promise<MarcaPublicaDto> {
+    return this.modificar((marca) => {
+      marca.mensajeBienvenida = dto.mensajeBienvenida;
+      marca.tamanoLogo = dto.tamanoLogo;
+    });
+  }
   async guardarLogo(file: Express.Multer.File): Promise<MarcaPublicaDto> {
     const nombre = `marca-logo-${randomUUID()}.webp`;
     const destino = join(uploadsPath(), nombre);
@@ -81,6 +89,8 @@ export class ConfiguracionService {
       colorPrimario: marca.colorPrimario,
       colorPrimarioOscuro: this.oscurecer(marca.colorPrimario),
       colorAcento: marca.colorAcento,
+      mensajeBienvenida: marca.mensajeBienvenida,
+      tamanoLogo: marca.tamanoLogo,
       actualizadoEn: marca.actualizadoEn,
     };
   }

@@ -559,6 +559,15 @@ async function esperarServidor() {
       if(accion) await page.getByRole('button',{name:new RegExp(accion)}).click();
       try { await expect(page.locator('h1')).toBeVisible(); } catch (error) { console.log(await page.locator('body').innerText(), errors); throw error; }
       await page.evaluate(escala => { document.documentElement.style.fontSize = `${escala * 100}%`; }, escala);
+      if (ruta === '/configuracion') {
+        const tutorial = page.getByRole('button', { name: 'Ver nuevamente el tutorial' });
+        await tutorial.click();
+        await expect(page.locator('dialog.recorrido-dialogo')).toBeVisible();
+        await expect(page.locator('.recorrido-progreso')).toContainText('paso 1');
+        await page.getByRole('button', { name: 'Omitir recorrido' }).click();
+        await expect(page.locator('dialog.recorrido-dialogo')).toHaveCount(0);
+        await expect(tutorial).toBeFocused();
+      }
       if (ruta === '/finanzas') {
         for (const nombre of ['Consultar cargos', 'Consultar pagos', 'Adeudos y cobranza']) {
           await page.getByRole('button', { name: new RegExp(nombre) }).click();

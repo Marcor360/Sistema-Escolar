@@ -10,6 +10,8 @@ const identidad: Marca = {
   colorPrimario: '#AA1122',
   colorPrimarioOscuro: '#771122',
   colorAcento: '#DDBB33',
+  mensajeBienvenida: 'Bienvenido al portal',
+  tamanoLogo: 'NORMAL',
   actualizadoEn: '2026-10-21T09:00:00Z',
 };
 

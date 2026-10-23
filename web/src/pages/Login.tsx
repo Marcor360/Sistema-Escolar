@@ -101,11 +101,12 @@ export default function LoginPage() {
 
   return (
     <div className="login-fondo">
-      <div className="login-caja">
+      <div className={`login-caja${marca.tamanoLogo === 'GRANDE' ? ' logo-amplio' : ''}`}>
         {marca.logoUrl && !logoFallo
           ? <img className="logo-marca" src={archivosBase + marca.logoUrl} alt={marca.nombreInstitucion} onError={() => setLogoFallo(true)} />
           : <div className="monograma" aria-hidden>{marca.nombreCorto}</div>}
         <h1>{marca.nombreInstitucion}</h1>
+        {marca.mensajeBienvenida && <p className="texto-ayuda" role="note">{marca.mensajeBienvenida}</p>}
         {localStorage.getItem(CLAVE_CIERRE) === 'inactividad' && (
           <p role="status" className="mensaje-ok">La sesión se cerró tras 30 minutos sin actividad. Inicia sesión nuevamente.</p>
         )}
