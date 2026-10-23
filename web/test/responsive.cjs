@@ -207,6 +207,14 @@ async function esperarServidor() {
     const sizes = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, width: innerWidth }));
     if (sizes.scroll > sizes.width) throw Error('Overflow ' + width + ': ' + JSON.stringify(sizes));
     if (width <= 800) {
+      const notificaciones = page.getByRole('button', { name: /^Notificaciones/ });
+      await notificaciones.click();
+      await expect(page.locator('.campana-panel')).toBeVisible();
+      const panelNotificaciones = await page.locator('.campana-panel').boundingBox();
+      if (!panelNotificaciones || panelNotificaciones.x < 0 || panelNotificaciones.x + panelNotificaciones.width > width) {
+        throw Error('El panel de notificaciones debe quedar dentro de la pantalla: ' + width);
+      }
+      await notificaciones.click();
       const botonMenu = page.getByRole('button', { name: /Abrir menú/ });
       const posicionBoton = await botonMenu.boundingBox();
       if (!posicionBoton || posicionBoton.x < width / 2) {
