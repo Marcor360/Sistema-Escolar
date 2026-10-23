@@ -8,12 +8,14 @@ export type Marca = {
   colorPrimario: string;
   colorPrimarioOscuro: string;
   colorAcento: string;
+  mensajeBienvenida: string;
+  tamanoLogo: 'NORMAL' | 'GRANDE';
   actualizadoEn: string;
 };
 
 export const MARCA_POR_DEFECTO: Marca = {
   nombreInstitucion: 'Sistema Escolar', nombreCorto: 'SE', logoUrl: null,
-  colorPrimario: '#14343B', colorPrimarioOscuro: '#0E262B', colorAcento: '#C79A3C', actualizadoEn: '',
+  colorPrimario: '#14343B', colorPrimarioOscuro: '#0E262B', colorAcento: '#C79A3C', mensajeBienvenida: '', tamanoLogo: 'NORMAL', actualizadoEn: '',
 };
 
 export function contrasteAA(fondo: string, texto: string): number {
@@ -50,6 +52,8 @@ export function esMarcaWebValida(valor: unknown): valor is Marca {
     )
     && (datos.logoUrl === null || (typeof datos.logoUrl === 'string'
       && /^\/uploads\/marca-logo-[0-9a-f-]+\.(png|jpe?g|webp)$/i.test(datos.logoUrl)))
+    && (datos.mensajeBienvenida === undefined || typeof datos.mensajeBienvenida === 'string')
+    && (datos.tamanoLogo === undefined || ['NORMAL', 'GRANDE'].includes(datos.tamanoLogo))
     && typeof datos.actualizadoEn === 'string';
 }
 
@@ -69,6 +73,8 @@ function marcaIgual(anterior: Marca, siguiente: Marca): boolean {
     && anterior.colorPrimario === siguiente.colorPrimario
     && anterior.colorPrimarioOscuro === siguiente.colorPrimarioOscuro
     && anterior.colorAcento === siguiente.colorAcento
+    && anterior.mensajeBienvenida === siguiente.mensajeBienvenida
+    && anterior.tamanoLogo === siguiente.tamanoLogo
     && anterior.actualizadoEn === siguiente.actualizadoEn;
 }
 

@@ -1,6 +1,6 @@
 import { Transform } from 'class-transformer';
 const limpiar = ({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value;
-import { Length, Matches } from 'class-validator';
+import { IsIn, Length, Matches } from 'class-validator';
 
 export class ActualizarMarcaDto {
   @Transform(limpiar) @Length(2, 150)
@@ -16,6 +16,12 @@ export class ActualizarMarcaDto {
   colorAcento!: string;
 }
 
+export class ActualizarOpcionesGlobalesDto {
+  @Transform(limpiar) @Length(0, 180)
+  mensajeBienvenida!: string;
+  @IsIn(['NORMAL', 'GRANDE'])
+  tamanoLogo!: 'NORMAL' | 'GRANDE';
+}
 export interface MarcaPublicaDto {
   nombreInstitucion: string;
   nombreCorto: string;
@@ -23,5 +29,7 @@ export interface MarcaPublicaDto {
   colorPrimario: string;
   colorPrimarioOscuro: string;
   colorAcento: string;
+  mensajeBienvenida: string;
+  tamanoLogo: 'NORMAL' | 'GRANDE';
   actualizadoEn: Date;
 }

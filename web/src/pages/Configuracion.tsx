@@ -9,6 +9,11 @@ export default function ConfiguracionPage() {
   const [nombreCorto, setNombreCorto] = useState(marca.nombreCorto);
   const [colorPrimario, setColorPrimario] = useState(marca.colorPrimario);
   const [colorAcento, setColorAcento] = useState(marca.colorAcento);
+  const [mensajeBienvenida, setMensajeBienvenida] = useState(marca.mensajeBienvenida ?? '');
+  const [tamanoLogo, setTamanoLogo] = useState<'NORMAL' | 'GRANDE'>(marca.tamanoLogo ?? 'NORMAL');
+  const [guardandoOpciones, setGuardandoOpciones] = useState(false);
+  const [estadoOpciones, setEstadoOpciones] = useState('');
+  const [errorOpciones, setErrorOpciones] = useState('');
   const [archivo, setArchivo] = useState<File | null>(null);
   const [vistaPrevia, setVistaPrevia] = useState<string | null>(null);
   const [mensaje, setMensaje] = useState('');
@@ -24,6 +29,8 @@ export default function ConfiguracionPage() {
     setNombreCorto(marca.nombreCorto);
     setColorPrimario(marca.colorPrimario);
     setColorAcento(marca.colorAcento);
+    setMensajeBienvenida(marca.mensajeBienvenida ?? '');
+    setTamanoLogo(marca.tamanoLogo ?? 'NORMAL');
   }, [marca]);
 
   useEffect(() => () => { if (vistaPrevia) URL.revokeObjectURL(vistaPrevia); }, [vistaPrevia]);
@@ -97,6 +104,20 @@ export default function ConfiguracionPage() {
     }
   };
 
+  const guardarOpciones = async (evento: FormEvent) => {
+    evento.preventDefault();
+    if (mutando.current) return;
+    mutando.current = true; setGuardandoOpciones(true); setEstadoOpciones(''); setErrorOpciones('');
+    try {
+      await api.put('/configuracion/opciones', { mensajeBienvenida, tamanoLogo });
+      await recargar();
+      setEstadoOpciones('Opciones globales guardadas.');
+    } catch (err) {
+      setErrorOpciones(mensajeDeError(err));
+    } finally {
+      mutando.current = false; setGuardandoOpciones(false);
+    }
+  };
   const quitarLogo = async () => {
     if (mutando.current) return; mutando.current = true;
     setError(''); setMensaje(''); setGuardando(true);
@@ -139,6 +160,28 @@ export default function ConfiguracionPage() {
         <button className="boton" disabled={guardando || archivoRechazado || Boolean(archivo && logoNoDisponible)}>{guardando ? 'Guardando…' : 'Guardar cambios'}</button>
         {marca.logoUrl && <button type="button" className="boton peligro" onClick={quitarLogo} disabled={guardando}>Quitar logo</button>}
       </div>
+    </form>
+    <form className="panel configuracion-global" onSubmit={guardarOpciones} aria-busy={guardandoOpciones}>
+      <header><h2>Opciones globales del portal web</h2>
+        <p className="detalle">Solo el Superadministrador puede modificar esta configuración. No se presenta en la app del alumno.</p></header>
+      <div className="fila">
+        <div className="campo">
+          <label htmlFor="mensaje-bienvenida">Mensaje institucional de bienvenida</label>
+          <textarea id="mensaje-bienvenida" maxLength={180} value={mensajeBienvenida} onChange={(e) => setMensajeBienvenida(e.target.value)}
+            placeholder="Bienvenido al portal institucional" />
+          <small>Texto público del acceso; nunca incluyas información privada.</small>
+        </div>
+        <div className="campo">
+          <label htmlFor="tamano-logo">Tamaño del logo institucional</label>
+          <select id="tamano-logo" value={tamanoLogo} onChange={(e) => setTamanoLogo(e.target.value as 'NORMAL' | 'GRANDE')}>
+            <option value="NORMAL">Normal</option><option value="GRANDE">Grande</option>
+          </select>
+          <small>No cambia la imagen original; se adapta a la pantalla.</small>
+        </div>
+      </div>
+      {errorOpciones && <p role="alert" className="mensaje-error">{errorOpciones}</p>}
+      {estadoOpciones && <p role="status" className="mensaje-ok">{estadoOpciones}</p>}
+      <button type="submit" className="boton" disabled={guardandoOpciones || guardando}>Guardar opciones globales</button>
     </form>
   </>;
 }

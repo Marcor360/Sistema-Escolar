@@ -33,6 +33,11 @@ describe('ConfiguracionService', () => {
     expect(repo.save).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
   });
 
+  it('actualiza las opciones globales sin alterar la marca anterior', async () => {
+    const { service } = crear();
+    await expect(service.actualizarOpciones({ mensajeBienvenida: 'Bienvenido a IUA', tamanoLogo: 'GRANDE' }))
+      .resolves.toMatchObject({ mensajeBienvenida: 'Bienvenido a IUA', tamanoLogo: 'GRANDE', logoUrl: null });
+  });
   it('quitarLogo deja logoUrl en null', async () => {
     const { service, limpiezas } = crear({
       id: 1,
