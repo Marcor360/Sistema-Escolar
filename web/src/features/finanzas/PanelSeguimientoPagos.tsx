@@ -52,11 +52,12 @@ export function PanelSeguimientoPagos() {
     e.preventDefault();if(enviando||!plantelId||!permitido)return;
     setError('');setMensaje('');setEnviando(true);
     try {
-      const {data:previa}=await api.post<{registros:number;totalEstimado:number}>('/finanzas/preview-cobranza',{plantelId:Number(plantelId)});
+      const datosAviso = { plantelId: Number(plantelId), soloSinAbono: sinAbono };
+      const {data:previa}=await api.post<{registros:number;totalEstimado:number}>('/finanzas/preview-cobranza',datosAviso);
       if (!previa.registros) {setMensaje('No existen cargos con saldo que requieran avisos en el plantel.');return;}
-      const ok=await confirmacion.solicitar(`Se programarán avisos institucionales para ${previa.registros} cuentas con saldo, por correo SMTP, sobre ${pesos(previa.totalEstimado)}. La selección de filtros de pantalla no limita el lote: incluye TODOS los adeudos del plantel. ¿Confirmar?`);
+      const ok=await confirmacion.solicitar(`Se programarán avisos institucionales para ${previa.registros} cuentas con saldo, por correo SMTP, sobre ${pesos(previa.totalEstimado)}. ${sinAbono ? 'Solo se incluyen alumnos sin abonos en cargos pendientes.' : 'Se incluyen alumnos con saldo, aun cuando hayan abonado.'} El filtro de vencimiento no limita el lote. ¿Confirmar?`);
       if(!ok)return;
-      const {data} = await api.post<{programados:number;omitidos:number}>('/finanzas/avisos-cobranza',{plantelId:Number(plantelId),confirmado:true});
+      const {data} = await api.post<{programados:number;omitidos:number}>('/finanzas/avisos-cobranza',{...datosAviso,confirmado:true});
       setMensaje(`Avisos programados: ${data.programados}. Existentes: ${data.omitidos}. Programa no significa entregado; revisa el seguimiento.`);
       setRevision(n=>n+1);
     }catch(e){setError(mensajeDeError(e));}finally{setEnviando(false);}
@@ -107,7 +108,7 @@ export function PanelSeguimientoPagos() {
     <p className="texto-ayuda">{datos.nota}</p></>}
     <form className="panel" onSubmit={avisar}>
       <h3>Recordatorios por correo institucional</h3>
-      <p>Los avisos se generan mediante la cola SMTP existente. El envío cubre todos los saldos del plantel, independientemente del filtro de la tabla. Requiere SMTP real y plantilla de cobranza.</p>
+      <p>Los avisos se generan mediante la cola SMTP existente. Se respeta la casilla «Solo sin abonos pendientes», pero el filtro de vencimiento no limita el lote. Requiere SMTP real y plantilla de cobranza.</p>
       <label><input type="checkbox" required checked={permitido} onChange={e=>setPermitido(e.target.checked)}/>
         Confirmo autorización institucional y aviso de privacidad vigente para contactar a las personas destinatarias.</label>
       <button className="boton" type="submit" disabled={!plantelId||enviando||!permitido}>{enviando?'Preparando…':'Previsualizar y programar correos'}</button>
