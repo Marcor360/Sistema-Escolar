@@ -37,15 +37,18 @@ export class CobranzaService implements OnModuleInit, OnModuleDestroy {
     if (this.timerAutomaticos) clearInterval(this.timerAutomaticos);
   }
 
-  async enviarAvisos(user: JwtUser, plantelId?: number, preview = false, confirmado = false, soloVencidos = false) {
+  async enviarAvisos(user: JwtUser, plantelId?: number, preview = false, confirmado = false, soloVencidos = false, soloSinAbono = false) {
     if (!plantelId) throw new BadRequestException('Selecciona un plantel para esta operación');
     if (!preview && !confirmado) throw new BadRequestException('Revisa la previsualización y confirma la operación');
     if (!await this.plantillas.findOneBy({ clave: 'AVISO_ADEUDO' })) throw new BadRequestException('Falta la plantilla AVISO_ADEUDO');
     const dia = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
     const adeudos = (await this.cargos.adeudos(user, plantelId, true))
       .filter((cargo) => !soloVencidos || (cargo.fechaVencimiento !== null && cargo.fechaVencimiento < dia));
+    const abonado = new Map<number, number>();
+    for (const cargo of adeudos) abonado.set(cargo.alumnoId, (abonado.get(cargo.alumnoId) ?? 0) + cargo.pagado);
     const porAlumno = new Map<number, { usuarioId: number; saldo: number; cargos: string[] }>();
     for (const c of adeudos) {
+      if (c.alumno.estatus !== 'ACTIVO' || (soloSinAbono && (abonado.get(c.alumnoId) ?? 0) > 0)) continue;
       const actual = porAlumno.get(c.alumnoId) ?? { usuarioId: c.alumno.usuarioId, saldo: 0, cargos: [] };
       actual.saldo = redondear(actual.saldo + c.saldo); actual.cargos.push(`${c.id}:${c.saldo}`); porAlumno.set(c.alumnoId, actual);
     }
