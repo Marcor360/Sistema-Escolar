@@ -6,7 +6,7 @@ function preparar(numeroDestino: number, fechaInicio = '2027-01-15', motivo?: st
   const alumno = { id: 11, estatus: 'ACTIVO', plantelId: 7, usuario: { activo: true } };
   const origen = { alumnoId: 11, grupo: {
     tipo: 'REGULAR', periodoAcademicoId: 19, carreraId: 6, nivelId: 5, plantelId: 7,
-    ciclo: { fechaFin: '2026-12-31' },
+    ciclo: { fechaFin: '2026-12-31', estado: 'CERRADO' },
   }};
   const periodos = {
     findOneBy: jest.fn()
@@ -17,7 +17,7 @@ function preparar(numeroDestino: number, fechaInicio = '2027-01-15', motivo?: st
     getRepository: jest.fn((entidad) => entidad === Alumno ? { findOne: async()=>alumno } :
       entidad === Inscripcion ? { findOne: async()=>origen } :
       entidad === PeriodoAcademico ? periodos :
-      entidad === CicloEscolar ? {findOneBy: async()=>({fechaInicio})} : {}),
+      entidad === CicloEscolar ? {findOneBy: async()=>({fechaInicio,estado:'PREPARACION'})} : {}),
   };
   const service = new CarteraService({} as never, { validarGestion: jest.fn() } as never, {} as never);
   const dto = { alumnoId:11, plantelId:7, cicloId:10, nivelId:5, carreraId:6,
