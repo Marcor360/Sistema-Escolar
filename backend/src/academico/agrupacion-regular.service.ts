@@ -14,7 +14,7 @@ export interface ContextoRegular { alumnoId: number; plantelId: number; cicloId:
 export class AgrupacionRegularService {
   constructor(private readonly scope: ScopeService) {}
   async solicitar(m: EntityManager, d: ContextoRegular, u: JwtUser) {
-    if (!u.roles.some(r => ['SUPERADMIN','ADMINISTRATIVO'].includes(r))) throw new ForbiddenException('Apertura reservada a Control Escolar');
+    if (!u.roles.some(r => ['SUPERADMIN','ADMINISTRATIVO','FINANZAS'].includes(r))) throw new ForbiddenException('Apertura reservada a Control Escolar y Finanzas');
     await this.scope.validarGestion(u, d.plantelId);
     const plantel = await m.getRepository(Plantel).findOne({ where: { id: d.plantelId }, lock: { mode: 'pessimistic_write' } });
     const ciclo = await m.getRepository(CicloEscolar).findOneBy({ id: d.cicloId });
