@@ -1143,6 +1143,5 @@ dialog button { max-width: 100%; min-height: 44px; white-space: normal; overflow
   .lateral .logo-marca { width: auto; max-width: min(100%, 148px); height: 86px; max-height: 86px; }
 }
 @media (max-width: 480px) {
-  .lateral { width: min(92vw, 360px); }
   .login-caja .logo-marca { width: 132px; height: 92px; }
 }
