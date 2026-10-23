@@ -47,7 +47,9 @@ describe('Dashboard por roles', () => {
               cargosConAdeudo: 5,
               cobradoMes: 1000,
             }
-          : [],
+          : ruta === '/reportes/cobranza/serie'
+            ? { datos: [], moneda: 'MXN', base: 'Pagos confirmados' }
+            : [],
     }));
     render(
       <MemoryRouter>
