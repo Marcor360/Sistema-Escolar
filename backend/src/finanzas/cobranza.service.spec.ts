@@ -76,3 +76,38 @@ describe('Automatización financiera optativa', () => {
     expect(await service.enviarAvisos(actor, 3, true, false, true)).toEqual({ plantelId: 3, registros: 1, totalEstimado: 100 });
   });
 });
+
+describe('Seguimiento privado de morosidad', () => {
+  const actor = { sub: 10, email: 'finanzas@example.test', nombre: 'Finanzas', roles: ['FINANZAS'] } as Parameters<CobranzaService['pendientes']>[0];
+  const cargos = [
+    { id:1, alumnoId:11, alumno:{ matricula:'A011', estatus:'ACTIVO', usuarioId:211,
+      tutorTelefono:'5551234567', usuario:{ nombreCompleto:'María Pérez', telefono:null, email:'alumno@example.test' } },
+      saldo:100, pagado:0, fechaVencimiento:'2020-01-01' },
+    { id:2, alumnoId:11, alumno:{ matricula:'A011', estatus:'ACTIVO', usuarioId:211,
+      tutorTelefono:'5551234567', usuario:{ nombreCompleto:'María Pérez', telefono:null, email:'alumno@example.test' } },
+      saldo:50, pagado:0, fechaVencimiento:'2999-01-01' },
+    { id:3, alumnoId:12, alumno:{ matricula:'A012', estatus:'ACTIVO', usuarioId:212,
+      tutorTelefono:null, usuario:{ nombreCompleto:'Ernesto Gómez', telefono:null, email:'contacto@example.test' } },
+      saldo:30, pagado:20, fechaVencimiento:'2020-01-01' },
+    { id:4, alumnoId:13, alumno:{ matricula:'A013', estatus:'BAJA', usuarioId:213,
+      tutorTelefono:null, usuario:{ nombreCompleto:'Inactivo', telefono:null, email:'baja@example.test' } },
+      saldo:80, pagado:0, fechaVencimiento:'2020-01-01' },
+  ];
+  it('agrupa deuda en alumnos únicos y restringe teléfonos a los destinatarios activos', async () => {
+    const svc = new CobranzaService({findOneBy:jest.fn().mockResolvedValue({})} as never,
+      {adeudos:jest.fn().mockResolvedValue(cargos)} as never, {} as never, {} as never, new ConfigService(),
+      {} as never, { validarGestion:jest.fn().mockResolvedValue(undefined) } as never);
+    const r = await svc.pendientes(actor, {plantelId:7,sinAbono:true,situacion:'VENCIDOS',pagina:1,porPagina:10});
+    expect(r.total).toBe(1);
+    expect(r.datos[0]).toMatchObject({ matricula:'A011',telefono:'5551234567',saldo:150,numeroCargos:2,vencidos:1 });
+    expect(r.resumen).toMatchObject({ alumnosConSaldo:2,sinAbono:1,conAbonoParcial:1 });
+    expect(JSON.stringify(r)).not.toContain('baja@example.test');
+  });
+  it('masivo filtrado excluye alumnos con abonos en cargos abiertos',async()=>{
+    const svc = new CobranzaService({findOneBy:jest.fn().mockResolvedValue({})} as never,
+      {adeudos:jest.fn().mockResolvedValue(cargos)} as never, {} as never, {} as never, new ConfigService(),
+      {} as never, {} as never);
+    const r = await svc.enviarAvisos(actor,7,true,false,false,true);
+    expect(r).toEqual({ plantelId:7,registros:1,totalEstimado:150 });
+  });
+});

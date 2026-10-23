@@ -142,7 +142,7 @@ export class FinanzasController {
   @Post('preview-cobranza')
   @ApiBearerAuth() @UseGuards(JwtAuthGuard, RolesGuard) @Roles('FINANZAS')
   previewCobranza(@Body() dto: CobranzaDto, @CurrentUser() user: JwtUser) {
-    return this.cobranza.enviarAvisos(user, dto.plantelId, true);
+    return this.cobranza.enviarAvisos(user, dto.plantelId, true, false, false, dto.soloSinAbono);
   }
 
   @Post('cargos/generar-colegiaturas')
@@ -199,7 +199,7 @@ export class FinanzasController {
   // ---------- Cobranza y bitácora ----------
   @Post('avisos-cobranza')
   @ApiBearerAuth() @UseGuards(JwtAuthGuard, RolesGuard) @Roles('FINANZAS')
-  avisos(@CurrentUser() user: JwtUser, @Body() dto: CobranzaDto) { return this.cobranza.enviarAvisos(user, dto.plantelId, false, dto.confirmado); }
+  avisos(@CurrentUser() user: JwtUser, @Body() dto: CobranzaDto) { return this.cobranza.enviarAvisos(user, dto.plantelId, false, dto.confirmado, false, dto.soloSinAbono); }
 
   @Get('conciliacion/resoluciones')
   @ApiBearerAuth() @UseGuards(JwtAuthGuard, RolesGuard) @Roles('FINANZAS')

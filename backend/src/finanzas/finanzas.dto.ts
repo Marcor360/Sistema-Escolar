@@ -91,6 +91,7 @@ export class MotivoFinancieroDto {
 export class CobranzaDto {
   @Type(() => Number) @IsInt() @Min(1) plantelId!: number;
   @OpcionalNoNulo() @IsBoolean() confirmado?: boolean;
+  @OpcionalNoNulo() @IsBoolean() soloSinAbono?: boolean;
 }
 
 export class AplicarPagoDto extends MotivoFinancieroDto {
