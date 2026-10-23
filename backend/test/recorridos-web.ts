@@ -27,6 +27,13 @@ export async function recorridoWeb(d: Datos, tipo: 'academico' | 'financiero' | 
     const login = await respuestaLogin;
     assert.equal(login.status(), 201, `Login del recorrido ${tipo}: ${await login.text()}`);
     await expect(page.getByRole('link', { name: 'Alumnos', exact: true })).toBeVisible();
+    const bienvenida = page.getByRole('dialog', { name: /Menú|Bienvenida|recorrido/i });
+    if (await bienvenida.count()) {
+      while (await bienvenida.getByRole('button', { name: 'Siguiente' }).count()) {
+        await bienvenida.getByRole('button', { name: 'Siguiente' }).click();
+      }
+      await bienvenida.getByRole('button', { name: 'Finalizar' }).click();
+    }
     const matricula = `BW${tipo === 'academico' ? 'A' : tipo === 'financiero' ? 'F' : 'U'}${d.sufijo}`;
     await page.getByRole('link', { name: 'Alumnos', exact: true }).click();
     await page.getByRole('button',{name:/Registrar alumno/}).click();
