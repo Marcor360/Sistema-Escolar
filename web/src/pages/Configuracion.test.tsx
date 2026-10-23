@@ -3,11 +3,11 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import ConfiguracionPage from './Configuracion';
 import { api } from '../api/client';
 vi.mock('../utils/optimizar-logo', () => ({ MAX_LOGO_ORIGINAL_BYTES: 20 * 1024 * 1024, optimizarLogo: vi.fn(async () => new File(['webp'], 'logo-institucional.webp', { type: 'image/webp' })) }));
-const { recargar, marca } = vi.hoisted(() => ({ recargar: vi.fn(), marca: { nombreInstitucion: 'Escuela', nombreCorto: 'SE', colorPrimario: '#14343B', colorAcento: '#C79A3C', logoUrl: null as string | null } }));
+const { recargar, marca } = vi.hoisted(() => ({ recargar: vi.fn(), marca: { nombreInstitucion: 'Escuela', nombreCorto: 'SE', colorPrimario: '#14343B', colorAcento: '#C79A3C', mensajeBienvenida: '', tamanoLogo: 'NORMAL' as 'NORMAL' | 'GRANDE', logoUrl: null as string | null } }));
 vi.mock('../marca/MarcaContext', () => {
   return { useMarca: () => ({ marca, recargar }) };
 });
-beforeEach(() => { recargar.mockReset().mockResolvedValue(undefined); marca.logoUrl = null; vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: vi.fn(() => 'blob:logo'), revokeObjectURL: vi.fn() })); });
+beforeEach(() => { recargar.mockReset().mockResolvedValue(undefined); Object.assign(marca, { nombreInstitucion: 'Escuela', nombreCorto: 'SE', colorPrimario: '#14343B', colorAcento: '#C79A3C', mensajeBienvenida: '', tamanoLogo: 'NORMAL', logoUrl: null }); vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: vi.fn(() => 'blob:logo'), revokeObjectURL: vi.fn() })); });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 it('dos envíos inmediatos guardan una sola vez y anuncian el resultado', async () => {
   let terminar!: (r: { data: object }) => void;
@@ -83,4 +83,35 @@ it.each(['logo.exe', 'vacio.png'])('rechaza %s y permite reemplazarlo por una im
   fireEvent.change(input, { target: { files: [new File([new Uint8Array(20 * 1024 * 1024)], 'logo.png')] } });
   expect(screen.queryByRole('alert')).toBeNull();
   expect((screen.getByText('Guardar cambios') as HTMLButtonElement).disabled).toBe(false);
+});
+
+
+it('permite volver a abrir el tutorial desde Configuración sin guardar formularios', () => {
+  const reiniciar = vi.fn();
+  window.addEventListener('escolar:reiniciar-recorrido', reiniciar);
+  const put = vi.spyOn(api, 'put');
+  try {
+    render(<ConfiguracionPage />);
+    fireEvent.click(screen.getByRole('button', { name: 'Ver nuevamente el tutorial' }));
+    expect(reiniciar).toHaveBeenCalledTimes(1);
+    expect(put).not.toHaveBeenCalled();
+  } finally { window.removeEventListener('escolar:reiniciar-recorrido', reiniciar); }
+});
+
+it('conserva el borrador de opciones al guardar identidad y viceversa', async () => {
+  vi.spyOn(api, 'put').mockResolvedValue({ data: {} });
+  const { rerender } = render(<ConfiguracionPage />);
+  const nombre = screen.getByLabelText('Nombre de la institución') as HTMLInputElement;
+  const bienvenida = screen.getByLabelText('Mensaje institucional de bienvenida') as HTMLTextAreaElement;
+  fireEvent.change(bienvenida, { target: { value: 'Borrador pendiente' } });
+  fireEvent.change(nombre, { target: { value: 'Nombre guardado' } });
+  recargar.mockImplementationOnce(async () => { marca.nombreInstitucion = 'Nombre guardado'; rerender(<ConfiguracionPage />); });
+  fireEvent.submit(nombre.closest('form')!);
+  await screen.findByText('Identidad institucional actualizada.');
+  expect(bienvenida.value).toBe('Borrador pendiente');
+  fireEvent.change(nombre, { target: { value: 'Otro borrador' } });
+  recargar.mockImplementationOnce(async () => { marca.mensajeBienvenida = 'Borrador pendiente'; rerender(<ConfiguracionPage />); });
+  fireEvent.submit(bienvenida.closest('form')!);
+  await screen.findByText('Opciones globales guardadas.');
+  expect(nombre.value).toBe('Otro borrador');
 });

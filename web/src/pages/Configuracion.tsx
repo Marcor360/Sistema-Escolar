@@ -29,9 +29,12 @@ export default function ConfiguracionPage() {
     setNombreCorto(marca.nombreCorto);
     setColorPrimario(marca.colorPrimario);
     setColorAcento(marca.colorAcento);
+  }, [marca.nombreInstitucion, marca.nombreCorto, marca.colorPrimario, marca.colorAcento]);
+
+  useEffect(() => {
     setMensajeBienvenida(marca.mensajeBienvenida ?? '');
     setTamanoLogo(marca.tamanoLogo ?? 'NORMAL');
-  }, [marca]);
+  }, [marca.mensajeBienvenida, marca.tamanoLogo]);
 
   useEffect(() => () => { if (vistaPrevia) URL.revokeObjectURL(vistaPrevia); }, [vistaPrevia]);
 
@@ -139,6 +142,11 @@ export default function ConfiguracionPage() {
   useEffect(() => { setLogoNoDisponible(false); }, [logoVisible]);
   return <>
     <header className="encabezado"><h1>Configuración institucional</h1><p className="detalle">Nombre, logo y colores de los clientes.</p></header>
+    <section className="panel" aria-labelledby="tutorial-configuracion">
+      <h2 id="tutorial-configuracion">Tutorial del portal</h2>
+      <p>Vuelve a consultar el recorrido de las secciones disponibles para tu cuenta.</p>
+      <button type="button" className="boton secundario" onClick={() => window.dispatchEvent(new Event('escolar:reiniciar-recorrido'))}>Ver nuevamente el tutorial</button>
+    </section>
     <form className="panel" onSubmit={guardar} aria-busy={guardando}>
       <div className="fila">
         <div className="campo"><label htmlFor="nombre-institucion">Nombre de la institución</label><input id="nombre-institucion" maxLength={150} minLength={2} value={nombreInstitucion} onChange={(e) => setNombreInstitucion(e.target.value)} required /></div>
