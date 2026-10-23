@@ -1,3 +1,4 @@
+import { condicionBusquedaAlumno } from '../common/busqueda-alumno';
 import { CicloEscolar } from '../entities/ciclo-escolar.entity';
 import { BadRequestException, ForbiddenException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -94,12 +95,12 @@ export class CargosService {
   async listarAlumnosFinancieros(query: ListarCargosDto, user: JwtUser) {
     const planteles = await this.scope.resolverFiltro(user);
     const qb = this.dataSource.getRepository(Alumno).createQueryBuilder('a').innerJoin('a.usuario', 'u')
-      .select(['a.id', 'a.matricula', 'u.id', 'u.nombre', 'u.apellidoPaterno']);
+      .select(['a.id', 'a.matricula', 'u.id', 'u.nombre', 'u.apellidoPaterno', 'u.apellidoMaterno']);
     if (planteles !== null) qb.where('(a.plantel_id IN (:...planteles) OR EXISTS (SELECT 1 FROM cargos c WHERE c.alumno_id = a.id AND c.plantel_id IN (:...planteles)) OR EXISTS (SELECT 1 FROM pagos p WHERE p.alumno_id = a.id AND p.plantel_id IN (:...planteles)))', { planteles });
-    if (query.buscar?.trim()) qb.andWhere('(a.matricula LIKE :buscar OR u.nombre LIKE :buscar OR u.apellido_paterno LIKE :buscar)', { buscar: `%${query.buscar.trim()}%` });
+    if (query.buscar?.trim()) qb.andWhere(condicionBusquedaAlumno('a', 'u'), { buscar: `%${query.buscar.trim()}%` });
     const pagina = query.pagina || 1, porPagina = query.porPagina || 10;
     const [datos, total] = await qb.orderBy('a.matricula', 'ASC').skip((pagina - 1) * porPagina).take(porPagina).getManyAndCount();
-    return { datos: datos.map((a) => ({ id: a.id, matricula: a.matricula, usuario: { nombre: a.usuario.nombre, apellidoPaterno: a.usuario.apellidoPaterno } })), total, pagina, porPagina };
+    return { datos: datos.map((a) => ({ id: a.id, matricula: a.matricula, usuario: { nombre: a.usuario.nombre, apellidoPaterno: a.usuario.apellidoPaterno, apellidoMaterno: a.usuario.apellidoMaterno } })), total, pagina, porPagina };
   }
 
   async obtener(id: number) {
