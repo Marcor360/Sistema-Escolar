@@ -73,3 +73,16 @@ it('bloquea doble envío mientras espera la API y conserva los datos si falla', 
   expect((screen.getByRole('button', { name: 'Actualizar contraseña' }) as HTMLButtonElement).disabled).toBe(false);
   expect(finalizar).not.toHaveBeenCalled();
 });
+
+it('muestra datos existentes de /auth/me sin permitir editarlos en cliente', async () => {
+  vi.spyOn(api, 'get').mockResolvedValue({ data: {
+    id: 42, nombreCompleto: 'Personal Institucional', email: 'test@escuela.example',
+    telefono: '5512345678', activo: true, passwordChangeRequired: false,
+    roles: [{ clave: 'ADMINISTRATIVO', nombre: 'Administrativo' }],
+  } });
+  montar();
+  expect(await screen.findByText('Personal Institucional')).toBeTruthy();
+  expect(screen.getByText('5512345678')).toBeTruthy();
+  expect(screen.getByText('Administrativo')).toBeTruthy();
+  expect(screen.getByText('Activa')).toBeTruthy();
+});

@@ -1154,3 +1154,14 @@ dialog button { max-width: 100%; min-height: 44px; white-space: normal; overflow
 .recorrido-acciones { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 22px; }
 .recorrido-acciones > * { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
 @media (max-width: 480px) { .recorrido-acciones > * { flex: 1 1 45%; } }
+
+/* 1.27.28 · Perfil de cuenta con lectura autorizada y tarjeta de seguridad. */
+.cuenta-rejilla { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(320px, .85fr); align-items: start; gap: clamp(16px, 2vw, 28px); }
+.cuenta-rejilla > .panel { min-width: 0; }
+.cuenta-datos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 24px; margin: 20px 0 28px; }
+.cuenta-datos > div { padding: 0 0 12px; border-bottom: 1px solid var(--linea); min-width: 0; }
+.cuenta-datos dt { font-size: .8125rem; color: var(--texto-secundario); margin-bottom: 5px; }
+.cuenta-datos dd { margin: 0; font-weight: 650; overflow-wrap: anywhere; }
+.cuenta-acciones { display: flex; gap: 10px; flex-wrap: wrap; }
+@media (max-width: 1000px) { .cuenta-rejilla { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 580px) { .cuenta-datos { grid-template-columns: minmax(0, 1fr); gap: 12px; } .cuenta-acciones > button { flex: 1 1 100%; } }
