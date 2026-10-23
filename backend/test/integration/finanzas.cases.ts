@@ -74,7 +74,7 @@ it('acepta pagos parciales y rechaza exceder el saldo restante', async () => {
     const token = await ctx.emitirToken(admin.email);
     const concepto = await ctx.api('/finanzas/conceptos', {
       method: 'POST', token,
-      body: { clave: `FM${ctx.sufijo}`, nombre: 'Cargo manual integración', tipo: 'COLEGIATURA', montoBase: 200 },
+      body: { clave: `FM${ctx.sufijo}`, nombre: 'Cargo manual integración', tipo: 'OTRO', montoBase: 200 },
     });
     expect(concepto.response.status).toBe(201);
     const cargo = await ctx.api('/finanzas/cargos', {
