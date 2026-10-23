@@ -7,6 +7,8 @@ import { Campana } from '../components/Campana';
 import { archivosBase } from '../api/client';
 import { useMarca } from '../marca/MarcaContext';
 import { IconoTabler, type NombreIcono } from '../components/IconoTabler';
+import { RecorridoInicial } from '../components/RecorridoInicial';
+import { construirRecorrido } from '../components/recorrido-por-rol';
 
 const secciones = [
   { destino: '/biblioteca', etiqueta: 'Biblioteca', roles: ['ADMINISTRATIVO'] },
@@ -71,6 +73,7 @@ export function Shell() {
   const navigate = useNavigate();
   const location = useLocation();
   const { marca } = useMarca();
+  const pasosRecorrido = construirRecorrido(gruposMenu, secciones, sesion?.roles ?? []);
   const [errorCierre, setErrorCierre] = useState('');
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [sinConexion, setSinConexion] = useState(() => navigator.onLine === false);
@@ -232,6 +235,7 @@ export function Shell() {
               Mi cuenta
             </NavLink>
             <p className="rol">{sesion?.roles.join(' · ')}</p>
+            <button type="button" className="boton fantasma" onClick={() => { setMenuAbierto(false); window.dispatchEvent(new Event('escolar:reiniciar-recorrido')); }}>Ver recorrido</button>
             <p className="detalle">Por seguridad, el sistema cierra la sesión tras 30 minutos sin actividad.</p>
             {errorCierre && (
               <p className="mensaje-error" role="alert">
@@ -284,6 +288,7 @@ export function Shell() {
           <Outlet />
         </Suspense>
       </main>
+      <RecorridoInicial usuarioId={sesion?.sub} roles={sesion?.roles ?? []} pasos={pasosRecorrido} />
     </div>
   );
 }
