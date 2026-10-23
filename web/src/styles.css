@@ -1177,3 +1177,10 @@ dialog button { max-width: 100%; min-height: 44px; white-space: normal; overflow
 .login-caja.logo-amplio .logo-marca { width: min(100%, 204px); max-width: 204px; height: 136px; max-height: 136px; }
 @media (max-width: 800px) { .lateral.logo-amplio .logo-marca { max-width: min(100%, 176px); height: 102px; max-height: 102px; } }
 @media (max-width: 480px) { .lateral.logo-amplio .logo-marca { max-width: 148px; height: 88px; max-height: 88px; } .configuracion-global .campo { flex-basis: 100%; } }
+
+/* Anclar el panel a toda la barra evita que el botón Menú lo desplace fuera de pantalla. */
+@media (max-width: 800px) {
+  .barra-superior { position: relative; }
+  .barra-superior .campana { position: static; }
+  .barra-superior .campana-panel { max-width: 100%; }
+}
