@@ -1114,3 +1114,34 @@ dialog button { max-width: 100%; min-height: 44px; white-space: normal; overflow
   .barra-cobranza { font-size: 10px; }
   .barra-cobranza-pista { height: 110px; }
 }
+
+/* 1.27.26 · Escalado fluido del espacio de trabajo y marca institucional. */
+@media (min-width: 1200px) {
+  .contenido { max-width: 1960px; margin-inline: auto; padding-inline: clamp(28px, 3.1vw, 78px); }
+  .lateral { width: clamp(254px, 15vw, 310px); }
+  .barra-superior { margin-bottom: clamp(22px, 2vw, 36px); }
+  .panel { padding: clamp(22px, 1.6vw, 36px); }
+}
+.lateral .logo-marca { width: min(100%, 178px); max-width: 178px; height: 104px; max-height: 104px; object-fit: contain; }
+.login-caja .logo-marca { width: min(100%, 160px); max-width: 160px; height: 112px; max-height: 112px; object-fit: contain; }
+.configuracion-logo .vista-logo { width: auto; max-width: min(100%, 240px); height: auto; max-height: 160px; margin: 12px 0; }
+.lateral-titulo { font-size: .96rem; line-height: 1.4; }
+.tabla-contenedor[aria-label="Listado de usuarios"] { max-width: 100%; overflow-x: auto; }
+.tabla-contenedor[aria-label="Listado de usuarios"] .tabla { min-width: 1060px; table-layout: fixed; }
+.tabla-contenedor[aria-label="Listado de usuarios"] .tabla th:nth-child(1) { width: 8%; }
+.tabla-contenedor[aria-label="Listado de usuarios"] .tabla th:nth-child(2) { width: 17%; }
+.tabla-contenedor[aria-label="Listado de usuarios"] .tabla th:nth-child(3) { width: 21%; }
+.tabla-contenedor[aria-label="Listado de usuarios"] .tabla th:nth-child(4) { width: 28%; }
+.tabla-contenedor[aria-label="Listado de usuarios"] .tabla th:nth-child(5) { width: 26%; }
+.tabla-contenedor[aria-label="Listado de usuarios"] .tabla td { overflow-wrap: anywhere; vertical-align: top; }
+.usuarios-celda-acciones { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; min-width: 0; }
+.usuarios-rol { display: inline-block; font-weight: 650; line-height: 1.4; }
+.usuarios-botones { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; width: 100%; }
+.usuarios-botones > :is(button, .boton) { max-width: 100%; }
+@media (max-width: 800px) {
+  .contenido { max-width: none; }
+  .lateral .logo-marca { width: auto; max-width: min(100%, 148px); height: 86px; max-height: 86px; }
+}
+@media (max-width: 480px) {
+  .login-caja .logo-marca { width: 132px; height: 92px; }
+}
