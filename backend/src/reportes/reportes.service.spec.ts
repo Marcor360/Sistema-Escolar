@@ -16,6 +16,32 @@ const maestroUser: JwtUser = {
   roles: ['MAESTRO'],
 };
 
+describe('Reportes financieros descargables', () => {
+  it('resuelve el alumno exclusivamente desde la sesión para su PDF', async () => {
+    const alumnos = { obtenerPorUsuario: jest.fn().mockResolvedValue({ id: 17 }) };
+    const service = new ReportesService(
+      {} as any, {} as any, {} as any, {} as any, {} as any, {} as any,
+      {} as any, {} as any, alumnos as any, {} as any, {} as any,
+    );
+    const exportar = jest.spyOn(service, 'estadoCuentaPdf').mockResolvedValue();
+    const res = {} as any;
+    await service.miEstadoCuentaPdf(alumnoUser, res);
+    expect(alumnos.obtenerPorUsuario).toHaveBeenCalledWith(alumnoUser.sub);
+    expect(exportar).toHaveBeenCalledWith(17, undefined, res);
+  });
+
+  it('rechaza PDF fuera de alcance antes de iniciar la descarga', async () => {
+    const cargos = { estadoDeCuenta: jest.fn().mockRejectedValue(new ForbiddenException()) };
+    const service = new ReportesService(
+      {} as any, {} as any, {} as any, {} as any, {} as any, {} as any,
+      cargos as any, {} as any, {} as any, {} as any, {} as any,
+    );
+    const res = { setHeader: jest.fn() } as any;
+    await expect(service.estadoCuentaPdf(9, alumnoUser, res)).rejects.toBeInstanceOf(ForbiddenException);
+    expect(res.setHeader).not.toHaveBeenCalled();
+  });
+});
+
 describe('ReportesService.boletaPdf', () => {
   it('rechaza alumno pidiendo boleta ajena', async () => {
     const alumnosRepo = { findOne: jest.fn().mockResolvedValue({ id: 2, plantelId: 1, matricula: 'A2' }) };
