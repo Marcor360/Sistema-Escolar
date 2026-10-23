@@ -70,7 +70,7 @@ describe('Automatización financiera optativa', () => {
     jest.setSystemTime(new Date('2026-11-03T12:00:00Z'));
     const { service, cargos } = preparar();
     cargos.adeudos.mockResolvedValue(['2026-11-02', '2026-11-03', '2026-11-05', null].map((fechaVencimiento, id) => ({
-      id, alumnoId: id, alumno: { usuarioId: id }, saldo: 100, fechaVencimiento,
+      id, alumnoId: id, alumno: { usuarioId: id, estatus: 'ACTIVO' }, saldo: 100, pagado: 0, fechaVencimiento,
     })));
     const actor = { sub: 10, email: '', nombre: '', roles: ['FINANZAS'] };
     expect(await service.enviarAvisos(actor, 3, true, false, true)).toEqual({ plantelId: 3, registros: 1, totalEstimado: 100 });
