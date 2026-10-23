@@ -48,6 +48,7 @@ export default function FinanzasPage() {
   const [formCargo, setFormCargo] = useState({ alumnoId: '', conceptoId: '', descripcion: '', monto: '', descuento: '0', fechaVencimiento: '' });
   const [formColegiaturas, setFormColegiaturas] = useState({ cicloId: '', periodo: '' });
   const [formPago, setFormPago] = useState({ alumnoId: '', cargoId: '', monto: '', metodo: 'EFECTIVO', referencia: '' });
+  const intentoCargo = useRef<{ firma: string; clave: string } | null>(null);
   const intentoPago = useRef<{ firma: string; clave: string } | null>(null);
   const navegarTabs = (event: KeyboardEvent<HTMLButtonElement>) => {
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
@@ -108,17 +109,21 @@ export default function FinanzasPage() {
     e.preventDefault();
     if (enviando) return; setEnviando(true);
     limpiarAvisos();
+    const datos = {
+      alumnoId: Number(formCargo.alumnoId),
+      conceptoId: Number(formCargo.conceptoId),
+      descripcion: formCargo.descripcion,
+      monto: Number(formCargo.monto), descuento: Number(formCargo.descuento),
+      fechaVencimiento: formCargo.fechaVencimiento || undefined,
+    };
+    const firma = JSON.stringify(datos);
+    if (intentoCargo.current?.firma !== firma) intentoCargo.current = { firma, clave: crypto.randomUUID() };
     try {
-      await api.post('/finanzas/cargos', {
-        alumnoId: Number(formCargo.alumnoId),
-        conceptoId: Number(formCargo.conceptoId),
-        descripcion: formCargo.descripcion,
-        monto: Number(formCargo.monto), descuento: Number(formCargo.descuento),
-        fechaVencimiento: formCargo.fechaVencimiento || undefined,
-      });
+      await api.post('/finanzas/cargos', { ...datos, claveIdempotencia: intentoCargo.current.clave });
+      intentoCargo.current = null;
       trabajo.guardado(); if (!legado) trabajo.ir('cargos');
       setFormCargo({ alumnoId: '', conceptoId: '', descripcion: '', monto: '', descuento: '0', fechaVencimiento: '' });
-      setMensaje('Cargo registrado');
+      setMensaje('Cargo adicional asignado; pendiente de pago');
       cargarDatos();
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
