@@ -155,6 +155,19 @@ describe('CargosService.crear', () => {
   });
 });
 
+describe('CargosService.crear bloquea colegiatura por formulario de adicionales', () => {
+  it('rechaza colegiatura aunque un cliente omita las restricciones de la web', async () => {
+    const service = new CargosService(
+      {} as never, {} as never, {} as never, {} as never, {} as never,
+      { obtener: jest.fn().mockResolvedValue({ id: 5, activo: true, tipo: 'COLEGIATURA' }) } as never,
+      {} as never, {} as never, {} as never,
+    );
+    await expect(service.crear({
+      alumnoId: 10, conceptoId: 5, descripcion: 'Colegiatura adicional', monto: 100,
+    }, { sub: 7, roles: ['FINANZAS'] } as Parameters<CargosService['crear']>[1])).rejects.toThrow('colegiaturas');
+  });
+});
+
 describe('CargosService.crear con clave de idempotencia', () => {
   it('reutiliza el cargo del mismo actor y contenido tras una respuesta perdida', async () => {
     const claveIdempotencia = '8e50df6c-91a6-4dbe-a3b5-2f98f1f941c9';
