@@ -63,6 +63,7 @@ En la versión 1.27.31 el formulario de cargos incluye una clave UUID de idempot
 
 - `ADMINISTRATIVO` lleva el avance/retroceso académico en su plantel. `FINANZAS` autoriza el precio del periodo, becas, descuentos y cargos. `SUPERADMIN` resuelve excepciones de reglamento, con bitácora y política expresa de roles; no suponer que esconder botones autoriza endpoints.
 - No bloquear entrega de boletas, certificados ni documentos por adeudos. No publicar deudas, nombres o calificaciones en logs ni mensajes públicos.
+- **Validación jurídica urgente:** el Acuerdo publicado en el DOF el 10/03/1992 contempla para colegios particulares sujetos a él recepción de colegiaturas **sin cargo durante los primeros diez días naturales de cada mes**; antes de activar recargo automático del 10 % desde el día 4 para secundaria o bachillerato, Legal debe verificar el ámbito de aplicación y corregir vencimientos. No habilitar por configuración una política incompatible.
 - Nunca aumentar unilateralmente colegiaturas **dentro del periodo contratado**; informar por adelantado importes y calendario. Contrato y reglamento institucional deben revisar niveles e incorporaciones.
 - Expo alumno solo recibe historial de nuevo periodo, materias/recursamiento autorizados, cuotas y estado de cuenta, **nunca** flujos de gestión.
 - Todas las operaciones nuevas requieren Swagger, DTOs estrictos, scopes, historial y errores en español. Sin dependencias nuevas para el flujo propuesto.
@@ -103,6 +104,7 @@ No implementar aún estas rutas sin acordar modelo histórico, responsables y mi
 
 ## 10. Referencias de verificación jurídica
 
+- DOF, acuerdo de bases mínimas de información, 10/mar/1992 (art. 4 y art. 5): https://sidof.segob.gob.mx/notas/docFuente/4655028
 - PROFECO, información sobre cuotas extraordinarias, exámenes, cursos de regularización, certificados, constancias y descuentos: https://www.gob.mx/profeco/es/articulos/escuelas-particulares-lo-que-debes-saber?idiom=es
 - PROFECO (2025), prohibición de aumento unilateral y retención de documentos: https://www.gob.mx/profeco/prensa/escuelas-particulares-profeco-explica-cuales-son-los-derechos-de-las-y-los-usuarios
 - Ley General de Educación, protección ante adeudos: https://www.gob.mx/sep/articulos/decreto-por-el-que-se-expide-la-ley-general-de-educacion-y-se-abroga-la-ley-general-de-la-infraestructura-fisica-educativa
