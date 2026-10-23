@@ -120,46 +120,47 @@ export class CargosService {
       throw new BadRequestException('El monto debe ser positivo y el descuento no puede excederlo');
     }
     const concepto = await this.conceptos.obtener(dto.conceptoId);
-    if (!concepto.activo || ['BECA', 'DESCUENTO', 'RECARGO'].includes(concepto.tipo)) throw new BadRequestException('Selecciona un concepto de cobro activo; la beca o descuento se aplica como descuento del cargo');
+    if (!concepto.activo || ['BECA', 'DESCUENTO', 'RECARGO', 'COLEGIATURA'].includes(concepto.tipo)) throw new BadRequestException('Selecciona un concepto adicional activo: colegiaturas, descuentos y recargos tienen su flujo independiente');
     const alumno = await this.alumnos.obtener(dto.alumnoId, user);
     try {
       return await this.dataSource.transaction(async (manager) => {
-      const cargos = manager.getRepository(Cargo);
-      const clave = dto.claveIdempotencia ? `MANUAL:${dto.claveIdempotencia}` : null;
-      if (clave) {
-        const previo = await cargos.findOne({ where: { claveGeneracion: clave }, lock: { mode: 'pessimistic_write' } });
-        if (previo) {
-          await this.scope.validarGestion(user, previo.plantelId);
-          const propio = await manager.getRepository(BitacoraFinanciera).existsBy({
-            usuarioId: user.sub, plantelId: previo.plantelId, entidad: 'cargo', entidadId: previo.id, accion: 'CREAR_CARGO',
-          });
-          if (!propio || previo.plantelId !== alumno.plantelId || previo.alumnoId !== dto.alumnoId ||
-              previo.conceptoId !== dto.conceptoId || previo.descripcion !== dto.descripcion ||
-              previo.monto !== dto.monto || previo.descuento !== (dto.descuento ?? 0) ||
-              previo.cicloId !== (dto.cicloId ?? null) || previo.periodo !== (dto.periodo ?? null) ||
-              previo.fechaVencimiento !== (dto.fechaVencimiento ?? null)) {
-            throw new ConflictException('La clave de la operación corresponde a otro cargo');
+        const cargos = manager.getRepository(Cargo);
+        const clave = dto.claveIdempotencia ? `MANUAL:${dto.claveIdempotencia}` : null;
+        if (clave) {
+          const previo = await cargos.findOne({ where: { claveGeneracion: clave }, lock: { mode: 'pessimistic_write' } });
+          if (previo) {
+            await this.scope.validarGestion(user, previo.plantelId);
+            const propio = await manager.getRepository(BitacoraFinanciera).existsBy({
+              usuarioId: user.sub, plantelId: previo.plantelId, entidad: 'cargo', entidadId: previo.id, accion: 'CREAR_CARGO',
+            });
+            if (!propio || previo.plantelId !== alumno.plantelId || previo.alumnoId !== dto.alumnoId ||
+                previo.conceptoId !== dto.conceptoId || previo.descripcion !== dto.descripcion ||
+                previo.monto !== dto.monto || previo.descuento !== (dto.descuento ?? 0) ||
+                previo.cicloId !== (dto.cicloId ?? null) || previo.periodo !== (dto.periodo ?? null) ||
+                previo.fechaVencimiento !== (dto.fechaVencimiento ?? null)) {
+              throw new ConflictException('La clave de la operación corresponde a otro cargo');
+            }
+            return previo;
           }
-          return previo;
         }
-      }
-      const cargo = await cargos.save(
-        cargos.create({
-          claveGeneracion: clave,
-          alumnoId: dto.alumnoId, plantelId: alumno.plantelId,
-          conceptoId: dto.conceptoId,
-          cicloId: dto.cicloId ?? null,
-          periodo: dto.periodo ?? null,
-          descripcion: dto.descripcion,
-          monto: dto.monto,
-          descuento: dto.descuento ?? 0,
-          fechaVencimiento: dto.fechaVencimiento ?? null,
-        }),
-      );
-      await this.bitacora.registrar(
-        user.sub, 'CREAR_CARGO', 'cargo', cargo.id, `${dto.descripcion} $${dto.monto}`, alumno.plantelId, manager,
-      );
-      return cargo;
+        const cargo = await cargos.save(
+          cargos.create({
+            claveGeneracion: clave,
+            alumnoId: dto.alumnoId, plantelId: alumno.plantelId,
+            conceptoId: dto.conceptoId,
+            cicloId: dto.cicloId ?? null,
+            periodo: dto.periodo ?? null,
+            descripcion: dto.descripcion,
+            monto: dto.monto,
+            descuento: dto.descuento ?? 0,
+            fechaVencimiento: dto.fechaVencimiento ?? null,
+          }),
+        );
+        await this.bitacora.registrar(
+          user.sub, 'CREAR_CARGO', 'cargo', cargo.id, `${dto.descripcion} $${dto.monto}`, alumno.plantelId, manager,
+        );
+        return cargo;
+  
       });
     } catch (error) {
       if (esConflictoUnico(error)) throw new ConflictException('El cargo ya fue registrado; consulta el listado antes de reintentar');
