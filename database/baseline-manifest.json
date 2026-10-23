@@ -37,7 +37,8 @@
         "migracion_auth_correo_outbox.sql",
         "migracion_materias_contexto.sql",
         "migracion_temarios.sql",
-        "migracion_aceptaciones_institucionales.sql"
+        "migracion_aceptaciones_institucionales.sql",
+        "migracion_marca_opciones_globales.sql"
       ]
     },
     "sqlserver": {
@@ -75,7 +76,8 @@
         "migracion_auth_correo_outbox.sql",
         "migracion_materias_contexto.sql",
         "migracion_temarios.sql",
-        "migracion_aceptaciones_institucionales.sql"
+        "migracion_aceptaciones_institucionales.sql",
+        "migracion_marca_opciones_globales.sql"
       ]
     }
   }

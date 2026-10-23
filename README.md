@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.27.28`** · Estado: candidata preparatoria; aceptación institucional pendiente. Esta entrega actualiza documentación, herramientas de pruebas y metadatos de versión; **no demuestra despliegue adicional**. Staging confirmado por el operador en **1.27.17** (commit `8579ab4`), con API `/health/ready` local y HTTPS correctas. La app Expo instalada en dispositivos **no se actualiza automáticamente**.
+**Versión candidata: `1.27.29`** · Estado: candidata preparatoria; aceptación institucional pendiente. Esta entrega actualiza documentación, herramientas de pruebas y metadatos de versión; **no demuestra despliegue adicional**. Staging confirmado por el operador en **1.27.17** (commit `8579ab4`), con API `/health/ready` local y HTTPS correctas. La app Expo instalada en dispositivos **no se actualiza automáticamente**.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -19,11 +19,13 @@ Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [ín
 
 ### Funcionalidad destacada de versiones recientes
 
-- **1.27.28:** vista «Mi cuenta» con identificador, nombre, correo, teléfono, roles, estado y seguridad consultados de `/auth/me`; lectura privada y controles de recarga, recorrido y cambio de contraseña. Sin modificación de cuentas ni migraciones.
+- **1.27.29:** Superadmin modifica mensaje público de bienvenida y tamaño del logo en web; API con validaciones y migraciones espejo MySQL/SQL Server. Sin administración en la aplicación Expo.
 
-- **1.27.28:** recorrido de bienvenida según áreas autorizadas para cada rol web, con omitir, siguiente, finalizar y «Ver recorrido»; recordatorio por cuenta/navegador con localStorage, sin tokens ni nueva lógica de permisos.
+- **1.27.29:** vista «Mi cuenta» con identificador, nombre, correo, teléfono, roles, estado y seguridad consultados de `/auth/me`; lectura privada y controles de recarga, recorrido y cambio de contraseña. Sin modificación de cuentas ni migraciones.
 
-- **1.27.28:** reflujo para monitores grandes, logotipo institucional más visible y acciones de usuarios separadas sin superponerse; sin nuevas dependencias ni migraciones.
+- **1.27.29:** recorrido de bienvenida según áreas autorizadas para cada rol web, con omitir, siguiente, finalizar y «Ver recorrido»; recordatorio por cuenta/navegador con localStorage, sin tokens ni nueva lógica de permisos.
+
+- **1.27.29:** reflujo para monitores grandes, logotipo institucional más visible y acciones de usuarios separadas sin superponerse; sin nuevas dependencias ni migraciones.
 
 - **1.27.24:** contrato de diseño preparatorio del módulo de cuentas por pagar. No agrega endpoints, tablas ni recordatorios; requiere aprobación financiera. [Contrato](docs/CUENTAS_POR_PAGAR_CONTRATO.md).
 
