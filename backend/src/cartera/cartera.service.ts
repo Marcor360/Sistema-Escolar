@@ -1,3 +1,4 @@
+import { condicionBusquedaAlumno } from '../common/busqueda-alumno';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { createHash } from 'crypto';
 import { DataSource, EntityManager, In } from 'typeorm';
@@ -78,7 +79,7 @@ export class CarteraService {
     const planteles = await this.scope.resolverFiltro(u, q.plantelId);
     const qb = this.ds.getRepository(AperturaCartera).createQueryBuilder('a').leftJoinAndSelect('a.solicitud','s').innerJoinAndSelect('a.alumno','al').innerJoinAndSelect('al.usuario','u');
     if (planteles !== null) qb.andWhere('a.plantel_id IN (:...planteles)', { planteles });
-    if (q.buscar) qb.andWhere('(al.matricula LIKE :buscar OR u.nombre LIKE :buscar OR u.apellido_paterno LIKE :buscar OR u.apellido_materno LIKE :buscar)', { buscar: `%${q.buscar}%` });
+    if (q.buscar) qb.andWhere(condicionBusquedaAlumno('al', 'u'), { buscar: `%${q.buscar}%` });
     const [filas,total] = await qb.orderBy('a.id','DESC').skip((q.pagina-1)*q.porPagina).take(q.porPagina).getManyAndCount();
     return { datos: filas.map(a => this.proyectar(a)), total, pagina: q.pagina, porPagina: q.porPagina };
   }
