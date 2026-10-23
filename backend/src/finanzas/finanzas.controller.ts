@@ -10,7 +10,7 @@ import { CobranzaService } from './cobranza.service';
 import { BitacoraFinancieraService } from './bitacora-financiera.service';
 import { OpenpayWebhookGuard } from './openpay-webhook.guard';
 import {
-  ReintentoCobranzaDto, AplicarRecargosDto, ActualizarConceptoDto, ConceptoDto, CrearCargoDto, CrearOrdenDto,
+  ListarPendientesDto, ReintentoCobranzaDto, AplicarRecargosDto, ActualizarConceptoDto, ConceptoDto, CrearCargoDto, CrearOrdenDto,
   GenerarColegiaturasDto, ListarCargosDto, ListarPagosDto, RegistrarPagoDto, MotivoFinancieroDto, CobranzaDto, AplicarPagoDto,
 } from './finanzas.dto';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
@@ -167,6 +167,13 @@ export class FinanzasController {
   @ApiBearerAuth() @UseGuards(JwtAuthGuard, RolesGuard) @Roles('FINANZAS', 'ADMINISTRATIVO')
   adeudos(@CurrentUser() user: JwtUser, @Query() query: ListarCargosDto) {
     return this.cargos.adeudosPaginados(user, query);
+  }
+
+  @Get('cobranza/pendientes')
+  @ApiOperation({ summary: 'Alumnos con saldo por plantel: vencidos, sin abono y datos de contacto privados para Finanzas' })
+  @ApiBearerAuth() @UseGuards(JwtAuthGuard, RolesGuard) @Roles('FINANZAS')
+  pendientesCobranza(@CurrentUser() user: JwtUser, @Query() query: ListarPendientesDto) {
+    return this.cobranza.pendientes(user, query);
   }
 
   @Get('cobranza/envios')
