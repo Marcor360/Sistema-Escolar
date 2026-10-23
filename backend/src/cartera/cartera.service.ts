@@ -35,7 +35,7 @@ export class CarteraService {
     };
   }
   private async validarReinscripcion(m: EntityManager, d: PrevisualizarReinscripcionDto, u: JwtUser) {
-    if (!u.roles.some(r => ['FINANZAS','SUPERADMIN'].includes(r))) throw new ConflictException('La reinscripción financiera requiere rol FINANZAS');
+    if (!u.roles.some(r => ['ADMINISTRATIVO','FINANZAS','SUPERADMIN'].includes(r))) throw new ConflictException('Se requiere permiso de gestión para reinscribir');
     const alumno = await m.getRepository(Alumno).findOne({ where: { id: d.alumnoId }, lock: { mode: 'pessimistic_write' } });
     if (!alumno || alumno.estatus !== 'ACTIVO' || !alumno.usuario.activo || alumno.plantelId !== d.plantelId) throw new ConflictException('El alumno no está activo en ese plantel');
     await this.scope.validarGestion(u, d.plantelId);
@@ -51,6 +51,7 @@ export class CarteraService {
       throw new ConflictException('El destino debe estar en un ciclo posterior al de origen; el cambio dentro del mismo ciclo necesita migración del historial académico');
     if ((destino.numero !== anterior.numero + 1) && (!d.motivo || d.motivo.trim().length < 10))
       throw new BadRequestException('El retroceso, repetición o salto requiere un motivo detallado de al menos 10 caracteres');
+    if (d.ajustes?.length && !u.roles.some(r => ['FINANZAS','SUPERADMIN'].includes(r))) throw new BadRequestException('Solo Finanzas puede autorizar ajustes de colegiatura');
     if (d.ajustes?.length && d.ajustes.length > 10) throw new BadRequestException('Máximo 10 ajustes de tarifa por operación');
     return { origen, anterior, destino };
   }
