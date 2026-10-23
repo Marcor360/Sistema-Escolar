@@ -29,6 +29,6 @@ export function registrarAgrupacion(ctx: ContextoIntegracion) {
     const paralelas = await Promise.all([alumnos[5], alumnos[6]].map(a => solicitar(a.id)));
     expect(paralelas.every(r => r.solicitud.grupoId === grupo.id)).toBe(true);
     expect(await ctx.dataSource.getRepository(Inscripcion).countBy({ grupoId: grupo.id, estatus: 'ACTIVA' })).toBe(7);
-    await expect(ctx.dataSource.transaction('READ COMMITTED', m => service.solicitar(m, { ...d, alumnoId: alumnos[0].id }, { ...user, roles: ['FINANZAS'] }))).rejects.toThrow('Control Escolar');
+    await expect(ctx.dataSource.transaction('READ COMMITTED', m => service.solicitar(m, { ...d, alumnoId: alumnos[0].id }, { ...user, roles: ['MAESTRO'] }))).rejects.toThrow('Control Escolar');
   });
 }
