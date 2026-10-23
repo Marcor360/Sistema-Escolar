@@ -5,7 +5,7 @@ import { PaginacionDto } from '../common/paginacion.dto';
 
 export class ListarCargosDto extends PaginacionDto {
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) plantelId?: number;
-  @IsOptional() @IsString() buscar?: string;
+  @IsOptional() @IsString() @MaxLength(120) buscar?: string;
   @IsOptional() @Type(() => Number) @IsInt() alumnoId?: number;
   @IsOptional() @IsString() estatus?: string;
   @IsOptional() @Matches(/^\d{4}-(0[1-9]|1[0-2])$/) periodo?: string;
@@ -35,8 +35,9 @@ export class ActualizarConceptoDto {
 }
 
 export class CrearCargoDto {
-  @IsInt() alumnoId!: number;
-  @IsInt() conceptoId!: number;
+  @IsOptional() @IsUUID('4') claveIdempotencia?: string;
+  @IsInt() @Min(1) alumnoId!: number;
+  @IsInt() @Min(1) conceptoId!: number;
   @IsOptional() @IsInt() cicloId?: number;
   @IsOptional() @Matches(/^\d{4}-(0[1-9]|1[0-2])$/) periodo?: string;
   @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value) @IsString() @MinLength(1) @MaxLength(200) descripcion!: string;
