@@ -47,7 +47,9 @@ export class CarteraService {
       origen.grupo.carreraId !== d.carreraId || origen.grupo.nivelId !== d.nivelId || origen.grupo.plantelId !== d.plantelId)
       throw new ConflictException('El destino debe respetar el mismo nivel, plan y modalidad de periodo');
     const ciclo = await m.getRepository(CicloEscolar).findOneBy({ id: d.cicloId });
-    if (!ciclo || ciclo.fechaInicio <= origen.grupo.ciclo.fechaFin)
+    if (!ciclo || origen.grupo.ciclo.estado !== 'CERRADO' || ciclo.estado !== 'PREPARACION')
+      throw new ConflictException('La reinscripción exige ciclo de origen cerrado y ciclo de destino en preparación');
+    if (ciclo.fechaInicio <= origen.grupo.ciclo.fechaFin)
       throw new ConflictException('El destino debe estar en un ciclo posterior al de origen; el cambio dentro del mismo ciclo necesita migración del historial académico');
     if ((destino.numero !== anterior.numero + 1) && (!d.motivo || d.motivo.trim().length < 10))
       throw new BadRequestException('El retroceso, repetición o salto requiere un motivo detallado de al menos 10 caracteres');
