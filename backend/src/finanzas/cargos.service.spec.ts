@@ -76,9 +76,9 @@ describe('Recargos de importe nulo', () => {
 });
 
 describe('CargosService.aplicarRecargos', () => {
-  it('calcula (monto - descuento) x porcentaje/100 en cargos vencidos sin recargo previo', async () => {
+  it.each(['PENDIENTE', 'PARCIAL', 'VENCIDO'])('calcula el 10%% una sola vez para cargo %s vencido', async (estatus) => {
     const cargo = {
-      id: 1, plantelId: 4, monto: 1000, descuento: 100, recargo: 0, estatus: 'PENDIENTE',
+      id: 1, plantelId: 4, monto: 1000, descuento: 100, recargo: 0, estatus,
       concepto: { activo: true, aplicaRecargo: true }, fechaVencimiento: '2020-01-01', alumno: { plantelId: 4 },
     };
     const qb = {
@@ -106,6 +106,9 @@ describe('CargosService.aplicarRecargos', () => {
 
     expect(cargo.recargo).toBe(90); // (1000 - 100) * 10 / 100
     expect(resultado).toEqual({ aplicados: 1, porcentaje: 10 });
+    expect(await service.aplicarRecargos({ porcentaje: 10, plantelId: 4, confirmado: true }, user))
+      .toEqual({ aplicados: 0, porcentaje: 10 });
+    expect(cargosRepo.save).toHaveBeenCalledTimes(1);
     expect(bitacora.registrar).toHaveBeenCalledWith(
       1, 'APLICAR_RECARGOS', 'cargo', null, '10% a 1 cargos', 4, manager,
     );
