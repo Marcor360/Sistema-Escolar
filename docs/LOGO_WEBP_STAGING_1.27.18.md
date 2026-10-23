@@ -37,3 +37,20 @@ Este comando cambia únicamente el máximo de cuerpo HTTP de `SistemaEscolar-Sta
 - WebP inválido y mayor de 10 MiB rechazados; si falla BD/ACL se conserva el logo anterior.
 - Guardar evidencia segura de código HTTP, tamaño, tipo, existencia y permisos sin secretos ni contenidos privados.
 La incidencia #106 no se cierra hasta contar con evidencias reales del servidor. La CI prueba el código pero no prueba IIS/ACL ni restauración.
+
+## Corrección 1.27.25: logo entre orígenes
+
+Helmet aplica `Cross-Origin-Resource-Policy: same-origin` a las respuestas de la API.
+Un `<img>` del portal hospedado en otro origen no puede mostrar el logo con esa
+cabecera, aunque el GET devuelva 200 y el archivo exista. Chromium informa
+`ERR_BLOCKED_BY_RESPONSE.NotSameOrigin`; un GET con curl o el chequeo fetch no
+sustituyen la comprobación de la imagen en el navegador.
+
+El controlador de logos públicos ahora responde con
+`Cross-Origin-Resource-Policy: cross-origin` únicamente después de validar el
+nombre de marca permitido. Las rutas privadas conservan la política de Helmet y
+los controles de acceso. La corrección requiere desplegar el backend; preparar
+el PR no actualiza el servidor instalado. Tras desplegar, verificar la cabecera
+en `/uploads/marca-logo-...`, cargar el portal desde su dominio real y comprobar
+que la imagen tenga dimensiones naturales mayores que cero. Si persiste un 404,
+403 o un bloqueo CSP, seguir el diagnóstico de rutas, archivos y permisos anterior.
