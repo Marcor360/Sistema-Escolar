@@ -1,3 +1,4 @@
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { OpcionalNoNulo } from '../common/opcional-no-nulo';
 import { IsBoolean, IsDateString, IsIn, IsInt, IsNumber, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, MinLength } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
@@ -35,6 +36,7 @@ export class ActualizarConceptoDto {
 }
 
 export class CrearCargoDto {
+  @ApiPropertyOptional({ format: 'uuid', description: 'Clave opcional para reintentar la asignación sin registrar dos veces el mismo cargo' })
   @IsOptional() @IsUUID('4') claveIdempotencia?: string;
   @IsInt() @Min(1) alumnoId!: number;
   @IsInt() @Min(1) conceptoId!: number;
