@@ -201,6 +201,9 @@ async function esperarServidor() {
       console.log('BODY', await page.locator('body').innerText(), 'ERRORS', errors);
       throw e;
     }
+    if (width === 320 && await page.getByRole('button', { name: 'Omitir recorrido' }).count()) {
+      await page.getByRole('button', { name: 'Omitir recorrido' }).click();
+    }
     const sizes = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, width: innerWidth }));
     if (sizes.scroll > sizes.width) throw Error('Overflow ' + width + ': ' + JSON.stringify(sizes));
     if (width <= 800) {

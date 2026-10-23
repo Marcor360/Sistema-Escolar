@@ -1145,3 +1145,12 @@ dialog button { max-width: 100%; min-height: 44px; white-space: normal; overflow
 @media (max-width: 480px) {
   .login-caja .logo-marca { width: 132px; height: 92px; }
 }
+
+/* 1.27.27 · Diálogo accesible de bienvenida según permisos de navegación. */
+.recorrido-dialogo { width: min(580px, calc(100vw - 32px)); padding: clamp(20px, 3vw, 34px); border-top: 4px solid var(--dorado); box-shadow: 0 24px 80px rgba(0, 0, 0, .18); }
+.recorrido-dialogo h2 { font-family: var(--sans); font-size: clamp(1.3rem, 2vw, 1.75rem); margin: 8px 0 14px; }
+.recorrido-progreso { color: var(--pizarra); font-weight: 750; font-size: .875rem; }
+.recorrido-ayuda { color: var(--texto-secundario); }
+.recorrido-acciones { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 22px; }
+.recorrido-acciones > * { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+@media (max-width: 480px) { .recorrido-acciones > * { flex: 1 1 45%; } }
