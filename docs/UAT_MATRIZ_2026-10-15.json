@@ -1,5 +1,5 @@
 {
-  "version": "1.27.30",
+  "version": "1.27.31",
   "alcance": "Escenarios de aceptación institucional sin resultados fabricados",
   "escenarios": [
     {
@@ -170,6 +170,34 @@
       ],
       "estado": "pendiente",
       "responsable": "Responsable institucional por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-14",
+      "rol": "ADMINISTRATIVO",
+      "escenario": "Buscar alumno existente por matrícula o nombre completo con dos nombres y apellido materno opcional; comprobar homónimos, paginación, alcance de plantel y ausencia de resultados",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable institucional por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-15",
+      "rol": "FINANZAS",
+      "escenario": "Elegir plantilla optativa de cargo adicional, verificar tarifa autorizada y exclusión de colegiatura; crear cargo una vez con la misma clave UUID tras un reintento, rechazar reutilización de clave con importes distintos y confirmar estado de cuenta",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable financiero por designar",
       "evidencias": []
     }
   ]
