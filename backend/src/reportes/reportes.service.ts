@@ -385,4 +385,30 @@ export class ReportesService {
     res.end();
   }
 
+  /** Serie de cobranza de los seis meses calendario, agregada por origen de pago. */
+  async serieCobranza(user: JwtUser, plantelId?: number) {
+    const planteles = await this.scope.resolverFiltro(user, plantelId);
+    const mexico = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(new Date());
+    const [year, month] = mexico.slice(0, 7).split('-').map(Number);
+    const meses = Array.from({ length: 6 }, (_, indice) => {
+      const fecha = new Date(Date.UTC(year, month - 6 + indice, 1));
+      const siguiente = new Date(Date.UTC(year, month - 5 + indice, 1));
+      const inicio = fecha.toISOString().slice(0, 10);
+      const fin = siguiente.toISOString().slice(0, 10);
+      return { periodo: inicio.slice(0, 7), inicio, fin };
+    });
+    const datos = await Promise.all(meses.map(async (mes) => {
+      const query = this.pagos.createQueryBuilder('p')
+        .select('COALESCE(SUM(p.monto), 0)', 'total')
+        .where('p.estatus = :estatus', { estatus: 'CONFIRMADO' })
+        .andWhere('p.fecha_pago >= :inicio AND p.fecha_pago < :fin', { inicio: mes.inicio, fin: mes.fin });
+      if (planteles !== null) query.andWhere('p.plantel_id IN (:...planteles)', { planteles });
+      const resultado = await query.getRawOne<{ total: string | number }>();
+      return { periodo: mes.periodo, cobrado: Math.round(Number(resultado?.total ?? 0) * 100) / 100 };
+    }));
+    return { datos, moneda: 'MXN', base: 'Pagos confirmados por fecha de pago y plantel de origen' };
+  }
+
 }

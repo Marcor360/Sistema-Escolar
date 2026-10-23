@@ -1101,3 +1101,16 @@ dialog button { max-width: 100%; min-height: 44px; white-space: normal; overflow
   .contenido { padding-left: 12px; padding-right: 12px; }
   .kpis { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Serie de cobranza: gráfica ligera y accesible, sin dependencias adicionales. */
+.grafica-cobranza { margin-block: 16px; }
+.barras-cobranza { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; align-items: end; padding: 18px 0; }
+.barra-cobranza { display: flex; min-width: 0; flex-direction: column; align-items: center; gap: 8px; font-size: 12px; }
+.barra-cobranza-pista { display: flex; align-items: flex-end; width: min(100%, 75px); height: 160px; background: var(--papel); border: 1px solid var(--linea); border-radius: 5px; overflow: hidden; }
+.barra-cobranza-relleno { width: 100%; background: var(--pizarra); min-height: 0; }
+.barra-cobranza-valor, .barra-cobranza-periodo { text-align: center; overflow-wrap: anywhere; }
+@media (max-width: 580px) {
+  .barras-cobranza { gap: 4px; }
+  .barra-cobranza { font-size: 10px; }
+  .barra-cobranza-pista { height: 110px; }
+}

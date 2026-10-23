@@ -73,4 +73,11 @@ export class ReportesController {
     return this.service.bajasExcel(user, res, plantelId);
   }
 
+  @Get('cobranza/serie')
+  @ApiOperation({ summary: 'Serie mensual de pagos confirmados de los últimos seis meses, por plantel de origen' })
+  @Roles('FINANZAS')
+  cobranzaMensual(@CurrentUser() user: JwtUser, @Query('plantelId', new ParseIntPipe({ optional: true })) plantelId?: number) {
+    return this.service.serieCobranza(user, plantelId);
+  }
+
 }
