@@ -370,10 +370,13 @@ export class ReportesService {
       { header: 'Última actualización (no fecha de baja)', key: 'actualizado', width: 38 },
     ];
     hoja.getRow(1).font = { bold: true };
+    const fechaInstitucional = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit',
+    });
     for (const alumno of alumnos) hoja.addRow({
       matricula: alumno.matricula, nombre: alumno.usuario.nombreCompleto,
       plantel: alumno.plantel.nombre, estatus: alumno.estatus,
-      actualizado: alumno.updatedAt.toISOString().slice(0, 10),
+      actualizado: fechaInstitucional.format(alumno.updatedAt),
     });
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', contentDisposition('bajas-actuales.xlsx', 'attachment'));
