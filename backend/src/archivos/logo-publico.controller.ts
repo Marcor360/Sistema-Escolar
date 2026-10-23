@@ -12,6 +12,9 @@ export class LogoPublicoController {
     }
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     res.setHeader('X-Content-Type-Options', 'nosniff');
+    // El portal y la API pueden usar dominios distintos. Helmet aplica same-origin
+    // por defecto; se permite incrustar solo este recurso público de marca.
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     return res.sendFile(filename, { root: uploadsPath() });
   }
 }

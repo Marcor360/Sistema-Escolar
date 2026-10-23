@@ -1,6 +1,6 @@
 {
   "name": "escolar-backend",
-  "version": "1.27.22",
+  "version": "1.27.25",
   "description": "API del Sistema Escolar Multiplataforma (MVP) — NestJS + TypeORM (MySQL / SQL Server)",
   "private": true,
   "scripts": {

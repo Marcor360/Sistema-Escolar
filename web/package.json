@@ -1,6 +1,6 @@
 {
   "name": "escolar-web",
-  "version": "1.27.22",
+  "version": "1.27.25",
   "private": true,
   "type": "module",
   "scripts": {

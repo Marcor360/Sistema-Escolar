@@ -13,7 +13,9 @@ const redondear = (n: number) => Math.round(n * 100) / 100;
 const escapar = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c);
 @Injectable()
 export class CobranzaService implements OnModuleInit, OnModuleDestroy {
-  private timer?: ReturnType<typeof setInterval>; private trabajando = false;
+  private timer?: ReturnType<typeof setInterval>; private timerAutomaticos?: ReturnType<typeof setInterval>;
+  private trabajando = false; private automatizando = false;
+  private ultimoDiaRecargos = '';
   private readonly logger = new Logger(CobranzaService.name);
   constructor(
     @InjectRepository(PlantillaCorreo) private readonly plantillas: Repository<PlantillaCorreo>,
@@ -21,13 +23,26 @@ export class CobranzaService implements OnModuleInit, OnModuleDestroy {
     private readonly bitacora: BitacoraFinancieraService, private readonly config: ConfigService,
     private readonly ds: DataSource, private readonly scope: ScopeService,
   ) {}
-  onModuleInit() { this.timer = setInterval(() => { void this.procesar().catch(() => this.logger.warn('Cobranza pendiente; revisar configuración/proveedor')); }, 30000); this.timer.unref(); }
-  onModuleDestroy() { if (this.timer) clearInterval(this.timer); }
-  async enviarAvisos(user: JwtUser, plantelId?: number, preview = false, confirmado = false) {
+
+  onModuleInit() {
+    this.timer = setInterval(() => { void this.procesar().catch(() => this.logger.warn('Cobranza pendiente; revisar configuración/proveedor')); }, 30000);
+    this.timer.unref();
+    this.timerAutomaticos = setInterval(() => { void this.ejecutarAutomaticos().catch(() => this.logger.warn('Automatización financiera pendiente de revisión')); }, 60 * 60 * 1000);
+    this.timerAutomaticos.unref();
+    void this.ejecutarAutomaticos().catch(() => this.logger.warn('No se pudo ejecutar la automatización financiera'));
+  }
+  onModuleDestroy() {
+    if (this.timer) clearInterval(this.timer);
+    if (this.timerAutomaticos) clearInterval(this.timerAutomaticos);
+  }
+
+  async enviarAvisos(user: JwtUser, plantelId?: number, preview = false, confirmado = false, soloVencidos = false) {
     if (!plantelId) throw new BadRequestException('Selecciona un plantel para esta operación');
     if (!preview && !confirmado) throw new BadRequestException('Revisa la previsualización y confirma la operación');
     if (!await this.plantillas.findOneBy({ clave: 'AVISO_ADEUDO' })) throw new BadRequestException('Falta la plantilla AVISO_ADEUDO');
-    const adeudos = await this.cargos.adeudos(user, plantelId, true);
+    const dia = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    const adeudos = (await this.cargos.adeudos(user, plantelId, true))
+      .filter((cargo) => !soloVencidos || (cargo.fechaVencimiento !== null && cargo.fechaVencimiento < dia));
     const porAlumno = new Map<number, { usuarioId: number; saldo: number; cargos: string[] }>();
     for (const c of adeudos) {
       const actual = porAlumno.get(c.alumnoId) ?? { usuarioId: c.alumno.usuarioId, saldo: 0, cargos: [] };
@@ -35,9 +50,11 @@ export class CobranzaService implements OnModuleInit, OnModuleDestroy {
     }
     if (preview) return { plantelId, registros: porAlumno.size, totalEstimado: redondear([...porAlumno.values()].reduce((s, a) => s + a.saldo, 0)) };
     let programados = 0, omitidos = 0;
-    const dia = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
     for (const datos of porAlumno.values()) {
-      const clave = createHash('sha256').update(JSON.stringify([dia, plantelId, datos.usuarioId, datos.cargos.sort()])).digest('hex');
+      const clave = createHash('sha256').update(JSON.stringify(
+        soloVencidos ? ['AUTO_CARTERA_VENCIDA', dia.slice(0, 7), plantelId, datos.usuarioId] :
+          [dia, plantelId, datos.usuarioId, datos.cargos.sort()],
+      )).digest('hex');
       try {
         const nuevo = await this.ds.transaction(async (manager) => {
           const repo = manager.getRepository(CobranzaEnvio);
@@ -55,6 +72,43 @@ export class CobranzaService implements OnModuleInit, OnModuleDestroy {
     }
     return { programados, omitidos, mensaje: 'Consulta el seguimiento de cobranza: programado no significa enviado por SMTP.' };
   }
+  /**
+   * Un solo actor real de FINANZAS opera por sus planteles asignados.
+   * Las banderas permanecen apagadas hasta aprobar calendario, SMTP y UAT.
+   */
+  private async ejecutarAutomaticos() {
+    const avisosActivos = this.config.get<string>('COBRANZA_DIA3_HABILITADA') === 'true';
+    const recargosActivos = this.config.get<string>('RECARGOS_AUTOMATICOS_HABILITADOS') === 'true';
+    if ((!avisosActivos && !recargosActivos) || this.automatizando) return;
+    const fecha = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(new Date());
+    const enviarHoy = avisosActivos && fecha.endsWith('-03');
+    const aplicarHoy = recargosActivos && Number(fecha.slice(-2)) >= 4 && this.ultimoDiaRecargos !== fecha;
+    if (!enviarHoy && !aplicarHoy) return;
+    this.automatizando = true;
+    try {
+      const actorId = Number(this.config.get<string>('FINANZAS_AUTO_ACTOR_ID'));
+      if (!Number.isSafeInteger(actorId) || actorId <= 0) throw new Error('FINANZAS_AUTO_ACTOR_ID inválido');
+      const usuario = await this.ds.getRepository(Usuario).findOneBy({ id: actorId, activo: true });
+      if (!usuario || !usuario.roles.some((rol) => rol.clave === 'FINANZAS')) {
+        throw new Error('El actor de automatización no es un usuario FINANZAS activo');
+      }
+      const actor: JwtUser = { sub: usuario.id, email: usuario.email, nombre: usuario.nombre,
+        roles: usuario.roles.map((rol) => rol.clave), portal: 'WEB' };
+      const planteles = await this.scope.plantelesDe(actor);
+      if (!planteles || planteles.length === 0) throw new Error('El actor automático necesita planteles asignados');
+      if (enviarHoy && !this.config.get<string>('SMTP_HOST')) throw new Error('El correo SMTP no está configurado');
+      for (const plantelId of planteles) {
+        if (enviarHoy) await this.enviarAvisos(actor, plantelId, false, true, true);
+        if (aplicarHoy) await this.cargos.aplicarRecargos({ plantelId, porcentaje: 10, confirmado: true }, actor);
+      }
+      if (aplicarHoy) this.ultimoDiaRecargos = fecha;
+    } finally {
+      this.automatizando = false;
+    }
+  }
+
   async listar(user: JwtUser, pagina = 1) {
     const planteles = await this.scope.resolverFiltro(user);
     const [datos, total] = await this.ds.getRepository(CobranzaEnvio).findAndCount({ where: planteles === null ? {} : { plantelId: In(planteles) }, order: { id: 'DESC' }, skip: (pagina - 1) * 10, take: 10 });

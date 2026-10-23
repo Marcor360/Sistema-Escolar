@@ -21,3 +21,17 @@ describe('validación central antes de arrancar', () => {
     expect(() => validarEntorno({ ...staging, APP_ENV: 'production' })).toThrow('SMTP_HOST');
   });
 });
+
+
+describe('Configuración de automatización financiera', () => {
+  it.each(['COBRANZA_DIA3_HABILITADA', 'RECARGOS_AUTOMATICOS_HABILITADOS'])('valida bandera y actor de %s', (bandera) => {
+    expect(() => validarEntorno({ ...desarrollo, [bandera]: 'yes' })).toThrow(bandera);
+    for (const actor of ['', '0', '-1', '1.5', '9007199254740992']) {
+      expect(() => validarEntorno({ ...desarrollo, [bandera]: 'true', FINANZAS_AUTO_ACTOR_ID: actor })).toThrow('FINANZAS_AUTO_ACTOR_ID');
+    }
+  });
+  it('exige SMTP para avisos, pero permite recargos sin correo', () => {
+    expect(() => validarEntorno({ ...desarrollo, COBRANZA_DIA3_HABILITADA: 'true', FINANZAS_AUTO_ACTOR_ID: '10' })).toThrow('SMTP_HOST');
+    expect(() => validarEntorno({ ...desarrollo, RECARGOS_AUTOMATICOS_HABILITADOS: 'true', FINANZAS_AUTO_ACTOR_ID: '10' })).not.toThrow();
+  });
+});

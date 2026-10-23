@@ -24,6 +24,12 @@ Base auditada: `main` 1.27.20; API NestJS, portal React/Vite, Expo exclusivo de 
 6. **Cobranza:** no mezclar fechas, cargos y saldos de diferentes planteles; todo proceso debe respetar `ScopeService` e idempotencia y mostrar vistas de error/última ejecución.
 7. **Zona horaria:** `America/Mexico_City`; usar vencimiento por cargo, no aplicar retroactivamente sin autorización.
 
+## Automatización optativa 1.27.23
+
+En backend se agregan `COBRANZA_DIA3_HABILITADA=false`, `RECARGOS_AUTOMATICOS_HABILITADOS=false` y `FINANZAS_AUTO_ACTOR_ID`. No se habilitan al hacer merge ni al desplegar; un operador deberá activarlas tras UAT institucional. El proceso comprueba al usuario FINANZAS real y solo opera en sus planteles. Se ejecuta al iniciar y cada hora: avisos solo el día 3, con clave única estable por alumno/plantel/mes; recargos desde día 4 exclusivamente a cargos ya vencidos y con `aplicaRecargo`, una vez por cargo.
+
+**Limitaciones operativas:** sin cuadro para habilitar por plantel; no reemplaza la conciliación SMTP ni prueba la lectura del aviso. Si el servidor permanece apagado todo el día 3 no se hará envío retroactivo. En despliegues con múltiples instancias, claves únicas de cobranza y bloqueo de recargos por cargo protegen de duplicidad, pero se requiere ensayo de concurrencia. La bitácora conserva el actor. El día 5 sigue siendo vencimiento por defecto: una colegiatura con vencimiento 5 no recibe recargo el día 4. Debe aprobarse cualquier modificación de vencimientos antes de activar la bandera.
+
 ## Aceptación 1.27.21
 
 - FINANZAS y ADMINISTRATIVO descargan un XLSX de bajas actuales solo de planteles autorizados; el conjunto se limita a 5000 registros.
@@ -31,3 +37,7 @@ Base auditada: `main` 1.27.20; API NestJS, portal React/Vite, Expo exclusivo de 
 - Cada PDF incluye total aplicado, saldo pendiente, cargos y movimientos con estado. Todos los archivos se generan bajo demanda sin almacenar datos financieros públicos.
 - No se programan mensajes ni recargos y no hay migraciones para esta entrega.
 - QA pendiente: pruebas reales MySQL/SQL Server, verificación de streaming Excel/PDF, límites, privacidad entre planteles y UAT con datos controlados.
+
+## Requerimiento de cuentas por pagar
+
+El contrato de implementación y las decisiones pendientes constan en [CUENTAS_POR_PAGAR_CONTRATO.md](CUENTAS_POR_PAGAR_CONTRATO.md). **No implementado en 1.27.24:** documento preparatorio solamente.
