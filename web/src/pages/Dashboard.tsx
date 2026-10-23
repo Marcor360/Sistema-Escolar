@@ -20,6 +20,10 @@ interface Resumen {
   grupos: number;
   saldoPendiente: number;
   cargosConAdeudo: number;
+  alumnosConSaldo: number;
+  alumnosSinAbono: number;
+  alumnosConAbonoParcial: number;
+  alumnosConVencidos: number;
   cobradoMes: number;
 }
 
@@ -122,6 +126,10 @@ export default function DashboardPage() {
           tono: 'rojo',
           dinero: true,
         },
+        { etiqueta: 'Alumnos con saldo', valor: resumen.alumnosConSaldo, nota: 'Alumnos con cargos pendientes', tono: 'dorado' },
+        { etiqueta: 'Sin abonos pendientes', valor: resumen.alumnosSinAbono, nota: 'Sin pagos aplicados a sus cargos pendientes', tono: 'rojo' },
+        { etiqueta: 'Con abonos parciales', valor: resumen.alumnosConAbonoParcial, nota: 'Alumnos que ya abonaron parte de sus cargos pendientes', tono: 'verde' },
+        { etiqueta: 'Alumnos con vencidos', valor: resumen.alumnosConVencidos, nota: 'Con al menos un cargo vencido', tono: 'rojo' },
         {
           etiqueta: 'Cargos con adeudo',
           valor: resumen.cargosConAdeudo,
@@ -134,7 +142,7 @@ export default function DashboardPage() {
   const metricasVisibles = metricas.filter(
     (metrica) =>
       tieneRol('SUPERADMIN') ||
-      (['Cobrado este mes', 'Saldo pendiente', 'Cargos con adeudo'].includes(metrica.etiqueta)
+      (['Cobrado este mes', 'Saldo pendiente', 'Cargos con adeudo', 'Alumnos con saldo', 'Sin abonos pendientes', 'Con abonos parciales', 'Alumnos con vencidos'].includes(metrica.etiqueta)
         ? tieneRol('FINANZAS')
         : tieneRol('ADMINISTRATIVO')),
   );
@@ -150,6 +158,7 @@ export default function DashboardPage() {
       : []),
     ...(sesion?.roles.includes('FINANZAS')
       ? [
+          { ruta: '/finanzas?vista=contactos', titulo: 'Seguimiento de pagos', detalle: 'Revisa alumnos con saldo y prepara recordatorios' },
           { ruta: '/finanzas', titulo: 'Finanzas', detalle: 'Da seguimiento a cargos y pagos' },
           { ruta: '/alumnos', titulo: 'Alumnos', detalle: 'Consulta datos de familias' },
         ]
