@@ -21,11 +21,11 @@ Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [ín
 
 - **1.27.29:** Superadmin modifica mensaje público de bienvenida y tamaño del logo en web; API con validaciones y migraciones espejo MySQL/SQL Server. Sin administración en la aplicación Expo.
 
-- **1.27.29:** vista «Mi cuenta» con identificador, nombre, correo, teléfono, roles, estado y seguridad consultados de `/auth/me`; lectura privada y controles de recarga, recorrido y cambio de contraseña. Sin modificación de cuentas ni migraciones.
+- **1.27.28:** vista «Mi cuenta» con identificador, nombre, correo, teléfono, roles, estado y seguridad consultados de `/auth/me`; lectura privada y controles de recarga, recorrido y cambio de contraseña. Sin modificación de cuentas ni migraciones.
 
-- **1.27.29:** recorrido de bienvenida según áreas autorizadas para cada rol web, con omitir, siguiente, finalizar y «Ver recorrido»; recordatorio por cuenta/navegador con localStorage, sin tokens ni nueva lógica de permisos.
+- **1.27.27:** recorrido de bienvenida según áreas autorizadas para cada rol web, con omitir, siguiente, finalizar y «Ver recorrido»; recordatorio por cuenta/navegador con localStorage, sin tokens ni nueva lógica de permisos.
 
-- **1.27.29:** reflujo para monitores grandes, logotipo institucional más visible y acciones de usuarios separadas sin superponerse; sin nuevas dependencias ni migraciones.
+- **1.27.26:** reflujo para monitores grandes, logotipo institucional más visible y acciones de usuarios separadas sin superponerse; sin nuevas dependencias ni migraciones.
 
 - **1.27.24:** contrato de diseño preparatorio del módulo de cuentas por pagar. No agrega endpoints, tablas ni recordatorios; requiere aprobación financiera. [Contrato](docs/CUENTAS_POR_PAGAR_CONTRATO.md).
 
