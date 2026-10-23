@@ -13,8 +13,11 @@ export interface ContextoRegular { alumnoId: number; plantelId: number; cicloId:
 @Injectable()
 export class AgrupacionRegularService {
   constructor(private readonly scope: ScopeService) {}
-  async solicitar(m: EntityManager, d: ContextoRegular, u: JwtUser) {
-    if (!u.roles.some(r => ['SUPERADMIN','ADMINISTRATIVO','FINANZAS'].includes(r))) throw new ForbiddenException('Apertura reservada a Control Escolar y Finanzas');
+  async solicitar(m: EntityManager, d: ContextoRegular, u: JwtUser, reinscripcionValidada = false) {
+    if (!u.roles.some(r => ['SUPERADMIN','ADMINISTRATIVO'].includes(r)) &&
+        !(reinscripcionValidada && u.roles.includes('FINANZAS'))) {
+      throw new ForbiddenException('Apertura reservada a Control Escolar; Finanzas requiere una reinscripción validada');
+    }
     await this.scope.validarGestion(u, d.plantelId);
     const plantel = await m.getRepository(Plantel).findOne({ where: { id: d.plantelId }, lock: { mode: 'pessimistic_write' } });
     const ciclo = await m.getRepository(CicloEscolar).findOneBy({ id: d.cicloId });

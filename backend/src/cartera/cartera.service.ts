@@ -108,7 +108,7 @@ export class CarteraService {
         const precio = await this.cotizar(m, d, u);
         if (d.cotizacion !== precio.cotizacion) throw new ConflictException('La cotización cambió; vuelve a previsualizar y confirmar');
         const apertura = await repo.save(repo.create({ idempotencia: d.idempotencia, peticionHash, alumnoId: d.alumnoId, plantelId: d.plantelId, cicloId: d.cicloId, creadoPorId: u.sub, estado: 'PENDIENTE', conceptos: precio.conceptos, solicitudId: null }));
-        const resultado = await this.agrupacion.solicitar(m, d, u);
+        const resultado = await this.agrupacion.solicitar(m, d, u, 'origenInscripcionId' in d);
         await repo.update(apertura.id, { solicitudId: resultado.solicitud.id });
         const asignadas = resultado.asignadas.length ? await repo.find({ where: { solicitudId: In(resultado.asignadas) }, order: { id: 'ASC' } }) : [];
         for (const a of asignadas) {

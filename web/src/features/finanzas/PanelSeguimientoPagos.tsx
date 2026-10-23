@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { api, mensajeDeError } from '../../api/client';
 import { Paginador } from '../../components/Paginador';
 import { useConfirmacion } from '../../components/useConfirmacion';
@@ -30,6 +30,7 @@ export function PanelSeguimientoPagos() {
   const [permitido, setPermitido] = useState(false);
   const [enviando, setEnviando] = useState(false), [cargando, setCargando] = useState(false), [error, setError] = useState(''), [mensaje, setMensaje] = useState('');
   const [revision, setRevision] = useState(0);
+  const consulta = useRef(0);
   const confirmacion = useConfirmacion();
   useEffect(() => {
     let activo = true;
@@ -38,16 +39,19 @@ export function PanelSeguimientoPagos() {
     return ()=>{activo=false;};
   }, []);
   const cargar = useCallback(async () => {
-    if (!plantelId) {setDatos(null);return;}
+    const solicitud = ++consulta.current;
+    setDatos(null);
+    if (!plantelId) {setCargando(false);return;}
     setCargando(true);setError('');
     try {
       const {data} = await api.get<Respuesta>('/finanzas/cobranza/pendientes', {params:{
         plantelId:Number(plantelId), pagina, porPagina:10, situacion, sinAbono,
       }});
-      setDatos(data);
-    }catch(e){setError(mensajeDeError(e));}finally{setCargando(false);}
+      if (consulta.current === solicitud) setDatos(data);
+    }catch(e){if (consulta.current === solicitud) setError(mensajeDeError(e));}
+    finally{if (consulta.current === solicitud) setCargando(false);}
   },[plantelId,pagina,situacion,sinAbono]);
-  useEffect(() => {void cargar();},[cargar,revision]);
+  useEffect(() => {void cargar();return () => { consulta.current++; };},[cargar,revision]);
   const avisar = async (e:FormEvent) => {
     e.preventDefault();if(enviando||!plantelId||!permitido)return;
     setError('');setMensaje('');setEnviando(true);

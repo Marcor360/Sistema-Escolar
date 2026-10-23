@@ -132,7 +132,7 @@ export default function ReinscribirAlumnoPage() {
         <label htmlFor="reinscripcion-ciclo">Ciclo de destino</label>
         <select id="reinscripcion-ciclo" required value={cicloId} onChange={e=>{setCicloId(e.target.value);setContexto({...contexto,periodoAcademicoId:''});setGrupoId('');}}>
           <option value="">Selecciona ciclo posterior…</option>
-          {ciclos.filter(c=>['PREPARACION','ACTIVO'].includes(c.estado) && c.fechaInicio > trayectoria.origen.fechaFin).map(c=><option key={c.id} value={c.id}>{c.nombre || c.clave}</option>)}
+          {ciclos.filter(c=>c.estado === 'PREPARACION' && c.fechaInicio > trayectoria.origen.fechaFin).map(c=><option key={c.id} value={c.id}>{c.nombre || c.clave}</option>)}
         </select>
         {!destinoValido && <p className="texto-ayuda">Para avanzar dentro del mismo ciclo se requiere la migración de inscripciones por periodo. Este formulario evita duplicarlas.</p>}
         <ContextoAcademicoSelector plantelId={plantel} cicloId={cicloId} valor={contexto}
