@@ -135,6 +135,8 @@ async function esperarServidor() {
             ],
           },
         };
+      if (path.endsWith('/reportes/cobranza/serie'))
+        data = { datos: [{ periodo: '2026-10', cobrado: 1000 }], moneda: 'MXN', base: 'Pagos confirmados' };
       if (path.endsWith('/reportes/resumen'))
         data = {
           alumnosActivos: 20,

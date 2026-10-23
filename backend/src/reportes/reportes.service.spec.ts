@@ -16,6 +16,32 @@ const maestroUser: JwtUser = {
   roles: ['MAESTRO'],
 };
 
+describe('Reportes financieros descargables', () => {
+  it('resuelve el alumno exclusivamente desde la sesión para su PDF', async () => {
+    const alumnos = { obtenerPorUsuario: jest.fn().mockResolvedValue({ id: 17 }) };
+    const service = new ReportesService(
+      {} as any, {} as any, {} as any, {} as any, {} as any, {} as any,
+      {} as any, {} as any, alumnos as any, {} as any, {} as any,
+    );
+    const exportar = jest.spyOn(service, 'estadoCuentaPdf').mockResolvedValue();
+    const res = {} as any;
+    await service.miEstadoCuentaPdf(alumnoUser, res);
+    expect(alumnos.obtenerPorUsuario).toHaveBeenCalledWith(alumnoUser.sub);
+    expect(exportar).toHaveBeenCalledWith(17, undefined, res);
+  });
+
+  it('rechaza PDF fuera de alcance antes de iniciar la descarga', async () => {
+    const cargos = { estadoDeCuenta: jest.fn().mockRejectedValue(new ForbiddenException()) };
+    const service = new ReportesService(
+      {} as any, {} as any, {} as any, {} as any, {} as any, {} as any,
+      cargos as any, {} as any, {} as any, {} as any, {} as any,
+    );
+    const res = { setHeader: jest.fn() } as any;
+    await expect(service.estadoCuentaPdf(9, alumnoUser, res)).rejects.toBeInstanceOf(ForbiddenException);
+    expect(res.setHeader).not.toHaveBeenCalled();
+  });
+});
+
 describe('ReportesService.boletaPdf', () => {
   it('rechaza alumno pidiendo boleta ajena', async () => {
     const alumnosRepo = { findOne: jest.fn().mockResolvedValue({ id: 2, plantelId: 1, matricula: 'A2' }) };
@@ -83,5 +109,37 @@ describe('ReportesService.calificacionesExcel', () => {
     await expect(service.calificacionesExcel(9, maestroUser, {} as any))
       .rejects.toThrow('El grupo no está activo');
     expect(calificaciones.find).not.toHaveBeenCalled();
+  });
+});
+
+describe('Serie mensual de cobranza', () => {
+  afterEach(() => jest.useRealTimers());
+  it('usa el mes de México al cambiar de año y filtra pagos confirmados por plantel de origen', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2027-01-01T02:00:00Z'));
+    const qb = {
+      select: jest.fn().mockReturnThis(), where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(), getRawOne: jest.fn().mockResolvedValue({ total: '125.50' }),
+    };
+    const scope = { resolverFiltro: jest.fn().mockResolvedValue([3]) };
+    const service = new ReportesService(
+      {} as any, {} as any, {} as any, {} as any, {} as any,
+      { createQueryBuilder: () => qb } as any, {} as any, {} as any, {} as any, scope as any, {} as any,
+    );
+    const serie = await service.serieCobranza(alumnoUser, 3);
+    expect(serie.datos.map((p) => p.periodo)).toEqual(['2026-07', '2026-08', '2026-09', '2026-10', '2026-11', '2026-12']);
+    expect(serie.datos.every((p) => p.cobrado === 125.5)).toBe(true);
+    expect(qb.where).toHaveBeenCalledWith('p.estatus = :estatus', { estatus: 'CONFIRMADO' });
+    expect(qb.andWhere).toHaveBeenCalledWith('p.plantel_id IN (:...planteles)', { planteles: [3] });
+    expect(qb.andWhere).toHaveBeenCalledWith('p.fecha_pago >= :inicio AND p.fecha_pago < :fin', { inicio: '2026-12-01', fin: '2027-01-01' });
+  });
+  it('no consulta pagos cuando el plantel no está autorizado', async () => {
+    const pagos = { createQueryBuilder: jest.fn() };
+    const service = new ReportesService(
+      {} as any, {} as any, {} as any, {} as any, {} as any, pagos as any,
+      {} as any, {} as any, {} as any,
+      { resolverFiltro: jest.fn().mockRejectedValue(new ForbiddenException()) } as any, {} as any,
+    );
+    await expect(service.serieCobranza(alumnoUser, 9)).rejects.toBeInstanceOf(ForbiddenException);
+    expect(pagos.createQueryBuilder).not.toHaveBeenCalled();
   });
 });
