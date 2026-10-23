@@ -261,6 +261,10 @@ export function Shell() {
       </aside>
       <main ref={contenido} className="contenido" id="contenido-principal" tabIndex={-1}>
         <div className="barra-superior">
+          <span className="barra-contexto">
+            Espacio de trabajo <strong>{sesion?.roles.join(' · ')}</strong>
+          </span>
+          <Campana />
           <button
             ref={botonMenu}
             type="button"
@@ -272,10 +276,6 @@ export function Shell() {
           >
             <IconoTabler nombre="menu-2" /> <span>Menú</span>
           </button>
-          <span className="barra-contexto">
-            Espacio de trabajo <strong>{sesion?.roles.join(' · ')}</strong>
-          </span>
-          <Campana />
         </div>
         {sinConexion && (
           <p className="mensaje-error" role="alert">

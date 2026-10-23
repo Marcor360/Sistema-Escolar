@@ -6,14 +6,14 @@ button:not(.boton), .boton {
   padding: 9px 16px;
   transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
 }
-button:not(.boton):not(.tabs button):not(.campana-boton):not(.campana-item):not(.enlace):not(.enlace-dashboard):not(.acceso-rapido):not(.campana-panel button) {
+button:not(.boton):not(.menu-fondo):not(.menu-cerrar):not(.tabs button):not(.campana-boton):not(.campana-item):not(.enlace):not(.enlace-dashboard):not(.acceso-rapido):not(.campana-panel button) {
   border: 1px solid var(--linea);
   background: #fff;
   color: var(--tinta);
   cursor: pointer;
   font-weight: 600;
 }
-button:not(.boton):hover:not(:disabled) { background: #eff3f4; }
+button:not(.boton):not(.menu-fondo):not(.menu-cerrar):hover:not(:disabled) { background: #eff3f4; }
 button:disabled { opacity: .55; cursor: not-allowed; }
 button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
   outline: 3px solid var(--dorado);
@@ -58,4 +58,22 @@ input[type="checkbox"], input[type="radio"] {
 }
 @media (prefers-reduced-motion: reduce) {
   button { transition: none; }
+}
+
+/* Los controles del cajón conservan su aspecto específico, incluso en hover. */
+@media (max-width: 800px) {
+  button.menu-fondo,
+  button.menu-fondo:hover:not(:disabled) {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: rgba(8, 27, 31, .38);
+    box-shadow: none;
+  }
+  button.menu-cerrar,
+  button.menu-cerrar:hover:not(:disabled) {
+    background: transparent;
+    color: var(--texto-sobre-pizarra);
+    border-color: rgba(255, 255, 255, .35);
+  }
 }

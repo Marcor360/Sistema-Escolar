@@ -184,3 +184,10 @@ it('agrupa las tareas en orden y oculta áreas sin opciones permitidas', () => {
   expect(within(within(nav).getByRole('group', { name: 'Docencia' })).getByRole('link', { name: 'Mis clases' })).toBeTruthy();
   expect(within(nav).getAllByRole('link')[0].getAttribute('href')).toBe('/');
 });
+
+it('ubica el control de navegación al final de la barra, del mismo lado que el cajón', () => {
+  render(<MemoryRouter><Shell /></MemoryRouter>);
+  const boton = screen.getByRole('button', { name: 'Abrir menú' });
+  const cabecera = boton.closest('.barra-superior');
+  expect(cabecera?.lastElementChild).toBe(boton);
+});

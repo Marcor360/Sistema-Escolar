@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.27.29`** · Estado: candidata preparatoria; aceptación institucional pendiente. Esta entrega actualiza documentación, herramientas de pruebas y metadatos de versión; **no demuestra despliegue adicional**. Staging confirmado por el operador en **1.27.17** (commit `8579ab4`), con API `/health/ready` local y HTTPS correctas. La app Expo instalada en dispositivos **no se actualiza automáticamente**.
+**Versión candidata: `1.27.30`** · Estado: candidata preparatoria; aceptación institucional pendiente. Esta entrega actualiza documentación, herramientas de pruebas y metadatos de versión; **no demuestra despliegue adicional**. Staging confirmado por el operador en **1.27.17** (commit `8579ab4`), con API `/health/ready` local y HTTPS correctas. La app Expo instalada en dispositivos **no se actualiza automáticamente**.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -18,6 +18,8 @@ Sistema escolar multiplataforma para operación académica, administrativa y fin
 Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [índice documental](docs/README.md) e [historial de documentos retirados](docs/HISTORIAL.md).
 
 ### Funcionalidad destacada de versiones recientes
+
+- **1.27.30:** navegación responsive web: menú lateral a la derecha con botón hamburguesa a la derecha, fondo atenuado semitransparente que conserva visible la pantalla y corrección de la superposición de reglas genéricas para botones. Prueba E2E de alineación, fondo y contenido subyacente; sin cambios a Expo, roles o API.
 
 - **1.27.29:** Superadmin modifica mensaje público de bienvenida y tamaño del logo en web; API con validaciones y migraciones espejo MySQL/SQL Server. Sin administración en la aplicación Expo.
 
