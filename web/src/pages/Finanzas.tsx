@@ -1,3 +1,6 @@
+import ReinscribirAlumnoPage from './ReinscribirAlumno';
+import { PanelIndicadoresFinanzas } from '../features/finanzas/PanelIndicadoresFinanzas';
+import { PanelSeguimientoPagos } from '../features/finanzas/PanelSeguimientoPagos';
 import { useModuloTrabajo } from '../components/ModuloTrabajo';
 import { useConfirmacion } from '../components/useConfirmacion';
 import { PanelCargos } from '../features/finanzas/PanelCargos';
@@ -223,6 +226,9 @@ export default function FinanzasPage() {
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
+  if (modo === 'reinscribir') return <ReinscribirAlumnoPage />;
+  if (modo === 'indicadores') return <PanelIndicadoresFinanzas />;
+  if (modo === 'contactos') return <PanelSeguimientoPagos />;
   return (
     <>{confirmacion.elemento}{dialogoMotivo.elemento}
       <Encabezado titulo="Finanzas" detalle="Cargos, pagos, adeudos y cobranza" />
