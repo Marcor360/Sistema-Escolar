@@ -189,6 +189,21 @@ export default function FinanzasPage() {
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
+  const descargarReporte = async (ruta: string, nombre: string) => {
+    setError('');
+    try {
+      const { data } = await api.get(ruta, { responseType: 'blob' });
+      const url = URL.createObjectURL(data);
+      const enlace = document.createElement('a');
+      enlace.href = url;
+      enlace.download = nombre;
+      enlace.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (err) { setError(mensajeDeError(err)); }
+  };
+  const descargarEstadoCuenta = (alumnoId: number) => descargarReporte(`/reportes/estado-cuenta/${alumnoId}/pdf`, `estado-cuenta-${alumnoId}.pdf`);
+  const descargarBajas = () => descargarReporte('/reportes/bajas.xlsx', 'bajas-actuales.xlsx');
+
   const descargarExcel = async () => {
     if (enviando) return; setEnviando(true);
     limpiarAvisos();
@@ -233,7 +248,7 @@ export default function FinanzasPage() {
       )}
 
       {tab === 'adeudos' && (
-        <PanelAdeudos enviando={enviando} enviarAvisos={enviarAvisos} descargarExcel={descargarExcel} adeudos={adeudos} corregir={corregir} totalAdeudos={totalAdeudos} paginaAdeudos={paginaAdeudos} cargarAdeudos={legado ? cargarAdeudos : async p => trabajo.actualizar({ pagina: String(p || 1) })} />
+        <PanelAdeudos enviando={enviando} enviarAvisos={enviarAvisos} descargarExcel={descargarExcel} descargarEstadoCuenta={descargarEstadoCuenta} descargarBajas={descargarBajas} adeudos={adeudos} corregir={corregir} totalAdeudos={totalAdeudos} paginaAdeudos={paginaAdeudos} cargarAdeudos={legado ? cargarAdeudos : async p => trabajo.actualizar({ pagina: String(p || 1) })} />
       )}
       </div>
     </>

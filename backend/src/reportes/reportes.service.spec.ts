@@ -1,3 +1,6 @@
+import { PassThrough } from 'stream';
+import * as ExcelJS from 'exceljs';
+import type { Response } from 'express';
 import { ForbiddenException } from '@nestjs/common';
 import { ReportesService } from './reportes.service';
 import { JwtUser } from '../common/current-user.decorator';
@@ -15,6 +18,32 @@ const maestroUser: JwtUser = {
   nombre: 'Maestro',
   roles: ['MAESTRO'],
 };
+
+describe('Reportes financieros descargables', () => {
+  it('resuelve el alumno exclusivamente desde la sesión para su PDF', async () => {
+    const alumnos = { obtenerPorUsuario: jest.fn().mockResolvedValue({ id: 17 }) };
+    const service = new ReportesService(
+      {} as any, {} as any, {} as any, {} as any, {} as any, {} as any,
+      {} as any, {} as any, alumnos as any, {} as any, {} as any,
+    );
+    const exportar = jest.spyOn(service, 'estadoCuentaPdf').mockResolvedValue();
+    const res = {} as any;
+    await service.miEstadoCuentaPdf(alumnoUser, res);
+    expect(alumnos.obtenerPorUsuario).toHaveBeenCalledWith(alumnoUser.sub);
+    expect(exportar).toHaveBeenCalledWith(17, undefined, res);
+  });
+
+  it('rechaza PDF fuera de alcance antes de iniciar la descarga', async () => {
+    const cargos = { estadoDeCuenta: jest.fn().mockRejectedValue(new ForbiddenException()) };
+    const service = new ReportesService(
+      {} as any, {} as any, {} as any, {} as any, {} as any, {} as any,
+      cargos as any, {} as any, {} as any, {} as any, {} as any,
+    );
+    const res = { setHeader: jest.fn() } as any;
+    await expect(service.estadoCuentaPdf(9, alumnoUser, res)).rejects.toBeInstanceOf(ForbiddenException);
+    expect(res.setHeader).not.toHaveBeenCalled();
+  });
+});
 
 describe('ReportesService.boletaPdf', () => {
   it('rechaza alumno pidiendo boleta ajena', async () => {
@@ -83,5 +112,38 @@ describe('ReportesService.calificacionesExcel', () => {
     await expect(service.calificacionesExcel(9, maestroUser, {} as any))
       .rejects.toThrow('El grupo no está activo');
     expect(calificaciones.find).not.toHaveBeenCalled();
+  });
+});
+
+
+describe('Fecha institucional en XLSX de bajas', () => {
+  it('conserva el día mexicano durante el cambio de fecha UTC y de año', async () => {
+    const instantes = ['2026-10-23T02:30:00Z', '2027-01-01T05:59:59Z', '2027-01-01T06:00:00Z'];
+    const qb = {
+      innerJoinAndSelect: jest.fn().mockReturnThis(), where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(), orderBy: jest.fn().mockReturnThis(), take: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue(instantes.map((fecha, id) => ({
+        matricula: `A${id}`, usuario: { nombreCompleto: 'Alumno' }, plantel: { nombre: 'Plantel' },
+        estatus: 'BAJA', updatedAt: new Date(fecha),
+      }))),
+    };
+    const service = new ReportesService(
+      { createQueryBuilder: () => qb } as any, {} as any, {} as any, {} as any, {} as any,
+      {} as any, {} as any, {} as any, {} as any,
+      { resolverFiltro: jest.fn().mockResolvedValue([3]) } as any, {} as any,
+    );
+    const res = Object.assign(new PassThrough(), { setHeader: jest.fn() });
+    const chunks: Buffer[] = [];
+    res.on('data', (chunk: Buffer) => chunks.push(chunk));
+    const terminado = new Promise<void>((resolve, reject) => { res.on('end', resolve); res.on('error', reject); });
+    await service.bajasExcel(alumnoUser, res as unknown as Response, 3);
+    await terminado;
+    const libro = new ExcelJS.Workbook();
+    const entrada = new PassThrough();
+    entrada.end(Buffer.concat(chunks));
+    await libro.xlsx.read(entrada);
+    const hoja = libro.getWorksheet('Bajas actuales')!;
+    expect([2, 3, 4].map((fila) => hoja.getCell(fila, 5).value))
+      .toEqual(['2026-10-22', '2026-12-31', '2027-01-01']);
   });
 });
