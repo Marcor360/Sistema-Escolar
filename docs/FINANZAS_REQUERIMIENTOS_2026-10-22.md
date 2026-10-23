@@ -37,3 +37,7 @@ En backend se agregan `COBRANZA_DIA3_HABILITADA=false`, `RECARGOS_AUTOMATICOS_HA
 - Cada PDF incluye total aplicado, saldo pendiente, cargos y movimientos con estado. Todos los archivos se generan bajo demanda sin almacenar datos financieros públicos.
 - No se programan mensajes ni recargos y no hay migraciones para esta entrega.
 - QA pendiente: pruebas reales MySQL/SQL Server, verificación de streaming Excel/PDF, límites, privacidad entre planteles y UAT con datos controlados.
+
+## Requerimiento de cuentas por pagar
+
+El contrato de implementación y las decisiones pendientes constan en [CUENTAS_POR_PAGAR_CONTRATO.md](CUENTAS_POR_PAGAR_CONTRATO.md). **No implementado en 1.27.24:** documento preparatorio solamente.
