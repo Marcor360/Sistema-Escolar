@@ -21,7 +21,7 @@ Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [ín
 
 - **1.27.27:** recorrido de bienvenida según áreas autorizadas para cada rol web, con omitir, siguiente, finalizar y «Ver recorrido»; recordatorio por cuenta/navegador con localStorage, sin tokens ni nueva lógica de permisos.
 
-- **1.27.27:** reflujo para monitores grandes, logotipo institucional más visible y acciones de usuarios separadas sin superponerse; sin nuevas dependencias ni migraciones.
+- **1.27.26:** reflujo para monitores grandes, logotipo institucional más visible y acciones de usuarios separadas sin superponerse; sin nuevas dependencias ni migraciones.
 
 - **1.27.24:** contrato de diseño preparatorio del módulo de cuentas por pagar. No agrega endpoints, tablas ni recordatorios; requiere aprobación financiera. [Contrato](docs/CUENTAS_POR_PAGAR_CONTRATO.md).
 
