@@ -6,10 +6,6 @@ import { Rol } from './rol.entity';
 
 export type ProveedorCorreo = 'GODADDY' | 'MICROSOFT365';
 
-export function proveedorCorreoPredeterminado(roles: readonly string[]): ProveedorCorreo {
-  return roles.includes('ALUMNO') ? 'MICROSOFT365' : 'GODADDY';
-}
-
 @Entity('usuarios')
 export class Usuario {
   @PrimaryGeneratedColumn() id!: number;
