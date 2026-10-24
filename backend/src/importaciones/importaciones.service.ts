@@ -23,7 +23,7 @@ interface Catalogos {
 }
 const trozos = <T>(filas: T[]) => Array.from({ length: Math.ceil(filas.length / 100) }, (_, i) => filas.slice(i*100,(i+1)*100));
 export const CABECERAS: Record<TipoImportacion, string[]> = {
-  ALUMNOS: ['correoInstitucional', 'correoPersonal', 'correoProveedor', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'matricula', 'plantelId', 'curp', 'fechaNacimiento', 'telefono', 'tutorNombre', 'tutorTelefono', 'direccion', 'email'],
+  ALUMNOS: ['correoInstitucional', 'correoPersonal', 'correoProveedor', 'nombre', 'segundoNombre', 'apellidoPaterno', 'apellidoMaterno', 'matricula', 'plantelId', 'curp', 'fechaNacimiento', 'telefono', 'tutorNombre', 'tutorTelefono', 'direccion', 'email'],
   DOCENTES: ['email', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'numEmpleado', 'plantelIds', 'cedulaProfesional', 'cedulaPendiente', 'especialidad', 'telefono'],
   PERSONAL: ['email', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'roles', 'plantelIds', 'telefono'],
   INSCRIPCIONES: ['matricula', 'grupoId'],
@@ -53,7 +53,10 @@ export class ImportacionesService {
       const elegido = String(datos.correoProveedor ?? '').trim();
       if (elegido === 'Microsoft 365') datos.correoProveedor = 'MICROSOFT365';
       else if (elegido === 'GoDaddy') datos.correoProveedor = 'GODADDY';
-      else if (!elegido) datos.correoProveedor = 'MICROSOFT365';
+      else if (!elegido) throw new BadRequestException('Selecciona correoProveedor: Microsoft 365 o GoDaddy');
+      const segundo = String(datos.segundoNombre ?? '').trim();
+      if (segundo) datos.nombre = `${String(datos.nombre ?? '').trim()} ${segundo}`.trim();
+      delete datos.segundoNombre;
       if (datos.correoPersonal === undefined) delete datos.correoPersonal;
     }
     if (tipo === 'PERSONAL') datos.password = randomBytes(24).toString('base64url');
@@ -123,10 +126,17 @@ export class ImportacionesService {
     if (!ids.length) throw new BadRequestException('Selecciona al menos un plantel');
     for (const id of ids) { if (c.permitidos !== null && !c.permitidos.has(id)) throw new ForbiddenException('El plantel solicitado está fuera de tu alcance'); if (!c.planteles.get(id)?.activo) throw new ConflictException('Plantel inactivo o inexistente'); }
     if (tipo === 'PERSONAL' && (instancia as CrearUsuarioDto).roles.some((r) => !['ADMINISTRATIVO', 'FINANZAS'].includes(r))) throw new BadRequestException('La importación de personal admite Administrativo y Finanzas');
-    const email = instancia.email.toLowerCase(); if (vistos.has(`EMAIL:${email}`) || c.emails.has(email)) throw new ConflictException('Correo ya registrado o duplicado en el archivo'); vistos.add(`EMAIL:${email}`);
+    const email = instancia.email.toLowerCase();
+    if (tipo === 'ALUMNOS' && c.emails.has(email)) throw new ConflictException('Ya registrado: correo institucional');
+    if (tipo === 'ALUMNOS' && vistos.has(`EMAIL:${email}`)) throw new ConflictException('Repetido en archivo: correo institucional');
+    if (vistos.has(`EMAIL:${email}`) || c.emails.has(email)) throw new ConflictException('Correo ya registrado o duplicado en el archivo');
+    vistos.add(`EMAIL:${email}`);
     if (tipo === 'ALUMNOS' || tipo === 'DOCENTES') {
       const id = (tipo === 'ALUMNOS' ? (instancia as CrearAlumnoDto).matricula : (instancia as CrearDocenteDto).numEmpleado).toUpperCase();
-      if (vistos.has(`${tipo}:${id}`) || c.identificadores.has(id)) throw new ConflictException('Identificador ya registrado o duplicado en el archivo'); vistos.add(`${tipo}:${id}`);
+      if (tipo === 'ALUMNOS' && c.identificadores.has(id)) throw new ConflictException('Ya registrado: matrícula');
+      if (tipo === 'ALUMNOS' && vistos.has(`${tipo}:${id}`)) throw new ConflictException('Repetido en archivo: matrícula');
+      if (vistos.has(`${tipo}:${id}`) || c.identificadores.has(id)) throw new ConflictException('Identificador ya registrado o duplicado en el archivo');
+      vistos.add(`${tipo}:${id}`);
     }
     return { clase: 'CUENTA', tipo, instancia, ids } as const;
   }
