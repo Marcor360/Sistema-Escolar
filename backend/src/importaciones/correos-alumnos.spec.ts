@@ -27,7 +27,7 @@ describe('Correo dual en importación de alumnos', () => {
     expect(await validate(dto, { whitelist: true, forbidNonWhitelisted: true })).toHaveLength(0);
     expect(dto.email).toBe('estudiante@iua.edu.mx');
     expect(dto.correoPersonal).toBe('personal@example.test');
-    expect(dto.correoProveedor).toBe('GODADDY');
+    expect(dto.correoProveedor).toBe('MICROSOFT365');
     expect(datos).not.toHaveProperty('correoInstitucional');
   });
 
@@ -46,7 +46,7 @@ describe('Correo dual en importación de alumnos', () => {
     const dto = plainToInstance(CrearAlumnoDto, preparar({ ...alumno, email: 'alumno@example.test', correoProveedor: 'GoDaddy' }));
     expect(await validate(dto)).toHaveLength(0);
     expect(dto.email).toBe('alumno@example.test');
-    expect(dto.correoProveedor).toBe('MICROSOFT365');
+    expect(dto.correoProveedor).toBe('GODADDY');
   });
 
   it('rechaza encabezados email e institucional contradictorios', () => {
@@ -65,8 +65,8 @@ describe('Correo dual en importación de alumnos', () => {
 
   it('exige correo institucional válido y valida correo personal si se proporciona', async () => {
     for (const fila of [
-      { ...alumno, correoPersonal: 'personal@example.test' },
-      { ...alumno, correoInstitucional: 'alumno@iua.edu.mx', correoPersonal: 'sin-arroba' },
+      { ...alumno, correoPersonal: 'personal@example.test', correoProveedor: 'GoDaddy' },
+      { ...alumno, correoInstitucional: 'alumno@iua.edu.mx', correoPersonal: 'sin-arroba', correoProveedor: 'Microsoft 365' },
     ]) {
       const dto = plainToInstance(CrearAlumnoDto, preparar(fila));
       expect((await validate(dto)).some((e) => ['email', 'correoPersonal'].includes(e.property))).toBe(true);
