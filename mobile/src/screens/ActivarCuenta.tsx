@@ -77,7 +77,7 @@ export default function ActivarCuentaScreen({ volver, correoInicial = "" }: { vo
     } catch (fallo) { if (activa.current) setError(mensajeDeError(fallo)); }
     finally { enCurso.current = false; if (activa.current) setEnviando(false); }
   };
-  const deshabilitado = enviando || (paso === "correo" ? !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email.trim())
+  const deshabilitado = enviando || (paso === "correo" ? !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
     : paso === "codigo" ? !/^[a-f0-9]{64}$/.test(token) : password.length < 8 || !confirmacion);
   const textoBoton = enviando ? "Procesando…" : paso === "correo" ? "Continuar" : paso === "codigo" ? "Continuar" : "Activar cuenta";
 
