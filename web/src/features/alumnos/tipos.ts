@@ -1,3 +1,5 @@
+import type { ProveedorCorreo } from '../../components/SelectorProveedorCorreo';
+
 export interface Alumno {
   id: number;
   matricula: string;
@@ -13,4 +15,5 @@ export interface Resultado { datos: Alumno[]; total: number; pagina: number; por
 export const FORM_INICIAL = {
   matricula: '', nombre: '', apellidoPaterno: '', apellidoMaterno: '',
   email: '', telefono: '', fechaNacimiento: '', direccion: '', curp: '', tutorNombre: '', tutorTelefono: '', plantelId: '',
+  correoProveedor: 'MICROSOFT365' as ProveedorCorreo,
 };
