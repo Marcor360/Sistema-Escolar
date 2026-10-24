@@ -134,6 +134,7 @@ export class DocentesService {
         apellidoMaterno: dto.apellidoMaterno,
         telefono: dto.telefono,
         roles: ['MAESTRO'],
+        correoProveedor: dto.correoProveedor,
       }, manager);
       await manager.getRepository(Usuario).update({ id: usuario.id }, { activacionPendiente: true });
       const docentes = manager.getRepository(Docente);
@@ -158,12 +159,13 @@ export class DocentesService {
       const docente = await docentes.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!docente) throw new NotFoundException('Docente no encontrado');
       await this.validarAlcanceDocente(docente.usuarioId, user, true);
-      if ([dto.nombre, dto.apellidoPaterno, dto.apellidoMaterno, dto.telefono].some((v) => v !== undefined)) {
+      if ([dto.nombre, dto.apellidoPaterno, dto.apellidoMaterno, dto.telefono, dto.correoProveedor].some((v) => v !== undefined)) {
         await this.usuarios.actualizar(docente.usuarioId, {
           nombre: dto.nombre,
           apellidoPaterno: dto.apellidoPaterno,
           apellidoMaterno: dto.apellidoMaterno,
           telefono: dto.telefono,
+          correoProveedor: dto.correoProveedor,
         }, manager);
       }
       Object.assign(docente, {
@@ -232,6 +234,7 @@ export class DocentesService {
         usuario: {
           id: docente.usuario.id,
           email: docente.usuario.email,
+          correoProveedor: docente.usuario.correoProveedor,
           nombre: docente.usuario.nombre,
           apellidoPaterno: docente.usuario.apellidoPaterno,
           apellidoMaterno: docente.usuario.apellidoMaterno,
