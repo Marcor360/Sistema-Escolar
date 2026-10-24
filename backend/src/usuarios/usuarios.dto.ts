@@ -6,7 +6,7 @@ import { MaxLength, Min, MinLength as LongitudMinima } from 'class-validator';
 import { Transform as Normalizar } from 'class-transformer';
 import { ArrayNotEmpty, IsArray, IsBoolean, IsEmail, IsIn, IsOptional, IsString, MinLength } from 'class-validator';
 import { RolClave } from '../common/roles.decorator';
-import { ProveedorCorreo } from '../entities/usuario.entity';
+import type { ProveedorCorreo } from '../entities/usuario.entity';
 import { Type } from 'class-transformer';
 import { IsInt } from 'class-validator';
 import { PaginacionDto } from '../common/paginacion.dto';
