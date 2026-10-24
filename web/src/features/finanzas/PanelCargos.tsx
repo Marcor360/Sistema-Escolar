@@ -22,9 +22,9 @@ cargarCargos: (pagina?: number) => Promise<void>;
 }
 export function PanelCargos({ vista = 'legado', crearCargo, formCargo, setFormCargo, conceptos,  enviando, generarColegiaturas, formColegiaturas, setFormColegiaturas, ciclos, aplicarRecargos, resultadoCargos, corregir, cargarCargos }: Props) { return (<div id="panel-cargos" role="tabpanel" aria-label="Cargos" tabIndex={0}>
           {(vista === 'legado' || vista === 'nuevo') && <section className="panel">
-            <h2>Nuevo cargo individual</h2>
+            <h2>Asignar cargo adicional</h2><p>Busca al alumno por su matrícula o nombre completo. Selecciona un concepto autorizado; el cargo aparecerá en su estado de cuenta. Las colegiaturas se gestionan por su flujo independiente. Registrar un cargo no significa que ya se haya pagado.</p>
             <form onSubmit={crearCargo} className="fila">
-              <SelectorBuscable<Alumno> ruta="/finanzas/alumnos" valor={formCargo.alumnoId} cambiar={(id) => setFormCargo({ ...formCargo, alumnoId: id })} etiqueta="Alumno" texto={(a) => `${a.matricula} — ${a.usuario.nombre} ${a.usuario.apellidoPaterno}`} />
+              <SelectorBuscable<Alumno> ruta="/finanzas/alumnos" valor={formCargo.alumnoId} cambiar={(id) => setFormCargo({ ...formCargo, alumnoId: id })} etiqueta="Alumno" texto={(a) => `${a.matricula} — ${a.usuario.nombre} ${a.usuario.apellidoPaterno} ${a.usuario.apellidoMaterno ?? ''}`.trim()} />
               <div className="campo"><label htmlFor="finanzas-campo-1">Concepto</label>
                 <select id="finanzas-campo-1"
                   required value={formCargo.conceptoId}
@@ -39,7 +39,7 @@ export function PanelCargos({ vista = 'legado', crearCargo, formCargo, setFormCa
                   }}
                 >
                   <option value="">Selecciona…</option>
-                  {conceptos.filter((c) => !['BECA', 'DESCUENTO', 'RECARGO'].includes(c.tipo)).map((c) => <option key={c.id} value={c.id}>{c.clave} — {c.nombre}</option>)}
+                  {conceptos.filter((c) => !['BECA', 'DESCUENTO', 'RECARGO', 'COLEGIATURA'].includes(c.tipo)).map((c) => <option key={c.id} value={c.id}>{c.clave} — {c.nombre}</option>)}
                 </select>
               </div>
               <div className="campo"><label htmlFor="finanzas-campo-2">Descripción</label>
@@ -51,7 +51,7 @@ export function PanelCargos({ vista = 'legado', crearCargo, formCargo, setFormCa
               <div className="campo"><label htmlFor="descuento-cargo">Beca / descuento</label><input id="descuento-cargo" type="number" min={0} max={formCargo.monto || undefined} step="0.01" value={formCargo.descuento} onChange={(e) => setFormCargo({ ...formCargo, descuento: e.target.value })} /></div><div className="campo"><label htmlFor="finanzas-campo-4">Vence</label>
                 <input id="finanzas-campo-4" type="date" value={formCargo.fechaVencimiento} onChange={(e) => setFormCargo({ ...formCargo, fechaVencimiento: e.target.value })} />
               </div>
-              <button disabled={enviando} className="boton">Registrar cargo</button>
+              <button disabled={enviando} className="boton">Asignar cargo</button>
             </form>
           </section>}
 

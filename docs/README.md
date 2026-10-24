@@ -17,6 +17,7 @@ Entrada de lectura para la candidata 1.27.20. Revisión documental: 21 de octubr
 | Estado, clasificación y pendientes | [Estado de implementación](ESTADO_IMPLEMENTACION.md) |
 | Diseño y contratos | [Arquitectura](ARQUITECTURA.md), [API](API.md), [matriz de acceso](MATRIZ_ACCESO.md) |
 | Reglas académicas/financieras | [Reglas del piloto](REGLAS_PILOTO.md) |
+| Reinscripción por año, semestre o cuatrimestre y cargos opcionales | [Contrato de reinscripción y cargos](REINSCRIPCION_PERIODOS_Y_CARGOS_CONTRATO.md) (diseño pendiente; no implementado) |
 | Inactividad de API y migración | [Contrato integrado de #47–51](SESIONES_INACTIVIDAD_PLAN.md) |
 | Cierre local por inactividad | [Contrato de 30 minutos y límites](CIERRE_INACTIVIDAD_30M_2026-10-14.md) |
 | Requisito de acceso inicial | [Contrato de activación segura](REQUERIMIENTO_ACTIVACION_SEGURA.md) |
