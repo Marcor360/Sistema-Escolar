@@ -586,7 +586,9 @@ async function esperarServidor() {
         await expect.poll(() => new URL(page.url()).pathname).not.toBe(primeraRuta);
         await page.getByRole('button', { name: 'Anterior', exact: true }).click();
         await expect.poll(() => new URL(page.url()).pathname).toBe(primeraRuta);
-        await page.locator('#navegacion-escolar a[href="/alumnos"]').click({ force: true });
+        const abrirMenu = page.getByRole('button', { name: /Abrir menú/ });
+        if (await abrirMenu.isVisible()) await abrirMenu.click();
+        await page.locator('#navegacion-escolar a[href="/alumnos"]').click();
         await expect.poll(() => new URL(page.url()).pathname).toBe('/alumnos');
         await expect(page.getByRole('button', { name: /Registrar alumno/ })).toBeVisible();
         await page.getByRole('button', { name: 'Omitir recorrido' }).click();
