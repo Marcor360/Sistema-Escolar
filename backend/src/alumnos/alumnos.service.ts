@@ -191,6 +191,7 @@ export class AlumnosService {
         apellidoMaterno: dto.apellidoMaterno,
         telefono: dto.telefono,
         roles: ['ALUMNO'],
+        correoProveedor: dto.correoProveedor,
       }, manager);
       await manager.getRepository(Usuario).update({ id: usuario.id }, { activacionPendiente: true });
       const alumnos = manager.getRepository(Alumno);
@@ -224,6 +225,7 @@ export class AlumnosService {
           apellidoPaterno: dto.apellidoPaterno,
           apellidoMaterno: dto.apellidoMaterno,
           telefono: dto.telefono,
+          correoProveedor: dto.correoProveedor,
         }, manager);
       }
       Object.assign(alumno, {
