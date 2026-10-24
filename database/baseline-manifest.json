@@ -38,7 +38,8 @@
         "migracion_materias_contexto.sql",
         "migracion_temarios.sql",
         "migracion_aceptaciones_institucionales.sql",
-        "migracion_marca_opciones_globales.sql"
+        "migracion_marca_opciones_globales.sql",
+        "migracion_proveedor_correo_usuario.sql"
       ]
     },
     "sqlserver": {
@@ -77,7 +78,8 @@
         "migracion_materias_contexto.sql",
         "migracion_temarios.sql",
         "migracion_aceptaciones_institucionales.sql",
-        "migracion_marca_opciones_globales.sql"
+        "migracion_marca_opciones_globales.sql",
+        "migracion_proveedor_correo_usuario.sql"
       ]
     }
   }
