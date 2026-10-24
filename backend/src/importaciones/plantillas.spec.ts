@@ -72,7 +72,10 @@ it('alumnos: plantilla descargable con correos separados, selector desplegable y
   expect(COLUMNAS_PLANTILLA.ALUMNOS).not.toContain('email');
   expect(CABECERAS.ALUMNOS).toContain('email'); // Compatibilidad CSV previo.
   const columna = hoja.getColumn(COLUMNAS_PLANTILLA.ALUMNOS.indexOf('correoProveedor') + 1).letter;
-  const lista = hoja.dataValidations.find(`${columna}2`);
+  const validaciones = (hoja as unknown as { dataValidations: { find: (rango: string) => {
+    type: string; formulae: string[];
+  } | undefined } }).dataValidations;
+  const lista = validaciones.find(`${columna}2:${columna}501`);
   expect(lista?.type).toBe('list');
   expect(lista?.formulae).toEqual(['"Microsoft 365,GoDaddy"']);
   expect(hoja.rowCount).toBe(1); // La validación no debe crear 500 filas fantasma.
