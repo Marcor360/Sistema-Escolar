@@ -1,4 +1,4 @@
-import { proveedorCorreoPredeterminado } from '../entities/usuario.entity';
+import { proveedorCorreoPredeterminado } from '../common/proveedor-correo';
 import { CrearPersonalDto, ActualizarUsuarioDto } from './usuarios.dto';
 import { CrearAlumnoDto } from '../alumnos/alumnos.dto';
 import { CrearDocenteDto } from '../docentes/docentes.dto';
