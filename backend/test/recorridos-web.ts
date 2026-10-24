@@ -43,7 +43,9 @@ export async function recorridoWeb(d: Datos, tipo: 'academico' | 'financiero' | 
     await form.getByLabel('Segundo apellido').fill('Institucional'); await form.getByLabel('Teléfono del alumno', { exact: true }).fill('5550001111'); await form.getByLabel('Fecha de nacimiento').fill('2009-01-02'); await form.getByLabel('Dirección').fill('Calle escolar 12');
     await expect(form.getByLabel('Contraseña inicial')).toHaveCount(0);
     await form.getByLabel('CURP').fill('GODE561231HDFRRN09');
-    await form.getByLabel('Correo institucional *', { exact: true }).fill(`${matricula}@example.invalid`); await form.getByRole('button', { name: 'Registrar alumno', exact: true }).click();
+    await expect(form.getByLabel('Correo emisor de notificaciones')).toHaveValue('MICROSOFT365');
+    await form.getByLabel('Correo personal (opcional)', { exact: true }).fill(`contacto_${matricula}@example.invalid`);
+    await form.getByLabel('Correo institucional (acceso) *', { exact: true }).fill(`${matricula}@example.invalid`); await form.getByRole('button', { name: 'Registrar alumno', exact: true }).click();
     await expect(page.getByRole('status').filter({ hasText: `Expediente de ${matricula} registrado.` })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Continuar con apertura de cartera', exact: true })).toBeVisible();
     let fila = page.locator('tr').filter({ hasText: matricula }); await expect(fila).toBeVisible();
