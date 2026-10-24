@@ -79,5 +79,5 @@ it('alumnos: plantilla descargable con correos separados, selector desplegable y
   expect(lista?.type).toBe('list');
   expect(lista?.formulae).toEqual(['"Microsoft 365,GoDaddy"']);
   expect(hoja.rowCount).toBe(1); // La validación no debe crear 500 filas fantasma.
-  expect(String(libro.getWorksheet('Instrucciones')!.getCell('A5').value)).toContain('correo institucional');
+  expect(String(libro.getWorksheet('Instrucciones')!.getCell('A6').value)).toContain('Correo institucional');
 });
