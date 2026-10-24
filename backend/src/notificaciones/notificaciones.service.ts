@@ -128,6 +128,9 @@ export class NotificacionesService {
       this.logger.log(`ACEPTADO_GRAPH correlacion=${correlacion}; recepción en buzón no verificada`);
       return { simulado: false };
     }
+    if (proveedor !== 'GODADDY') {
+      throw new ServiceUnavailableException('Proveedor de correo no válido para esta cuenta');
+    }
     if (!this.transporter) {
       this.logger.log('SMTP no configurado: correo no enviado');
       return { simulado: true };

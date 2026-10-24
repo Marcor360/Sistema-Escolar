@@ -71,3 +71,24 @@ describe('Configuración de Microsoft Graph', () => {
     } as unknown as ConfigService)).toThrow('configuración de Microsoft Graph está incompleta');
   });
 });
+
+describe('Correo dual en recuperación de acceso', () => {
+  it('rechaza proveedor desconocido sin cambiar silenciosamente a GoDaddy', async () => {
+    const { servicio, graph } = crearServicio({ correoProveedor: 'OTRO' as Usuario['correoProveedor'] }, true);
+    await expect(servicio.enviarEmail('cuenta@ejemplo.test', 'Acceso', '<p>Privado</p>'))
+      .rejects.toBeInstanceOf(ServiceUnavailableException);
+    expect(graph.enviar).not.toHaveBeenCalled();
+  });
+
+  it.each(['ALUMNO', 'MAESTRO', 'ADMINISTRATIVO', 'FINANZAS', 'SUPERADMIN'])(
+    'usa Graph para recuperación de cuenta %s configurada como Microsoft 365', async clave => {
+      const { servicio, graph } = crearServicio({
+        correoProveedor: 'MICROSOFT365',
+        roles: [{ clave }] as Usuario['roles'],
+      }, true);
+      await expect(servicio.enviarEmail('cuenta@ejemplo.test', 'Recuperación de contraseña', '<p>Código</p>'))
+        .resolves.toEqual({ simulado: false });
+      expect(graph.enviar).toHaveBeenCalledTimes(1);
+    },
+  );
+});

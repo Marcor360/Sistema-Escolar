@@ -24,8 +24,8 @@ interface Catalogos {
 const trozos = <T>(filas: T[]) => Array.from({ length: Math.ceil(filas.length / 100) }, (_, i) => filas.slice(i*100,(i+1)*100));
 export const CABECERAS: Record<TipoImportacion, string[]> = {
   ALUMNOS: ['correoInstitucional', 'correoPersonal', 'correoProveedor', 'nombre', 'segundoNombre', 'apellidoPaterno', 'apellidoMaterno', 'matricula', 'plantelId', 'curp', 'fechaNacimiento', 'telefono', 'tutorNombre', 'tutorTelefono', 'direccion', 'email'],
-  DOCENTES: ['email', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'numEmpleado', 'plantelIds', 'cedulaProfesional', 'cedulaPendiente', 'especialidad', 'telefono'],
-  PERSONAL: ['email', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'roles', 'plantelIds', 'telefono'],
+  DOCENTES: ['email', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'numEmpleado', 'plantelIds', 'cedulaProfesional', 'cedulaPendiente', 'especialidad', 'telefono', 'correoProveedor'],
+  PERSONAL: ['email', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'roles', 'plantelIds', 'telefono', 'correoProveedor'],
   INSCRIPCIONES: ['matricula', 'grupoId'],
   CALIFICACIONES: ['grupoMateriaId', 'parcial', 'alumnoId', 'matricula', 'grado', 'calificacion', 'observaciones'],
 };
@@ -50,14 +50,18 @@ export class ImportacionesService {
       if (nuevo && anterior && nuevo !== anterior) throw new BadRequestException('correoInstitucional y email no coinciden');
       datos.email = nuevo || anterior;
       delete datos.correoInstitucional;
-      const elegido = String(datos.correoProveedor ?? '').trim();
-      if (elegido === 'Microsoft 365') datos.correoProveedor = 'MICROSOFT365';
-      else if (elegido === 'GoDaddy') datos.correoProveedor = 'GODADDY';
-      else if (!elegido) throw new BadRequestException('Selecciona correoProveedor: Microsoft 365 o GoDaddy');
       const segundo = String(datos.segundoNombre ?? '').trim();
       if (segundo) datos.nombre = `${String(datos.nombre ?? '').trim()} ${segundo}`.trim();
       delete datos.segundoNombre;
       if (datos.correoPersonal === undefined) delete datos.correoPersonal;
+    }
+    if (tipo === 'ALUMNOS' || tipo === 'DOCENTES' || tipo === 'PERSONAL') {
+      const elegido = String(datos.correoProveedor ?? '').trim();
+      if (elegido === 'Microsoft 365') datos.correoProveedor = 'MICROSOFT365';
+      else if (elegido === 'GoDaddy') datos.correoProveedor = 'GODADDY';
+      else if (tipo === 'ALUMNOS' && !elegido) {
+        throw new BadRequestException('Selecciona correoProveedor: Microsoft 365 o GoDaddy');
+      }
     }
     if (tipo === 'PERSONAL') datos.password = randomBytes(24).toString('base64url');
     if (tipo === 'DOCENTES' && datos.cedulaPendiente !== undefined) {

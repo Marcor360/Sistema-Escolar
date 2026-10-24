@@ -1,5 +1,5 @@
 {
-  "version": "1.27.40",
+  "version": "1.27.41",
   "alcance": "Escenarios de aceptación institucional sin resultados fabricados",
   "escenarios": [
     {
@@ -322,6 +322,21 @@
       ],
       "estado": "pendiente",
       "responsable": "Control Escolar, Finanzas y QA",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-25",
+      "rol": "SUPERADMIN",
+      "escenario": "Importar DOCENTES y PERSONAL mediante XLSX/CSV con Microsoft 365 o GoDaddy por fila o GoDaddy por omisión; comprobar envío de recuperación según proveedor, rechazo seguro y recepción real de correo.",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver",
+        "smtp"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable institucional por designar",
       "evidencias": []
     }
   ]
