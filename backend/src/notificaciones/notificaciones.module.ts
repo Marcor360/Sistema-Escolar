@@ -8,11 +8,12 @@ import { Alumno } from '../entities/alumno.entity';
 import { UsuarioPlantel } from '../entities/usuario-plantel.entity';
 import { PlantelesModule } from '../planteles/planteles.module';
 import { NotificacionesService } from './notificaciones.service';
+import { CorreoMicrosoftService } from './correo-microsoft.service';
 import { NotificacionesController } from './notificaciones.controller';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Notificacion, Usuario, Alumno, UsuarioPlantel]), PlantelesModule],
-  providers: [NotificacionesService, PushService],
+  providers: [NotificacionesService, PushService, CorreoMicrosoftService],
   controllers: [NotificacionesController, PushController],
   exports: [NotificacionesService],
 })
