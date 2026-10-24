@@ -14,6 +14,6 @@ export interface Resultado { datos: Alumno[]; total: number; pagina: number; por
 
 export const FORM_INICIAL = {
   matricula: '', nombre: '', apellidoPaterno: '', apellidoMaterno: '',
-  email: '', telefono: '', fechaNacimiento: '', direccion: '', curp: '', tutorNombre: '', tutorTelefono: '', plantelId: '',
+  email: '', correoPersonal: '', telefono: '', fechaNacimiento: '', direccion: '', curp: '', tutorNombre: '', tutorTelefono: '', plantelId: '',
   correoProveedor: 'MICROSOFT365' as ProveedorCorreo,
 };
