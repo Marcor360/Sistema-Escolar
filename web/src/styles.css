@@ -1191,3 +1191,28 @@ dialog button { max-width: 100%; min-height: 44px; white-space: normal; overflow
 .grafica-filtros { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 14px 0; }
 .grafica-filtros select { max-width: min(100%, 310px); }
 @media (prefers-reduced-motion: reduce) { .grafica-lineas *, .barras-cobranza * { animation: none !important; transition: none !important; } }
+
+
+/* Diálogos: superficie opaca y contraste independiente del tema del navegador. */
+dialog,
+dialog.recorrido-dialogo {
+  color-scheme: light;
+  background: var(--papel, #fff);
+  color: var(--tinta, #1c2528);
+  border: 1px solid var(--linea, #d8dcd6);
+  border-top: 4px solid var(--pizarra);
+}
+dialog :is(h1, h2, h3, p, label, legend, strong) { color: inherit; }
+dialog .recorrido-progreso { color: var(--pizarra); }
+dialog .recorrido-ayuda { color: #46575a; }
+dialog :is(.boton, button) { color-scheme: light; }
+dialog :is(.boton:not(.secundario), button:not(.secundario)) {
+  background-color: var(--pizarra);
+  color: var(--texto-sobre-pizarra, #fff);
+}
+dialog :is(.boton.secundario, button.secundario) {
+  background-color: #fff;
+  color: var(--pizarra);
+  border: 1px solid var(--pizarra);
+}
+dialog :is(.boton, button):focus-visible { outline: 3px solid var(--dorado); outline-offset: 3px; }
