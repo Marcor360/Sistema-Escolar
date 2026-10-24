@@ -16,7 +16,7 @@ export class Usuario {
   @Column({ type: String, length: 80, nullable: true }) apellidoMaterno!: string | null;
   @Column({ type: String, length: 20, nullable: true }) telefono!: string | null;
   @Column({ default: true }) activo!: boolean;
-  @Column({ name: 'correo_proveedor', type: 'varchar', length: 20, default: 'GODADDY' }) correoProveedor!: ProveedorCorreo;
+  @Column({ name: 'correo_proveedor', type: String, length: 20, default: 'GODADDY' }) correoProveedor!: ProveedorCorreo;
   @Column({ default: false }) passwordChangeRequired!: boolean;
   @Column({ default: false }) activacionPendiente!: boolean;
   @Column({ name: 'session_version', type: 'int', default: 0 }) sessionVersion!: number;
