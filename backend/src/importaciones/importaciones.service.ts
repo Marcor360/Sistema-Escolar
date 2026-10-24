@@ -130,7 +130,6 @@ export class ImportacionesService {
     if (tipo === 'ALUMNOS' && c.emails.has(email)) throw new ConflictException('Ya registrado: correo institucional');
     if (tipo === 'ALUMNOS' && vistos.has(`EMAIL:${email}`)) throw new ConflictException('Repetido en archivo: correo institucional');
     if (vistos.has(`EMAIL:${email}`) || c.emails.has(email)) throw new ConflictException('Correo ya registrado o duplicado en el archivo');
-    vistos.add(`EMAIL:${email}`);
     if (tipo === 'ALUMNOS' || tipo === 'DOCENTES') {
       const id = (tipo === 'ALUMNOS' ? (instancia as CrearAlumnoDto).matricula : (instancia as CrearDocenteDto).numEmpleado).toUpperCase();
       if (tipo === 'ALUMNOS' && c.identificadores.has(id)) throw new ConflictException('Ya registrado: matrícula');
@@ -138,6 +137,7 @@ export class ImportacionesService {
       if (vistos.has(`${tipo}:${id}`) || c.identificadores.has(id)) throw new ConflictException('Identificador ya registrado o duplicado en el archivo');
       vistos.add(`${tipo}:${id}`);
     }
+    vistos.add(`EMAIL:${email}`);
     return { clase: 'CUENTA', tipo, instancia, ids } as const;
   }
   private async evaluarAlumnos(filas: Fila[], c: Catalogos) {
