@@ -213,8 +213,8 @@ export default function PerfilScreen({ abrirDocumentos }: { abrirDocumentos?: ()
               <Text style={base.secundario}>Tutor: {perfil.tutorNombre}</Text>
             )}
             <Text style={base.secundario}>Estatus: {perfil.estatus}</Text>
-            <Text style={base.secundario}>Correo personal: {perfil.usuario.correoPersonal || "Sin registrar"}</Text>
-            <Text style={base.secundario}>Teléfono: {perfil.usuario.telefono || "Sin registrar"}</Text>
+            <Text style={base.secundario}>Correo personal: {perfil.usuario?.correoPersonal || "Sin registrar"}</Text>
+            <Text style={base.secundario}>Teléfono: {perfil.usuario?.telefono || "Sin registrar"}</Text>
             <Text style={base.secundario}>Nacimiento: {perfil.fechaNacimiento || "Sin registrar"}</Text>
             <Text style={base.secundario}>Teléfono del tutor: {perfil.tutorTelefono || "Sin registrar"}</Text>
             <Text style={base.secundario}>Dirección: {perfil.direccion || "Sin registrar"}</Text>
@@ -229,8 +229,8 @@ export default function PerfilScreen({ abrirDocumentos }: { abrirDocumentos?: ()
               accessibilityLabel="Editar mis datos de contacto" onPress={() => {
                 setErrorEdicion("");
                 setEdicion({
-                  correoPersonal: perfil.usuario.correoPersonal || "",
-                  telefono: perfil.usuario.telefono || "",
+                  correoPersonal: perfil.usuario?.correoPersonal || "",
+                  telefono: perfil.usuario?.telefono || "",
                   fechaNacimiento: perfil.fechaNacimiento || "",
                   tutorNombre: perfil.tutorNombre || "",
                   tutorTelefono: perfil.tutorTelefono || "",
