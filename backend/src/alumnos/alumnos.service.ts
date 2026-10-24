@@ -116,7 +116,7 @@ export class AlumnosService {
       tutorNombre: alumno.tutorNombre,
       tutorTelefono: alumno.tutorTelefono,
       direccion: alumno.direccion,
-      usuario: { ...publico.usuario, email: alumno.usuario.email, telefono: alumno.usuario.telefono },
+      usuario: { ...publico.usuario, email: alumno.usuario.email, telefono: alumno.usuario.telefono, correoProveedor: alumno.usuario.correoProveedor },
     };
   }
 
