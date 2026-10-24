@@ -11,6 +11,8 @@ export function RecorridoInicial({ usuarioId, roles, pasos }: Props) {
   const clave = usuarioId ? claveRecorrido(usuarioId, roles) : '';
   const [actual, setActual] = useState<number | null>(() => clave && pasos.length && !completado(clave) ? 0 : null);
   const navigate = useNavigate();
+  const navegar = useRef(navigate);
+  useEffect(() => { navegar.current = navigate; }, [navigate]);
   const location = useLocation();
   const panel = useRef<HTMLElement>(null);
 
@@ -24,8 +26,8 @@ export function RecorridoInicial({ usuarioId, roles, pasos }: Props) {
   const destino = actual === null ? null : pasos[Math.min(actual, pasos.length - 1)]?.destino;
   useEffect(() => {
     if (destino === null || !destino) return;
-    navigate(destino);
-  }, [destino, navigate]);
+    navegar.current(destino);
+  }, [destino]);
 
   useEffect(() => {
     if (actual === null || !destino || location.pathname !== destino) return;
