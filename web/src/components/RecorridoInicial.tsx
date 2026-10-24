@@ -34,7 +34,7 @@ export function RecorridoInicial({ usuarioId, roles, pasos }: Props) {
     const enlace = Array.from(document.querySelectorAll<HTMLAnchorElement>('#navegacion-escolar a[href]'))
       .find(elemento => new URL(elemento.href).pathname === destino);
     enlace?.classList.add('recorrido-destacado');
-    enlace?.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+    enlace?.scrollIntoView({ block: 'nearest', behavior: 'auto' });
     panel.current?.focus();
     return () => enlace?.classList.remove('recorrido-destacado');
   }, [actual, destino, location.pathname]);
