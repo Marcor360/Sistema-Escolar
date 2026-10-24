@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, mensajeDeError } from '../api/client';
 import { Encabezado } from '../components/Encabezado';
+import { PerfilAlumnoEditable } from '../components/PerfilAlumnoEditable';
 import { useAuth } from '../auth/AuthContext';
 
 interface PerfilActual {
@@ -87,6 +88,7 @@ export default function CuentaPage() {
             <button type="button" className="boton secundario" onClick={() => window.dispatchEvent(new Event('escolar:reiniciar-recorrido'))}>Ver recorrido</button>
           </div>
         </section>
+        {perfil?.roles.some((r) => r.clave === 'ALUMNO') && <PerfilAlumnoEditable />}
         <section className="panel cuenta-seguridad">
           <h2>Cambiar contraseña</h2>
         <p>Por seguridad, al actualizarla deberás iniciar sesión nuevamente.</p>
