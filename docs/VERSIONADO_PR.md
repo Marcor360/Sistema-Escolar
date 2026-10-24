@@ -1,6 +1,6 @@
 # Política de versiones por pull request
 
-**Corte: 21/oct/2026.** Base de #165: `main` **1.27.19** (`9a09ed6`). Entrega preparatoria: **1.27.20**. **1.28.0** identifica solo la versión objetivo futura del reglamento; no la entrega de este PR. La siguiente entrega pequeña deberá usar 1.27.21 o una versión superior, comprobando siempre la base remota.
+**Corte: 24/oct/2026.** Esta entrega propone **1.27.40** sobre `main` **1.27.39**. Consultar siempre la versión de la rama base remota; los títulos de PR no reservan versiones. La versión objetivo 1.28.0 del reglamento sigue pendiente de aprobación y desarrollo.
 
 ## Numeración
 

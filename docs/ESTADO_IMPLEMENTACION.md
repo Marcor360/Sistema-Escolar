@@ -1,6 +1,6 @@
-# Estado de implementación — candidata 1.27.20
+# Estado de implementación — candidata 1.27.40
 
-Corte documental: 21 de octubre de 2026. Base: `main` 1.27.19 (`9a09ed6`), tras integrar #164. La candidata 1.27.20 añade el [anexo técnico propuesto de evaluaciones](IMPLEMENTACION_EVALUACIONES_1.28.0.md) y actualiza Vitest en las herramientas de pruebas. Conserva las reglas funcionales de calificaciones, escala 0–100 y P1–P3/Final; no implementa NP ni asistencia. La versión objetivo 1.28.0 queda pendiente de aprobación y desarrollo.
+Corte documental: 24 de octubre de 2026. Base: `main` 1.27.39 (`e4b815e`), con #180–186 integrados. Esta entrega limpia documentación y estilos sin uso, actualiza referencias y metadatos; no añade funciones ni migraciones. La propuesta de evaluación 1.28.0 sigue pendiente de aprobación: se conservan escala 0–100 y P1–P3/Final.
 
 ## Clasificación
 
@@ -19,21 +19,23 @@ Marca en #163: entrada web PNG/JPEG/WebP ≤20 MiB, salida/API WebP ≤10 MiB, m
 | Calendario | Consulta, alta, PATCH y baja; autorización de origen/destino y revision completa para conflictos; web conserva ámbito al editar | Uso real y posibles vistas/exportaciones futuras |
 | Documentos | Boleta propia por ciclo/inscripción y enlace de dos minutos; concentrados y adeudos Excel | Formatos oficiales y abrir/guardar PDF en Android/iOS |
 | Biblioteca | Administración privada por plantel; carpetas, PNG/JPEG/PDF, firma/MIME, ClamAV obligatorio, cuota y enlaces revocables | Scanner real, ACL, conservación y restore; no concede acceso a alumno/maestro |
-| Importaciones | ALUMNOS/DOCENTES/PERSONAL/INSCRIPCIONES, hasta 500 filas/5 MB; plantillas legibles, IDs visibles, preview por actor 15 minutos y confirmación atómica | Ensayo institucional de entrega y activación por correo; cuentas nuevas permanecen pendientes sin SMTP operativo |
+| Importaciones | ALUMNOS/DOCENTES/PERSONAL/INSCRIPCIONES, hasta 500 filas/5 MB; plantillas legibles, IDs visibles, preview cifrado por actor de 15 minutos; alumnos nuevos válidos se confirman en transacción, existentes se omiten e inválidos se exportan para corrección | Ensayo institucional de entrega y activación por correo; cuentas nuevas permanecen pendientes sin SMTP operativo |
 | Web | Recorridos guiados, tablas adaptables, teclado/foco, estados y errores; permisos revalidados en API | UAT por rol/plantel, Edge y auditoría integral de accesibilidad |
 | Móvil | Cinco pestañas (Inicio, Materias, Calificaciones, Pagos y Perfil); tareas desde Materias; Perfil → Mis documentos; boletas y materiales por materia, enlaces restringidos al origen/ruta, lectura en memoria hasta cinco minutos, aislamiento por identidad | Build firmado y pruebas físicas; no guarda PDF ni firmas en caché y no confirma tareas/pagos offline |
 | Finanzas | Cargos/pagos, idempotencia, cancelación/anulación, conciliación, origen estable tras traslado y cobranza auditable | Openpay sandbox real, SMTP y aceptación contable |
 | Conducta y analítica | Incidencias internas, seguimiento y métricas por capacidad/alcance | Política de conservación y validación de indicadores; sin objetivos académicos implementados |
 | Push | Opt-in, dispositivo/sesión, cola y recibos; deshabilitado por defecto | EAS/FCM/APNs y entrega física |
-| Base | Baseline v1 y 19 incrementales espejo según el manifiesto; DB_SYNC=false, runner y pruebas de ambos motores | Estado del servidor real y ensayo en copia histórica |
+| Base | Baseline v1 y migraciones incrementales espejo según el manifiesto vigente; DB_SYNC=false, runner y pruebas de ambos motores | Estado del servidor real y ensayo en copia histórica |
 | ETL | Planteles/alumnos, dry-run y siete pruebas | Esquema certweb sanitizado, TLS/mapeos/conciliación; no apto para migración general |
 | Operación | Scripts Windows/IIS, despliegue manual, health live/ready, rollback de código; README informa staging 1.27.17 | Verificar versión efectiva del host, alertas, respaldo cifrado externo y restore con RPO/RTO observado |
 
-## Evidencia técnica
+## Cambios consolidados y evidencia técnica
 
-- [CI de #163, ejecución 39644029772](https://github.com/Marcor360/Sistema-Escolar/actions/runs/39644029772): ocho jobs aprobados para `301d7f1a94bdd296b7048cfb9be41e9fb03925c0`, integrado mediante `fd2b9dc`. Incluye backend/web/mobile, MySQL, SQL Server, ETL, scripts Windows y recorridos web.
-- Verificación local de esa entrega: backend 365 pruebas en 68 suites; web 200 en 50 archivos; móvil 117 en 21 archivos y 11 controles auxiliares; lint/tipos/build web satisfactorios. Son resultados de ese código, no una ejecución nueva de cada versión.
-- Cada candidata debe comprobar su SHA final; los resultados previos no certifican commits posteriores. Las pruebas automatizadas no certifican IIS/ACL, teléfonos, proveedores externos ni restore institucional.
+- #180–182: correo GoDaddy/Microsoft 365 por usuario, correo personal y proveedor en importación; carga parcial sin duplicados y perfil propio editable web/Expo. El proveedor es obligatorio en cada fila de alumno en el contrato actual.
+- #183–185: diálogos legibles, tutorial navegable repetible desde Configuración y teléfono del alumno junto a los correos.
+- #186: activación Expo por correo/código/contraseña; espera de reenvío de 60 segundos persistida. El backend conserva código y caducidad, serializa solicitudes y mantiene respuesta genérica. La aceptación del proveedor no demuestra recepción.
+- [CI de #186](https://github.com/Marcor360/Sistema-Escolar/actions/runs/40061064901): 8 jobs aprobados para `325c2dac4f251a72d895c549d64bc711ebc7a26b`, integrado mediante `e4b815e`. Incluye MySQL, SQL Server y recorridos con API/base reales. Estos resultados corresponden a ese SHA, no certifican automáticamente esta candidata.
+- Cada entrega valida su SHA final. CI no certifica IIS/ACL, teléfonos, recepción de correo, proveedores externos ni restauración institucional.
 
 ## Pendientes actuales
 
@@ -46,4 +48,4 @@ Marca en #163: entrada web PNG/JPEG/WebP ≤20 MiB, salida/API WebP ≤10 MiB, m
 | Accesibilidad y app física (#141) | [Matriz UAT](UAT_MATRIZ_2026-10-15.json), Android/iOS, lectores de pantalla, red y sesiones. |
 | Operación y datos | [Puertas beta](BETA_ACEPTACION.json): SMTP, antivirus real, restore y UAT. ETL requiere esquema sanitizado, TLS y conciliación. |
 
-Las ocho puertas institucionales y los trece escenarios UAT permanecen pendientes. El consentimiento institucional y la política de inscripción ordinaria conservan su habilitación explícita; esta limpieza no los activa. Staging 1.27.17 sigue siendo la última versión informada por el operador en README; no se obtuvo evidencia nueva del host. La app instalada requiere compilación/actualización para ejecutar cambios nuevos.
+Las ocho puertas institucionales y los 24 escenarios UAT permanecen pendientes. El consentimiento institucional y la política de inscripción ordinaria conservan su habilitación explícita; esta limpieza no los activa. El informe histórico de staging 1.27.17 no acredita la versión actual del host; comprobar health y release activa. No se obtuvo evidencia nueva del servidor. La app instalada requiere compilación/actualización para ejecutar cambios nuevos.
