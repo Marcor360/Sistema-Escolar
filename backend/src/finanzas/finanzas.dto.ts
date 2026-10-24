@@ -12,6 +12,13 @@ export class ListarCargosDto extends PaginacionDto {
   @IsOptional() @Matches(/^\d{4}-(0[1-9]|1[0-2])$/) periodo?: string;
 }
 
+export class ListarPendientesDto extends PaginacionDto {
+  @Type(() => Number) @IsInt() @Min(1) plantelId!: number;
+  @IsOptional() @IsIn(['TODOS', 'VENCIDOS', 'POR_VENCER']) situacion?: 'TODOS' | 'VENCIDOS' | 'POR_VENCER';
+  @IsOptional() @Transform(({ value }: { value: unknown }) => value === 'true' ? true : value === 'false' ? false : value)
+  @IsBoolean() sinAbono?: boolean;
+}
+
 export class ListarPagosDto extends PaginacionDto {
   @IsOptional() @Type(() => Number) @IsInt() alumnoId?: number;
 }
@@ -84,6 +91,7 @@ export class MotivoFinancieroDto {
 export class CobranzaDto {
   @Type(() => Number) @IsInt() @Min(1) plantelId!: number;
   @OpcionalNoNulo() @IsBoolean() confirmado?: boolean;
+  @OpcionalNoNulo() @IsBoolean() soloSinAbono?: boolean;
 }
 
 export class AplicarPagoDto extends MotivoFinancieroDto {

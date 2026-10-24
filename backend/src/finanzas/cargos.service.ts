@@ -417,12 +417,12 @@ export class CargosService {
       matricula: alumno.matricula,
       estatus: alumno.estatus,
       plantelId: alumno.plantelId,
-      ...(incluirContacto ? { usuarioId: alumno.usuarioId } : {}),
+      ...(incluirContacto ? { usuarioId: alumno.usuarioId, tutorTelefono: alumno.tutorTelefono } : {}),
       usuario: alumno.usuario ? {
         nombre: alumno.usuario.nombre,
         apellidoPaterno: alumno.usuario.apellidoPaterno,
         nombreCompleto: alumno.usuario.nombreCompleto,
-        ...(incluirContacto ? { email: alumno.usuario.email } : {}),
+        ...(incluirContacto ? { email: alumno.usuario.email, telefono: alumno.usuario.telefono } : {}),
       } : undefined,
     };
   }

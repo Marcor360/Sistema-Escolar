@@ -1184,3 +1184,10 @@ dialog button { max-width: 100%; min-height: 44px; white-space: normal; overflow
   .barra-superior .campana { position: static; }
   .barra-superior .campana-panel { max-width: 100%; }
 }
+
+/* Cobranza: gráficos SVG adaptables y tabla accesible de valores. */
+.grafica-lineas-contenedor { width: 100%; overflow-x: auto; }
+.grafica-lineas { display: block; width: 100%; min-width: 300px; height: auto; max-height: 320px; }
+.grafica-filtros { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 14px 0; }
+.grafica-filtros select { max-width: min(100%, 310px); }
+@media (prefers-reduced-motion: reduce) { .grafica-lineas *, .barras-cobranza * { animation: none !important; transition: none !important; } }

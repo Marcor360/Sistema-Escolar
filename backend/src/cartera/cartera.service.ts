@@ -2,23 +2,75 @@ import { condicionBusquedaAlumno } from '../common/busqueda-alumno';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { createHash } from 'crypto';
 import { DataSource, EntityManager, In } from 'typeorm';
-import { Alumno, AperturaCartera, BitacoraFinanciera, Cargo, CicloEscolar, ConceptoPago, Grupo, Plantel } from '../entities';
+import { Alumno, AperturaCartera, BitacoraFinanciera, Cargo, CicloEscolar, ConceptoPago, Grupo, Inscripcion, PeriodoAcademico, Plantel } from '../entities';
 import { AgrupacionRegularService } from '../academico/agrupacion-regular.service';
 import { validarContextoGrupo } from '../catalogos-academicos/contexto-grupo';
 import { esConflictoTransaccional, esConflictoUnico } from '../academico/conflictos';
 import { JwtUser } from '../common/current-user.decorator';
 import { ScopeService } from '../planteles/scope.service';
-import { ConfirmarCarteraDto, ListarCarteraDto, PrevisualizarCarteraDto } from './cartera.dto';
+import { ConfirmarCarteraDto, ConfirmarReinscripcionDto, ListarCarteraDto, PrevisualizarCarteraDto, PrevisualizarReinscripcionDto } from './cartera.dto';
 const hash = (valor: unknown) => createHash('sha256').update(JSON.stringify(valor)).digest('hex');
 @Injectable()
 export class CarteraService {
   constructor(private readonly ds: DataSource, private readonly scope: ScopeService, private readonly agrupacion: AgrupacionRegularService) {}
+  async trayectoria(alumnoId: number, u: JwtUser) {
+    const alumno = await this.ds.getRepository(Alumno).findOneBy({ id: alumnoId });
+    if (!alumno) throw new NotFoundException('Alumno no encontrado');
+    await this.scope.validarGestion(u, alumno.plantelId);
+    const inscripciones = await this.ds.getRepository(Inscripcion).find({
+      where: { alumnoId, grupo: { tipo: 'REGULAR' } }, order: { id: 'DESC' }, take: 30,
+    });
+    const ultima = inscripciones
+      .filter(i => i.grupo.periodoAcademicoId !== null)
+      .sort((a,b) => b.grupo.ciclo.fechaInicio.localeCompare(a.grupo.ciclo.fechaInicio) || b.id-a.id)[0];
+    if (!ultima) throw new ConflictException('El alumno aún no tiene periodo académico regular registrado');
+    const periodo = await this.ds.getRepository(PeriodoAcademico).findOneBy({ id: ultima.grupo.periodoAcademicoId! });
+    if (!periodo) throw new ConflictException('El periodo de origen no está registrado');
+    return {
+      alumno: { id: alumno.id, matricula: alumno.matricula, nombre: alumno.usuario.nombreCompleto, plantelId: alumno.plantelId },
+      origen: { inscripcionId: ultima.id, grupo: ultima.grupo.nombre, cicloId: ultima.grupo.cicloId, nivelId: ultima.grupo.nivelId,
+        carreraId: ultima.grupo.carreraId, periodoAcademicoId: periodo.id, periodo: periodo.nombre, tipo: periodo.tipo, numero: periodo.numero,
+        turno: ultima.grupo.turno, fechaFin: ultima.grupo.ciclo.fechaFin },
+      advertencia: 'Las calificaciones y materias pendientes requieren validación de Control Escolar; una reinscripción no las aprueba automáticamente.',
+    };
+  }
+  private async validarReinscripcion(m: EntityManager, d: PrevisualizarReinscripcionDto, u: JwtUser) {
+    if (!u.roles.some(r => ['ADMINISTRATIVO','FINANZAS','SUPERADMIN'].includes(r))) throw new ConflictException('Se requiere permiso de gestión para reinscribir');
+    const alumno = await m.getRepository(Alumno).findOne({ where: { id: d.alumnoId }, lock: { mode: 'pessimistic_write' } });
+    if (!alumno || alumno.estatus !== 'ACTIVO' || !alumno.usuario.activo || alumno.plantelId !== d.plantelId) throw new ConflictException('El alumno no está activo en ese plantel');
+    await this.scope.validarGestion(u, d.plantelId);
+    const origen = await m.getRepository(Inscripcion).findOne({ where: { id: d.origenInscripcionId, alumnoId: d.alumnoId } });
+    if (!origen || origen.grupo.tipo !== 'REGULAR' || !origen.grupo.periodoAcademicoId) throw new ConflictException('La inscripción anterior no es válida');
+    const destino = await m.getRepository(PeriodoAcademico).findOneBy({ id: d.periodoAcademicoId, cicloId: d.cicloId, carreraId: d.carreraId, plantelId: d.plantelId });
+    const anterior = await m.getRepository(PeriodoAcademico).findOneBy({ id: origen.grupo.periodoAcademicoId });
+    if (!destino?.activo || !anterior || !anterior.activo || destino.tipo !== anterior.tipo ||
+      origen.grupo.carreraId !== d.carreraId || origen.grupo.nivelId !== d.nivelId || origen.grupo.plantelId !== d.plantelId)
+      throw new ConflictException('El destino debe respetar el mismo nivel, plan y modalidad de periodo');
+    const ciclo = await m.getRepository(CicloEscolar).findOneBy({ id: d.cicloId });
+    if (!ciclo || origen.grupo.ciclo.estado !== 'CERRADO' || ciclo.estado !== 'PREPARACION')
+      throw new ConflictException('La reinscripción exige ciclo de origen cerrado y ciclo de destino en preparación');
+    if (ciclo.fechaInicio <= origen.grupo.ciclo.fechaFin)
+      throw new ConflictException('El destino debe estar en un ciclo posterior al de origen; el cambio dentro del mismo ciclo necesita migración del historial académico');
+    if ((destino.numero !== anterior.numero + 1) && (!d.motivo || d.motivo.trim().length < 10))
+      throw new BadRequestException('El retroceso, repetición o salto requiere un motivo detallado de al menos 10 caracteres');
+    if (d.ajustes?.length && !u.roles.some(r => ['FINANZAS','SUPERADMIN'].includes(r))) throw new BadRequestException('Solo Finanzas puede autorizar ajustes de colegiatura');
+    if (d.ajustes?.length && d.ajustes.length > 10) throw new BadRequestException('Máximo 10 ajustes de tarifa por operación');
+    return { origen, anterior, destino };
+  }
+  previsualizarReinscripcion(d: PrevisualizarReinscripcionDto, u: JwtUser) {
+    return this.previsualizar(d, u);
+  }
+  confirmarReinscripcion(d: ConfirmarReinscripcionDto, u: JwtUser) {
+    return this.confirmar(d, u);
+  }
+
   private async cotizar(m: EntityManager, d: PrevisualizarCarteraDto, u: JwtUser) {
     await this.scope.validarGestion(u, d.plantelId);
     const pl = await m.getRepository(Plantel).findOne({ where: { id: d.plantelId }, lock: { mode: 'pessimistic_write' } });
     const ciclo = await m.getRepository(CicloEscolar).findOneBy({ id: d.cicloId });
     if (!pl?.activo || !ciclo || !['PREPARACION','ACTIVO'].includes(ciclo.estado)) throw new ConflictException('Plantel y ciclo no disponibles');
     await validarContextoGrupo(m, d);
+    if ('origenInscripcionId' in d) await this.validarReinscripcion(m, d as PrevisualizarReinscripcionDto, u);
     const a = await m.getRepository(Alumno).findOneBy({ id: d.alumnoId, plantelId: d.plantelId });
     if (!a || a.estatus !== 'ACTIVO' || !a.usuario.activo) throw new ConflictException('Selecciona un alumno activo del plantel');
     if (d.grupoId) {
@@ -29,8 +81,13 @@ export class CarteraService {
     const conceptos = await m.getRepository(ConceptoPago).find({ where: { id: In(d.conceptoIds), activo: true }, order: { id: 'ASC' }, lock: { mode: 'pessimistic_read' } });
     if (conceptos.length !== d.conceptoIds.length || conceptos.some(c => ['BECA','DESCUENTO','RECARGO'].includes(c.tipo) || c.montoBase <= 0)) throw new ConflictException('Selecciona conceptos de cobro activos con tarifa positiva definida por Finanzas');
     if (conceptos.filter(c => c.tipo === 'COLEGIATURA').length > 1) throw new ConflictException('Selecciona una sola colegiatura por mes');
-    const precios = conceptos.map(c => ({ conceptoId: c.id, clave: c.clave, nombre: c.nombre, tipo: c.tipo, monto: c.montoBase, periodo: d.periodo, fechaVencimiento: d.fechaVencimiento }));
-    const contexto = { alumnoId: d.alumnoId, plantelId: d.plantelId, cicloId: d.cicloId, nivelId: d.nivelId, carreraId: d.carreraId, periodoAcademicoId: d.periodoAcademicoId, turno: d.turno, grupoId: d.grupoId ?? null };
+    const ajustes = 'ajustes' in d ? (d as PrevisualizarReinscripcionDto).ajustes ?? [] : [];
+    if (ajustes.some(a => !conceptos.some(c => c.id === a.conceptoId && c.tipo === 'COLEGIATURA')))
+      throw new BadRequestException('Los ajustes autorizados solo aplican a la colegiatura seleccionada');
+    const precios = conceptos.map(c => ({ conceptoId: c.id, clave: c.clave, nombre: c.nombre, tipo: c.tipo,
+      monto: ajustes.find(a => a.conceptoId === c.id)?.monto ?? c.montoBase,
+      periodo: d.periodo, fechaVencimiento: d.fechaVencimiento }));
+    const contexto = { alumnoId: d.alumnoId, plantelId: d.plantelId, cicloId: d.cicloId, nivelId: d.nivelId, carreraId: d.carreraId, periodoAcademicoId: d.periodoAcademicoId, turno: d.turno, grupoId: d.grupoId ?? null, ...('origenInscripcionId' in d ? { origenInscripcionId: (d as PrevisualizarReinscripcionDto).origenInscripcionId, motivo: (d as PrevisualizarReinscripcionDto).motivo ?? null, ajustes } : {}) };
     return { conceptos: precios, total: Math.round(precios.reduce((n,c) => n+c.monto, 0)*100)/100, cotizacion: hash({ contexto, precios }), contexto };
   }
   previsualizar(d: PrevisualizarCarteraDto, u: JwtUser) { return this.ds.transaction('READ COMMITTED', m => this.cotizar(m, d, u)); }
@@ -51,7 +108,7 @@ export class CarteraService {
         const precio = await this.cotizar(m, d, u);
         if (d.cotizacion !== precio.cotizacion) throw new ConflictException('La cotización cambió; vuelve a previsualizar y confirmar');
         const apertura = await repo.save(repo.create({ idempotencia: d.idempotencia, peticionHash, alumnoId: d.alumnoId, plantelId: d.plantelId, cicloId: d.cicloId, creadoPorId: u.sub, estado: 'PENDIENTE', conceptos: precio.conceptos, solicitudId: null }));
-        const resultado = await this.agrupacion.solicitar(m, d, u);
+        const resultado = await this.agrupacion.solicitar(m, d, u, 'origenInscripcionId' in d);
         await repo.update(apertura.id, { solicitudId: resultado.solicitud.id });
         const asignadas = resultado.asignadas.length ? await repo.find({ where: { solicitudId: In(resultado.asignadas) }, order: { id: 'ASC' } }) : [];
         for (const a of asignadas) {
@@ -70,7 +127,7 @@ export class CarteraService {
           }
           await repo.update(a.id, { estado: 'ABIERTA', conceptos: a.conceptos });
         }
-        await m.getRepository(BitacoraFinanciera).insert({ usuarioId: u.sub, plantelId: d.plantelId, accion: 'APERTURA_CARTERA', entidad: 'apertura', entidadId: apertura.id, detalle: `solicitudId=${resultado.solicitud.id}; cotizacion=${precio.cotizacion}` });
+        await m.getRepository(BitacoraFinanciera).insert({ usuarioId: u.sub, plantelId: d.plantelId, accion: 'APERTURA_CARTERA', entidad: 'apertura', entidadId: apertura.id, detalle: `solicitudId=${resultado.solicitud.id}; cotizacion=${precio.cotizacion}${'origenInscripcionId' in d ? `; reinscripcionOrigen=${(d as ConfirmarReinscripcionDto).origenInscripcionId}; motivo=${(d as ConfirmarReinscripcionDto).motivo ?? 'AVANCE'}; ajustes=${JSON.stringify((d as ConfirmarReinscripcionDto).ajustes ?? [])}` : ''}`.slice(0, 500) });
         return this.proyectar(await repo.findOneOrFail({ where: { id: apertura.id }, relations: { solicitud: true } }));
       });
     } catch (e) { if (esConflictoUnico(e) || esConflictoTransaccional(e)) throw new ConflictException('La apertura cambió concurrentemente; consulta el resultado y reintenta con la misma clave'); throw e; }
