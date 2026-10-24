@@ -4,6 +4,7 @@ import { Transform as Normalizar } from 'class-transformer';
 import { ArrayNotEmpty, IsArray, IsEmail, IsIn, IsInt, IsOptional, IsString, IsBoolean, ValidateIf, MinLength } from 'class-validator';
 import { Type } from 'class-transformer';
 import { PaginacionDto } from '../common/paginacion.dto';
+import { ProveedorCorreo } from '../entities/usuario.entity';
 
 export class ListarDocentesDto extends PaginacionDto {
   @IsOptional() @IsString() buscar?: string;
@@ -11,6 +12,7 @@ export class ListarDocentesDto extends PaginacionDto {
 }
 
 export class CrearDocenteDto {
+  @OpcionalNoNulo() @IsIn(['GODADDY', 'MICROSOFT365']) correoProveedor?: ProveedorCorreo;
   @IsArray() @ArrayNotEmpty() @Type(() => Number) @IsInt({ each: true }) plantelIds!: number[];
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim().toLowerCase() : value)
   @IsEmail() @MaxLength(120) email!: string;
@@ -34,6 +36,7 @@ export class CrearDocenteDto {
 }
 
 export class ActualizarDocenteDto {
+  @OpcionalNoNulo() @IsIn(['GODADDY', 'MICROSOFT365']) correoProveedor?: ProveedorCorreo;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @OpcionalNoNulo() @IsString() @LongitudMinima(1) @MaxLength(80) nombre?: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
