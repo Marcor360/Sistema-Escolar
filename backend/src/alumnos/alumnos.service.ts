@@ -219,7 +219,7 @@ export class AlumnosService {
         await this.scope.validarGestion(user, alumno.plantelId);
         if (dto.plantelId) await this.scope.validarGestion(user, dto.plantelId);
       }
-      if ([dto.nombre, dto.apellidoPaterno, dto.apellidoMaterno, dto.telefono].some((v) => v !== undefined)) {
+      if ([dto.nombre, dto.apellidoPaterno, dto.apellidoMaterno, dto.telefono, dto.correoProveedor].some((v) => v !== undefined)) {
         await this.usuarios.actualizar(alumno.usuarioId, {
           nombre: dto.nombre,
           apellidoPaterno: dto.apellidoPaterno,
