@@ -1,6 +1,7 @@
 import { FormEvent } from 'react';
 import type * as React from 'react';
 import { FORM_INICIAL } from './tipos';
+import { SelectorProveedorCorreo } from '../../components/SelectorProveedorCorreo';
 import type { Plantel } from './tipos';
 
 interface Props {
@@ -89,6 +90,8 @@ export function FormularioAlumno({
               <input id="alumno-correo" type="email" required maxLength={120} disabled={!nuevo}
                 autoComplete="email" {...dar('email')} />
             </div>
+            <SelectorProveedorCorreo id="alumno-correo-proveedor" value={form.correoProveedor}
+              onChange={(correoProveedor) => setForm((anterior) => ({ ...anterior, correoProveedor }))} />
             {nuevo && <div className="aviso-credenciales" role="note">
               <strong>Primer acceso del alumno</strong>
               <p>La matrícula solo identifica su expediente: no es una contraseña. El alumno solicitará un código de activación enviado a su correo, establecerá una contraseña y después podrá iniciar sesión. Si no tiene acceso al correo, Control escolar deberá resolverlo mediante un canal institucional autorizado.</p><p>Al registrar el expediente todavía no se asigna un grupo ni materias. Después Control Escolar debe completar la apertura de cartera en el plantel y ciclo que correspondan.</p>
