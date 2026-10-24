@@ -1,7 +1,7 @@
 import { ApiBearerAuth, ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiConsumes, ApiBody, ApiResponse } from '@nestjs/swagger';
 import { ApiErroresOperacion } from '../common/api-operacion';
 import { PreviewImportacionRespuestaDto, ConfirmacionImportacionRespuestaDto } from './respuestas.dto';
-import { BadRequestException, Body, Controller, Get, Post, Query, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { crearPlantillaImportacion } from './plantillas';
@@ -32,7 +32,18 @@ export class ImportacionesController {
   preview(@Body() dto: TipoImportacionDto, @UploadedFile() archivo: Express.Multer.File, @CurrentUser() user: JwtUser) {
     if (!archivo?.buffer) throw new BadRequestException('Adjunta CSV o XLSX'); return this.service.preview(dto.tipo, archivo.buffer, archivo.originalname, user);
   }
-  @ApiOperation({ summary: 'Consumir preview del actor y confirmar lote atómicamente; revalida alcance y duplicados' })
+  @ApiOperation({ summary: 'Descargar XLSX de filas inválidas del preview propio de alumnos; no incluye duplicados' })
+  @ApiOkResponse({ content: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': { schema: { type: 'string', format: 'binary' } } } })
+  @Get('correcciones/:previewId')
+  async correcciones(@Param('previewId', new ParseUUIDPipe({ version: '4' })) previewId: string,
+    @CurrentUser() user: JwtUser, @Res() res: Response) {
+    const buffer = await this.service.plantillaCorrecciones(previewId, user);
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="alumnos_para_corregir.xlsx"');
+    res.send(buffer);
+  }
+  @ApiOperation({ summary: 'Confirmar importación; alumnos válidos se guardan y duplicados o errores se omiten sin bloquear el lote' })
   @ApiCreatedResponse({ type: ConfirmacionImportacionRespuestaDto })
   @Post('confirmar') confirmar(@Body() dto: ConfirmarImportacionDto, @CurrentUser() user: JwtUser) { return this.service.confirmar(dto.previewId, dto.confirmado, user); }
 }
