@@ -14,7 +14,7 @@ import { Alumno, Docente, Usuario, UsuarioPlantel, Plantel, Grupo, CicloEscolar,
 import { exigirGrupoConfigurable } from '../common/contexto-academico';
 import { leerArchivo } from './lectura';
 import { TipoImportacion } from './importaciones.dto';
-import { proveedorCorreoPredeterminado } from '../entities/usuario.entity';
+import { proveedorCorreoPredeterminado } from '../common/proveedor-correo';
 import { PreviewCifrado } from './preview-cifrado';
 type Fila = Record<string,string>;
 interface Catalogos {
