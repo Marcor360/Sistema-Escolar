@@ -71,7 +71,7 @@ export default function OperacionesPage() {
             {preview.identificadores.map((i) => <tr key={i.fila}><td data-etiqueta="Fila">{i.fila}</td><td data-etiqueta="Identificador">{i.identificador}</td></tr>)}
           </tbody></table></div>
           <button type="button" disabled={enviando || !preview.previewId} onClick={async () => {
-            if (!preview.previewId || !await confirmacion.solicitar(`¿Importar ${preview.validos} alumnos nuevos? Los existentes y los incorrectos se omitirán.`)) return;
+            if (!preview.previewId || !await confirmacion.solicitar(`¿Confirmar ${preview.validos} ${tipo === 'ALUMNOS' ? 'alumnos nuevos' : 'registros'}? ${tipo === 'ALUMNOS' ? 'Los existentes y los incorrectos se omitirán.' : 'Se aplicarán únicamente si todo el lote es válido.'}`)) return;
             const id = preview.previewId;
             setEtapa('Importando únicamente alumnos nuevos y válidos…');
             void operar(async () => {
@@ -79,10 +79,10 @@ export default function OperacionesPage() {
               const { data } = await api.post<{ total: number; insertados: number; existentes: number; rechazados: number; activacion: string | null }>(
                 '/importaciones/confirmar', { previewId: id, confirmado: true });
               trabajo.guardado();
-              setMensaje(`Archivo de ${data.total} registros: ${data.insertados} alumnos nuevos importados, ${data.existentes} ya registrados, ${data.rechazados} por corregir. ${data.activacion || ''}`);
+              setMensaje(`Archivo de ${data.total} registros: ${data.insertados} importados, ${data.existentes} ya registrados, ${data.rechazados} por corregir. ${data.activacion || ''}`);
               setPreview(null);
             });
-          }}>Importar {preview.validos} alumnos nuevos</button></>}
+          }}>Importar {preview.validos} {tipo === 'ALUMNOS' ? 'alumnos nuevos' : 'registros'}</button></>}
       </section>}
     </section>}
     {!soloFinanzas && (legado || trabajo.modo==='promover') && <section className="panel"><h2>Promoción al siguiente ciclo</h2><p>Selecciona un grupo de ciclo cerrado y un destino de ciclo en preparación, dentro del mismo plantel.</p>
