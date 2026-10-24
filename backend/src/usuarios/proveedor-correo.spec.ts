@@ -20,9 +20,13 @@ describe('Política de proveedor del correo emisor', () => {
   });
 
   it('usa el mismo contrato opcional en alumnos, docentes y personal', () => {
-    for (const dto of [CrearAlumnoDto, CrearDocenteDto, CrearPersonalDto]) {
-      const errores = validateSync(plainToInstance(dto, { correoProveedor: 'OTRO' }));
-      expect(errores.some((e) => e.property === 'correoProveedor')).toBe(true);
+    const errores = [
+      validateSync(plainToInstance(CrearAlumnoDto, { correoProveedor: 'OTRO' })),
+      validateSync(plainToInstance(CrearDocenteDto, { correoProveedor: 'OTRO' })),
+      validateSync(plainToInstance(CrearPersonalDto, { correoProveedor: 'OTRO' })),
+    ];
+    for (const validacion of errores) {
+      expect(validacion.some((e) => e.property === 'correoProveedor')).toBe(true);
     }
   });
 });
