@@ -4,6 +4,12 @@ import {
 } from 'typeorm';
 import { Rol } from './rol.entity';
 
+export type ProveedorCorreo = 'GODADDY' | 'MICROSOFT365';
+
+export function proveedorCorreoPredeterminado(roles: readonly string[]): ProveedorCorreo {
+  return roles.includes('ALUMNO') ? 'MICROSOFT365' : 'GODADDY';
+}
+
 @Entity('usuarios')
 export class Usuario {
   @PrimaryGeneratedColumn() id!: number;
@@ -14,6 +20,7 @@ export class Usuario {
   @Column({ type: String, length: 80, nullable: true }) apellidoMaterno!: string | null;
   @Column({ type: String, length: 20, nullable: true }) telefono!: string | null;
   @Column({ default: true }) activo!: boolean;
+  @Column({ name: 'correo_proveedor', type: 'varchar', length: 20, default: 'GODADDY' }) correoProveedor!: ProveedorCorreo;
   @Column({ default: false }) passwordChangeRequired!: boolean;
   @Column({ default: false }) activacionPendiente!: boolean;
   @Column({ name: 'session_version', type: 'int', default: 0 }) sessionVersion!: number;
