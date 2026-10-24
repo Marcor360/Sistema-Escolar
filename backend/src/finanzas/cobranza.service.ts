@@ -9,6 +9,7 @@ import { CargosService } from './cargos.service';
 import { BitacoraFinancieraService } from './bitacora-financiera.service';
 import { JwtUser } from '../common/current-user.decorator';
 import { ScopeService } from '../planteles/scope.service';
+import { ListarPendientesDto } from './finanzas.dto';
 const redondear = (n: number) => Math.round(n * 100) / 100;
 const escapar = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c);
 @Injectable()
@@ -36,15 +37,18 @@ export class CobranzaService implements OnModuleInit, OnModuleDestroy {
     if (this.timerAutomaticos) clearInterval(this.timerAutomaticos);
   }
 
-  async enviarAvisos(user: JwtUser, plantelId?: number, preview = false, confirmado = false, soloVencidos = false) {
+  async enviarAvisos(user: JwtUser, plantelId?: number, preview = false, confirmado = false, soloVencidos = false, soloSinAbono = false) {
     if (!plantelId) throw new BadRequestException('Selecciona un plantel para esta operación');
     if (!preview && !confirmado) throw new BadRequestException('Revisa la previsualización y confirma la operación');
     if (!await this.plantillas.findOneBy({ clave: 'AVISO_ADEUDO' })) throw new BadRequestException('Falta la plantilla AVISO_ADEUDO');
     const dia = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
     const adeudos = (await this.cargos.adeudos(user, plantelId, true))
       .filter((cargo) => !soloVencidos || (cargo.fechaVencimiento !== null && cargo.fechaVencimiento < dia));
+    const abonado = new Map<number, number>();
+    for (const cargo of adeudos) abonado.set(cargo.alumnoId, (abonado.get(cargo.alumnoId) ?? 0) + cargo.pagado);
     const porAlumno = new Map<number, { usuarioId: number; saldo: number; cargos: string[] }>();
     for (const c of adeudos) {
+      if (c.alumno.estatus !== 'ACTIVO' || (soloSinAbono && (abonado.get(c.alumnoId) ?? 0) > 0)) continue;
       const actual = porAlumno.get(c.alumnoId) ?? { usuarioId: c.alumno.usuarioId, saldo: 0, cargos: [] };
       actual.saldo = redondear(actual.saldo + c.saldo); actual.cargos.push(`${c.id}:${c.saldo}`); porAlumno.set(c.alumnoId, actual);
     }
@@ -109,6 +113,48 @@ export class CobranzaService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  /** Unifica saldos por alumno sin publicar teléfonos fuera del rol FINANZAS. */
+  async pendientes(user: JwtUser, q: ListarPendientesDto) {
+    await this.scope.validarGestion(user, q.plantelId);
+    const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City',
+      year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    const cargos = await this.cargos.adeudos(user, q.plantelId, true);
+    const porAlumno = new Map<number, {
+      alumnoId: number; matricula: string; nombre: string; telefono: string | null; email: string | null;
+      saldo: number; abonado: number; numeroCargos: number; primerVencimiento: string | null; vencidos: number;
+    }>();
+    for (const c of cargos) {
+      if (c.alumno.estatus !== 'ACTIVO') continue;
+      const contacto = c.alumno as typeof c.alumno & { tutorTelefono?: string | null; usuario: typeof c.alumno.usuario & { email?: string; telefono?: string | null } };
+      const linea = porAlumno.get(c.alumnoId) ?? {
+        alumnoId: c.alumnoId, matricula: c.alumno.matricula, nombre: c.alumno.usuario?.nombreCompleto ?? c.alumno.matricula,
+        telefono: contacto.tutorTelefono || contacto.usuario?.telefono || null,
+        email: contacto.usuario?.email || null, saldo: 0, abonado: 0,
+        numeroCargos: 0, primerVencimiento: null, vencidos: 0,
+      };
+      linea.saldo = redondear(linea.saldo + c.saldo);
+      linea.abonado = redondear(linea.abonado + c.pagado);
+      linea.numeroCargos++;
+      if (c.fechaVencimiento && (!linea.primerVencimiento || c.fechaVencimiento < linea.primerVencimiento))
+        linea.primerVencimiento = c.fechaVencimiento;
+      if (c.fechaVencimiento && c.fechaVencimiento < hoy) linea.vencidos++;
+      porAlumno.set(c.alumnoId, linea);
+    }
+    const datos = [...porAlumno.values()].filter(a =>
+      (q.sinAbono !== true || a.abonado === 0) &&
+      (q.situacion !== 'VENCIDOS' || a.vencidos > 0) &&
+      (q.situacion !== 'POR_VENCER' || a.vencidos === 0),
+    ).sort((a, b) => b.vencidos - a.vencidos || b.saldo - a.saldo || a.matricula.localeCompare(b.matricula));
+    const pagina = q.pagina || 1, porPagina = q.porPagina || 10;
+    return {
+      datos: datos.slice((pagina - 1) * porPagina, pagina * porPagina),
+      total: datos.length, pagina, porPagina,
+      resumen: { alumnosConSaldo: porAlumno.size, sinAbono: [...porAlumno.values()].filter(a => a.abonado === 0).length,
+        conAbonoParcial: [...porAlumno.values()].filter(a => a.abonado > 0).length,
+        vencidos: [...porAlumno.values()].filter(a => a.vencidos > 0).length },
+      nota: 'Sin abono significa sin pagos aplicados a los cargos aún pendientes; no indica falta de pagos históricos.',
+    };
+  }
   async listar(user: JwtUser, pagina = 1) {
     const planteles = await this.scope.resolverFiltro(user);
     const [datos, total] = await this.ds.getRepository(CobranzaEnvio).findAndCount({ where: planteles === null ? {} : { plantelId: In(planteles) }, order: { id: 'DESC' }, skip: (pagina - 1) * 10, take: 10 });

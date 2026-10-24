@@ -18,6 +18,10 @@ it('genera una sola colegiatura si dos solicitudes llegan simultaneamente', asyn
     const concepto = await conceptos.save(conceptos.create({
       clave: 'COL', nombre: 'Colegiatura integracion', tipo: 'COLEGIATURA', montoBase: 100,
     }));
+    const manual = await ctx.api('/finanzas/cargos', { method: 'POST', token, body: {
+      alumnoId: ctx.alumnoId, conceptoId: concepto.id, descripcion: 'Colegiatura manual no permitida', monto: 100,
+    } });
+    expect(manual.response.status).toBe(400);
     const body = { cicloId: ciclo.id, periodo: '2026-09', monto: 100, plantelId: ctx.plantelId, confirmado: true };
     const [primera, segunda] = await Promise.all([
       ctx.api('/finanzas/cargos/generar-colegiaturas', { method: 'POST', token, body }),
@@ -74,17 +78,26 @@ it('acepta pagos parciales y rechaza exceder el saldo restante', async () => {
     const token = await ctx.emitirToken(admin.email);
     const concepto = await ctx.api('/finanzas/conceptos', {
       method: 'POST', token,
-      body: { clave: `FM${ctx.sufijo}`, nombre: 'Cargo manual integración', tipo: 'COLEGIATURA', montoBase: 200 },
+      body: { clave: `FM${ctx.sufijo}`, nombre: 'Cargo manual integración', tipo: 'OTRO', montoBase: 200 },
     });
     expect(concepto.response.status).toBe(201);
+    const claveCargo = randomUUID();
     const cargo = await ctx.api('/finanzas/cargos', {
       method: 'POST', token,
       body: {
-        alumnoId: ctx.alumnoId, conceptoId: concepto.data.id, descripcion: 'Cargo manual', monto: 200,
+        alumnoId: ctx.alumnoId, conceptoId: concepto.data.id, descripcion: 'Cargo manual', monto: 200, claveIdempotencia: claveCargo,
         descuento: 0, fechaVencimiento: '2027-06-01',
       },
     });
     expect(cargo.response.status).toBe(201);
+    const repetirCargo = (monto: number) => ctx.api('/finanzas/cargos', { method: 'POST', token, body: {
+      alumnoId: ctx.alumnoId, conceptoId: concepto.data.id, descripcion: 'Cargo manual', monto,
+      descuento: 0, fechaVencimiento: '2027-06-01', claveIdempotencia: claveCargo,
+    } });
+    const repetido = await repetirCargo(200);
+    expect(repetido.response.status).toBe(201);
+    expect(repetido.data.id).toBe(cargo.data.id);
+    expect((await repetirCargo(201)).response.status).toBe(409);
 
     const claveParcial = randomUUID();
     const parcial = await ctx.api('/finanzas/pagos', {

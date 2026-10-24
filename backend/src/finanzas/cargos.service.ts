@@ -1,3 +1,4 @@
+import { condicionBusquedaAlumno } from '../common/busqueda-alumno';
 import { CicloEscolar } from '../entities/ciclo-escolar.entity';
 import { BadRequestException, ForbiddenException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -94,12 +95,12 @@ export class CargosService {
   async listarAlumnosFinancieros(query: ListarCargosDto, user: JwtUser) {
     const planteles = await this.scope.resolverFiltro(user);
     const qb = this.dataSource.getRepository(Alumno).createQueryBuilder('a').innerJoin('a.usuario', 'u')
-      .select(['a.id', 'a.matricula', 'u.id', 'u.nombre', 'u.apellidoPaterno']);
+      .select(['a.id', 'a.matricula', 'u.id', 'u.nombre', 'u.apellidoPaterno', 'u.apellidoMaterno']);
     if (planteles !== null) qb.where('(a.plantel_id IN (:...planteles) OR EXISTS (SELECT 1 FROM cargos c WHERE c.alumno_id = a.id AND c.plantel_id IN (:...planteles)) OR EXISTS (SELECT 1 FROM pagos p WHERE p.alumno_id = a.id AND p.plantel_id IN (:...planteles)))', { planteles });
-    if (query.buscar?.trim()) qb.andWhere('(a.matricula LIKE :buscar OR u.nombre LIKE :buscar OR u.apellido_paterno LIKE :buscar)', { buscar: `%${query.buscar.trim()}%` });
+    if (query.buscar?.trim()) qb.andWhere(condicionBusquedaAlumno('a', 'u'), { buscar: `%${query.buscar.trim()}%` });
     const pagina = query.pagina || 1, porPagina = query.porPagina || 10;
     const [datos, total] = await qb.orderBy('a.matricula', 'ASC').skip((pagina - 1) * porPagina).take(porPagina).getManyAndCount();
-    return { datos: datos.map((a) => ({ id: a.id, matricula: a.matricula, usuario: { nombre: a.usuario.nombre, apellidoPaterno: a.usuario.apellidoPaterno } })), total, pagina, porPagina };
+    return { datos: datos.map((a) => ({ id: a.id, matricula: a.matricula, usuario: { nombre: a.usuario.nombre, apellidoPaterno: a.usuario.apellidoPaterno, apellidoMaterno: a.usuario.apellidoMaterno } })), total, pagina, porPagina };
   }
 
   async obtener(id: number) {
@@ -119,27 +120,52 @@ export class CargosService {
       throw new BadRequestException('El monto debe ser positivo y el descuento no puede excederlo');
     }
     const concepto = await this.conceptos.obtener(dto.conceptoId);
-    if (!concepto.activo || ['BECA', 'DESCUENTO', 'RECARGO'].includes(concepto.tipo)) throw new BadRequestException('Selecciona un concepto de cobro activo; la beca o descuento se aplica como descuento del cargo');
+    if (!concepto.activo || ['BECA', 'DESCUENTO', 'RECARGO', 'COLEGIATURA'].includes(concepto.tipo)) throw new BadRequestException('Selecciona un concepto adicional activo: colegiaturas, descuentos y recargos tienen su flujo independiente');
     const alumno = await this.alumnos.obtener(dto.alumnoId, user);
-    return this.dataSource.transaction(async (manager) => {
-      const cargos = manager.getRepository(Cargo);
-      const cargo = await cargos.save(
-        cargos.create({
-          alumnoId: dto.alumnoId, plantelId: alumno.plantelId,
-          conceptoId: dto.conceptoId,
-          cicloId: dto.cicloId ?? null,
-          periodo: dto.periodo ?? null,
-          descripcion: dto.descripcion,
-          monto: dto.monto,
-          descuento: dto.descuento ?? 0,
-          fechaVencimiento: dto.fechaVencimiento ?? null,
-        }),
-      );
-      await this.bitacora.registrar(
-        user.sub, 'CREAR_CARGO', 'cargo', cargo.id, `${dto.descripcion} $${dto.monto}`, alumno.plantelId, manager,
-      );
-      return cargo;
-    });
+    try {
+      return await this.dataSource.transaction(async (manager) => {
+        const cargos = manager.getRepository(Cargo);
+        const clave = dto.claveIdempotencia ? `MANUAL:${dto.claveIdempotencia}` : null;
+        if (clave) {
+          const previo = await cargos.findOne({ where: { claveGeneracion: clave }, lock: { mode: 'pessimistic_write' } });
+          if (previo) {
+            await this.scope.validarGestion(user, previo.plantelId);
+            const propio = await manager.getRepository(BitacoraFinanciera).existsBy({
+              usuarioId: user.sub, plantelId: previo.plantelId, entidad: 'cargo', entidadId: previo.id, accion: 'CREAR_CARGO',
+            });
+            if (!propio || previo.plantelId !== alumno.plantelId || previo.alumnoId !== dto.alumnoId ||
+                previo.conceptoId !== dto.conceptoId || previo.descripcion !== dto.descripcion ||
+                previo.monto !== dto.monto || previo.descuento !== (dto.descuento ?? 0) ||
+                previo.cicloId !== (dto.cicloId ?? null) || previo.periodo !== (dto.periodo ?? null) ||
+                previo.fechaVencimiento !== (dto.fechaVencimiento ?? null)) {
+              throw new ConflictException('La clave de la operación corresponde a otro cargo');
+            }
+            return this.proyectarCargoFinanciero({ ...previo, alumno: previo.alumno ?? alumno });
+          }
+        }
+        const cargo = await cargos.save(
+          cargos.create({
+            claveGeneracion: clave,
+            alumnoId: dto.alumnoId, plantelId: alumno.plantelId,
+            conceptoId: dto.conceptoId,
+            cicloId: dto.cicloId ?? null,
+            periodo: dto.periodo ?? null,
+            descripcion: dto.descripcion,
+            monto: dto.monto,
+            descuento: dto.descuento ?? 0,
+            fechaVencimiento: dto.fechaVencimiento ?? null,
+          }),
+        );
+        await this.bitacora.registrar(
+          user.sub, 'CREAR_CARGO', 'cargo', cargo.id, `${dto.descripcion} $${dto.monto}`, alumno.plantelId, manager,
+        );
+        return this.proyectarCargoFinanciero({ ...cargo, alumno });
+  
+      });
+    } catch (error) {
+      if (esConflictoUnico(error)) throw new ConflictException('El cargo ya fue registrado; consulta el listado antes de reintentar');
+      throw error;
+    }
   }
 
   async cancelar(id: number, motivo: string, user: JwtUser) {
@@ -391,12 +417,12 @@ export class CargosService {
       matricula: alumno.matricula,
       estatus: alumno.estatus,
       plantelId: alumno.plantelId,
-      ...(incluirContacto ? { usuarioId: alumno.usuarioId } : {}),
+      ...(incluirContacto ? { usuarioId: alumno.usuarioId, tutorTelefono: alumno.tutorTelefono } : {}),
       usuario: alumno.usuario ? {
         nombre: alumno.usuario.nombre,
         apellidoPaterno: alumno.usuario.apellidoPaterno,
         nombreCompleto: alumno.usuario.nombreCompleto,
-        ...(incluirContacto ? { email: alumno.usuario.email } : {}),
+        ...(incluirContacto ? { email: alumno.usuario.email, telefono: alumno.usuario.telefono } : {}),
       } : undefined,
     };
   }

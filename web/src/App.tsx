@@ -10,6 +10,7 @@ import { Shell } from './layout/Shell';
 const TemariosPage = lazy(() => import('./pages/Temarios'));
 const CicloFichaPage = lazy(() => import('./pages/CicloFicha'));
 const AperturaCarteraPage = lazy(() => import('./pages/AperturaCartera'));
+const ReinscribirAlumnoPage = lazy(() => import('./pages/ReinscribirAlumno'));
 const RecursamientosPage = lazy(() => import('./pages/Recursamientos'));
 const ProgramasEspecialesPage = lazy(() => import('./pages/ProgramasEspeciales'));
 const CatalogosAcademicosPage = lazy(() => import('./pages/CatalogosAcademicos'));
@@ -78,6 +79,7 @@ export default function App() {
             <Route path="/materias" element={<ModuloTrabajo titulo="Materias y ciclos" acciones={[{titulo:'Registrar materia',detalle:'Clasificación y créditos',vista:'nuevo'},{titulo:'Consultar materias',detalle:'Buscar, editar y vincular planes y periodos',vista:'consulta'},{titulo:'Consultar ciclos',detalle:'Revisar preparación, activación y cierre',vista:'ciclos'},{titulo:'Preparar ciclo',detalle:'Registrar fechas sin activar el ciclo',vista:'ciclo-nuevo'}]} vistas={['editar', 'ciclo-editar', 'contextos']}><MateriasPage /></ModuloTrabajo>} />
             <Route path="/apertura-cartera" element={<AperturaCarteraPage />} />
             <Route path="/apertura-cartera/nueva" element={<AperturaCarteraPage />} />
+            <Route path="/apertura-cartera/reinscribir" element={<ReinscribirAlumnoPage />} />
             <Route path="/programas-especiales" element={<ProgramasEspecialesPage />} />
             <Route path="/programas-especiales/:id" element={<ProgramasEspecialesPage />} />
             <Route path="/programas-especiales/:id/grupos/:grupo" element={<ProgramasEspecialesPage />} />
@@ -104,7 +106,8 @@ export default function App() {
           </Route>
 
           <Route element={<RutaProtegida roles={['FINANZAS']} />}>
-            <Route path="/finanzas" element={<ModuloTrabajo titulo="Finanzas" acciones={[{titulo:'Consultar cargos',detalle:'Consultar y corregir cargos existentes',vista:'cargos'},{titulo:'Registrar cargo',detalle:'Cargo individual',vista:'cargo-nuevo'},{titulo:'Generar colegiaturas',detalle:'Previsualizar y confirmar por plantel',vista:'colegiaturas'},{titulo:'Consultar pagos',detalle:'Consultar y anular pagos según permisos',vista:'pagos'},{titulo:'Registrar pago',detalle:'Registrar una operación con idempotencia',vista:'pago-nuevo'},{titulo:'Adeudos y cobranza',detalle:'Consultar saldos, exportar y enviar avisos',vista:'adeudos'},{titulo:'Conciliación',detalle:'Resolver incidencias y consultar auditoría',vista:'conciliacion'},{titulo:'Catálogo de conceptos',detalle:'Administrar conceptos y tarifas',vista:'conceptos'}]} vistas={[]}><FinanzasPage /></ModuloTrabajo>} />
+            <Route path="/finanzas/reinscribir" element={<ReinscribirAlumnoPage />} />
+            <Route path="/finanzas" element={<ModuloTrabajo titulo="Finanzas" acciones={[{titulo:'Reinscribir alumno',detalle:'Avanzar a nuevo ciclo desde un expediente existente y cotizar la nueva cartera',vista:'reinscribir'}, {titulo:'Indicadores de cobranza',detalle:'Ingresos, alumnos con saldo y evolución por mes',vista:'indicadores'}, {titulo:'Seguimiento de alumnos sin pago',detalle:'Consultar contactos y programar avisos institucionales',vista:'contactos'}, {titulo:'Consultar cargos',detalle:'Consultar y corregir cargos existentes',vista:'cargos'},{titulo:'Asignar cargos adicionales',detalle:'Titulación, certificados, recursamiento y otros servicios autorizados (sin colegiaturas)',vista:'cargo-nuevo'},{titulo:'Generar colegiaturas',detalle:'Previsualizar y confirmar por plantel',vista:'colegiaturas'},{titulo:'Consultar pagos',detalle:'Consultar y anular pagos según permisos',vista:'pagos'},{titulo:'Registrar pago',detalle:'Registrar una operación con idempotencia',vista:'pago-nuevo'},{titulo:'Adeudos y cobranza',detalle:'Consultar saldos, exportar y enviar avisos',vista:'adeudos'},{titulo:'Conciliación',detalle:'Resolver incidencias y consultar auditoría',vista:'conciliacion'},{titulo:'Catálogo de conceptos',detalle:'Administrar conceptos y tarifas',vista:'conceptos'}]} vistas={[]}><FinanzasPage /></ModuloTrabajo>} />
           </Route>
 
           <Route element={<RutaProtegida roles={['ADMINISTRATIVO', 'FINANZAS', 'MAESTRO']} />}>
