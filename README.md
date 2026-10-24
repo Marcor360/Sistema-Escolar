@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.27.33`** · Estado: PR pendiente de pruebas e integración; **no demuestra despliegue adicional**. Staging confirmado por el operador en **1.27.17** (commit `8579ab4`), con API `/health/ready` local y HTTPS correctas. La app Expo instalada en dispositivos **no se actualiza automáticamente**.
+**Versión candidata: `1.27.34`** · Estado: PR pendiente de pruebas e integración; **no demuestra despliegue adicional**. Staging confirmado por el operador en **1.27.17** (commit `8579ab4`), con API `/health/ready` local y HTTPS correctas. La app Expo instalada en dispositivos **no se actualiza automáticamente**.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -18,6 +18,9 @@ Sistema escolar multiplataforma para operación académica, administrativa y fin
 Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [índice documental](docs/README.md) e [historial de documentos retirados](docs/HISTORIAL.md).
 
 ### Funcionalidad destacada de versiones recientes
+
+- **1.27.34 (PR dependiente de #181):** alumno edita datos de contacto y tutor en web/Expo mediante `PATCH /alumnos/me/perfil` exclusivo del titular; importación masiva parcial de nuevos válidos, omisión de existentes, selector de correo obligatorio y XLSX de correcciones solo con filas erróneas. [Flujo y restricciones](docs/IMPORTACION_PARCIAL_Y_PERFIL_1.27.34.md).
+
 
 - **1.27.33 (PR dependiente de #180):** importación masiva de alumnos con correo institucional de acceso, correo personal de contacto y selección de remitente Microsoft 365/GoDaddy por fila en Excel. Compatibilidad con CSV anterior, migración aditiva de correo personal, previsualización y confirmación transaccional conservadas. Ver [guía](docs/CARGA_MASIVA_ALUMNOS_CORREOS.md).
 
