@@ -34,6 +34,7 @@ export default function ActivarCuentaScreen({ volver, correoInicial = "" }: { vo
 
   useEffect(() => {
     let vigente = true;
+    setCooldownHasta(0);
     void SecureStore.getItemAsync(CLAVE_REENVIO).then(valor => {
       if (!vigente || !valor) return;
       const registro: unknown = JSON.parse(valor);
@@ -46,7 +47,8 @@ export default function ActivarCuentaScreen({ volver, correoInicial = "" }: { vo
   }, [email]);
 
   const pedirCodigo = async () => {
-    if (enCurso.current || !activa.current || (paso !== "correo" && restante > 0)) return;
+    if (enCurso.current || !activa.current) return;
+    if (restante > 0) { setPaso("codigo"); return; }
     enCurso.current = true;
     setEnviando(true); setError(""); setMensaje("");
     try {
@@ -55,7 +57,7 @@ export default function ActivarCuentaScreen({ volver, correoInicial = "" }: { vo
       const hasta = Date.now() + ESPERA_MS;
       setAhora(Date.now());
       setCooldownHasta(hasta);
-      await SecureStore.setItemAsync(CLAVE_REENVIO, JSON.stringify({ email: email.trim().toLowerCase(), hasta }));
+      await SecureStore.setItemAsync(CLAVE_REENVIO, JSON.stringify({ email: email.trim().toLowerCase(), hasta })).catch(() => undefined);
       if (!activa.current) return;
       setMensaje(data.mensaje);
       setPaso("codigo");
