@@ -265,7 +265,9 @@ export class ImportacionesService {
     try { return await this.ds.transaction('SERIALIZABLE', async (manager) => {
       const p = await manager.getRepository(ImportacionPreview).findOne({ where: { id: previewId }, lock: { mode: 'pessimistic_write' } }); this.comprobar(p,user);
       const c = await this.catalogos(manager,p.tipo,filas,user,true), vistos = new Set<string>();
-      const validas = []; for (const fila of filas) validas.push(await this.validarFila(p.tipo,fila,c,vistos));
+      const evaluacion = p.tipo === 'ALUMNOS' ? await this.evaluarAlumnos(filas, c) : null;
+      const validas = evaluacion ? evaluacion.validas : [];
+      if (!evaluacion) for (const fila of filas) validas.push(await this.validarFila(p.tipo, fila, c, vistos));
       const auditoria: { usuarioId: number; plantelId: number; accion: string; entidadId: number; detalle: string; fecha: Date }[] = [];
       const auditar = (entidadId: number, plantelId: number) => auditoria.push({ usuarioId: user.sub, plantelId, accion: `IMPORTAR_${p.tipo}`, entidadId, detalle: 'Alta desde archivo validado y confirmado; sin datos personales en bitácora', fecha: new Date() });
       const inscripciones = validas.filter((v) => v.clase === 'INSCRIPCION');
@@ -300,10 +302,12 @@ export class ImportacionesService {
           for (const lote of trozos(asignaciones)) await manager.getRepository(UsuarioPlantel).insert(lote);
         }
       }
-      if (auditoria.length !== filas.length) throw new ConflictException('El lote no está completo');
+      if (auditoria.length !== validas.length) throw new ConflictException('El lote no está completo');
       for (const lote of trozos(auditoria)) await manager.getRepository(BitacoraAcademica).insert(lote);
       await manager.getRepository(ImportacionPreview).delete(p.id);
-      return { insertados: filas.length, activacion: p.tipo === 'INSCRIPCIONES' ? null : p.tipo === 'ALUMNOS' ? 'Cuenta pendiente de activación. El alumno solicitará un código privado por correo institucional y establecerá su propia contraseña.' : 'Establecer contraseña mediante recuperación por correo o reinicio temporal autorizado en la cuenta.' };
+      return { insertados: validas.length, existentes: evaluacion?.duplicados.length ?? 0,
+        rechazados: evaluacion?.errores.length ?? 0, total: filas.length,
+        activacion: p.tipo === 'INSCRIPCIONES' ? null : p.tipo === 'ALUMNOS' ? 'Cuenta pendiente de activación. El alumno solicitará un código privado por correo institucional y establecerá su propia contraseña.' : 'Establecer contraseña mediante recuperación por correo o reinicio temporal autorizado en la cuenta.' };
     }); } catch (e) { if (e instanceof BadRequestException || e instanceof ForbiddenException || e instanceof ConflictException || e instanceof NotFoundException) throw e; throw new ConflictException('La importación no se aplicó; revisa duplicados o cambios concurrentes y genera otra previsualización'); }
   }
 }
