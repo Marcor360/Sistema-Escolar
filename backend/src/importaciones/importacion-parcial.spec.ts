@@ -33,6 +33,16 @@ describe('Carga parcial de alumnos', () => {
     expect(resultado.duplicados.map((f) => f.fila)).toEqual([3, 4, 6]);
     expect(resultado.errores.map((f) => f.fila)).toEqual([5, 7]);
   });
+  it('una fila inválida no reserva correo y permite un registro posterior correcto', async () => {
+    const filas = [
+      { ...alumno('BAD', 'nuevo@iua.edu.mx'), curp: 'NO_VALIDA' },
+      alumno('BUENO', 'nuevo@iua.edu.mx'),
+    ];
+    const resultado = await service['evaluarAlumnos'](filas, catalogos());
+    expect(resultado.validas).toHaveLength(1);
+    expect(resultado.errores.map((e) => e.fila)).toEqual([2]);
+    expect(resultado.duplicados).toHaveLength(0);
+  });
   it('reprocesar el mismo archivo no produce nuevos registros', async () => {
     const filas = [alumno('NUEVO001', 'nuevo@iua.edu.mx')];
     const c = catalogos();
