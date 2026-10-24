@@ -153,8 +153,8 @@ describe('Serie mensual de cobranza', () => {
   it('usa el mes de México al cambiar de año y filtra pagos confirmados por plantel de origen', async () => {
     jest.useFakeTimers().setSystemTime(new Date('2027-01-01T02:00:00Z'));
     const qb = {
-      select: jest.fn().mockReturnThis(), where: jest.fn().mockReturnThis(),
-      andWhere: jest.fn().mockReturnThis(), getRawOne: jest.fn().mockResolvedValue({ total: '125.50' }),
+      select: jest.fn().mockReturnThis(), addSelect: jest.fn().mockReturnThis(), where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(), getRawOne: jest.fn().mockResolvedValue({ total: '125.50', alumnos: '3' }),
     };
     const scope = { resolverFiltro: jest.fn().mockResolvedValue([3]) };
     const service = new ReportesService(
@@ -164,6 +164,7 @@ describe('Serie mensual de cobranza', () => {
     const serie = await service.serieCobranza(alumnoUser, 3);
     expect(serie.datos.map((p) => p.periodo)).toEqual(['2026-07', '2026-08', '2026-09', '2026-10', '2026-11', '2026-12']);
     expect(serie.datos.every((p) => p.cobrado === 125.5)).toBe(true);
+    expect(serie.datos.every((p) => p.alumnosQuePagaron === 3)).toBe(true);
     expect(qb.where).toHaveBeenCalledWith('p.estatus = :estatus', { estatus: 'CONFIRMADO' });
     expect(qb.andWhere).toHaveBeenCalledWith('p.plantel_id IN (:...planteles)', { planteles: [3] });
     expect(qb.andWhere).toHaveBeenCalledWith('p.fecha_pago >= :inicio AND p.fecha_pago < :fin', { inicio: '2026-12-01', fin: '2027-01-01' });

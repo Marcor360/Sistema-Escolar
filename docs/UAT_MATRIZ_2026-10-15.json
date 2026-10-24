@@ -1,5 +1,5 @@
 {
-  "version": "1.27.30",
+  "version": "1.27.32",
   "alcance": "Escenarios de aceptación institucional sin resultados fabricados",
   "escenarios": [
     {
@@ -170,6 +170,76 @@
       ],
       "estado": "pendiente",
       "responsable": "Responsable institucional por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-14",
+      "rol": "ADMINISTRATIVO",
+      "escenario": "Buscar alumno existente por matrícula o nombre completo con dos nombres y apellido materno opcional; comprobar homónimos, paginación, alcance de plantel y ausencia de resultados",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable institucional por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-15",
+      "rol": "FINANZAS",
+      "escenario": "Elegir plantilla optativa de cargo adicional, verificar tarifa autorizada y exclusión de colegiatura; crear cargo una vez con la misma clave UUID tras un reintento, rechazar reutilización de clave con importes distintos y confirmar estado de cuenta",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable financiero por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-16",
+      "rol": "FINANZAS",
+      "escenario": "Reinscribir expediente existente de ciclo CERRADO a posterior PREPARACION, con cotización de colegiatura autorizada, motivo para avance no secuencial y no duplicar pagos o notas históricos",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver"
+      ],
+      "estado": "pendiente",
+      "responsable": "Finanzas y Control Escolar por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-17",
+      "rol": "FINANZAS",
+      "escenario": "Listado paginado de alumnos con adeudos por plantel, vencidos y sin abono: confirma privacidad y coherencia de saldos, llamadas/WhatsApp solo manual, correo masivo con previa y seguimiento SMTP",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver",
+        "smtp"
+      ],
+      "estado": "pendiente",
+      "responsable": "Finanzas y Privacidad por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-18",
+      "rol": "FINANZAS",
+      "escenario": "Dashboard/Finanzas: recuentos de alumnos con saldo y abonos, ingresos confirmados y alumnos pagadores por mes, selector de gráfica barras/líneas, teclado, responsive y cambios de plantel",
+      "canales": [
+        "web",
+        "api",
+        "ux"
+      ],
+      "estado": "pendiente",
+      "responsable": "Finanzas y QA por designar",
       "evidencias": []
     }
   ]

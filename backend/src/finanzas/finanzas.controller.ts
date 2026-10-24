@@ -10,7 +10,7 @@ import { CobranzaService } from './cobranza.service';
 import { BitacoraFinancieraService } from './bitacora-financiera.service';
 import { OpenpayWebhookGuard } from './openpay-webhook.guard';
 import {
-  ReintentoCobranzaDto, AplicarRecargosDto, ActualizarConceptoDto, ConceptoDto, CrearCargoDto, CrearOrdenDto,
+  ListarPendientesDto, ReintentoCobranzaDto, AplicarRecargosDto, ActualizarConceptoDto, ConceptoDto, CrearCargoDto, CrearOrdenDto,
   GenerarColegiaturasDto, ListarCargosDto, ListarPagosDto, RegistrarPagoDto, MotivoFinancieroDto, CobranzaDto, AplicarPagoDto,
 } from './finanzas.dto';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
@@ -142,7 +142,7 @@ export class FinanzasController {
   @Post('preview-cobranza')
   @ApiBearerAuth() @UseGuards(JwtAuthGuard, RolesGuard) @Roles('FINANZAS')
   previewCobranza(@Body() dto: CobranzaDto, @CurrentUser() user: JwtUser) {
-    return this.cobranza.enviarAvisos(user, dto.plantelId, true);
+    return this.cobranza.enviarAvisos(user, dto.plantelId, true, false, false, dto.soloSinAbono);
   }
 
   @Post('cargos/generar-colegiaturas')
@@ -169,6 +169,13 @@ export class FinanzasController {
     return this.cargos.adeudosPaginados(user, query);
   }
 
+  @Get('cobranza/pendientes')
+  @ApiOperation({ summary: 'Alumnos con saldo por plantel: vencidos, sin abono y datos de contacto privados para Finanzas' })
+  @ApiBearerAuth() @UseGuards(JwtAuthGuard, RolesGuard) @Roles('FINANZAS')
+  pendientesCobranza(@CurrentUser() user: JwtUser, @Query() query: ListarPendientesDto) {
+    return this.cobranza.pendientes(user, query);
+  }
+
   @Get('cobranza/envios')
   @ApiBearerAuth() @UseGuards(JwtAuthGuard, RolesGuard) @Roles('FINANZAS')
   enviosCobranza(@CurrentUser() user: JwtUser, @Query() query: ListarPagosDto) { return this.cobranza.listar(user, query.pagina); }
@@ -192,7 +199,7 @@ export class FinanzasController {
   // ---------- Cobranza y bitácora ----------
   @Post('avisos-cobranza')
   @ApiBearerAuth() @UseGuards(JwtAuthGuard, RolesGuard) @Roles('FINANZAS')
-  avisos(@CurrentUser() user: JwtUser, @Body() dto: CobranzaDto) { return this.cobranza.enviarAvisos(user, dto.plantelId, false, dto.confirmado); }
+  avisos(@CurrentUser() user: JwtUser, @Body() dto: CobranzaDto) { return this.cobranza.enviarAvisos(user, dto.plantelId, false, dto.confirmado, false, dto.soloSinAbono); }
 
   @Get('conciliacion/resoluciones')
   @ApiBearerAuth() @UseGuards(JwtAuthGuard, RolesGuard) @Roles('FINANZAS')

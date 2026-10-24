@@ -405,7 +405,7 @@ describe('Integración de flujos críticos (base aislada)', () => {
 
     const concepto = await dataSource.getRepository(ConceptoPago).save(
       dataSource.getRepository(ConceptoPago).create({
-        clave: `CW${sufijo}`, nombre: 'Cargo webhook de integración', tipo: 'COLEGIATURA', montoBase: 125,
+        clave: `CW${sufijo}`, nombre: 'Cargo webhook de integración', tipo: 'OTRO', montoBase: 125,
       }),
     );
     const cargo = await dataSource.getRepository(Cargo).save(

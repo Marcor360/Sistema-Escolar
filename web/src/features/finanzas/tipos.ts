@@ -1,4 +1,4 @@
-export interface Alumno { id: number; matricula: string; usuario: { nombre: string; apellidoPaterno: string } }
+export interface Alumno { id: number; matricula: string; usuario: { nombre: string; apellidoPaterno: string; apellidoMaterno?: string | null } }
 export interface Concepto { id: number; clave: string; nombre: string; tipo: string; montoBase: number }
 export interface Ciclo { id: number; clave: string }
 export interface Cargo {

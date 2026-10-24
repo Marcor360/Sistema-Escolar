@@ -22,7 +22,7 @@ function Bloqueo({ sucio, ocupado, guardado }: { sucio: boolean; ocupado: React.
 function Guardia({ children }: { children: ReactNode }) {
   return useContext(UNSAFE_DataRouterContext) ? children : null;
 }
-export const esFormularioModulo = (vista: string) => ['nuevo', 'editar', 'adjuntar', 'actividad-nueva', 'actividad-editar', 'material-nuevo', 'material-editar', 'calificar-entrega', 'ciclo-nuevo', 'ciclo-editar', 'cargo-nuevo', 'pago-nuevo', 'colegiaturas', 'carpeta-nueva', 'archivo-nuevo', 'seguimiento', 'importar', 'promover'].includes(vista);
+export const esFormularioModulo = (vista: string) => ['nuevo', 'editar', 'adjuntar', 'actividad-nueva', 'actividad-editar', 'material-nuevo', 'material-editar', 'calificar-entrega', 'ciclo-nuevo', 'ciclo-editar', 'cargo-nuevo', 'pago-nuevo', 'colegiaturas', 'carpeta-nueva', 'archivo-nuevo', 'seguimiento', 'importar', 'promover', 'reinscribir'].includes(vista);
 
 export function ModuloTrabajo({ titulo, acciones, vistas = [], permisos = {}, children }: { titulo: string; acciones: Accion[]; vistas?: string[]; permisos?: Record<string,string[]>; children: ReactNode }) {
   const { tieneRol } = useAuth(), [query, setQuery] = useSearchParams();
