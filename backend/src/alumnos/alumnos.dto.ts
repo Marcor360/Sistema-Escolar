@@ -8,7 +8,7 @@ import type { ProveedorCorreo } from '../entities/usuario.entity';
 
 export class ListarAlumnosDto extends PaginacionDto {
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsOptional() @IsString() buscar?: string;
+  @IsOptional() @IsString() @MaxLength(120) buscar?: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) plantelId?: number;
 }
 

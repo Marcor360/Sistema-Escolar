@@ -8,7 +8,7 @@ test('la matriz institucional continúa pendiente y bloquea release', () => {
   assert.throws(() => validarMatriz(copia(), original.version, true), /incompleta/);
 });
 test('rechaza eliminación de escenarios, duplicados y canales desconocidos', () => {
-  for (const mutar of [m => m.escenarios.shift(), m => { m.escenarios[1].id = m.escenarios[0].id; }, m => { m.escenarios[0].canales = ['inexistente']; }]) {
+  for (const mutar of [m => m.escenarios.splice(0, 1), m => { m.escenarios[1].id = m.escenarios[0].id; }, m => { m.escenarios[0].canales = ['inexistente']; }]) {
     const m = copia(); mutar(m); assert.throws(() => validarMatriz(m, original.version));
   }
 });

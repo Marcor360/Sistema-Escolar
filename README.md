@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.27.32`** · Estado: PR pendiente de pruebas e integración; **no demuestra despliegue adicional**. Staging confirmado por el operador en **1.27.17** (commit `8579ab4`), con API `/health/ready` local y HTTPS correctas. La app Expo instalada en dispositivos **no se actualiza automáticamente**.
+**Versión candidata: `1.27.33`** · Estado: candidata preparatoria; aceptación institucional pendiente. Esta entrega actualiza documentación, herramientas de pruebas y metadatos de versión; **no demuestra despliegue adicional**. Staging confirmado por el operador en **1.27.17** (commit `8579ab4`), con API `/health/ready` local y HTTPS correctas. La app Expo instalada en dispositivos **no se actualiza automáticamente**.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -19,7 +19,12 @@ Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [ín
 
 ### Funcionalidad destacada de versiones recientes
 
-- **1.27.32 (PR):** correo dual por usuario: alumnos Microsoft 365, personal y docentes GoDaddy por defecto, selección manual en web, migraciones MySQL/SQL Server y cliente Graph sin nuevas dependencias. Activación mediante configuración segura del certificado; ver [manual de despliegue](docs/CORREO_DUAL_GRAPH_GODADDY.md). No hay nuevas funciones ni rutas en Expo. La candidata 1.27.31 continúa en un PR independiente; coordinar integración de versiones antes de desplegar.
+- **1.27.33 (PR):** correo dual por usuario: alumnos Microsoft 365, personal y docentes GoDaddy por defecto, selección manual en web, migraciones MySQL/SQL Server y cliente Graph sin nuevas dependencias. Activación mediante configuración segura del certificado; ver [manual de despliegue](docs/CORREO_DUAL_GRAPH_GODADDY.md). No hay nuevas funciones ni rutas en Expo.
+
+- **1.27.32:** web de reinscripción a **ciclo posterior** para Control Escolar y Finanzas: expediente recuperado, plan compatible, retroceso/salto con motivo, previsualización de cargos, ajuste financiero de colegiatura y confirmación usando apertura/grupos existentes. Dentro del mismo ciclo permanece bloqueado hasta migración por periodo. Finanzas incorpora seguimiento paginado de alumnos con saldo, acceso telefónico y WhatsApp **manual**, previsualización de avisos de correo mediante SMTP/cola existente y KPIs por alumno; serie mensual alterna barras y líneas, importes y pagadores. Sin nuevos proveedores, migraciones ni mensajería por teléfono/WhatsApp automática. [Contrato y límites](docs/FINANZAS_REINSCRIPCION_COBRANZA_1.27.32.md). **Pendiente CI/UAT antes de producción.**
+
+
+- **1.27.31:** búsqueda por matrícula, nombre, apellidos o nombre completo (incluido segundo nombre en el campo existente); FINANZAS dispone de sugerencias opcionales de cargos adicionales por nivel, sin tarifas precargadas, con clave opcional de idempotencia para proteger reintentos del mismo actor. [Contrato de reinscripción por periodo](docs/REINSCRIPCION_PERIODOS_Y_CARGOS_CONTRATO.md): diseño pendiente de autorización, **sin crear todavía un nuevo flujo de reinscripción ni migraciones**; Expo sin funciones de gestión.
 
 
 - **1.27.30:** navegación responsive web: menú lateral a la derecha con botón hamburguesa a la derecha, fondo atenuado semitransparente que conserva visible la pantalla y corrección de la superposición de reglas genéricas para botones. Prueba E2E de alineación, fondo y contenido subyacente; sin cambios a Expo, roles o API.

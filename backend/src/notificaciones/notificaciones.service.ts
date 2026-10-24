@@ -7,7 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as nodemailer from 'nodemailer';
 import { Notificacion } from '../entities/notificacion.entity';
-import { proveedorCorreoPredeterminado } from '../entities/usuario.entity';
+import { proveedorCorreoPredeterminado } from '../common/proveedor-correo';
 import { CorreoMicrosoftService } from './correo-microsoft.service';
 import { Usuario } from '../entities/usuario.entity';
 import { Alumno } from '../entities/alumno.entity';

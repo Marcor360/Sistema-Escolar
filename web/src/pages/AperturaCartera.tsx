@@ -26,6 +26,7 @@ function Directorio() {
   },[consulta,pagina,q,intento]);
   return <><h1>Apertura de cartera</h1><p>Inscripción ordinaria y cargos con tarifas autorizadas por Finanzas.</p>{!consulta ? <PanelAccionesModulo titulo="Gestionar aperturas" acciones={[
     { titulo: 'Abrir cartera ordinaria', detalle: 'Seleccionar alumno, contexto y conceptos; previsualizar antes de confirmar', ejecutar: ()=>navigate('/apertura-cartera/nueva') },
+    { titulo: 'Reinscribir alumno', detalle: 'Buscar expediente existente y preparar siguiente ciclo sin duplicar matrícula', ejecutar: ()=>navigate('/apertura-cartera/reinscribir') },
     { titulo: 'Consultar aperturas', detalle: 'Revisar asignaciones y solicitudes pendientes', ejecutar: ()=>setQ({vista:'consulta'}) },
   ]}/> : <><Link to="/apertura-cartera/nueva">Nueva apertura</Link><button onClick={()=>setQ({})}>Volver a opciones</button>
     <form onSubmit={e=>{e.preventDefault();setQ({vista:'consulta',buscar});}}><label htmlFor="buscar-cartera">Buscar por nombre o matrícula</label><input id="buscar-cartera" value={buscar} onChange={e=>setBuscar(e.target.value)}/><button>Buscar</button></form>

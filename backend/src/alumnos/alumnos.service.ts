@@ -1,3 +1,4 @@
+import { condicionBusquedaAlumno } from '../common/busqueda-alumno';
 import { PaginacionDto } from '../common/paginacion.dto';
 import { clasesRecursadas } from '../recursamientos/acceso-recursamiento';
 import { ParticipacionAsignatura } from '../entities/participacion-asignatura.entity';
@@ -46,7 +47,7 @@ export class AlumnosService {
       );
     }
     if (query.buscar?.trim()) {
-      qb.andWhere('(a.matricula LIKE :buscar OR u.nombre LIKE :buscar OR u.apellido_paterno LIKE :buscar OR u.apellido_materno LIKE :buscar)', {
+      qb.andWhere(condicionBusquedaAlumno('a', 'u'), {
         buscar: `%${query.buscar.trim()}%`,
       });
     }

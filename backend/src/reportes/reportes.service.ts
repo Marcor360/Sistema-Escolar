@@ -61,6 +61,20 @@ export class ReportesService {
     ]);
     const adeudos = await this.cargos.adeudos(user, plantelId);
     const saldoPendiente = Math.round(adeudos.reduce((s, c) => s + c.saldo, 0) * 100) / 100;
+    const porAlumno = new Map<number, { abonado: number; saldo: number; vencidos: number }>();
+    const hoyMexico = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City',
+      year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    for (const cargo of adeudos) {
+      if (cargo.alumno.estatus !== 'ACTIVO') continue;
+      const datos = porAlumno.get(cargo.alumnoId) ?? { abonado: 0, saldo: 0, vencidos: 0 };
+      datos.abonado += cargo.pagado;
+      datos.saldo += cargo.saldo;
+      if (cargo.fechaVencimiento && cargo.fechaVencimiento < hoyMexico) datos.vencidos++;
+      porAlumno.set(cargo.alumnoId, datos);
+    }
+    const alumnosSinAbono = [...porAlumno.values()].filter(v => v.abonado === 0).length;
+    const alumnosConAbonoParcial = [...porAlumno.values()].filter(v => v.abonado > 0).length;
+    const alumnosConVencidos = [...porAlumno.values()].filter(v => v.vencidos > 0).length;
 
     const inicioMes = new Date();
     inicioMes.setDate(1);
@@ -80,6 +94,10 @@ export class ReportesService {
       grupos: totalGrupos,
       saldoPendiente,
       cargosConAdeudo: adeudos.length,
+      alumnosConSaldo: porAlumno.size,
+      alumnosSinAbono,
+      alumnosConAbonoParcial,
+      alumnosConVencidos,
       cobradoMes: Number(pagosMes?.total ?? 0),
     };
   }
@@ -402,11 +420,13 @@ export class ReportesService {
     const datos = await Promise.all(meses.map(async (mes) => {
       const query = this.pagos.createQueryBuilder('p')
         .select('COALESCE(SUM(p.monto), 0)', 'total')
+        .addSelect('COUNT(DISTINCT p.alumno_id)', 'alumnos')
         .where('p.estatus = :estatus', { estatus: 'CONFIRMADO' })
         .andWhere('p.fecha_pago >= :inicio AND p.fecha_pago < :fin', { inicio: mes.inicio, fin: mes.fin });
       if (planteles !== null) query.andWhere('p.plantel_id IN (:...planteles)', { planteles });
-      const resultado = await query.getRawOne<{ total: string | number }>();
-      return { periodo: mes.periodo, cobrado: Math.round(Number(resultado?.total ?? 0) * 100) / 100 };
+      const resultado = await query.getRawOne<{ total: string | number; alumnos: string | number }>();
+      return { periodo: mes.periodo, cobrado: Math.round(Number(resultado?.total ?? 0) * 100) / 100,
+        alumnosQuePagaron: Number(resultado?.alumnos ?? 0) };
     }));
     return { datos, moneda: 'MXN', base: 'Pagos confirmados por fecha de pago y plantel de origen' };
   }
