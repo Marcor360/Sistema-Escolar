@@ -86,9 +86,14 @@ export function FormularioAlumno({
           <legend>Acceso institucional</legend>
           <div className="rejilla-formulario">
             <div className="campo">
-              <label htmlFor="alumno-correo">Correo institucional *</label>
+              <label htmlFor="alumno-correo">Correo institucional (acceso) *</label>
               <input id="alumno-correo" type="email" required maxLength={120} disabled={!nuevo}
                 autoComplete="email" {...dar('email')} />
+            </div>
+            <div className="campo">
+              <label htmlFor="alumno-correo-personal">Correo personal (opcional)</label>
+              <input id="alumno-correo-personal" type="email" maxLength={120} autoComplete="email" {...dar('correoPersonal')} />
+              <small>Solo contacto alternativo. Las invitaciones y los códigos de acceso se envían al correo institucional.</small>
             </div>
             <SelectorProveedorCorreo id="alumno-correo-proveedor" value={form.correoProveedor}
               onChange={(correoProveedor) => setForm((anterior) => ({ ...anterior, correoProveedor }))} />
