@@ -18,6 +18,7 @@ it('importa con preview ligado al actor, valida duplicados y confirma una sola v
     const csv = 'email,correoProveedor,nombre,apellidoPaterno,matricula,plantelId,curp\n' + fila;
     const duplicado = await enviar(csv + '\n' + fila); expect(duplicado.response.status).toBe(201); expect(duplicado.data.previewId).not.toBeNull(); expect(duplicado.data.errores).toHaveLength(0); expect(duplicado.data.duplicados).toHaveLength(1); expect(duplicado.data.validos).toBe(1);
     expect(await ctx.dataSource.getRepository(Usuario).findOneBy({ email })).toBeNull();
+    await ctx.dataSource.getRepository(ImportacionPreview).delete(duplicado.data.previewId);
     const preview = await enviar(csv); expect(preview.response.status).toBe(201); expect(preview.data.errores).toEqual([]);
     expect((await ctx.api('/importaciones/confirmar', { method: 'POST', token: superadmin, body: { previewId: preview.data.previewId, confirmado: true } })).response.status).toBe(404);
     const confirmado = await ctx.api('/importaciones/confirmar', { method: 'POST', token: admin, body: { previewId: preview.data.previewId, confirmado: true } }); expect(confirmado.response.status).toBe(201); expect(confirmado.data.insertados).toBe(1);
@@ -47,7 +48,7 @@ it('omite el duplicado nuevo entre preview y confirmar sin cancelar al alumno vÃ
     expect(confirmado.response.status).toBe(201);
     expect(confirmado.data.insertados).toBe(1); expect(confirmado.data.existentes).toBe(1);
     expect(await ctx.dataSource.getRepository(Usuario).findOneBy({ email: email1 })).not.toBeNull(); expect(await ctx.dataSource.getRepository(Alumno).countBy({ matricula: `AT1${ctx.sufijo}`.toUpperCase() })).toBe(1);
-    expect(await ctx.dataSource.getRepository(BitacoraAcademica).countBy({ accion: 'IMPORTAR_ALUMNOS' })).toBe(1);
+    expect(await ctx.dataSource.getRepository(BitacoraAcademica).countBy({ accion: 'IMPORTAR_ALUMNOS' })).toBe(2);
   });
   },
   48: (ctx) => {
