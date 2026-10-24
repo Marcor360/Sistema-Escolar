@@ -175,6 +175,9 @@ describe('CargosService.crear con clave de idempotencia', () => {
     const anterior = {
       id: 90, alumnoId: 10, plantelId: 3, conceptoId: 5, descripcion: dto.descripcion, monto: 250,
       descuento: 0, cicloId: null, periodo: null, fechaVencimiento: null,
+      alumno: { id: 10, matricula: 'A010', plantelId: 3, curp: 'CURP-PRIVADA',
+        fechaNacimiento: '2010-01-01', direccion: 'Domicilio privado', tutorNombre: 'Tutor privado', tutorTelefono: '5550000000',
+        usuario: { nombre: 'Ana', apellidoPaterno: 'López', nombreCompleto: 'Ana López', email: 'privado@example.test', passwordHash: 'HASH-PRIVADO' } },
     };
     const cargosRepo = {
       findOne: jest.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(anterior),
@@ -188,13 +191,18 @@ describe('CargosService.crear con clave de idempotencia', () => {
     const scope = { validarGestion: jest.fn().mockResolvedValue(undefined) };
     const service = new CargosService(
       cargosRepo as never, {} as never, {} as never, {} as never,
-      { obtener: jest.fn().mockResolvedValue({ id: 10, plantelId: 3 }) } as never,
+      { obtener: jest.fn().mockResolvedValue(anterior.alumno) } as never,
       { obtener: jest.fn().mockResolvedValue({ id: 5, activo: true, tipo: 'OTRO' }) } as never,
       bitacora as never, scope as never, dataSource as never,
     );
     const user = { sub: 7, roles: ['FINANZAS'] } as Parameters<CargosService['crear']>[1];
-    expect(await service.crear(dto, user)).toBe(anterior);
-    expect(await service.crear(dto, user)).toBe(anterior);
+    const nuevo = await service.crear(dto, user);
+    const repetido = await service.crear(dto, user);
+    expect(nuevo).toEqual(repetido);
+    expect(repetido).toMatchObject({ id: 90, alumno: { id: 10, matricula: 'A010' } });
+    for (const secreto of ['CURP-PRIVADA', '2010-01-01', 'Domicilio privado', 'Tutor privado', '5550000000', 'privado@example.test', 'HASH-PRIVADO']) {
+      expect(JSON.stringify([nuevo, repetido])).not.toContain(secreto);
+    }
     expect(cargosRepo.save).toHaveBeenCalledTimes(1);
     expect(bitacora.registrar).toHaveBeenCalledTimes(1);
     expect(cargosRepo.create).toHaveBeenCalledWith(expect.objectContaining({ claveGeneracion: `MANUAL:${claveIdempotencia}` }));

@@ -140,7 +140,7 @@ export class CargosService {
                 previo.fechaVencimiento !== (dto.fechaVencimiento ?? null)) {
               throw new ConflictException('La clave de la operación corresponde a otro cargo');
             }
-            return previo;
+            return this.proyectarCargoFinanciero({ ...previo, alumno: previo.alumno ?? alumno });
           }
         }
         const cargo = await cargos.save(
@@ -159,7 +159,7 @@ export class CargosService {
         await this.bitacora.registrar(
           user.sub, 'CREAR_CARGO', 'cargo', cargo.id, `${dto.descripcion} $${dto.monto}`, alumno.plantelId, manager,
         );
-        return cargo;
+        return this.proyectarCargoFinanciero({ ...cargo, alumno });
   
       });
     } catch (error) {

@@ -44,6 +44,7 @@
   "overrides": {
     "uuid": "11.1.1",
     "braces": "$braces",
-    "node-forge": "$node-forge"
+    "node-forge": "$node-forge",
+    "zod": "4.6.7"
   }
 }
