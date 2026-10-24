@@ -1,5 +1,4 @@
-/* ============================================================
-   Sistema Escolar — identidad "documento oficial"
+/* =====================================================   Sistema Escolar — identidad "documento oficial"
    Papel #F7F8F6 · Tinta #1C2528 · Pizarra #14343B · Dorado #C79A3C
    ============================================================ */
 :root {
@@ -1191,3 +1190,55 @@ dialog button { max-width: 100%; min-height: 44px; white-space: normal; overflow
 .grafica-filtros { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 14px 0; }
 .grafica-filtros select { max-width: min(100%, 310px); }
 @media (prefers-reduced-motion: reduce) { .grafica-lineas *, .barras-cobranza * { animation: none !important; transition: none !important; } }
+
+
+/* Tour contextual: no bloquea la pantalla ni oculta el módulo guiado. */
+.recorrido-panel {
+  position: fixed;
+  z-index: 950;
+  right: clamp(12px, 3vw, 32px);
+  bottom: clamp(12px, 3vw, 32px);
+  width: min(440px, calc(100vw - 24px));
+  max-height: min(75dvh, 560px);
+  overflow: auto;
+  padding: 22px;
+  border: 1px solid var(--linea);
+  border-top: 4px solid var(--dorado);
+  border-radius: 16px;
+  background: #fff;
+  color: var(--tinta);
+  box-shadow: 0 18px 60px rgba(0,0,0,.2);
+}
+.recorrido-panel h2 { margin: 8px 0; color: var(--pizarra); }
+.recorrido-panel .recorrido-ayuda { color: #405458; }
+.recorrido-panel:focus { outline: none; }
+#navegacion-escolar a.recorrido-destacado {
+  outline: 3px solid var(--dorado);
+  outline-offset: -3px;
+  background: var(--pizarra-2);
+  color: #fff;
+}
+@media (max-width: 600px) { .recorrido-panel { left: 12px; right: 12px; bottom: 12px; width: auto; max-height: 55dvh; } }
+/* Diálogos: superficie opaca y contraste independiente del tema del navegador. */
+dialog,
+dialog.recorrido-dialogo {
+  color-scheme: light;
+  background: var(--papel, #fff);
+  color: var(--tinta, #1c2528);
+  border: 1px solid var(--linea, #d8dcd6);
+  border-top: 4px solid var(--pizarra);
+}
+dialog :is(h1, h2, h3, p, label, legend, strong) { color: inherit; }
+dialog .recorrido-progreso { color: var(--pizarra); }
+dialog .recorrido-ayuda { color: #46575a; }
+dialog :is(.boton, button) { color-scheme: light; }
+dialog :is(.boton:not(.secundario), button:not(.secundario)) {
+  background-color: var(--pizarra);
+  color: var(--texto-sobre-pizarra, #fff);
+}
+dialog :is(.boton.secundario, button.secundario) {
+  background-color: #fff;
+  color: var(--pizarra);
+  border: 1px solid var(--pizarra);
+}
+dialog :is(.boton, button):focus-visible { outline: 3px solid var(--dorado); outline-offset: 3px; }

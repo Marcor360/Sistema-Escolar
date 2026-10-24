@@ -578,11 +578,24 @@ async function esperarServidor() {
       if (ruta === '/configuracion') {
         const tutorial = page.getByRole('button', { name: 'Ver nuevamente el tutorial' });
         await tutorial.click();
-        await expect(page.locator('dialog.recorrido-dialogo')).toBeVisible();
-        await expect(page.locator('.recorrido-progreso')).toContainText('paso 1');
+        await expect(page.locator('aside.recorrido-panel')).toBeVisible();
+        await expect(page.locator('.recorrido-progreso')).toContainText('1 de');
+        const primeraRuta = new URL(page.url()).pathname;
+        await page.getByRole('button', { name: 'Siguiente', exact: true }).click();
+        await expect(page.locator('.recorrido-progreso')).toContainText('2 de');
+        await expect.poll(() => new URL(page.url()).pathname).not.toBe(primeraRuta);
+        await page.getByRole('button', { name: 'Anterior', exact: true }).click();
+        await expect.poll(() => new URL(page.url()).pathname).toBe(primeraRuta);
+        const abrirMenu = page.getByRole('button', { name: /Abrir menú/ });
+        if (await abrirMenu.isVisible()) await abrirMenu.click();
+        await page.locator('#navegacion-escolar a[href="/alumnos"]').click();
+        await expect.poll(() => new URL(page.url()).pathname).toBe('/alumnos');
+        await expect(page.getByRole('button', { name: /Registrar alumno/ })).toBeVisible();
         await page.getByRole('button', { name: 'Omitir recorrido' }).click();
-        await expect(page.locator('dialog.recorrido-dialogo')).toHaveCount(0);
-        await expect(tutorial).toBeFocused();
+        await expect(page.locator('aside.recorrido-panel')).toHaveCount(0);
+        await page.goto(baseUrl + '/configuracion');
+        await expect(page.locator('aside.recorrido-panel')).toHaveCount(0);
+        await expect(tutorial).toBeVisible();
       }
       if (ruta === '/finanzas') {
         for (const nombre of ['Consultar cargos', 'Consultar pagos', 'Adeudos y cobranza']) {

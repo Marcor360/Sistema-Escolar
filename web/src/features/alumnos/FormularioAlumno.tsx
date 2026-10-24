@@ -95,6 +95,12 @@ export function FormularioAlumno({
               <input id="alumno-correo-personal" type="email" maxLength={120} autoComplete="email" {...dar('correoPersonal')} />
               <small>Solo contacto alternativo. Las invitaciones y los códigos de acceso se envían al correo institucional.</small>
             </div>
+            <div className="campo">
+              <label htmlFor="alumno-telefono">Teléfono del alumno</label>
+              <input id="alumno-telefono" type="tel" maxLength={20} autoComplete="tel-national" inputMode="tel"
+                placeholder="10 dígitos" aria-describedby="ayuda-telefono-alumno" {...dar('telefono')} />
+              <small id="ayuda-telefono-alumno">Número de contacto del alumno. Podrá actualizarlo desde su perfil en la aplicación.</small>
+            </div>
             <SelectorProveedorCorreo id="alumno-correo-proveedor" value={form.correoProveedor}
               onChange={(correoProveedor) => setForm((anterior) => ({ ...anterior, correoProveedor }))} />
             {nuevo && <div className="aviso-credenciales" role="note">
@@ -115,10 +121,6 @@ export function FormularioAlumno({
             <div className="campo">
               <label htmlFor="alumno-telefono-tutor">Teléfono del tutor</label>
               <input id="alumno-telefono-tutor" type="tel" maxLength={20} {...dar('tutorTelefono')} />
-            </div>
-            <div className="campo">
-              <label htmlFor="alumno-telefono">Teléfono del alumno</label>
-              <input id="alumno-telefono" type="tel" maxLength={20} {...dar('telefono')} />
             </div>
             <div className="campo">
               <label htmlFor="alumno-nacimiento">Fecha de nacimiento</label>

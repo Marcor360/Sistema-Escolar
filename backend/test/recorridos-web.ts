@@ -27,8 +27,9 @@ export async function recorridoWeb(d: Datos, tipo: 'academico' | 'financiero' | 
     const login = await respuestaLogin;
     assert.equal(login.status(), 201, `Login del recorrido ${tipo}: ${await login.text()}`);
     await expect(page.getByRole('link', { name: 'Alumnos', exact: true })).toBeVisible();
-    const bienvenida = page.locator('dialog.recorrido-dialogo');
-    if (await bienvenida.count()) {
+    const bienvenida = page.locator('aside.recorrido-panel');
+    await expect(bienvenida).toBeVisible();
+    {
       while (await bienvenida.getByRole('button', { name: 'Siguiente' }).count()) {
         await bienvenida.getByRole('button', { name: 'Siguiente' }).click();
       }
@@ -95,7 +96,7 @@ export async function recorridoWeb(d: Datos, tipo: 'academico' | 'financiero' | 
       {
       const page = await browser.newPage({ extraHTTPHeaders: { 'x-forwarded-for': '203.0.113.4' } });
       page.on('pageerror', (e: Error) => errores.push(e.message)); page.on('dialog', (dialog: { accept: () => Promise<void> }) => { void dialog.accept(); });
-      await page.goto('http://127.0.0.1:5181/login'); await page.getByLabel('Correo institucional').fill(d.docenteEmail); await page.getByLabel('Contraseña', { exact: true }).fill(d.docentePassword); await page.getByRole('button', { name: 'Entrar', exact: true }).click(); await expect(page.getByRole('link', { name: 'Mis clases', exact: true })).toBeVisible(); const bienvenidaDocente = page.locator('dialog.recorrido-dialogo'); await expect(bienvenidaDocente).toBeVisible();
+      await page.goto('http://127.0.0.1:5181/login'); await page.getByLabel('Correo institucional').fill(d.docenteEmail); await page.getByLabel('Contraseña', { exact: true }).fill(d.docentePassword); await page.getByRole('button', { name: 'Entrar', exact: true }).click(); await expect(page.getByRole('link', { name: 'Mis clases', exact: true })).toBeVisible(); const bienvenidaDocente = page.locator('aside.recorrido-panel'); await expect(bienvenidaDocente).toBeVisible();
       while (await bienvenidaDocente.getByRole('button', { name: 'Siguiente' }).count()) {
         await bienvenidaDocente.getByRole('button', { name: 'Siguiente' }).click();
       }
