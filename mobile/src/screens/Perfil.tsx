@@ -260,7 +260,7 @@ export default function PerfilScreen({ abrirDocumentos }: { abrirDocumentos?: ()
               <TouchableOpacity style={estilos.botonPrimario} accessibilityRole="button"
                 disabled={guardandoPerfil} accessibilityState={{ busy: guardandoPerfil, disabled: guardandoPerfil }}
                 onPress={() => { void guardarPerfil(); }}>
-                <Text>{guardandoPerfil ? "Guardando…" : "Guardar mis datos"}</Text>
+                <Text style={[estilos.botonPrimarioTexto, { color: textoSobreFondo(marca.colorPrimario) }]}>{guardandoPerfil ? "Guardando…" : "Guardar mis datos"}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={base.botonAccesible} accessibilityRole="button"
                 disabled={guardandoPerfil} onPress={() => setEdicion(null)}>
