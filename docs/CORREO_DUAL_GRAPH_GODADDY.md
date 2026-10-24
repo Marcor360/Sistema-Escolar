@@ -5,6 +5,7 @@
 - Por defecto, **ALUMNO → Correo Microsoft 365**; **MAESTRO, ADMINISTRATIVO, FINANZAS y SUPERADMIN → Correo GoDaddy**.
 - En **alta** y **edición web** de alumno, docente y personal, el operador autorizado puede cambiar a cualquiera de los dos proveedores. La preferencia se guarda en `usuarios.correo_proveedor`, no en el navegador.
 - Todos los correos dirigidos a una **cuenta registrada** (activación, recuperación, avisos de cobranza y solicitudes de apoyo) usan su preferencia actual.
+- Las importaciones DOCENTES/PERSONAL permiten escoger `correoProveedor` opcional por fila en XLSX/CSV; su ausencia mantiene GoDaddy. En ALUMNOS sigue siendo obligatorio.
 - Los correos destinados a direcciones **no registradas** conservan el SMTP GoDaddy existente. Nunca cambiar automáticamente de un proveedor a otro si falla: podría usar el buzón incorrecto o duplicar mensajes.
 - Solo se selecciona el **remitente**, no se crea un buzón. La dirección del destinatario sigue siendo `usuarios.email`. En un dominio compartido, si el remitente y destino están en proveedores diferentes, **la entrega puede fallar**, aunque la API acepte el envío. Se debe elegir manualmente el proveedor que entrega a ese destinatario y resolver la coexistencia de dominio con los administradores de correo.
 - Expo permanece exclusivamente para ALUMNO y **no** recibe credenciales Graph ni configuración SMTP. Las operaciones de gestión están solo en web.

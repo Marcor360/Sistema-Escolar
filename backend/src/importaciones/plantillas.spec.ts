@@ -16,7 +16,7 @@ for (const tipo of TIPOS_IMPORTACION) {
     expect(datos.views[0]).toMatchObject({ state: 'frozen', ySplit: 1 });
     expect(datos.autoFilter).toBeTruthy();
     const guia = libro.getWorksheet('Instrucciones');
-    const filaGuia = tipo === 'ALUMNOS' ? 8 : 6;
+    const filaGuia = tipo === 'ALUMNOS' ? 8 : tipo === 'INSCRIPCIONES' ? 6 : 7;
     expect(guia?.getCell(`A${filaGuia}`).value).toBe('Campo técnico');
     expect(guia?.getCell(`B${filaGuia}`).value).toBe('Requerido');
     expect(guia?.rowCount).toBe(filaGuia + COLUMNAS_PLANTILLA[tipo].length);
@@ -80,4 +80,20 @@ it('alumnos: plantilla descargable con correos separados, selector desplegable y
   expect(lista?.formulae).toEqual(['"Microsoft 365,GoDaddy"']);
   expect(hoja.rowCount).toBe(1); // La validación no debe crear 500 filas fantasma.
   expect(String(libro.getWorksheet('Instrucciones')!.getCell('A6').value)).toContain('Correo institucional');
+});
+
+it.each(['DOCENTES', 'PERSONAL'] as const)('%s: selector de remitente opcional en XLSX', tipo => {
+  const libro = crearPlantillaImportacion(tipo);
+  const hoja = libro.getWorksheet(tipo)!;
+  const columnas = COLUMNAS_PLANTILLA[tipo];
+  expect(columnas).toContain('correoProveedor');
+  const letra = hoja.getColumn(columnas.indexOf('correoProveedor') + 1).letter;
+  const validaciones = (hoja as unknown as { dataValidations: { find: (rango: string) => {
+    type: string; allowBlank: boolean; formulae: string[];
+  } | undefined } }).dataValidations;
+  expect(validaciones.find(`${letra}2:${letra}501`)).toMatchObject({
+    type: 'list', allowBlank: true, formulae: ['"Microsoft 365,GoDaddy"'],
+  });
+  expect(hoja.rowCount).toBe(1);
+  expect(String(libro.getWorksheet('Instrucciones')!.getCell('A6').value)).toContain('GoDaddy');
 });

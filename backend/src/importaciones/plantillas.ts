@@ -39,6 +39,7 @@ const DESCRIPCIONES: Record<TipoPlantilla, Record<string, string>> = {
   },
   DOCENTES: {
     email: 'Correo único de la persona docente.',
+    correoProveedor: 'Opcional. Microsoft 365 o GoDaddy; vacío utiliza GoDaddy.',
     nombre: 'Nombre o nombres.',
     apellidoPaterno: 'Primer apellido.',
     apellidoMaterno: 'Segundo apellido, si corresponde.',
@@ -50,6 +51,7 @@ const DESCRIPCIONES: Record<TipoPlantilla, Record<string, string>> = {
   },
   PERSONAL: {
     email: 'Correo único de la persona.',
+    correoProveedor: 'Opcional. Microsoft 365 o GoDaddy; vacío utiliza GoDaddy.',
     nombre: 'Nombre o nombres.',
     apellidoPaterno: 'Primer apellido.',
     apellidoMaterno: 'Segundo apellido, si corresponde.',
@@ -76,7 +78,7 @@ export function crearPlantillaImportacion(tipo: TipoPlantilla): ExcelJS.Workbook
   hoja.addRow(columnas);
   hoja.autoFilter = { from: 'A1', to: hoja.getRow(1).getCell(columnas.length).address };
   hoja.getRow(1).height = 32;
-  if (tipo === 'ALUMNOS') {
+  if (tipo === 'ALUMNOS' || tipo === 'DOCENTES' || tipo === 'PERSONAL') {
     const indiceProveedor = columnas.indexOf('correoProveedor') + 1;
     const letraProveedor = hoja.getColumn(indiceProveedor).letter;
     // ExcelJS soporta rangos de validación, aunque su tipo público omite el registro de reglas.
@@ -85,7 +87,7 @@ export function crearPlantillaImportacion(tipo: TipoPlantilla): ExcelJS.Workbook
       errorTitle: string; error: string;
     }) => void } }).dataValidations;
     validaciones.add(`${letraProveedor}2:${letraProveedor}501`, {
-      type: 'list', allowBlank: false, formulae: ['"Microsoft 365,GoDaddy"'],
+      type: 'list', allowBlank: tipo !== 'ALUMNOS', formulae: ['"Microsoft 365,GoDaddy"'],
       showErrorMessage: true, errorTitle: 'Proveedor incorrecto',
       error: 'Selecciona Microsoft 365 o GoDaddy de la lista.',
     });
@@ -112,8 +114,10 @@ export function crearPlantillaImportacion(tipo: TipoPlantilla): ExcelJS.Workbook
   if (tipo === 'ALUMNOS') {
     guia.addRow(['5. Correo institucional: cuenta de acceso. Correo personal: contacto opcional. Ambos son datos diferentes.']);
     guia.addRow(['6. correoProveedor es obligatorio en cada fila. Selecciona Microsoft 365 o GoDaddy. Segundo nombre es opcional.']);
+  } else if (tipo === 'DOCENTES' || tipo === 'PERSONAL') {
+    guia.addRow(['5. correoProveedor opcional: Microsoft 365 o GoDaddy; vacío utiliza GoDaddy.']);
   }
-  const filaEncabezadoGuia = tipo === 'ALUMNOS' ? 8 : 6;
+  const filaEncabezadoGuia = tipo === 'ALUMNOS' ? 8 : tipo === 'INSCRIPCIONES' ? 6 : 7;
   guia.addRow(['Campo técnico', 'Requerido', 'Cómo completarlo']);
   guia.getRow(1).font = { bold: true, size: 14, color: { argb: 'FF14343B' } };
   guia.getRow(filaEncabezadoGuia).font = { bold: true, color: { argb: 'FFFFFFFF' } };
