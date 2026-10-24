@@ -144,7 +144,7 @@ No se declara PILOTO LISTO ni Fase 5 cerrada. El estado por área está en [ESTA
 - `database/sqlserver/schema.sql`
 - `docs/AMPLIACION_1.15.0.md`
 - `docs/ARQUITECTURA.md`
-- `docs/CORRECCIONES_1.15.0.md`
+- [Resumen histórico de correcciones 1.15.0](https://github.com/Marcor360/Sistema-Escolar/blob/e4b815eb1b5fa797f69853720fc412703e503c23/docs/CORRECCIONES_1.15.0.md)
 - `docs/ESTADO_IMPLEMENTACION.md`
 - `docs/EXCEPCIONES_NPM_AUDIT.md`
 - `docs/REGLAS_PILOTO.md`
