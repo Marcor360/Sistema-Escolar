@@ -43,6 +43,20 @@ describe('Carga parcial de alumnos', () => {
     expect(resultado.errores.map((e) => e.fila)).toEqual([2]);
     expect(resultado.duplicados).toHaveLength(0);
   });
+  it('en un archivo de 10 alumnos con 9 ya registrados prepara exactamente 1 alta nueva', async () => {
+    const filas = Array.from({ length: 10 }, (_, indice) =>
+      alumno(`MATRICULA${indice}`, `alumno${indice}@iua.edu.mx`));
+    const c = catalogos();
+    for (let indice = 0; indice < 9; indice++) {
+      c.emails.add(`alumno${indice}@iua.edu.mx`);
+      c.identificadores.add(`MATRICULA${indice}`);
+    }
+    const resultado = await service['evaluarAlumnos'](filas, c);
+    expect(resultado.validas).toHaveLength(1);
+    expect(resultado.duplicados).toHaveLength(9);
+    expect(resultado.errores).toHaveLength(0);
+  });
+
   it('reprocesar el mismo archivo no produce nuevos registros', async () => {
     const filas = [alumno('NUEVO001', 'nuevo@iua.edu.mx')];
     const c = catalogos();
