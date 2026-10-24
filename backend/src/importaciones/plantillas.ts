@@ -4,8 +4,15 @@ import { CABECERAS } from './importaciones.service';
 
 export type TipoPlantilla = (typeof TIPOS_IMPORTACION)[number];
 
+export const COLUMNAS_PLANTILLA: Record<TipoPlantilla, string[]> = {
+  ALUMNOS: CABECERAS.ALUMNOS.filter((campo) => campo !== 'email'),
+  DOCENTES: CABECERAS.DOCENTES,
+  PERSONAL: CABECERAS.PERSONAL,
+  INSCRIPCIONES: CABECERAS.INSCRIPCIONES,
+};
+
 const OBLIGATORIOS: Record<TipoPlantilla, readonly string[]> = {
-  ALUMNOS: ['email', 'nombre', 'apellidoPaterno', 'matricula', 'plantelId', 'curp'],
+  ALUMNOS: ['correoInstitucional', 'nombre', 'apellidoPaterno', 'matricula', 'plantelId', 'curp'],
   DOCENTES: ['email', 'nombre', 'apellidoPaterno', 'numEmpleado', 'plantelIds'],
   PERSONAL: ['email', 'nombre', 'apellidoPaterno', 'roles', 'plantelIds'],
   INSCRIPCIONES: ['matricula', 'grupoId'],
@@ -13,7 +20,10 @@ const OBLIGATORIOS: Record<TipoPlantilla, readonly string[]> = {
 
 const DESCRIPCIONES: Record<TipoPlantilla, Record<string, string>> = {
   ALUMNOS: {
-    email: 'Correo único del alumno. Se usa para ingresar al sistema.',
+    correoInstitucional: 'Obligatorio. Correo único para ingresar al sistema y recibir activación. En archivos antiguos también se admite la cabecera email.',
+    correoPersonal: 'Opcional. Correo personal de contacto, separado del institucional. No se usa para iniciar sesión ni recibir códigos de acceso.',
+    correoProveedor: 'Remitente de avisos al alumno. Elige Microsoft 365 o GoDaddy en el desplegable; en blanco se aplica Microsoft 365.',
+    email: 'Columna heredada opcional para CSV antiguos; utiliza correoInstitucional en las plantillas nuevas.',
     nombre: 'Nombre o nombres del alumno.',
     apellidoPaterno: 'Primer apellido del alumno.',
     apellidoMaterno: 'Segundo apellido, si corresponde.',
@@ -53,18 +63,32 @@ const DESCRIPCIONES: Record<TipoPlantilla, Record<string, string>> = {
 };
 
 const CAMPOS_TEXTO = new Set([
-  'email', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'matricula', 'curp',
+  'email', 'correoInstitucional', 'correoPersonal', 'correoProveedor', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'matricula', 'curp',
   'fechaNacimiento', 'telefono', 'tutorNombre', 'tutorTelefono', 'direccion',
   'numEmpleado', 'plantelIds', 'cedulaProfesional', 'especialidad', 'roles',
 ]);
 
 export function crearPlantillaImportacion(tipo: TipoPlantilla): ExcelJS.Workbook {
   const libro = new ExcelJS.Workbook();
-  const columnas = CABECERAS[tipo];
+  const columnas = COLUMNAS_PLANTILLA[tipo];
   const hoja = libro.addWorksheet(tipo, { views: [{ state: 'frozen', ySplit: 1, activeCell: 'A2' }] });
   hoja.addRow(columnas);
   hoja.autoFilter = { from: 'A1', to: hoja.getRow(1).getCell(columnas.length).address };
   hoja.getRow(1).height = 32;
+  if (tipo === 'ALUMNOS') {
+    const indiceProveedor = columnas.indexOf('correoProveedor') + 1;
+    const letraProveedor = hoja.getColumn(indiceProveedor).letter;
+    // ExcelJS soporta rangos de validación, aunque su tipo público omite el registro de reglas.
+    const validaciones = (hoja as unknown as { dataValidations: { add: (rango: string, regla: {
+      type: 'list'; allowBlank: boolean; formulae: string[]; showErrorMessage: boolean;
+      errorTitle: string; error: string;
+    }) => void } }).dataValidations;
+    validaciones.add(`${letraProveedor}2:${letraProveedor}501`, {
+      type: 'list', allowBlank: true, formulae: ['"Microsoft 365,GoDaddy"'],
+      showErrorMessage: true, errorTitle: 'Proveedor incorrecto',
+      error: 'Selecciona Microsoft 365 o GoDaddy de la lista.',
+    });
+  }
 
   columnas.forEach((campo, posicion) => {
     const columna = hoja.getColumn(posicion + 1);
@@ -84,11 +108,16 @@ export function crearPlantillaImportacion(tipo: TipoPlantilla): ExcelJS.Workbook
   guia.addRow(['2. Usa identificadores reales del sistema. No incluyas contraseñas ni fórmulas.']);
   guia.addRow(['3. No añadas filas de ejemplo. Máximo 500 registros y 5 MB por archivo.']);
   guia.addRow(['4. Sube el XLSX o CSV, revisa la previsualización y confirma para aplicar.']);
+  if (tipo === 'ALUMNOS') {
+    guia.addRow(['5. Correo institucional: cuenta de acceso. Correo personal: contacto opcional. Ambos son datos diferentes.']);
+    guia.addRow(['6. En correoProveedor selecciona Microsoft 365 o GoDaddy. Si lo dejas vacío se usa Microsoft 365.']);
+  }
+  const filaEncabezadoGuia = tipo === 'ALUMNOS' ? 8 : 6;
   guia.addRow(['Campo técnico', 'Requerido', 'Cómo completarlo']);
   guia.getRow(1).font = { bold: true, size: 14, color: { argb: 'FF14343B' } };
-  guia.getRow(6).font = { bold: true, color: { argb: 'FFFFFFFF' } };
-  guia.getRow(6).height = 25;
-  guia.getRow(6).eachCell((celda) => {
+  guia.getRow(filaEncabezadoGuia).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  guia.getRow(filaEncabezadoGuia).height = 25;
+  guia.getRow(filaEncabezadoGuia).eachCell((celda) => {
     celda.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF14343B' } };
     celda.alignment = { vertical: 'middle', wrapText: true };
   });

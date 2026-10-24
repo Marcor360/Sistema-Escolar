@@ -1,5 +1,5 @@
 {
-  "version": "1.27.33",
+  "version": "1.27.34",
   "alcance": "Escenarios de aceptación institucional sin resultados fabricados",
   "escenarios": [
     {
@@ -279,6 +279,21 @@
       ],
       "estado": "pendiente",
       "responsable": "Control Escolar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-22",
+      "rol": "FINANZAS",
+      "escenario": "Importar 2 alumnos en XLSX: correo institucional, correo personal, elección Microsoft 365/GoDaddy por fila; mantener compatibilidad con CSV email, verificar validaciones, confirmación atómica, aislamiento de plantel y que códigos nunca se envían al correo personal.",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver",
+        "smtp"
+      ],
+      "estado": "pendiente",
+      "responsable": "Finanzas, Control Escolar y QA",
       "evidencias": []
     }
   ]

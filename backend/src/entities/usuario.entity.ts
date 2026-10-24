@@ -10,6 +10,7 @@ export type ProveedorCorreo = 'GODADDY' | 'MICROSOFT365';
 export class Usuario {
   @PrimaryGeneratedColumn() id!: number;
   @Column({ length: 120, unique: true }) email!: string;
+  @Column({ name: 'correo_personal', type: String, length: 120, nullable: true }) correoPersonal!: string | null;
   @Column({ length: 100, select: false }) passwordHash!: string;
   @Column({ length: 80 }) nombre!: string;
   @Column({ length: 80 }) apellidoPaterno!: string;

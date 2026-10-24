@@ -117,7 +117,7 @@ export class AlumnosService {
       tutorNombre: alumno.tutorNombre,
       tutorTelefono: alumno.tutorTelefono,
       direccion: alumno.direccion,
-      usuario: { ...publico.usuario, email: alumno.usuario.email, telefono: alumno.usuario.telefono, correoProveedor: alumno.usuario.correoProveedor },
+      usuario: { ...publico.usuario, email: alumno.usuario.email, correoPersonal: alumno.usuario.correoPersonal, telefono: alumno.usuario.telefono, correoProveedor: alumno.usuario.correoProveedor },
     };
   }
 
@@ -194,6 +194,7 @@ export class AlumnosService {
         roles: ['ALUMNO'],
         correoProveedor: dto.correoProveedor,
       }, manager);
+      await manager.getRepository(Usuario).update({ id: usuario.id }, { correoPersonal: dto.correoPersonal ?? null });
       await manager.getRepository(Usuario).update({ id: usuario.id }, { activacionPendiente: true });
       const alumnos = manager.getRepository(Alumno);
       return alumnos.save(alumnos.create({
@@ -220,7 +221,7 @@ export class AlumnosService {
         await this.scope.validarGestion(user, alumno.plantelId);
         if (dto.plantelId) await this.scope.validarGestion(user, dto.plantelId);
       }
-      if ([dto.nombre, dto.apellidoPaterno, dto.apellidoMaterno, dto.telefono, dto.correoProveedor].some((v) => v !== undefined)) {
+      if ([dto.nombre, dto.apellidoPaterno, dto.apellidoMaterno, dto.telefono, dto.correoProveedor, dto.correoPersonal].some((v) => v !== undefined)) {
         await this.usuarios.actualizar(alumno.usuarioId, {
           nombre: dto.nombre,
           apellidoPaterno: dto.apellidoPaterno,
@@ -228,6 +229,9 @@ export class AlumnosService {
           telefono: dto.telefono,
           correoProveedor: dto.correoProveedor,
         }, manager);
+        if (dto.correoPersonal !== undefined) {
+          await manager.getRepository(Usuario).update({ id: alumno.usuarioId }, { correoPersonal: dto.correoPersonal });
+        }
       }
       Object.assign(alumno, {
         curp: dto.curp === undefined ? alumno.curp : dto.curp,

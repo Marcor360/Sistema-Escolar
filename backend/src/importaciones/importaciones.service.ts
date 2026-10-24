@@ -14,6 +14,7 @@ import { Alumno, Docente, Usuario, UsuarioPlantel, Plantel, Grupo, CicloEscolar,
 import { exigirGrupoConfigurable } from '../common/contexto-academico';
 import { leerArchivo } from './lectura';
 import { TipoImportacion } from './importaciones.dto';
+import { proveedorCorreoPredeterminado } from '../common/proveedor-correo';
 import { PreviewCifrado } from './preview-cifrado';
 type Fila = Record<string,string>;
 interface Catalogos {
@@ -22,7 +23,7 @@ interface Catalogos {
 }
 const trozos = <T>(filas: T[]) => Array.from({ length: Math.ceil(filas.length / 100) }, (_, i) => filas.slice(i*100,(i+1)*100));
 export const CABECERAS: Record<TipoImportacion, string[]> = {
-  ALUMNOS: ['email', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'matricula', 'plantelId', 'curp', 'fechaNacimiento', 'telefono', 'tutorNombre', 'tutorTelefono', 'direccion'],
+  ALUMNOS: ['correoInstitucional', 'correoPersonal', 'correoProveedor', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'matricula', 'plantelId', 'curp', 'fechaNacimiento', 'telefono', 'tutorNombre', 'tutorTelefono', 'direccion', 'email'],
   DOCENTES: ['email', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'numEmpleado', 'plantelIds', 'cedulaProfesional', 'cedulaPendiente', 'especialidad', 'telefono'],
   PERSONAL: ['email', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'roles', 'plantelIds', 'telefono'],
   INSCRIPCIONES: ['matricula', 'grupoId'],
@@ -41,8 +42,20 @@ export class ImportacionesService {
   }
   validarTipo(tipo: TipoImportacion, user: JwtUser) { this.autorizar(tipo, user); }
   private preparar(tipo: TipoImportacion, fila: Fila) {
-    const datos: Record<string, unknown> = Object.fromEntries(Object.entries(fila).filter(([, v]) => v !== ''));
     if (Object.keys(fila).some((k) => !CABECERAS[tipo].includes(k))) throw new BadRequestException('Hay columnas no admitidas; descarga la plantilla');
+    const datos: Record<string, unknown> = Object.fromEntries(Object.entries(fila).filter(([, v]) => v !== ''));
+    if (tipo === 'ALUMNOS') {
+      const nuevo = (fila.correoInstitucional ?? '').trim().toLowerCase();
+      const anterior = (fila.email ?? '').trim().toLowerCase();
+      if (nuevo && anterior && nuevo !== anterior) throw new BadRequestException('correoInstitucional y email no coinciden');
+      datos.email = nuevo || anterior;
+      delete datos.correoInstitucional;
+      const elegido = String(datos.correoProveedor ?? '').trim();
+      if (elegido === 'Microsoft 365') datos.correoProveedor = 'MICROSOFT365';
+      else if (elegido === 'GoDaddy') datos.correoProveedor = 'GODADDY';
+      else if (!elegido) datos.correoProveedor = 'MICROSOFT365';
+      if (datos.correoPersonal === undefined) delete datos.correoPersonal;
+    }
     if (tipo === 'PERSONAL') datos.password = randomBytes(24).toString('base64url');
     if (tipo === 'DOCENTES' && datos.cedulaPendiente !== undefined) {
       const valor = String(datos.cedulaPendiente).trim().toLowerCase();
@@ -80,7 +93,7 @@ export class ImportacionesService {
     } else {
       const ids = numericos(filas.flatMap((f) => tipo === 'ALUMNOS' ? [f.plantelId] : (f.plantelIds ?? '').split(';')));
       if (ids.length) c.planteles = new Map((await manager.getRepository(Plantel).find({ where: { id: In(ids) }, order: { id: 'ASC' }, ...lock })).map((p) => [p.id,p]));
-      const emails = [...new Set(filas.map((f) => (f.email ?? '').toLowerCase()))];
+      const emails = [...new Set(filas.map((f) => (tipo === 'ALUMNOS' ? (f.correoInstitucional || f.email) : f.email) ?? '').map((e) => e.trim().toLowerCase()).filter(Boolean))];
       if (emails.length) c.emails = new Set((await manager.getRepository(Usuario).find({ where: { email: In(emails) }, select: { email: true }, loadEagerRelations: false, withDeleted: true })).map((u) => u.email.toLowerCase()));
       const identificadores = [...new Set(filas.map((f) => (tipo === 'ALUMNOS' ? f.matricula : f.numEmpleado) ?? '').map((s) => s.toUpperCase()))];
       if (tipo === 'ALUMNOS' && identificadores.length) c.identificadores = new Set((await manager.getRepository(Alumno).find({ where: { matricula: In(identificadores) }, select: { matricula: true }, loadEagerRelations: false, withDeleted: true })).map((a) => a.matricula.toUpperCase()));
@@ -135,7 +148,7 @@ export class ImportacionesService {
         await repo.insert(p); for (const lote of trozos(cifradas)) await manager.getRepository(ImportacionFila).insert(lote);
       }); previewId = p.id;
     }
-    return { previewId, registros: filas.length, errores, identificadores: filas.map((f,i) => ({ fila: i+2, identificador: f.matricula ?? f.numEmpleado ?? f.email })), regla: tipo === 'ALUMNOS' ? 'Confirmación atómica. El alumno no recibe contraseña inicial; debe solicitar y completar la activación por código de un solo uso en su correo. Si no hay correo operativo, el acceso queda pendiente.' : 'Confirmación atómica. Cuentas nuevas se activan estableciendo contraseña mediante recuperación por correo; no se entregan contraseñas en la importación.' };
+    return { previewId, registros: filas.length, errores, identificadores: filas.map((f,i) => ({ fila: i+2, identificador: f.matricula ?? f.numEmpleado ?? f.correoInstitucional ?? f.email })), regla: tipo === 'ALUMNOS' ? 'Confirmación atómica. El alumno no recibe contraseña inicial; debe solicitar y completar la activación por código de un solo uso en su correo. Si no hay correo operativo, el acceso queda pendiente.' : 'Confirmación atómica. Cuentas nuevas se activan estableciendo contraseña mediante recuperación por correo; no se entregan contraseñas en la importación.' };
   }
   private comprobar(p: ImportacionPreview | null, user: JwtUser): asserts p is ImportacionPreview { if (!p || p.expira < new Date() || p.actorId !== user.sub) throw new NotFoundException('Previsualización expirada, consumida o no disponible para tu sesión'); this.autorizar(p.tipo,user); }
   async confirmar(previewId: string, confirmado: boolean, user: JwtUser) {
@@ -174,7 +187,7 @@ export class ImportacionesService {
         const nuevos = await repo.save(cuentas.map((v,i) => {
           const d = v.instancia, claves = p.tipo === 'ALUMNOS' ? ['ALUMNO'] : p.tipo === 'DOCENTES' ? ['MAESTRO'] : (d as CrearUsuarioDto).roles;
           const roles = [...new Set(claves)].map((clave) => { const rol = c.roles.get(clave); if (!rol) throw new ConflictException('Rol inexistente'); return rol; });
-          return repo.create({ email: d.email, nombre: d.nombre, apellidoPaterno: d.apellidoPaterno, apellidoMaterno: d.apellidoMaterno ?? null, telefono: d.telefono ?? null, passwordHash: hashes[i], passwordChangeRequired: true, activacionPendiente: p.tipo === 'ALUMNOS', roles });
+          return repo.create({ email: d.email, correoPersonal: p.tipo === 'ALUMNOS' ? (d as CrearAlumnoDto).correoPersonal ?? null : null, correoProveedor: d.correoProveedor ?? proveedorCorreoPredeterminado(claves), nombre: d.nombre, apellidoPaterno: d.apellidoPaterno, apellidoMaterno: d.apellidoMaterno ?? null, telefono: d.telefono ?? null, passwordHash: hashes[i], passwordChangeRequired: true, activacionPendiente: p.tipo === 'ALUMNOS', roles });
         }),{ chunk: 50 });
         const usuarios = new Map(nuevos.map((u) => [u.email,u.id]));
         if (p.tipo === 'ALUMNOS') {
