@@ -253,9 +253,22 @@ export class ImportacionesService {
     const cifradas = await this.ds.getRepository(ImportacionFila).find({ where: { previewId }, order: { posicion: 'ASC' } });
     let filas: Fila[]; try { filas = cifradas.map((f) => this.cifrado.descifrar(f.contenido,this.aad(previa,f.posicion))); } catch { throw new NotFoundException('Genera otra previsualización: clave cambiada o contenido inválido'); }
     if (!filas.length || filas.length > 500) throw new ConflictException('Previsualización inválida');
-    // El hash se calcula fuera de la transacción para reducir el tiempo de bloqueo.
+    // Sólo se generan hashes para candidatos nuevos; no bloquear el portal por alumnos ya registrados.
     const hashes: string[] = [];
-    if (previa.tipo !== 'INSCRIPCIONES') {
+    const hashesAlumnos = new Map<string, string>();
+    if (previa.tipo === 'ALUMNOS') {
+      const candidatos = await this.ds.transaction(async (manager) => {
+        const c = await this.catalogos(manager, 'ALUMNOS', filas, user, false);
+        const resultado = await this.evaluarAlumnos(filas, c);
+        return resultado.validas.filter((v) => v.clase === 'CUENTA')
+          .map((v) => v.instancia.email.toLowerCase());
+      });
+      for (let i = 0; i < candidatos.length; i += 4) {
+        const lote = candidatos.slice(i, i + 4);
+        const generados = await Promise.all(lote.map(() => hashPasswordNueva(randomBytes(32).toString('base64url'))));
+        lote.forEach((correo, indice) => hashesAlumnos.set(correo, generados[indice]));
+      }
+    } else if (previa.tipo !== 'INSCRIPCIONES') {
       for (let i = 0; i < filas.length; i += 4) {
         hashes.push(...await Promise.all(filas.slice(i, i + 4).map(() =>
           hashPasswordNueva(randomBytes(32).toString('base64url')),
@@ -285,7 +298,9 @@ export class ImportacionesService {
         const nuevos = await repo.save(cuentas.map((v,i) => {
           const d = v.instancia, claves = p.tipo === 'ALUMNOS' ? ['ALUMNO'] : p.tipo === 'DOCENTES' ? ['MAESTRO'] : (d as CrearUsuarioDto).roles;
           const roles = [...new Set(claves)].map((clave) => { const rol = c.roles.get(clave); if (!rol) throw new ConflictException('Rol inexistente'); return rol; });
-          return repo.create({ email: d.email, correoPersonal: p.tipo === 'ALUMNOS' ? (d as CrearAlumnoDto).correoPersonal ?? null : null, correoProveedor: d.correoProveedor ?? proveedorCorreoPredeterminado(claves), nombre: d.nombre, apellidoPaterno: d.apellidoPaterno, apellidoMaterno: d.apellidoMaterno ?? null, telefono: d.telefono ?? null, passwordHash: hashes[i], passwordChangeRequired: true, activacionPendiente: p.tipo === 'ALUMNOS', roles });
+          const passwordHash = p.tipo === 'ALUMNOS' ? hashesAlumnos.get(d.email.toLowerCase()) : hashes[i];
+          if (!passwordHash) throw new ConflictException('El estado de las cuentas cambió; vuelve a previsualizar el archivo');
+          return repo.create({ email: d.email, correoPersonal: p.tipo === 'ALUMNOS' ? (d as CrearAlumnoDto).correoPersonal ?? null : null, correoProveedor: d.correoProveedor ?? proveedorCorreoPredeterminado(claves), nombre: d.nombre, apellidoPaterno: d.apellidoPaterno, apellidoMaterno: d.apellidoMaterno ?? null, telefono: d.telefono ?? null, passwordHash, passwordChangeRequired: true, activacionPendiente: p.tipo === 'ALUMNOS', roles });
         }),{ chunk: 50 });
         const usuarios = new Map(nuevos.map((u) => [u.email,u.id]));
         if (p.tipo === 'ALUMNOS') {
