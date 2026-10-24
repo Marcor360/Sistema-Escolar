@@ -51,7 +51,7 @@ describe('Selección del proveedor de correo por usuario', () => {
   it('conserva la preferencia explícita del docente aunque su rol sugiera otro proveedor', async () => {
     const { servicio, graph } = crearServicio({
       correoProveedor: 'MICROSOFT365',
-      roles: [{ clave: 'MAESTRO' }] as Usuario['roles'],
+      roles: [{ clave: 'MAESTRO' }] as unknown as Usuario['roles'],
     }, true);
     await servicio.enviarEmail('docente@ejemplo.test', 'Aviso', 'Hola', 'referencia-segura');
     expect(graph.enviar).toHaveBeenCalledWith(
