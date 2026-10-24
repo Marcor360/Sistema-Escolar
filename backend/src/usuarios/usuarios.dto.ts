@@ -6,6 +6,7 @@ import { MaxLength, Min, MinLength as LongitudMinima } from 'class-validator';
 import { Transform as Normalizar } from 'class-transformer';
 import { ArrayNotEmpty, IsArray, IsBoolean, IsEmail, IsIn, IsOptional, IsString, MinLength } from 'class-validator';
 import { RolClave } from '../common/roles.decorator';
+import type { ProveedorCorreo } from '../entities/usuario.entity';
 import { Type } from 'class-transformer';
 import { IsInt } from 'class-validator';
 import { PaginacionDto } from '../common/paginacion.dto';
@@ -26,6 +27,7 @@ export class CrearUsuarioDto {
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsOptional() @IsString() @MaxLength(20) telefono?: string | null;
   @IsArray() @ArrayNotEmpty() @IsIn(ROLES, { each: true }) roles!: RolClave[];
+  @OpcionalNoNulo() @IsIn(['GODADDY', 'MICROSOFT365']) correoProveedor?: ProveedorCorreo;
 }
 
 /** El personal recibe un enlace privado para definir su contraseña; nunca se solicita una temporal en el alta. */
@@ -43,6 +45,7 @@ export class ActualizarUsuarioDto {
   @OpcionalNoNulo() @IsBoolean() activo?: boolean;
   @OpcionalNoNulo() @IsString() @MinLength(8) @PasswordNuevaValida() password?: string;
   @OpcionalNoNulo() @IsArray() @IsIn(ROLES, { each: true }) roles?: RolClave[];
+  @OpcionalNoNulo() @IsIn(['GODADDY', 'MICROSOFT365']) correoProveedor?: ProveedorCorreo;
 }
 
 export class ListadoUsuariosDto extends PaginacionDto {

@@ -1,5 +1,5 @@
 {
-  "version": "1.27.32",
+  "version": "1.27.33",
   "alcance": "Escenarios de aceptación institucional sin resultados fabricados",
   "escenarios": [
     {
@@ -240,6 +240,45 @@
       ],
       "estado": "pendiente",
       "responsable": "Finanzas y QA por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-19",
+      "rol": "ALUMNO",
+      "escenario": "Crear alumno: Microsoft 365 seleccionado automáticamente, comprobar invitación, recuperación y avisos por Graph con entrega real y sin exponer códigos en logs; probar cambio manual a GoDaddy para buzón alojado allí.",
+      "canales": [
+        "web",
+        "api",
+        "smtp"
+      ],
+      "estado": "pendiente",
+      "responsable": "Operación y Control Escolar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-20",
+      "rol": "ADMINISTRATIVO",
+      "escenario": "Crear personal administrativo/Finanzas/Superadmin: GoDaddy seleccionado por defecto, comprobar invitación y recuperación mediante plataforma-stagin@iua.edu.mx, y permitir preferencia manual Microsoft 365 sin redirección silenciosa ante fallos.",
+      "canales": [
+        "web",
+        "api",
+        "smtp"
+      ],
+      "estado": "pendiente",
+      "responsable": "Operación",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-21",
+      "rol": "MAESTRO",
+      "escenario": "Alta de docente con GoDaddy por defecto; modificar selección a Microsoft 365 desde edición web, comprobar entrega al buzón de destino y alcance de plantel; validar error de proveedor deshabilitado.",
+      "canales": [
+        "web",
+        "api",
+        "smtp"
+      ],
+      "estado": "pendiente",
+      "responsable": "Control Escolar",
       "evidencias": []
     }
   ]

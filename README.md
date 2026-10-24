@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.27.32`** · Estado: candidata preparatoria; aceptación institucional pendiente. Esta entrega actualiza documentación, herramientas de pruebas y metadatos de versión; **no demuestra despliegue adicional**. Staging confirmado por el operador en **1.27.17** (commit `8579ab4`), con API `/health/ready` local y HTTPS correctas. La app Expo instalada en dispositivos **no se actualiza automáticamente**.
+**Versión candidata: `1.27.33`** · Estado: candidata preparatoria; aceptación institucional pendiente. Esta entrega actualiza documentación, herramientas de pruebas y metadatos de versión; **no demuestra despliegue adicional**. Staging confirmado por el operador en **1.27.17** (commit `8579ab4`), con API `/health/ready` local y HTTPS correctas. La app Expo instalada en dispositivos **no se actualiza automáticamente**.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -18,6 +18,8 @@ Sistema escolar multiplataforma para operación académica, administrativa y fin
 Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [índice documental](docs/README.md) e [historial de documentos retirados](docs/HISTORIAL.md).
 
 ### Funcionalidad destacada de versiones recientes
+
+- **1.27.33 (PR):** correo dual por usuario: alumnos Microsoft 365, personal y docentes GoDaddy por defecto, selección manual en web, migraciones MySQL/SQL Server y cliente Graph sin nuevas dependencias. Activación mediante configuración segura del certificado; ver [manual de despliegue](docs/CORREO_DUAL_GRAPH_GODADDY.md). No hay nuevas funciones ni rutas en Expo.
 
 - **1.27.32:** web de reinscripción a **ciclo posterior** para Control Escolar y Finanzas: expediente recuperado, plan compatible, retroceso/salto con motivo, previsualización de cargos, ajuste financiero de colegiatura y confirmación usando apertura/grupos existentes. Dentro del mismo ciclo permanece bloqueado hasta migración por periodo. Finanzas incorpora seguimiento paginado de alumnos con saldo, acceso telefónico y WhatsApp **manual**, previsualización de avisos de correo mediante SMTP/cola existente y KPIs por alumno; serie mensual alterna barras y líneas, importes y pagadores. Sin nuevos proveedores, migraciones ni mensajería por teléfono/WhatsApp automática. [Contrato y límites](docs/FINANZAS_REINSCRIPCION_COBRANZA_1.27.32.md). **Pendiente CI/UAT antes de producción.**
 

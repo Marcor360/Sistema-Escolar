@@ -117,7 +117,7 @@ export class AlumnosService {
       tutorNombre: alumno.tutorNombre,
       tutorTelefono: alumno.tutorTelefono,
       direccion: alumno.direccion,
-      usuario: { ...publico.usuario, email: alumno.usuario.email, telefono: alumno.usuario.telefono },
+      usuario: { ...publico.usuario, email: alumno.usuario.email, telefono: alumno.usuario.telefono, correoProveedor: alumno.usuario.correoProveedor },
     };
   }
 
@@ -192,6 +192,7 @@ export class AlumnosService {
         apellidoMaterno: dto.apellidoMaterno,
         telefono: dto.telefono,
         roles: ['ALUMNO'],
+        correoProveedor: dto.correoProveedor,
       }, manager);
       await manager.getRepository(Usuario).update({ id: usuario.id }, { activacionPendiente: true });
       const alumnos = manager.getRepository(Alumno);
@@ -219,12 +220,13 @@ export class AlumnosService {
         await this.scope.validarGestion(user, alumno.plantelId);
         if (dto.plantelId) await this.scope.validarGestion(user, dto.plantelId);
       }
-      if ([dto.nombre, dto.apellidoPaterno, dto.apellidoMaterno, dto.telefono].some((v) => v !== undefined)) {
+      if ([dto.nombre, dto.apellidoPaterno, dto.apellidoMaterno, dto.telefono, dto.correoProveedor].some((v) => v !== undefined)) {
         await this.usuarios.actualizar(alumno.usuarioId, {
           nombre: dto.nombre,
           apellidoPaterno: dto.apellidoPaterno,
           apellidoMaterno: dto.apellidoMaterno,
           telefono: dto.telefono,
+          correoProveedor: dto.correoProveedor,
         }, manager);
       }
       Object.assign(alumno, {

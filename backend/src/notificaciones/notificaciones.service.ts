@@ -7,6 +7,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as nodemailer from 'nodemailer';
 import { Notificacion } from '../entities/notificacion.entity';
+import { proveedorCorreoPredeterminado } from '../common/proveedor-correo';
+import { CorreoMicrosoftService } from './correo-microsoft.service';
 import { Usuario } from '../entities/usuario.entity';
 import { Alumno } from '../entities/alumno.entity';
 import { UsuarioPlantel } from '../entities/usuario-plantel.entity';
@@ -27,6 +29,7 @@ export class NotificacionesService {
     private readonly scope: ScopeService,
     private readonly config: ConfigService,
     @Optional() private readonly push?: PushService,
+    @Optional() private readonly microsoft?: CorreoMicrosoftService,
   ) {
     const host = this.config.get<string>('SMTP_HOST');
     const puertoConfigurado = this.config.get<string>('SMTP_PORT') || '587';
@@ -110,13 +113,25 @@ export class NotificacionesService {
     return { enviadas: ids.length };
   }
 
-  /** Envía correo real si hay SMTP configurado; si no, registra únicamente que no fue enviado. */
+  /** La preferencia persistida se aplica por destinatario; nunca se sustituye silenciosamente un proveedor. */
   async enviarEmail(to: string, subject: string, html: string, messageId?: string) {
+    const usuario = await this.usuarios.findOne({ where: { email: to } });
+    const proveedor = usuario
+      ? (usuario.correoProveedor ?? proveedorCorreoPredeterminado(usuario.roles.map((r) => r.clave)))
+      : 'GODADDY';
+    const correlacion = randomUUID();
+    if (proveedor === 'MICROSOFT365') {
+      if (!this.microsoft?.habilitado) {
+        throw new ServiceUnavailableException('Correo Microsoft 365 no disponible para esta cuenta');
+      }
+      await this.microsoft.enviar(to, subject, html, correlacion, messageId);
+      this.logger.log(`ACEPTADO_GRAPH correlacion=${correlacion}; recepción en buzón no verificada`);
+      return { simulado: false };
+    }
     if (!this.transporter) {
       this.logger.log('SMTP no configurado: correo no enviado');
       return { simulado: true };
     }
-    const correlacion = randomUUID();
     const from = this.config.get<string>('SMTP_FROM') || 'no-reply@escolar.mx';
     const dominio = from.trim().match(/@([a-z0-9.-]+)>?$/i)?.[1];
     const idMensaje = messageId || (dominio ? `${correlacion}@${dominio}` : undefined);

@@ -131,7 +131,7 @@ export class CorreoAccesoOutboxService implements OnModuleInit, OnModuleDestroy 
       const listo = await this.preparar(id, claim);
       if (!listo) return;
       const { trabajo, usuario, token } = listo;
-      // El reintento conserva Message-ID; SMTP es al menos una vez, nunca exactamente una vez.
+      // El reintento conserva referencia de correlación; SMTP/Graph son al menos una vez.
       const from = this.config.get<string>('SMTP_FROM') || '';
       const dominio = from.trim().match(/@([a-z0-9.-]+)>?$/i)?.[1];
       const enviado = await this.correo.enviarEmail(usuario.email,
@@ -140,7 +140,7 @@ export class CorreoAccesoOutboxService implements OnModuleInit, OnModuleDestroy 
         dominio ? `acceso-${trabajo.id}@${dominio}` : undefined);
       if (enviado.simulado) throw new Error('SMTP_NO_DISPONIBLE');
       const actualizado = await repo.update({ id, claim, estado: 'PROCESANDO' }, { estado: 'ACEPTADO', errorCodigo: null, claim: null, leaseHasta: null });
-      this.logger.log(`OUTBOX id=${id} estado=ACEPTADO_SMTP`);
+      this.logger.log(`OUTBOX id=${id} estado=ACEPTADO_PROVEEDOR`);
       if (actualizado.affected === 1 && trabajo.tipo === 'RECUPERACION') {
         await this.notificarAyudaPlantel(usuario).catch(() => this.logger.warn(`OUTBOX id=${id} aviso_plantel_fallido`));
       }

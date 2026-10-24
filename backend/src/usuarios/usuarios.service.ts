@@ -5,6 +5,7 @@ import { ConflictException, ForbiddenException, Injectable, NotFoundException } 
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, In, Repository, SelectQueryBuilder } from 'typeorm';
 import { Usuario } from '../entities/usuario.entity';
+import { proveedorCorreoPredeterminado } from '../common/proveedor-correo';
 import { Rol } from '../entities/rol.entity';
 import { ActualizarPersonalDto, ActualizarUsuarioDto, CrearUsuarioDto, CrearPersonalDto } from './usuarios.dto';
 import { RolClave } from '../common/roles.decorator';
@@ -21,7 +22,7 @@ import { ListadoUsuariosDto } from './usuarios.dto';
 import { PaginacionDto } from '../common/paginacion.dto';
 
 type UsuarioPublico = Pick<
-  Usuario, 'id' | 'email' | 'nombre' | 'apellidoPaterno' | 'apellidoMaterno' | 'telefono' | 'activo' | 'roles' | 'nombreCompleto'
+  Usuario, 'id' | 'email' | 'nombre' | 'apellidoPaterno' | 'apellidoMaterno' | 'telefono' | 'activo' | 'roles' | 'nombreCompleto' | 'correoProveedor'
 >;
 
 @Injectable()
@@ -118,7 +119,7 @@ export class UsuariosService {
     const [filas, total] = await qb.orderBy('a.id', 'DESC').skip((pagina - 1) * porPagina).take(porPagina).getManyAndCount();
     return { datos: filas.map((a) => ({
       id: a.id, matricula: a.matricula, nombre: a.usuario.nombreCompleto,
-      ...(user.roles.some((r) => ['SUPERADMIN', 'ADMINISTRATIVO'].includes(r)) ? { correo: a.usuario.email } : {}), plantel: a.plantel?.nombre ?? null, estatus: a.estatus,
+      ...(user.roles.some((r) => ['SUPERADMIN', 'ADMINISTRATIVO'].includes(r)) ? { correo: a.usuario.email, correoProveedor: a.usuario.correoProveedor } : {}), plantel: a.plantel?.nombre ?? null, estatus: a.estatus,
     })), total, pagina, porPagina };
   }
 
@@ -134,7 +135,7 @@ export class UsuariosService {
     const nombres = await this.plantelesPorUsuario(filas.map((d) => d.usuarioId), planteles);
     return { datos: filas.map((d) => ({
       id: d.id, numEmpleado: d.numEmpleado, nombre: d.usuario.nombreCompleto,
-      correo: d.usuario.email, planteles: nombres.get(d.usuarioId) ?? [], estatus: d.estatus,
+      correo: d.usuario.email, correoProveedor: d.usuario.correoProveedor, planteles: nombres.get(d.usuarioId) ?? [], estatus: d.estatus,
     })), total, pagina, porPagina };
   }
 
@@ -153,7 +154,7 @@ export class UsuariosService {
     const nombres = await this.plantelesPorUsuario(filas.map((u) => u.id), planteles);
     return { datos: filas.map((u) => ({
       id: u.id, nombre: u.nombreCompleto, correo: u.email,
-      roles: u.roles.map((r) => r.clave), planteles: nombres.get(u.id) ?? [], activo: u.activo,
+      roles: u.roles.map((r) => r.clave), correoProveedor: u.correoProveedor, planteles: nombres.get(u.id) ?? [], activo: u.activo,
     })), total, pagina, porPagina };
   }
 
@@ -251,6 +252,7 @@ export class UsuariosService {
       apellidoMaterno: dto.apellidoMaterno ?? null,
       telefono: dto.telefono ?? null,
       roles, passwordChangeRequired: true,
+      correoProveedor: dto.correoProveedor ?? proveedorCorreoPredeterminado(dto.roles),
     });
     return this.proyectar(await usuarios.save(usuario));
   }
@@ -286,6 +288,7 @@ export class UsuariosService {
       apellidoMaterno: dto.apellidoMaterno === undefined ? usuario.apellidoMaterno : dto.apellidoMaterno,
       telefono: dto.telefono === undefined ? usuario.telefono : dto.telefono,
       activo: dto.activo ?? usuario.activo,
+      correoProveedor: dto.correoProveedor ?? usuario.correoProveedor,
     });
     return this.proyectar(await usuarios.save(usuario));
   }
@@ -307,6 +310,7 @@ export class UsuariosService {
     return {
       id: usuario.id,
       email: usuario.email,
+      correoProveedor: usuario.correoProveedor ?? proveedorCorreoPredeterminado(usuario.roles?.map((r) => r.clave) ?? []),
       nombre: usuario.nombre,
       apellidoPaterno: usuario.apellidoPaterno,
       apellidoMaterno: usuario.apellidoMaterno,

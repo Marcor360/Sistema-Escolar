@@ -1,15 +1,16 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useBeforeUnload, useBlocker, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { api, mensajeDeError } from '../api/client';
+import { SelectorProveedorCorreo, type ProveedorCorreo } from '../components/SelectorProveedorCorreo';
 import { useConfirmacion } from '../components/useConfirmacion';
 
 const FORM_INICIAL = {
   numEmpleado: '', nombre: '', apellidoPaterno: '', apellidoMaterno: '', telefono: '',
-  cedulaProfesional: '', email: '', cedulaPendiente: false, especialidad: '',
+  cedulaProfesional: '', email: '', cedulaPendiente: false, especialidad: '', correoProveedor: 'GODADDY' as ProveedorCorreo,
 };
 interface Docente {
   numEmpleado: string; especialidad?: string; cedulaProfesional?: string;
-  usuario: { nombre: string; apellidoPaterno: string; apellidoMaterno?: string; telefono?: string; email: string };
+  usuario: { nombre: string; apellidoPaterno: string; apellidoMaterno?: string; telefono?: string; email: string; correoProveedor?: ProveedorCorreo };
 }
 
 export default function DocenteFormulario() {
@@ -52,7 +53,7 @@ export default function DocenteFormulario() {
           const datos = { ...FORM_INICIAL, numEmpleado: d.numEmpleado, nombre: d.usuario.nombre,
             apellidoPaterno: d.usuario.apellidoPaterno, apellidoMaterno: d.usuario.apellidoMaterno ?? '',
             telefono: d.usuario.telefono ?? '', email: d.usuario.email, especialidad: d.especialidad ?? '',
-            cedulaProfesional: d.cedulaProfesional ?? '', cedulaPendiente: !d.cedulaProfesional };
+            cedulaProfesional: d.cedulaProfesional ?? '', cedulaPendiente: !d.cedulaProfesional, correoProveedor: d.usuario.correoProveedor ?? 'GODADDY' };
           setForm(datos); setBase(datos);
         } else {
           const { data } = await api.get('/planteles/mios');
@@ -72,7 +73,7 @@ export default function DocenteFormulario() {
     mutando.current = true; setEnviando(true); setError('');
     try {
       if (id) await api.patch(`/docentes/${id}`, { nombre: form.nombre, apellidoPaterno: form.apellidoPaterno,
-        apellidoMaterno: form.apellidoMaterno, telefono: form.telefono,
+        apellidoMaterno: form.apellidoMaterno, telefono: form.telefono, correoProveedor: form.correoProveedor,
         cedulaProfesional: form.cedulaPendiente ? null : form.cedulaProfesional, especialidad: form.especialidad });
       else await api.post('/docentes', { ...form, plantelIds,
         cedulaProfesional: form.cedulaPendiente ? undefined : form.cedulaProfesional, especialidad: form.especialidad || undefined });
@@ -102,6 +103,7 @@ export default function DocenteFormulario() {
           <div className="campo"><label htmlFor="doc-materno">Segundo apellido</label><input id="doc-materno" maxLength={80} {...dar('apellidoMaterno')} /></div>
           <div className="campo"><label htmlFor="doc-email">Correo</label><input id="doc-email" type="email" disabled={editando} required maxLength={120} {...dar('email')} /></div>
           <div className="campo"><label htmlFor="doc-telefono">Teléfono</label><input id="doc-telefono" type="tel" maxLength={20} {...dar('telefono')} /></div>
+          <SelectorProveedorCorreo id="doc-correo-proveedor" value={form.correoProveedor} onChange={(correoProveedor) => setForm({ ...form, correoProveedor })} />
           <div className="campo"><label htmlFor="doc-especialidad">Especialidad</label><input id="doc-especialidad" maxLength={120} {...dar('especialidad')} /></div>
           <div className="campo"><label htmlFor="doc-cedula">Cédula profesional</label><input id="doc-cedula" required={!form.cedulaPendiente} disabled={form.cedulaPendiente} maxLength={20} {...dar('cedulaProfesional')} /></div>
           <label className="casilla"><input type="checkbox" checked={form.cedulaPendiente} onChange={(e) => setForm({ ...form, cedulaPendiente: e.target.checked, cedulaProfesional: e.target.checked ? '' : form.cedulaProfesional })} />Cédula pendiente de capturar</label>

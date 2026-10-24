@@ -25,7 +25,7 @@ describe('SMTP seguro en entornos desplegados', () => {
     };
     const config = { get: (clave: string) => valores[clave] } as ConfigService;
     const repo = {} as Repository<Notificacion>;
-    const usuarios = {} as Repository<Usuario>;
+    const usuarios = { findOne: jest.fn().mockResolvedValue(null) } as unknown as Repository<Usuario>;
     const alumnos = {} as Repository<Alumno>;
     const asignaciones = {} as Repository<UsuarioPlantel>;
     const scope = {} as ScopeService;
