@@ -4,7 +4,7 @@ import { Transform as Normalizar } from 'class-transformer';
 import { Type } from 'class-transformer';
 import { IsEmail, IsIn, IsInt, IsOptional, IsString, MinLength } from 'class-validator';
 import { PaginacionDto } from '../common/paginacion.dto';
-import { ProveedorCorreo } from '../entities/usuario.entity';
+import type { ProveedorCorreo } from '../entities/usuario.entity';
 
 export class ListarAlumnosDto extends PaginacionDto {
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
