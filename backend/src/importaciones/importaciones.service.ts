@@ -149,9 +149,9 @@ export class ImportacionesService {
       try {
         validas.push(await this.validarFila('ALUMNOS', filas[i], c, vistos));
       } catch (e) {
-        const mensaje = e instanceof BadRequestException || e instanceof ConflictException
-          || e instanceof ForbiddenException || e instanceof NotFoundException
-          ? e.message : 'No fue posible validar la fila';
+        if (!(e instanceof BadRequestException || e instanceof ConflictException
+          || e instanceof ForbiddenException || e instanceof NotFoundException)) throw e;
+        const mensaje = e.message;
         const resultado = { fila: i + 2, mensaje };
         if (e instanceof ConflictException && /^(Ya registrado|Repetido en archivo):/.test(mensaje)) {
           duplicados.push(resultado);
