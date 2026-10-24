@@ -23,7 +23,7 @@ interface Catalogos {
 }
 const trozos = <T>(filas: T[]) => Array.from({ length: Math.ceil(filas.length / 100) }, (_, i) => filas.slice(i*100,(i+1)*100));
 export const CABECERAS: Record<TipoImportacion, string[]> = {
-  ALUMNOS: ['correoInstitucional', 'correoPersonal', 'correoProveedor', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'matricula', 'plantelId', 'curp', 'fechaNacimiento', 'telefono', 'tutorNombre', 'tutorTelefono', 'direccion', 'email'],
+  ALUMNOS: ['correoInstitucional', 'correoPersonal', 'correoProveedor', 'nombre', 'segundoNombre', 'apellidoPaterno', 'apellidoMaterno', 'matricula', 'plantelId', 'curp', 'fechaNacimiento', 'telefono', 'tutorNombre', 'tutorTelefono', 'direccion', 'email'],
   DOCENTES: ['email', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'numEmpleado', 'plantelIds', 'cedulaProfesional', 'cedulaPendiente', 'especialidad', 'telefono'],
   PERSONAL: ['email', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'roles', 'plantelIds', 'telefono'],
   INSCRIPCIONES: ['matricula', 'grupoId'],
@@ -53,7 +53,10 @@ export class ImportacionesService {
       const elegido = String(datos.correoProveedor ?? '').trim();
       if (elegido === 'Microsoft 365') datos.correoProveedor = 'MICROSOFT365';
       else if (elegido === 'GoDaddy') datos.correoProveedor = 'GODADDY';
-      else if (!elegido) datos.correoProveedor = 'MICROSOFT365';
+      else if (!elegido) throw new BadRequestException('Selecciona correoProveedor: Microsoft 365 o GoDaddy');
+      const segundo = String(datos.segundoNombre ?? '').trim();
+      if (segundo) datos.nombre = `${String(datos.nombre ?? '').trim()} ${segundo}`.trim();
+      delete datos.segundoNombre;
       if (datos.correoPersonal === undefined) delete datos.correoPersonal;
     }
     if (tipo === 'PERSONAL') datos.password = randomBytes(24).toString('base64url');
@@ -123,33 +126,126 @@ export class ImportacionesService {
     if (!ids.length) throw new BadRequestException('Selecciona al menos un plantel');
     for (const id of ids) { if (c.permitidos !== null && !c.permitidos.has(id)) throw new ForbiddenException('El plantel solicitado está fuera de tu alcance'); if (!c.planteles.get(id)?.activo) throw new ConflictException('Plantel inactivo o inexistente'); }
     if (tipo === 'PERSONAL' && (instancia as CrearUsuarioDto).roles.some((r) => !['ADMINISTRATIVO', 'FINANZAS'].includes(r))) throw new BadRequestException('La importación de personal admite Administrativo y Finanzas');
-    const email = instancia.email.toLowerCase(); if (vistos.has(`EMAIL:${email}`) || c.emails.has(email)) throw new ConflictException('Correo ya registrado o duplicado en el archivo'); vistos.add(`EMAIL:${email}`);
+    const email = instancia.email.toLowerCase();
+    if (tipo === 'ALUMNOS' && c.emails.has(email)) throw new ConflictException('Ya registrado: correo institucional');
+    if (tipo === 'ALUMNOS' && vistos.has(`EMAIL:${email}`)) throw new ConflictException('Repetido en archivo: correo institucional');
+    if (vistos.has(`EMAIL:${email}`) || c.emails.has(email)) throw new ConflictException('Correo ya registrado o duplicado en el archivo');
     if (tipo === 'ALUMNOS' || tipo === 'DOCENTES') {
       const id = (tipo === 'ALUMNOS' ? (instancia as CrearAlumnoDto).matricula : (instancia as CrearDocenteDto).numEmpleado).toUpperCase();
-      if (vistos.has(`${tipo}:${id}`) || c.identificadores.has(id)) throw new ConflictException('Identificador ya registrado o duplicado en el archivo'); vistos.add(`${tipo}:${id}`);
+      if (tipo === 'ALUMNOS' && c.identificadores.has(id)) throw new ConflictException('Ya registrado: matrícula');
+      if (tipo === 'ALUMNOS' && vistos.has(`${tipo}:${id}`)) throw new ConflictException('Repetido en archivo: matrícula');
+      if (vistos.has(`${tipo}:${id}`) || c.identificadores.has(id)) throw new ConflictException('Identificador ya registrado o duplicado en el archivo');
+      vistos.add(`${tipo}:${id}`);
     }
+    vistos.add(`EMAIL:${email}`);
     return { clase: 'CUENTA', tipo, instancia, ids } as const;
   }
+  private async evaluarAlumnos(filas: Fila[], c: Catalogos) {
+    const vistos = new Set<string>();
+    const validas: Awaited<ReturnType<ImportacionesService['validarFila']>>[] = [];
+    const errores: { fila: number; mensaje: string }[] = [];
+    const duplicados: { fila: number; mensaje: string }[] = [];
+    for (let i = 0; i < filas.length; i++) {
+      try {
+        validas.push(await this.validarFila('ALUMNOS', filas[i], c, vistos));
+      } catch (e) {
+        if (!(e instanceof BadRequestException || e instanceof ConflictException
+          || e instanceof ForbiddenException || e instanceof NotFoundException)) throw e;
+        const mensaje = e.message;
+        const resultado = { fila: i + 2, mensaje };
+        if (e instanceof ConflictException && /^(Ya registrado|Repetido en archivo):/.test(mensaje)) {
+          duplicados.push(resultado);
+        } else {
+          errores.push(resultado);
+        }
+      }
+    }
+    return { validas, errores, duplicados };
+  }
+
   private aad(p: ImportacionPreview, posicion: number) { return `${p.id}:${p.actorId}:${p.tipo}:${posicion}`; }
   async preview(tipo: TipoImportacion, buffer: Buffer, nombre: string, user: JwtUser) {
-    this.autorizar(tipo,user); const filas = await leerArchivo(buffer,nombre), errores: { fila: number; mensaje: string }[] = [];
-    await this.ds.transaction(async (manager) => { const c = await this.catalogos(manager,tipo,filas,user,false), vistos = new Set<string>();
-      for (let i=0;i<filas.length;i++) { try { await this.validarFila(tipo,filas[i],c,vistos); } catch (e) { errores.push({ fila: i+2, mensaje: e instanceof BadRequestException || e instanceof ConflictException || e instanceof ForbiddenException || e instanceof NotFoundException ? e.message : 'No fue posible validar la fila' }); } }
+    this.autorizar(tipo, user);
+    const filas = await leerArchivo(buffer, nombre);
+    const errores: { fila: number; mensaje: string }[] = [];
+    let duplicados: { fila: number; mensaje: string }[] = [];
+    let validos = 0;
+    await this.ds.transaction(async (manager) => {
+      const c = await this.catalogos(manager, tipo, filas, user, false);
+      if (tipo === 'ALUMNOS') {
+        const resultado = await this.evaluarAlumnos(filas, c);
+        errores.push(...resultado.errores);
+        duplicados = resultado.duplicados;
+        validos = resultado.validas.length;
+      } else {
+        const vistos = new Set<string>();
+        for (let i = 0; i < filas.length; i++) {
+          try { await this.validarFila(tipo, filas[i], c, vistos); }
+          catch (e) {
+            errores.push({ fila: i + 2, mensaje: e instanceof BadRequestException || e instanceof ConflictException ||
+              e instanceof ForbiddenException || e instanceof NotFoundException ? e.message : 'No fue posible validar la fila' });
+          }
+        }
+        validos = filas.length - errores.length;
+      }
     });
     let previewId: string | null = null;
-    if (!errores.length) {
-      const p = this.ds.getRepository(ImportacionPreview).create({ id: randomUUID(), actorId: user.sub, tipo, expira: new Date(Date.now()+15*60000) });
-      const cifradas = filas.map((fila,posicion) => ({ previewId: p.id, posicion, contenido: this.cifrado.cifrar(fila,this.aad(p,posicion)) }));
+    if ((!errores.length && tipo !== 'ALUMNOS') || (tipo === 'ALUMNOS' && (validos > 0 || errores.length > 0))) {
+      const p = this.ds.getRepository(ImportacionPreview).create({
+        id: randomUUID(), actorId: user.sub, tipo, expira: new Date(Date.now() + 15 * 60000),
+      });
+      const cifradas = filas.map((fila, posicion) => ({
+        previewId: p.id, posicion, contenido: this.cifrado.cifrar(fila, this.aad(p, posicion)),
+      }));
       if (cifradas.some((f) => f.contenido.length > 8000)) throw new BadRequestException('Una fila excede el límite de previsualización');
       await this.ds.transaction(async (manager) => {
         await manager.getRepository(Usuario).findOne({ where: { id: user.sub }, lock: { mode: 'pessimistic_write' }, loadEagerRelations: false });
-        const repo = manager.getRepository(ImportacionPreview); await repo.delete({ expira: LessThan(new Date()) });
-        if (await repo.count() >= 100 || await repo.countBy({ actorId: user.sub }) >= 5) throw new BadRequestException('Confirma tus previsualizaciones pendientes o espera su expiración de 15 minutos');
-        await repo.insert(p); for (const lote of trozos(cifradas)) await manager.getRepository(ImportacionFila).insert(lote);
-      }); previewId = p.id;
+        const repo = manager.getRepository(ImportacionPreview);
+        await repo.delete({ expira: LessThan(new Date()) });
+        if (await repo.count() >= 100 || await repo.countBy({ actorId: user.sub }) >= 5) {
+          throw new BadRequestException('Confirma tus previsualizaciones pendientes o espera su expiración de 15 minutos');
+        }
+        await repo.insert(p);
+        for (const lote of trozos(cifradas)) await manager.getRepository(ImportacionFila).insert(lote);
+      });
+      previewId = p.id;
     }
-    return { previewId, registros: filas.length, errores, identificadores: filas.map((f,i) => ({ fila: i+2, identificador: f.matricula ?? f.numEmpleado ?? f.correoInstitucional ?? f.email })), regla: tipo === 'ALUMNOS' ? 'Confirmación atómica. El alumno no recibe contraseña inicial; debe solicitar y completar la activación por código de un solo uso en su correo. Si no hay correo operativo, el acceso queda pendiente.' : 'Confirmación atómica. Cuentas nuevas se activan estableciendo contraseña mediante recuperación por correo; no se entregan contraseñas en la importación.' };
+    return {
+      previewId, registros: filas.length, validos, duplicados, errores,
+      identificadores: filas.map((f, i) => ({ fila: i + 2, identificador: f.matricula ?? f.numEmpleado ?? f.correoInstitucional ?? f.email })),
+      regla: tipo === 'ALUMNOS'
+        ? 'Solo se incorporarán alumnos nuevos y válidos. Los existentes se omiten y las filas con errores pueden descargarse para corregirse. Revisa y confirma para importar.'
+        : 'Confirmación atómica; el lote se revierte si alguna fila es inválida.',
+    };
   }
+
+  /** Solo el actor del preview puede recuperar sus filas inválidas antes de confirmar. */
+  async plantillaCorrecciones(previewId: string, user: JwtUser) {
+    const p = await this.ds.getRepository(ImportacionPreview).findOneBy({ id: previewId });
+    this.comprobar(p, user);
+    if (p.tipo !== 'ALUMNOS') throw new BadRequestException('Las correcciones descargables son para alumnos');
+    const filas = await this.ds.getRepository(ImportacionFila).find({ where: { previewId }, order: { posicion: 'ASC' } });
+    const originales = filas.map((f) => this.cifrado.descifrar(f.contenido, this.aad(p, f.posicion)));
+    const { errores } = await this.ds.transaction(async (manager) => {
+      const c = await this.catalogos(manager, 'ALUMNOS', originales, user, false);
+      return this.evaluarAlumnos(originales, c);
+    });
+    if (!errores.length) throw new BadRequestException('No hay filas por corregir');
+    const { crearPlantillaImportacion, COLUMNAS_PLANTILLA } = await import('./plantillas');
+    const libro = crearPlantillaImportacion('ALUMNOS');
+    const hoja = libro.getWorksheet('ALUMNOS')!;
+    for (const error of errores) {
+      const fila = originales[error.fila - 2];
+      const valores = COLUMNAS_PLANTILLA.ALUMNOS.map((campo) =>
+        campo === 'correoInstitucional' ? (fila.correoInstitucional || fila.email || '') : (fila[campo] || ''));
+      hoja.addRow(valores);
+    }
+    const incidencias = libro.addWorksheet('Errores');
+    incidencias.columns = [{ header: 'Fila original', width: 20 }, { header: 'Motivo', width: 90 }];
+    for (const error of errores) incidencias.addRow([error.fila, error.mensaje]);
+    return Buffer.from(await libro.xlsx.writeBuffer());
+  }
+
   private comprobar(p: ImportacionPreview | null, user: JwtUser): asserts p is ImportacionPreview { if (!p || p.expira < new Date() || p.actorId !== user.sub) throw new NotFoundException('Previsualización expirada, consumida o no disponible para tu sesión'); this.autorizar(p.tipo,user); }
   async confirmar(previewId: string, confirmado: boolean, user: JwtUser) {
     if (!confirmado) throw new BadRequestException('Confirma explícitamente la previsualización');
@@ -157,9 +253,22 @@ export class ImportacionesService {
     const cifradas = await this.ds.getRepository(ImportacionFila).find({ where: { previewId }, order: { posicion: 'ASC' } });
     let filas: Fila[]; try { filas = cifradas.map((f) => this.cifrado.descifrar(f.contenido,this.aad(previa,f.posicion))); } catch { throw new NotFoundException('Genera otra previsualización: clave cambiada o contenido inválido'); }
     if (!filas.length || filas.length > 500) throw new ConflictException('Previsualización inválida');
-    // El hash se calcula fuera de la transacción para reducir el tiempo de bloqueo.
+    // Sólo se generan hashes para candidatos nuevos; no bloquear el portal por alumnos ya registrados.
     const hashes: string[] = [];
-    if (previa.tipo !== 'INSCRIPCIONES') {
+    const hashesAlumnos = new Map<string, string>();
+    if (previa.tipo === 'ALUMNOS') {
+      const candidatos = await this.ds.transaction(async (manager) => {
+        const c = await this.catalogos(manager, 'ALUMNOS', filas, user, false);
+        const resultado = await this.evaluarAlumnos(filas, c);
+        return resultado.validas.filter((v) => v.clase === 'CUENTA')
+          .map((v) => v.instancia.email.toLowerCase());
+      });
+      for (let i = 0; i < candidatos.length; i += 4) {
+        const lote = candidatos.slice(i, i + 4);
+        const generados = await Promise.all(lote.map(() => hashPasswordNueva(randomBytes(32).toString('base64url'))));
+        lote.forEach((correo, indice) => hashesAlumnos.set(correo, generados[indice]));
+      }
+    } else if (previa.tipo !== 'INSCRIPCIONES') {
       for (let i = 0; i < filas.length; i += 4) {
         hashes.push(...await Promise.all(filas.slice(i, i + 4).map(() =>
           hashPasswordNueva(randomBytes(32).toString('base64url')),
@@ -169,7 +278,9 @@ export class ImportacionesService {
     try { return await this.ds.transaction('SERIALIZABLE', async (manager) => {
       const p = await manager.getRepository(ImportacionPreview).findOne({ where: { id: previewId }, lock: { mode: 'pessimistic_write' } }); this.comprobar(p,user);
       const c = await this.catalogos(manager,p.tipo,filas,user,true), vistos = new Set<string>();
-      const validas = []; for (const fila of filas) validas.push(await this.validarFila(p.tipo,fila,c,vistos));
+      const evaluacion = p.tipo === 'ALUMNOS' ? await this.evaluarAlumnos(filas, c) : null;
+      const validas = evaluacion ? evaluacion.validas : [];
+      if (!evaluacion) for (const fila of filas) validas.push(await this.validarFila(p.tipo, fila, c, vistos));
       const auditoria: { usuarioId: number; plantelId: number; accion: string; entidadId: number; detalle: string; fecha: Date }[] = [];
       const auditar = (entidadId: number, plantelId: number) => auditoria.push({ usuarioId: user.sub, plantelId, accion: `IMPORTAR_${p.tipo}`, entidadId, detalle: 'Alta desde archivo validado y confirmado; sin datos personales en bitácora', fecha: new Date() });
       const inscripciones = validas.filter((v) => v.clase === 'INSCRIPCION');
@@ -187,7 +298,9 @@ export class ImportacionesService {
         const nuevos = await repo.save(cuentas.map((v,i) => {
           const d = v.instancia, claves = p.tipo === 'ALUMNOS' ? ['ALUMNO'] : p.tipo === 'DOCENTES' ? ['MAESTRO'] : (d as CrearUsuarioDto).roles;
           const roles = [...new Set(claves)].map((clave) => { const rol = c.roles.get(clave); if (!rol) throw new ConflictException('Rol inexistente'); return rol; });
-          return repo.create({ email: d.email, correoPersonal: p.tipo === 'ALUMNOS' ? (d as CrearAlumnoDto).correoPersonal ?? null : null, correoProveedor: d.correoProveedor ?? proveedorCorreoPredeterminado(claves), nombre: d.nombre, apellidoPaterno: d.apellidoPaterno, apellidoMaterno: d.apellidoMaterno ?? null, telefono: d.telefono ?? null, passwordHash: hashes[i], passwordChangeRequired: true, activacionPendiente: p.tipo === 'ALUMNOS', roles });
+          const passwordHash = p.tipo === 'ALUMNOS' ? hashesAlumnos.get(d.email.toLowerCase()) : hashes[i];
+          if (!passwordHash) throw new ConflictException('El estado de las cuentas cambió; vuelve a previsualizar el archivo');
+          return repo.create({ email: d.email, correoPersonal: p.tipo === 'ALUMNOS' ? (d as CrearAlumnoDto).correoPersonal ?? null : null, correoProveedor: d.correoProveedor ?? proveedorCorreoPredeterminado(claves), nombre: d.nombre, apellidoPaterno: d.apellidoPaterno, apellidoMaterno: d.apellidoMaterno ?? null, telefono: d.telefono ?? null, passwordHash, passwordChangeRequired: true, activacionPendiente: p.tipo === 'ALUMNOS', roles });
         }),{ chunk: 50 });
         const usuarios = new Map(nuevos.map((u) => [u.email,u.id]));
         if (p.tipo === 'ALUMNOS') {
@@ -204,10 +317,12 @@ export class ImportacionesService {
           for (const lote of trozos(asignaciones)) await manager.getRepository(UsuarioPlantel).insert(lote);
         }
       }
-      if (auditoria.length !== filas.length) throw new ConflictException('El lote no está completo');
+      if (auditoria.length !== validas.length) throw new ConflictException('El lote no está completo');
       for (const lote of trozos(auditoria)) await manager.getRepository(BitacoraAcademica).insert(lote);
       await manager.getRepository(ImportacionPreview).delete(p.id);
-      return { insertados: filas.length, activacion: p.tipo === 'INSCRIPCIONES' ? null : p.tipo === 'ALUMNOS' ? 'Cuenta pendiente de activación. El alumno solicitará un código privado por correo institucional y establecerá su propia contraseña.' : 'Establecer contraseña mediante recuperación por correo o reinicio temporal autorizado en la cuenta.' };
+      return { insertados: validas.length, existentes: evaluacion?.duplicados.length ?? 0,
+        rechazados: evaluacion?.errores.length ?? 0, total: filas.length,
+        activacion: p.tipo === 'INSCRIPCIONES' ? null : p.tipo === 'ALUMNOS' ? 'Cuenta pendiente de activación. El alumno solicitará un código privado por correo institucional y establecerá su propia contraseña.' : 'Establecer contraseña mediante recuperación por correo o reinicio temporal autorizado en la cuenta.' };
     }); } catch (e) { if (e instanceof BadRequestException || e instanceof ForbiddenException || e instanceof ConflictException || e instanceof NotFoundException) throw e; throw new ConflictException('La importación no se aplicó; revisa duplicados o cambios concurrentes y genera otra previsualización'); }
   }
 }

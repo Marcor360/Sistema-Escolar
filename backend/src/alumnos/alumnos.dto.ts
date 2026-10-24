@@ -43,6 +43,22 @@ export class CrearAlumnoDto {
   @IsOptional() @IsString() @MaxLength(200) direccion?: string | null;
 }
 
+/** Autogestión estricta: no admite cambios de CURP, matrícula, estatus, acceso ni proveedor. */
+export class EditarMiPerfilAlumnoDto {
+  @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? (value.trim() || null) : value)
+  @IsOptional() @IsEmail() @MaxLength(120) correoPersonal?: string | null;
+  @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? (value.trim() || null) : value)
+  @IsOptional() @IsString() @MaxLength(20) telefono?: string | null;
+  @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? (value.trim() || null) : value)
+  @IsOptional() @Matches(/^\d{4}-\d{2}-\d{2}$/) @IsDateString({ strict: true }) fechaNacimiento?: string | null;
+  @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? (value.trim() || null) : value)
+  @IsOptional() @IsString() @MaxLength(120) tutorNombre?: string | null;
+  @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? (value.trim() || null) : value)
+  @IsOptional() @IsString() @MaxLength(20) tutorTelefono?: string | null;
+  @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? (value.trim() || null) : value)
+  @IsOptional() @IsString() @MaxLength(200) direccion?: string | null;
+}
+
 export class TransferirAlumnoDto {
   @Type(() => Number) @IsInt() @Min(1) plantelId!: number;
 }

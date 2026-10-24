@@ -178,7 +178,7 @@ async function esperarServidor() {
       if (path.endsWith('/calendario/listado')) data = {datos:[],total:0,pagina:1,porPagina:10};
       if (path.endsWith('/biblioteca')) data = { carpetas: [{ id: 1, nombre: 'Documentos Beta', padreId: null }], archivos: [{ id: 1, titulo: 'Calendario institucional de prueba para familias y docentes', archivoNombre: 'calendario-con-nombre-extenso.pdf', categoria: 'CALENDARIO', bytes: 512 }], total: 1, pagina: 1, porPagina: 10, bytes: 512, cuota: 104857600 };
       if (path.endsWith('/academico/bitacora')) data = { datos: [], total: 0, pagina: 1 };
-      if (path.endsWith('/importaciones/preview')) data = { previewId: 'qa-preview', registros: 1, errores: [], regla: 'Confirmación atómica del lote', identificadores: [{ fila: 2, identificador: 'ALUMNO-QA-001' }] };
+      if (path.endsWith('/importaciones/preview')) data = { previewId: 'qa-preview', registros: 1, validos: 1, duplicados: [], errores: [], regla: 'Confirmación de registros válidos', identificadores: [{ fila: 2, identificador: 'ALUMNO-QA-001' }] };
       if (['/finanzas/cargos', '/finanzas/pagos', '/finanzas/adeudos', '/conducta/incidencias', '/finanzas/conciliacion/ordenes', '/finanzas/conciliacion/pagos', '/finanzas/conciliacion/resoluciones'].some(p => path.endsWith(p)))
         data = { datos: [], total: 0, pagina: 1, porPagina: 10 };
       const cargoQA = { id: 1, descripcion: 'Colegiatura con descripción extensa para comprobar el ancho', periodo: '2026-10', monto: 123456.78, descuento: 0, recargo: 0, fechaVencimiento: '2026-10-31', estatus: 'PENDIENTE', total: 123456.78, pagado: 0, saldo: 123456.78, alumno: { id: 1, matricula: 'FIN-QA-001', usuario: { nombre: 'Alumno con nombre extenso de prueba', apellidoPaterno: 'Prueba' } } };

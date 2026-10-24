@@ -21,8 +21,8 @@ const alumno = {
 };
 
 describe('Correo dual en importación de alumnos', () => {
-  it('admite plantilla nueva con correo institucional y personal; Microsoft 365 predeterminado', async () => {
-    const datos = preparar({ ...alumno, correoInstitucional: ' ESTUDIANTE@IUA.EDU.MX ', correoPersonal: 'personal@example.test' });
+  it('admite plantilla nueva con correo institucional y personal y proveedor obligatorio', async () => {
+    const datos = preparar({ ...alumno, correoInstitucional: ' ESTUDIANTE@IUA.EDU.MX ', correoPersonal: 'personal@example.test', correoProveedor: 'Microsoft 365' });
     const dto = plainToInstance(CrearAlumnoDto, datos);
     expect(await validate(dto, { whitelist: true, forbidNonWhitelisted: true })).toHaveLength(0);
     expect(dto.email).toBe('estudiante@iua.edu.mx');
@@ -43,10 +43,10 @@ describe('Correo dual en importación de alumnos', () => {
   });
 
   it('mantiene compatibilidad con CSV anterior que usa email', async () => {
-    const dto = plainToInstance(CrearAlumnoDto, preparar({ ...alumno, email: 'alumno@example.test' }));
+    const dto = plainToInstance(CrearAlumnoDto, preparar({ ...alumno, email: 'alumno@example.test', correoProveedor: 'GoDaddy' }));
     expect(await validate(dto)).toHaveLength(0);
     expect(dto.email).toBe('alumno@example.test');
-    expect(dto.correoProveedor).toBe('MICROSOFT365');
+    expect(dto.correoProveedor).toBe('GODADDY');
   });
 
   it('rechaza encabezados email e institucional contradictorios', () => {
@@ -65,12 +65,29 @@ describe('Correo dual en importación de alumnos', () => {
 
   it('exige correo institucional válido y valida correo personal si se proporciona', async () => {
     for (const fila of [
-      { ...alumno, correoPersonal: 'personal@example.test' },
-      { ...alumno, correoInstitucional: 'alumno@iua.edu.mx', correoPersonal: 'sin-arroba' },
+      { ...alumno, correoPersonal: 'personal@example.test', correoProveedor: 'GoDaddy' },
+      { ...alumno, correoInstitucional: 'alumno@iua.edu.mx', correoPersonal: 'sin-arroba', correoProveedor: 'Microsoft 365' },
     ]) {
       const dto = plainToInstance(CrearAlumnoDto, preparar(fila));
       expect((await validate(dto)).some((e) => ['email', 'correoPersonal'].includes(e.property))).toBe(true);
     }
+  });
+
+  it('rechaza proveedor vacío aunque use CSV antiguo', () => {
+    expect(() => preparar({ ...alumno, email: 'alumno@example.test' })).toThrow('Selecciona correoProveedor');
+  });
+
+  it('segundo nombre opcional sin afectar primer nombre obligatorio', async () => {
+    const sinSegundo = plainToInstance(CrearAlumnoDto, preparar({
+      ...alumno, correoInstitucional: 'alumno@example.test', correoProveedor: 'GoDaddy',
+    }));
+    const conSegundo = plainToInstance(CrearAlumnoDto, preparar({
+      ...alumno, segundoNombre: 'Isabel', correoInstitucional: 'alumna@example.test', correoProveedor: 'Microsoft 365',
+    }));
+    expect(sinSegundo.nombre).toBe('Rosa');
+    expect(conSegundo.nombre).toBe('Rosa Isabel');
+    expect(await validate(sinSegundo)).toHaveLength(0);
+    expect(await validate(conSegundo)).toHaveLength(0);
   });
 
   it('no admite columnas arbitrarias ni secretos agregados', () => {

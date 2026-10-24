@@ -24,7 +24,12 @@ interface Perfil {
   estatus: string;
   curp: string | null;
   tutorNombre: string | null;
+  tutorTelefono: string | null;
+  fechaNacimiento: string | null;
+  direccion: string | null;
   usuario: {
+    correoPersonal: string | null;
+    telefono: string | null;
     nombreCompleto?: string;
     nombre: string;
     apellidoPaterno: string;
@@ -36,6 +41,34 @@ export default function PerfilScreen({ abrirDocumentos }: { abrirDocumentos?: ()
   const { marca } = useMarca();
   const { sesion, cerrar, finalizarSesionLocal } = useSesion();
   const [perfil, setPerfil] = useState<Perfil | null>(null);
+  const [edicion, setEdicion] = useState<{
+    correoPersonal: string; telefono: string; fechaNacimiento: string;
+    tutorNombre: string; tutorTelefono: string; direccion: string;
+  } | null>(null);
+  const [guardandoPerfil, setGuardandoPerfil] = useState(false);
+  const [errorEdicion, setErrorEdicion] = useState("");
+  const guardarPerfil = async () => {
+    if (!edicion || guardandoPerfil) return;
+    setGuardandoPerfil(true);
+    setErrorEdicion("");
+    try {
+      const { data } = await api.patch<Perfil>("/alumnos/me/perfil", {
+        correoPersonal: edicion.correoPersonal.trim() || null,
+        telefono: edicion.telefono.trim() || null,
+        fechaNacimiento: edicion.fechaNacimiento.trim() || null,
+        tutorNombre: edicion.tutorNombre.trim() || null,
+        tutorTelefono: edicion.tutorTelefono.trim() || null,
+        direccion: edicion.direccion.trim() || null,
+      });
+      setPerfil(data);
+      setEdicion(null);
+      Alert.alert("Información actualizada", "Tus datos personales se guardaron correctamente.");
+    } catch (error) {
+      setErrorEdicion(mensajeDeError(error));
+    } finally {
+      setGuardandoPerfil(false);
+    }
+  };
   const [mostrarCurp, setMostrarCurp] = useState(false);
   useEffect(() => {
     if (!mostrarCurp) return;
@@ -180,9 +213,62 @@ export default function PerfilScreen({ abrirDocumentos }: { abrirDocumentos?: ()
               <Text style={base.secundario}>Tutor: {perfil.tutorNombre}</Text>
             )}
             <Text style={base.secundario}>Estatus: {perfil.estatus}</Text>
+            <Text style={base.secundario}>Correo personal: {perfil.usuario?.correoPersonal || "Sin registrar"}</Text>
+            <Text style={base.secundario}>Teléfono: {perfil.usuario?.telefono || "Sin registrar"}</Text>
+            <Text style={base.secundario}>Nacimiento: {perfil.fechaNacimiento || "Sin registrar"}</Text>
+            <Text style={base.secundario}>Teléfono del tutor: {perfil.tutorTelefono || "Sin registrar"}</Text>
+            <Text style={base.secundario}>Dirección: {perfil.direccion || "Sin registrar"}</Text>
           </>
         )}
       </Tarjeta>
+      {perfil && <Tarjeta>
+        <Text style={base.tituloTarjeta} accessibilityRole="header">Mis datos de contacto</Text>
+        <Text style={base.secundario}>Puedes corregir estos datos. Tu nombre, matrícula, CURP y correo institucional no se pueden cambiar aquí.</Text>
+        {edicion === null
+          ? <TouchableOpacity style={base.botonAccesible} accessibilityRole="button"
+              accessibilityLabel="Editar mis datos de contacto" onPress={() => {
+                setErrorEdicion("");
+                setEdicion({
+                  correoPersonal: perfil.usuario?.correoPersonal || "",
+                  telefono: perfil.usuario?.telefono || "",
+                  fechaNacimiento: perfil.fechaNacimiento || "",
+                  tutorNombre: perfil.tutorNombre || "",
+                  tutorTelefono: perfil.tutorTelefono || "",
+                  direccion: perfil.direccion || "",
+                });
+              }}>
+              <Text>Editar mis datos de contacto</Text>
+            </TouchableOpacity>
+          : <>
+              {([
+                ["correoPersonal", "Correo personal", "email-address", 120, false],
+                ["fechaNacimiento", "Fecha de nacimiento (AAAA-MM-DD)", "numbers-and-punctuation", 10, false],
+                ["telefono", "Teléfono", "phone-pad", 20, false],
+                ["tutorNombre", "Nombre del tutor", "default", 120, false],
+                ["tutorTelefono", "Teléfono del tutor", "phone-pad", 20, false],
+                ["direccion", "Dirección", "default", 200, true],
+              ] as const).map(([campo, etiqueta, teclado, maximo, multilinea]) => (
+                <TextInput key={campo} style={estilos.input} accessibilityLabel={etiqueta}
+                  placeholder={etiqueta} placeholderTextColor={colores.gris} value={edicion[campo]}
+                  onChangeText={(valor) => setEdicion((anterior) => anterior && { ...anterior, [campo]: valor })}
+                  keyboardType={teclado} maxLength={maximo} multiline={multilinea}
+                  autoCapitalize={campo === "correoPersonal" ? "none" : "sentences"}
+                  autoCorrect={campo !== "correoPersonal"} editable={!guardandoPerfil}
+                />
+              ))}
+              {errorEdicion ? <Text style={{ color: colores.peligro }} accessibilityRole="alert">{errorEdicion}</Text> : null}
+              <TouchableOpacity style={estilos.botonPrimario} accessibilityRole="button"
+                disabled={guardandoPerfil} accessibilityState={{ busy: guardandoPerfil, disabled: guardandoPerfil }}
+                onPress={() => { void guardarPerfil(); }}>
+                <Text style={[estilos.botonPrimarioTexto, { color: textoSobreFondo(marca.colorPrimario) }]}>{guardandoPerfil ? "Guardando…" : "Guardar mis datos"}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={base.botonAccesible} accessibilityRole="button"
+                disabled={guardandoPerfil} onPress={() => setEdicion(null)}>
+                <Text>Cancelar</Text>
+              </TouchableOpacity>
+            </>
+        }
+      </Tarjeta>}
       <Tarjeta>
         <Text style={base.tituloTarjeta} accessibilityRole="header">Mis documentos</Text>
         <Text style={base.secundario}>Consulta tus boletas PDF y carpetas de materiales de clase. Se descargan desde el servidor al abrirlos.</Text>

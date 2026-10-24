@@ -3,7 +3,7 @@ import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query,
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AlumnosService } from './alumnos.service';
 import { ActivacionService } from '../auth/activacion.service';
-import { ActualizarAlumnoDto, CrearAlumnoDto, ListarAlumnosDto, TransferirAlumnoDto, ReactivarAlumnoDto } from './alumnos.dto';
+import { ActualizarAlumnoDto, CrearAlumnoDto, ListarAlumnosDto, TransferirAlumnoDto, ReactivarAlumnoDto, EditarMiPerfilAlumnoDto } from './alumnos.dto';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { RolesGuard } from '../common/roles.guard';
 import { Roles } from '../common/roles.decorator';
@@ -30,6 +30,13 @@ export class AlumnosController {
   @Roles('ALUMNO')
   miPerfil(@CurrentUser() user: JwtUser) {
     return this.service.perfilPropio(user.sub);
+  }
+
+  @ApiOperation({ summary: 'El alumno actualiza exclusivamente su información personal y del tutor; identidad y proveedor son inmutables' })
+  @ApiResponse({ status: 403, description: 'Solo alumno activo con sesión propia' })
+  @Patch('me/perfil') @Roles('ALUMNO')
+  editarMiPerfil(@CurrentUser() user: JwtUser, @Body() dto: EditarMiPerfilAlumnoDto) {
+    return this.service.editarMiPerfil(user.sub, dto);
   }
 
   // --- Control escolar ---

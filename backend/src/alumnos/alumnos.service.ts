@@ -17,7 +17,7 @@ import { GrupoMateria } from '../entities/grupo-materia.entity';
 import { UsuariosService } from '../usuarios/usuarios.service';
 import { JwtUser } from '../common/current-user.decorator';
 import { ScopeService } from '../planteles/scope.service';
-import { ActualizarAlumnoDto, CrearAlumnoDto, ListarAlumnosDto } from './alumnos.dto';
+import { ActualizarAlumnoDto, CrearAlumnoDto, ListarAlumnosDto, EditarMiPerfilAlumnoDto } from './alumnos.dto';
 
 @Injectable()
 export class AlumnosService {
@@ -167,13 +167,43 @@ export class AlumnosService {
       estatus: alumno.estatus,
       curp: alumno.curp,
       tutorNombre: alumno.tutorNombre,
+      tutorTelefono: alumno.tutorTelefono,
+      fechaNacimiento: alumno.fechaNacimiento,
+      direccion: alumno.direccion,
       usuario: {
+        telefono: alumno.usuario.telefono,
+        correoPersonal: alumno.usuario.correoPersonal,
         nombre: alumno.usuario.nombre,
         apellidoPaterno: alumno.usuario.apellidoPaterno,
         nombreCompleto: alumno.usuario.nombreCompleto,
         email: alumno.usuario.email,
       },
     };
+  }
+
+  async editarMiPerfil(usuarioId: number, dto: EditarMiPerfilAlumnoDto) {
+    await this.dataSource.transaction(async (manager) => {
+      const alumno = await manager.getRepository(Alumno).findOne({
+        where: { usuarioId }, lock: { mode: 'pessimistic_write' },
+      });
+      if (!alumno) throw new NotFoundException('El usuario no tiene expediente de alumno');
+      if (alumno.estatus !== 'ACTIVO') throw new ForbiddenException('Tu expediente no permite cambios');
+      const cuenta: Partial<Pick<Usuario, 'correoPersonal' | 'telefono'>> = {};
+      if (dto.correoPersonal !== undefined) cuenta.correoPersonal = dto.correoPersonal;
+      if (dto.telefono !== undefined) cuenta.telefono = dto.telefono;
+      if (Object.keys(cuenta).length) await manager.getRepository(Usuario).update({ id: usuarioId }, cuenta);
+      if (dto.fechaNacimiento !== undefined) alumno.fechaNacimiento = dto.fechaNacimiento;
+      if (dto.tutorNombre !== undefined) alumno.tutorNombre = dto.tutorNombre;
+      if (dto.tutorTelefono !== undefined) alumno.tutorTelefono = dto.tutorTelefono;
+      if (dto.direccion !== undefined) alumno.direccion = dto.direccion;
+      await manager.getRepository(Alumno).save(alumno);
+      await manager.getRepository(BitacoraAcademica).insert({
+        usuarioId, plantelId: alumno.plantelId, accion: 'ALUMNO_ACTUALIZA_CONTACTO',
+        entidadId: alumno.id, detalle: 'Autogestión de información personal; sin datos sensibles en bitácora',
+        fecha: new Date(),
+      });
+    });
+    return this.perfilPropio(usuarioId);
   }
 
   async crear(dto: CrearAlumnoDto, user?: JwtUser) {

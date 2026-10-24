@@ -12,7 +12,7 @@ export const COLUMNAS_PLANTILLA: Record<TipoPlantilla, string[]> = {
 };
 
 const OBLIGATORIOS: Record<TipoPlantilla, readonly string[]> = {
-  ALUMNOS: ['correoInstitucional', 'nombre', 'apellidoPaterno', 'matricula', 'plantelId', 'curp'],
+  ALUMNOS: ['correoInstitucional', 'correoProveedor', 'nombre', 'apellidoPaterno', 'matricula', 'plantelId', 'curp'],
   DOCENTES: ['email', 'nombre', 'apellidoPaterno', 'numEmpleado', 'plantelIds'],
   PERSONAL: ['email', 'nombre', 'apellidoPaterno', 'roles', 'plantelIds'],
   INSCRIPCIONES: ['matricula', 'grupoId'],
@@ -22,9 +22,10 @@ const DESCRIPCIONES: Record<TipoPlantilla, Record<string, string>> = {
   ALUMNOS: {
     correoInstitucional: 'Obligatorio. Correo único para ingresar al sistema y recibir activación. En archivos antiguos también se admite la cabecera email.',
     correoPersonal: 'Opcional. Correo personal de contacto, separado del institucional. No se usa para iniciar sesión ni recibir códigos de acceso.',
-    correoProveedor: 'Remitente de avisos al alumno. Elige Microsoft 365 o GoDaddy en el desplegable; en blanco se aplica Microsoft 365.',
+    correoProveedor: 'Obligatorio por alumno. Selecciona Microsoft 365 o GoDaddy. En blanco se rechaza esa fila.',
     email: 'Columna heredada opcional para CSV antiguos; utiliza correoInstitucional en las plantillas nuevas.',
-    nombre: 'Nombre o nombres del alumno.',
+    nombre: 'Primer nombre obligatorio del alumno. Los archivos anteriores también pueden incluir aquí nombres compuestos.',
+    segundoNombre: 'Segundo nombre opcional. Si existe, se agrega al primer nombre para el expediente.',
     apellidoPaterno: 'Primer apellido del alumno.',
     apellidoMaterno: 'Segundo apellido, si corresponde.',
     matricula: 'Matrícula única, solo identificador; conserva ceros iniciales. No es una contraseña. El alumno solicita un código privado de activación por correo y establece su propia contraseña; sin correo operativo el acceso permanece pendiente.',
@@ -63,7 +64,7 @@ const DESCRIPCIONES: Record<TipoPlantilla, Record<string, string>> = {
 };
 
 const CAMPOS_TEXTO = new Set([
-  'email', 'correoInstitucional', 'correoPersonal', 'correoProveedor', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'matricula', 'curp',
+  'email', 'correoInstitucional', 'correoPersonal', 'correoProveedor', 'nombre', 'segundoNombre', 'apellidoPaterno', 'apellidoMaterno', 'matricula', 'curp',
   'fechaNacimiento', 'telefono', 'tutorNombre', 'tutorTelefono', 'direccion',
   'numEmpleado', 'plantelIds', 'cedulaProfesional', 'especialidad', 'roles',
 ]);
@@ -84,7 +85,7 @@ export function crearPlantillaImportacion(tipo: TipoPlantilla): ExcelJS.Workbook
       errorTitle: string; error: string;
     }) => void } }).dataValidations;
     validaciones.add(`${letraProveedor}2:${letraProveedor}501`, {
-      type: 'list', allowBlank: true, formulae: ['"Microsoft 365,GoDaddy"'],
+      type: 'list', allowBlank: false, formulae: ['"Microsoft 365,GoDaddy"'],
       showErrorMessage: true, errorTitle: 'Proveedor incorrecto',
       error: 'Selecciona Microsoft 365 o GoDaddy de la lista.',
     });
@@ -110,7 +111,7 @@ export function crearPlantillaImportacion(tipo: TipoPlantilla): ExcelJS.Workbook
   guia.addRow(['4. Sube el XLSX o CSV, revisa la previsualización y confirma para aplicar.']);
   if (tipo === 'ALUMNOS') {
     guia.addRow(['5. Correo institucional: cuenta de acceso. Correo personal: contacto opcional. Ambos son datos diferentes.']);
-    guia.addRow(['6. En correoProveedor selecciona Microsoft 365 o GoDaddy. Si lo dejas vacío se usa Microsoft 365.']);
+    guia.addRow(['6. correoProveedor es obligatorio en cada fila. Selecciona Microsoft 365 o GoDaddy. Segundo nombre es opcional.']);
   }
   const filaEncabezadoGuia = tipo === 'ALUMNOS' ? 8 : 6;
   guia.addRow(['Campo técnico', 'Requerido', 'Cómo completarlo']);
