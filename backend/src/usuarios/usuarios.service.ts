@@ -4,7 +4,7 @@ import { esMaestroRestringido } from '../common/politica-acceso';
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, In, Repository, SelectQueryBuilder } from 'typeorm';
-import { Usuario } from '../entities/usuario.entity';
+import { Usuario, proveedorCorreoPredeterminado } from '../entities/usuario.entity';
 import { Rol } from '../entities/rol.entity';
 import { ActualizarPersonalDto, ActualizarUsuarioDto, CrearUsuarioDto, CrearPersonalDto } from './usuarios.dto';
 import { RolClave } from '../common/roles.decorator';
@@ -21,7 +21,7 @@ import { ListadoUsuariosDto } from './usuarios.dto';
 import { PaginacionDto } from '../common/paginacion.dto';
 
 type UsuarioPublico = Pick<
-  Usuario, 'id' | 'email' | 'nombre' | 'apellidoPaterno' | 'apellidoMaterno' | 'telefono' | 'activo' | 'roles' | 'nombreCompleto'
+  Usuario, 'id' | 'email' | 'nombre' | 'apellidoPaterno' | 'apellidoMaterno' | 'telefono' | 'activo' | 'roles' | 'nombreCompleto' | 'correoProveedor'
 >;
 
 @Injectable()
@@ -251,6 +251,7 @@ export class UsuariosService {
       apellidoMaterno: dto.apellidoMaterno ?? null,
       telefono: dto.telefono ?? null,
       roles, passwordChangeRequired: true,
+      correoProveedor: dto.correoProveedor ?? proveedorCorreoPredeterminado(dto.roles),
     });
     return this.proyectar(await usuarios.save(usuario));
   }
@@ -286,6 +287,7 @@ export class UsuariosService {
       apellidoMaterno: dto.apellidoMaterno === undefined ? usuario.apellidoMaterno : dto.apellidoMaterno,
       telefono: dto.telefono === undefined ? usuario.telefono : dto.telefono,
       activo: dto.activo ?? usuario.activo,
+      correoProveedor: dto.correoProveedor ?? usuario.correoProveedor,
     });
     return this.proyectar(await usuarios.save(usuario));
   }
@@ -307,6 +309,7 @@ export class UsuariosService {
     return {
       id: usuario.id,
       email: usuario.email,
+      correoProveedor: usuario.correoProveedor ?? proveedorCorreoPredeterminado(usuario.roles?.map((r) => r.clave) ?? []),
       nombre: usuario.nombre,
       apellidoPaterno: usuario.apellidoPaterno,
       apellidoMaterno: usuario.apellidoMaterno,
