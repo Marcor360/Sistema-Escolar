@@ -225,6 +225,34 @@
       "estado": "pendiente",
       "responsable": "Finanzas, Control Escolar y QA",
       "evidencias": []
+    },
+    {
+      "id": "UAT-18",
+      "rol": "ALUMNO",
+      "escenario": "El alumno activo actualiza correo personal, fecha de nacimiento, teléfono, tutor, teléfono del tutor y dirección en Expo y web; no puede modificar correo institucional, matrícula, CURP ni proveedor de envío; comprobar errores y aislamiento por sesión.",
+      "canales": [
+        "android",
+        "ios",
+        "web",
+        "api"
+      ],
+      "estado": "pendiente",
+      "responsable": "Control Escolar y QA",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-19",
+      "rol": "FINANZAS",
+      "escenario": "Importación parcial de alumnos XLSX: 10 filas (9 registrados, 1 nuevo); requerir proveedor; segundo nombre opcional; reporte de duplicados, errores y descarga solo filas inválidas; repetir carga sin doble alta.",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver"
+      ],
+      "estado": "pendiente",
+      "responsable": "Control Escolar, Finanzas y QA",
+      "evidencias": []
     }
   ]
 }
