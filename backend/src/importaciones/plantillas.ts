@@ -78,7 +78,12 @@ export function crearPlantillaImportacion(tipo: TipoPlantilla): ExcelJS.Workbook
   if (tipo === 'ALUMNOS') {
     const indiceProveedor = columnas.indexOf('correoProveedor') + 1;
     const letraProveedor = hoja.getColumn(indiceProveedor).letter;
-    hoja.dataValidations.add(`${letraProveedor}2:${letraProveedor}501`, {
+    // ExcelJS soporta rangos de validación, aunque su tipo público omite el registro de reglas.
+    const validaciones = (hoja as unknown as { dataValidations: { add: (rango: string, regla: {
+      type: 'list'; allowBlank: boolean; formulae: string[]; showErrorMessage: boolean;
+      errorTitle: string; error: string;
+    }) => void } }).dataValidations;
+    validaciones.add(`${letraProveedor}2:${letraProveedor}501`, {
       type: 'list', allowBlank: true, formulae: ['"Microsoft 365,GoDaddy"'],
       showErrorMessage: true, errorTitle: 'Proveedor incorrecto',
       error: 'Selecciona Microsoft 365 o GoDaddy de la lista.',
