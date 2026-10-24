@@ -4,7 +4,7 @@ import { Transform as Normalizar } from 'class-transformer';
 import { ArrayNotEmpty, IsArray, IsEmail, IsIn, IsInt, IsOptional, IsString, IsBoolean, ValidateIf, MinLength } from 'class-validator';
 import { Type } from 'class-transformer';
 import { PaginacionDto } from '../common/paginacion.dto';
-import { ProveedorCorreo } from '../entities/usuario.entity';
+import type { ProveedorCorreo } from '../entities/usuario.entity';
 
 export class ListarDocentesDto extends PaginacionDto {
   @IsOptional() @IsString() buscar?: string;
