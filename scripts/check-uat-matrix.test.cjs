@@ -4,11 +4,11 @@ const { validarMatriz } = require('./check-uat-matrix.cjs');
 const original = require('../docs/UAT_MATRIZ_2026-10-15.json');
 const copia = () => structuredClone(original);
 test('la matriz institucional continúa pendiente y bloquea release', () => {
-  assert.equal(validarMatriz(copia(), original.version).pendientes, 13);
+  assert.equal(validarMatriz(copia(), original.version).pendientes, original.escenarios.length);
   assert.throws(() => validarMatriz(copia(), original.version, true), /incompleta/);
 });
 test('rechaza eliminación de escenarios, duplicados y canales desconocidos', () => {
-  for (const mutar of [m => m.escenarios.pop(), m => { m.escenarios[1].id = m.escenarios[0].id; }, m => { m.escenarios[0].canales = ['inexistente']; }]) {
+  for (const mutar of [m => m.escenarios.shift(), m => { m.escenarios[1].id = m.escenarios[0].id; }, m => { m.escenarios[0].canales = ['inexistente']; }]) {
     const m = copia(); mutar(m); assert.throws(() => validarMatriz(m, original.version));
   }
 });
