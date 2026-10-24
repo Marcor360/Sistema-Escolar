@@ -78,6 +78,9 @@
     },
     "js-yaml": "4.3.2",
     "sprintf-js": "$sprintf-js",
-    "multer": "$multer"
+    "multer": "$multer",
+    "@azure/identity": {
+      "@azure/msal-node": "7.1.1"
+    }
   }
 }
