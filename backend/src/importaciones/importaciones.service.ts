@@ -140,26 +140,112 @@ export class ImportacionesService {
     }
     return { clase: 'CUENTA', tipo, instancia, ids } as const;
   }
+  private async evaluarAlumnos(filas: Fila[], c: Catalogos) {
+    const vistos = new Set<string>();
+    const validas: Awaited<ReturnType<ImportacionesService['validarFila']>>[] = [];
+    const errores: { fila: number; mensaje: string }[] = [];
+    const duplicados: { fila: number; mensaje: string }[] = [];
+    for (let i = 0; i < filas.length; i++) {
+      try {
+        validas.push(await this.validarFila('ALUMNOS', filas[i], c, vistos));
+      } catch (e) {
+        const mensaje = e instanceof BadRequestException || e instanceof ConflictException
+          || e instanceof ForbiddenException || e instanceof NotFoundException
+          ? e.message : 'No fue posible validar la fila';
+        const resultado = { fila: i + 2, mensaje };
+        if (e instanceof ConflictException && /^(Ya registrado|Repetido en archivo):/.test(mensaje)) {
+          duplicados.push(resultado);
+        } else {
+          errores.push(resultado);
+        }
+      }
+    }
+    return { validas, errores, duplicados };
+  }
+
   private aad(p: ImportacionPreview, posicion: number) { return `${p.id}:${p.actorId}:${p.tipo}:${posicion}`; }
   async preview(tipo: TipoImportacion, buffer: Buffer, nombre: string, user: JwtUser) {
-    this.autorizar(tipo,user); const filas = await leerArchivo(buffer,nombre), errores: { fila: number; mensaje: string }[] = [];
-    await this.ds.transaction(async (manager) => { const c = await this.catalogos(manager,tipo,filas,user,false), vistos = new Set<string>();
-      for (let i=0;i<filas.length;i++) { try { await this.validarFila(tipo,filas[i],c,vistos); } catch (e) { errores.push({ fila: i+2, mensaje: e instanceof BadRequestException || e instanceof ConflictException || e instanceof ForbiddenException || e instanceof NotFoundException ? e.message : 'No fue posible validar la fila' }); } }
+    this.autorizar(tipo, user);
+    const filas = await leerArchivo(buffer, nombre);
+    const errores: { fila: number; mensaje: string }[] = [];
+    let duplicados: { fila: number; mensaje: string }[] = [];
+    let validos = 0;
+    await this.ds.transaction(async (manager) => {
+      const c = await this.catalogos(manager, tipo, filas, user, false);
+      if (tipo === 'ALUMNOS') {
+        const resultado = await this.evaluarAlumnos(filas, c);
+        errores.push(...resultado.errores);
+        duplicados = resultado.duplicados;
+        validos = resultado.validas.length;
+      } else {
+        const vistos = new Set<string>();
+        for (let i = 0; i < filas.length; i++) {
+          try { await this.validarFila(tipo, filas[i], c, vistos); }
+          catch (e) {
+            errores.push({ fila: i + 2, mensaje: e instanceof BadRequestException || e instanceof ConflictException ||
+              e instanceof ForbiddenException || e instanceof NotFoundException ? e.message : 'No fue posible validar la fila' });
+          }
+        }
+        validos = filas.length - errores.length;
+      }
     });
     let previewId: string | null = null;
-    if (!errores.length) {
-      const p = this.ds.getRepository(ImportacionPreview).create({ id: randomUUID(), actorId: user.sub, tipo, expira: new Date(Date.now()+15*60000) });
-      const cifradas = filas.map((fila,posicion) => ({ previewId: p.id, posicion, contenido: this.cifrado.cifrar(fila,this.aad(p,posicion)) }));
+    if ((!errores.length && tipo !== 'ALUMNOS') || (tipo === 'ALUMNOS' && (validos > 0 || errores.length > 0))) {
+      const p = this.ds.getRepository(ImportacionPreview).create({
+        id: randomUUID(), actorId: user.sub, tipo, expira: new Date(Date.now() + 15 * 60000),
+      });
+      const cifradas = filas.map((fila, posicion) => ({
+        previewId: p.id, posicion, contenido: this.cifrado.cifrar(fila, this.aad(p, posicion)),
+      }));
       if (cifradas.some((f) => f.contenido.length > 8000)) throw new BadRequestException('Una fila excede el límite de previsualización');
       await this.ds.transaction(async (manager) => {
         await manager.getRepository(Usuario).findOne({ where: { id: user.sub }, lock: { mode: 'pessimistic_write' }, loadEagerRelations: false });
-        const repo = manager.getRepository(ImportacionPreview); await repo.delete({ expira: LessThan(new Date()) });
-        if (await repo.count() >= 100 || await repo.countBy({ actorId: user.sub }) >= 5) throw new BadRequestException('Confirma tus previsualizaciones pendientes o espera su expiración de 15 minutos');
-        await repo.insert(p); for (const lote of trozos(cifradas)) await manager.getRepository(ImportacionFila).insert(lote);
-      }); previewId = p.id;
+        const repo = manager.getRepository(ImportacionPreview);
+        await repo.delete({ expira: LessThan(new Date()) });
+        if (await repo.count() >= 100 || await repo.countBy({ actorId: user.sub }) >= 5) {
+          throw new BadRequestException('Confirma tus previsualizaciones pendientes o espera su expiración de 15 minutos');
+        }
+        await repo.insert(p);
+        for (const lote of trozos(cifradas)) await manager.getRepository(ImportacionFila).insert(lote);
+      });
+      previewId = p.id;
     }
-    return { previewId, registros: filas.length, errores, identificadores: filas.map((f,i) => ({ fila: i+2, identificador: f.matricula ?? f.numEmpleado ?? f.correoInstitucional ?? f.email })), regla: tipo === 'ALUMNOS' ? 'Confirmación atómica. El alumno no recibe contraseña inicial; debe solicitar y completar la activación por código de un solo uso en su correo. Si no hay correo operativo, el acceso queda pendiente.' : 'Confirmación atómica. Cuentas nuevas se activan estableciendo contraseña mediante recuperación por correo; no se entregan contraseñas en la importación.' };
+    return {
+      previewId, registros: filas.length, validos, duplicados, errores,
+      identificadores: filas.map((f, i) => ({ fila: i + 2, identificador: f.matricula ?? f.numEmpleado ?? f.correoInstitucional ?? f.email })),
+      regla: tipo === 'ALUMNOS'
+        ? 'Solo se incorporarán alumnos nuevos y válidos. Los existentes se omiten y las filas con errores pueden descargarse para corregirse. Revisa y confirma para importar.'
+        : 'Confirmación atómica; el lote se revierte si alguna fila es inválida.',
+    };
   }
+
+  /** Solo el actor del preview puede recuperar sus filas inválidas antes de confirmar. */
+  async plantillaCorrecciones(previewId: string, user: JwtUser) {
+    const p = await this.ds.getRepository(ImportacionPreview).findOneBy({ id: previewId });
+    this.comprobar(p, user);
+    if (p.tipo !== 'ALUMNOS') throw new BadRequestException('Las correcciones descargables son para alumnos');
+    const filas = await this.ds.getRepository(ImportacionFila).find({ where: { previewId }, order: { posicion: 'ASC' } });
+    const originales = filas.map((f) => this.cifrado.descifrar(f.contenido, this.aad(p, f.posicion)));
+    const { errores } = await this.ds.transaction(async (manager) => {
+      const c = await this.catalogos(manager, 'ALUMNOS', originales, user, false);
+      return this.evaluarAlumnos(originales, c);
+    });
+    if (!errores.length) throw new BadRequestException('No hay filas por corregir');
+    const { crearPlantillaImportacion, COLUMNAS_PLANTILLA } = await import('./plantillas');
+    const libro = crearPlantillaImportacion('ALUMNOS');
+    const hoja = libro.getWorksheet('ALUMNOS')!;
+    for (const error of errores) {
+      const fila = originales[error.fila - 2];
+      const valores = COLUMNAS_PLANTILLA.ALUMNOS.map((campo) =>
+        campo === 'correoInstitucional' ? (fila.correoInstitucional || fila.email || '') : (fila[campo] || ''));
+      hoja.addRow(valores);
+    }
+    const incidencias = libro.addWorksheet('Errores');
+    incidencias.columns = [{ header: 'Fila original', width: 20 }, { header: 'Motivo', width: 90 }];
+    for (const error of errores) incidencias.addRow([error.fila, error.mensaje]);
+    return Buffer.from(await libro.xlsx.writeBuffer());
+  }
+
   private comprobar(p: ImportacionPreview | null, user: JwtUser): asserts p is ImportacionPreview { if (!p || p.expira < new Date() || p.actorId !== user.sub) throw new NotFoundException('Previsualización expirada, consumida o no disponible para tu sesión'); this.autorizar(p.tipo,user); }
   async confirmar(previewId: string, confirmado: boolean, user: JwtUser) {
     if (!confirmado) throw new BadRequestException('Confirma explícitamente la previsualización');
