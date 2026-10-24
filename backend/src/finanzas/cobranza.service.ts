@@ -155,7 +155,7 @@ export class CobranzaService implements OnModuleInit, OnModuleDestroy {
           const codigo = (e as { responseCode?: number }).responseCode;
           const rechazado = codigo !== undefined && codigo >= 400 && codigo < 600;
           const retry = rechazado && codigo < 500 && envio.intentos < 3;
-          await this.resultado(envio, retry ? 'PENDIENTE' : rechazado ? 'ERROR' : 'INCIERTO', rechazado ? 'SMTP_RECHAZO' : 'SMTP_RESULTADO_INCIERTO');
+          await this.resultado(envio, retry ? 'PENDIENTE' : rechazado ? 'ERROR' : 'INCIERTO', rechazado ? 'SMTP_RECHAZO' : 'CORREO_RESULTADO_INCIERTO');
         }
       }
     } finally { this.trabajando = false; }
@@ -163,7 +163,7 @@ export class CobranzaService implements OnModuleInit, OnModuleDestroy {
   private async resultado(envio: CobranzaEnvio, estado: CobranzaEnvio['estado'], error: string | null) {
     await this.ds.transaction(async (manager) => {
       await manager.getRepository(CobranzaEnvio).update(envio.id, { estado, error, proximoIntento: new Date(Date.now() + 120000) });
-      await this.bitacora.registrar(envio.actorId, `COBRANZA_${estado}`, 'cobranza_envio', envio.id, `intentos=${envio.intentos}; resultado=${error ?? 'SMTP_ACEPTADO'}`, envio.plantelId, manager);
+      await this.bitacora.registrar(envio.actorId, `COBRANZA_${estado}`, 'cobranza_envio', envio.id, `intentos=${envio.intentos}; resultado=${error ?? 'CORREO_ACEPTADO'}`, envio.plantelId, manager);
     });
   }
 }
