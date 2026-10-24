@@ -197,6 +197,11 @@ export class AlumnosService {
       if (dto.tutorTelefono !== undefined) alumno.tutorTelefono = dto.tutorTelefono;
       if (dto.direccion !== undefined) alumno.direccion = dto.direccion;
       await manager.getRepository(Alumno).save(alumno);
+      await manager.getRepository(BitacoraAcademica).insert({
+        usuarioId, plantelId: alumno.plantelId, accion: 'ALUMNO_ACTUALIZA_CONTACTO',
+        entidadId: alumno.id, detalle: 'Autogestión de información personal; sin datos sensibles en bitácora',
+        fecha: new Date(),
+      });
     });
     return this.perfilPropio(usuarioId);
   }
