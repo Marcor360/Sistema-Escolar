@@ -44,9 +44,20 @@ export class CorreoAccesoOutboxService implements OnModuleInit, OnModuleDestroy 
       const actual = await manager.getRepository(Usuario).findOne({ where: { id: usuario.id, activo: true }, lock: { mode: 'pessimistic_write' } });
       if (!actual || (actual.sessionVersion ?? 0) !== (usuario.sessionVersion ?? 0) || actual.activacionPendiente !== (tipo === 'ACTIVACION')) return;
       const repo = manager.getRepository(AuthCorreoOutbox);
-      // Coalescer durante toda la vigencia, incluso si SMTP ya aceptó. No invalidar el primer código al reenviar.
-      if (await repo.findOne({ where: { usuarioId: actual.id, tipo, version: actual.sessionVersion ?? 0, expiraEn: MoreThan(new Date()) } })) return;
+      // Conservar el mismo código durante su vigencia; nunca generar múltiples correos simultáneos.
       const ahora = new Date();
+      const existente = await repo.findOne({ where: { usuarioId: actual.id, tipo, version: actual.sessionVersion ?? 0, expiraEn: MoreThan(ahora) } });
+      if (existente) {
+        if (tipo === 'ACTIVACION' && existente.estado === 'ACEPTADO'
+          && existente.proximoIntento.getTime() <= ahora.getTime() - 60_000) {
+          // El bloqueo por usuario y esta transición serializan los reenvíos incluso entre instancias.
+          // Se conserva tokenHash y claveId: no se invalida el código que el alumno ya recibió.
+          await repo.update({ id: existente.id, estado: 'ACEPTADO' }, {
+            estado: 'PENDIENTE', intentos: 0, proximoIntento: ahora, errorCodigo: null,
+          });
+        }
+        return;
+      }
       await repo.insert({ id: randomUUID(), usuarioId: actual.id, tipo, version: actual.sessionVersion ?? 0,
         // DATETIME sin fracciones puede redondear hacia el segundo siguiente en MySQL.
         // Una solicitud nueva debe ser elegible desde el commit, sin retraso por redondeo.
@@ -139,7 +150,11 @@ export class CorreoAccesoOutboxService implements OnModuleInit, OnModuleDestroy 
         trabajo.tipo === 'ACTIVACION' ? plantillaInvitacion(token) : plantillaRecuperacion(token),
         dominio ? `acceso-${trabajo.id}@${dominio}` : undefined);
       if (enviado.simulado) throw new Error('SMTP_NO_DISPONIBLE');
-      const actualizado = await repo.update({ id, claim, estado: 'PROCESANDO' }, { estado: 'ACEPTADO', errorCodigo: null, claim: null, leaseHasta: null });
+      const actualizado = await repo.update({ id, claim, estado: 'PROCESANDO' }, {
+        estado: 'ACEPTADO', errorCodigo: null, claim: null, leaseHasta: null,
+        // Inicio del cooldown del próximo reenvío, desde la aceptación del proveedor.
+        proximoIntento: new Date(),
+      });
       this.logger.log(`OUTBOX id=${id} estado=ACEPTADO_PROVEEDOR`);
       if (actualizado.affected === 1 && trabajo.tipo === 'RECUPERACION') {
         await this.notificarAyudaPlantel(usuario).catch(() => this.logger.warn(`OUTBOX id=${id} aviso_plantel_fallido`));

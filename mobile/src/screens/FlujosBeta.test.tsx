@@ -12,6 +12,7 @@ import EstadoCuenta from "./EstadoCuenta";
 import Perfil from "./Perfil";
 import { api } from "../api/client";
 import { Alert, AppState, Linking, ScrollView, Text, TouchableOpacity } from "react-native";
+import * as SecureStore from "expo-secure-store";
 import * as DocumentPicker from "expo-document-picker";
 const sesion = vi.hoisted(() => ({
   sub: 1 as number | null,
@@ -43,6 +44,7 @@ vi.mock("../marca", () => ({
   }),
 }));
 vi.mock("../push", () => ({ activarPush: vi.fn(), desactivarPush: vi.fn() }));
+vi.mock("expo-secure-store", () => ({ getItemAsync: vi.fn(async () => null), setItemAsync: vi.fn(async () => undefined), deleteItemAsync: vi.fn(async () => undefined) }));
 vi.mock("expo-document-picker", () => ({ getDocumentAsync: vi.fn() }));
 vi.mock("@react-navigation/native", () => ({
   useNavigation: () => ({ navigate: sesion.navegar }),
@@ -563,9 +565,10 @@ it("activa una cuenta de alumno, impide duplicados y limpia los secretos al term
   vi.mocked(api.post).mockResolvedValueOnce({ data: { mensaje: "Solicitud recibida; revisa tu correo si está disponible" } });
   await montar(<ActivarCuenta volver={vi.fn()} />);
   await escribir("Correo institucional", "alumno@example.test");
-  await act(async () => vista.root.findByProps({ accessibilityLabel: "Solicitar código de activación" }).props.onPress());
+  await act(async () => vista.root.findByProps({ accessibilityLabel: "Continuar" }).props.onPress());
   expect(api.post).toHaveBeenCalledWith("/auth/solicitar-activacion", { email: "alumno@example.test" });
-  await escribir("Código de activación", "A".repeat(64));
+  await escribir("Código de verificación de 64 caracteres", "A".repeat(64));
+  await act(async () => vista.root.findByProps({ accessibilityLabel: "Continuar" }).props.onPress());
   await escribir("Nueva contraseña", "Nueva_Segura_42!");
   await escribir("Confirmar nueva contraseña", "Distinta_42!");
   await act(async () => vista.root.findByProps({ accessibilityLabel: "Activar cuenta" }).props.onPress());
@@ -672,4 +675,22 @@ it('pagina tareas en servidor y vuelve a validar solo la página visible antes d
   await act(async () => vista.root.findByProps({accessibilityLabel:'Entregar archivo: Trabajo paginado'}).props.onPress());
   expect(api.get).toHaveBeenLastCalledWith('/alumnos/me/tareas/listado',{params:{pagina:2,porPagina:10}});
   expect(DocumentPicker.getDocumentAsync).toHaveBeenCalled();
+});
+
+
+it("restaura el contador de activación al remontar sin solicitar otro correo", async () => {
+  vi.mocked(SecureStore.getItemAsync).mockResolvedValueOnce(JSON.stringify({ email: "alumno@example.test", hasta: Date.now() + 60_000 }));
+  await montar(<ActivarCuenta volver={() => undefined} correoInicial="alumno@example.test" />);
+  await act(async () => vista.root.findByProps({ accessibilityLabel: "Continuar" }).props.onPress());
+  expect(api.post).not.toHaveBeenCalled();
+  expect(texto()).toContain("Solicitar uno nuevo en");
+  expect(vista.root.findByProps({ accessibilityLabel: "Código de verificación de 64 caracteres" })).toBeTruthy();
+});
+
+it("permite continuar después de solicitar el código si falla el almacenamiento local", async () => {
+  vi.mocked(SecureStore.setItemAsync).mockRejectedValueOnce(new Error("almacenamiento no disponible"));
+  await montar(<ActivarCuenta volver={() => undefined} correoInicial="alumno@example.test" />);
+  await act(async () => vista.root.findByProps({ accessibilityLabel: "Continuar" }).props.onPress());
+  expect(api.post).toHaveBeenCalledTimes(1);
+  expect(vista.root.findByProps({ accessibilityLabel: "Código de verificación de 64 caracteres" })).toBeTruthy();
 });

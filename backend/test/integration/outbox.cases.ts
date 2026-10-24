@@ -35,6 +35,32 @@ export function registrarOutbox(ctx: ContextoIntegracion) {
     } finally { correo.mockRestore(); }
   });
 
+  it('outbox: activación reenvía tras 60 segundos sin duplicar ni renovar código o caducidad', async () => {
+    const usuario = await nuevo('reenvio60');
+    const correo = jest.spyOn(ctx.app.get(NotificacionesService), 'enviarEmail').mockResolvedValue({ simulado: false });
+    try {
+      const servicio = ctx.app.get(ActivacionService);
+      await servicio.solicitar(usuario.email);
+      await drenar();
+      const original = await repo().findOneByOrFail({ usuarioId: usuario.id });
+      expect(original.estado).toBe('ACEPTADO');
+      await servicio.solicitar(usuario.email);
+      expect((await repo().findOneByOrFail({ id: original.id })).estado).toBe('ACEPTADO');
+      await repo().update(original.id, { proximoIntento: new Date(Date.now() - 61_000) });
+      await Promise.all(Array.from({ length: 5 }, () => servicio.solicitar(usuario.email)));
+      expect(await repo().countBy({ usuarioId: usuario.id })).toBe(1);
+      const reenviado = await repo().findOneByOrFail({ id: original.id });
+      expect(reenviado.estado).toBe('PENDIENTE');
+      expect(reenviado.tokenHash).toBe(original.tokenHash);
+      expect(reenviado.expiraEn.getTime()).toBe(original.expiraEn.getTime());
+      await anticipar(original.id);
+      await drenar();
+      expect(correo).toHaveBeenCalledTimes(2);
+      expect(correo.mock.calls[1]).toEqual(correo.mock.calls[0]);
+      expect(await ctx.dataSource.getRepository(ActivacionToken).countBy({ usuarioId: usuario.id })).toBe(1);
+    } finally { correo.mockRestore(); }
+  });
+
   it('outbox: fallo SMTP y reinicio conservan el mismo código, hash y Message-ID; dos workers no lo envían a la vez', async () => {
     const usuario = await nuevo('reintento');
     await ctx.app.get(ActivacionService).solicitar(usuario.email);
