@@ -1200,15 +1200,15 @@ dialog.recorrido-dialogo {
   background: var(--papel, #fff);
   color: var(--tinta, #1c2528);
   border: 1px solid var(--linea, #d8dcd6);
-  border-top: 4px solid var(--marca-primario, var(--pizarra));
+  border-top: 4px solid var(--pizarra);
 }
 dialog :is(h1, h2, h3, p, label, legend, strong) { color: inherit; }
 dialog .recorrido-progreso { color: var(--pizarra); }
 dialog .recorrido-ayuda { color: #46575a; }
 dialog :is(.boton, button) { color-scheme: light; }
 dialog :is(.boton:not(.secundario), button:not(.secundario)) {
-  background-color: var(--marca-primario, var(--pizarra));
-  color: #fff;
+  background-color: var(--pizarra);
+  color: var(--texto-sobre-pizarra, #fff);
 }
 dialog :is(.boton.secundario, button.secundario) {
   background-color: #fff;
