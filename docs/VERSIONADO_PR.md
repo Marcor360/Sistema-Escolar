@@ -1,6 +1,6 @@
 # Política de versiones por pull request
 
-**Corte: 24/oct/2026.** Esta entrega propone **1.27.40** sobre `main` **1.27.39**. Consultar siempre la versión de la rama base remota; los títulos de PR no reservan versiones. La versión objetivo 1.28.0 del reglamento sigue pendiente de aprobación y desarrollo.
+**Corte: 25/oct/2026.** Esta entrega propone **1.27.42** sobre `main` **1.27.41**. Consultar siempre la versión de la rama base remota; los títulos de PR no reservan versiones. La versión objetivo 1.28.0 del reglamento sigue pendiente de aprobación y desarrollo.
 
 ## Numeración
 

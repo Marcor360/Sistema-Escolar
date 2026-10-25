@@ -1,0 +1,69 @@
+name: Auditoría IUA y recorridos ligeros
+
+on:
+  pull_request:
+    paths:
+      - '.agents/skills/**'
+      - 'scripts/check-agent-skills*.cjs'
+      - '.github/workflows/auditoria-agentes.yml'
+      - 'AGENTS.md'
+      - 'docs/AGENTES_Y_SKILLS.md'
+  workflow_dispatch:
+  schedule:
+    - cron: '20 10 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: auditoria-iua-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  skills-y-contratos:
+    name: Skills, UAT y puertas sin datos reales
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Verificar estructura y pruebas de skills
+        run: |
+          node scripts/check-agent-skills.cjs
+          node --test scripts/check-agent-skills.test.cjs
+      - name: Verificar contratos de aceptación (no certifica UAT)
+        run: |
+          node scripts/check-uat-matrix.cjs
+          node scripts/check-beta-gates.cjs
+      - name: Registrar límites de la evidencia
+        run: |
+          echo '### Auditoría estructural IUA' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Se validó la estructura de skills y de matrices UAT. No se ejecutó aceptación institucional ni auditoría autónoma por IA.' >> "$GITHUB_STEP_SUMMARY"
+
+  smoke-ux-semanal:
+    name: Recorrido responsive con datos simulados
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Instalar dependencias bloqueadas
+        run: node ../scripts/ci-install.cjs
+      - name: Instalar Chromium de pruebas
+        run: npx playwright install --with-deps chromium
+      - name: Ejecutar navegación responsive sin backend ni datos de alumnos
+        run: npm run test:responsive
+      - name: Documentar alcance
+        run: |
+          echo '### Smoke web' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Playwright ejecuta navegador con API simulada; los E2E con DB real aislada siguen en ci.yml para cada PR.' >> "$GITHUB_STEP_SUMMARY"

@@ -10,3 +10,9 @@
 La zona horaria está documentada en `docs/ARQUITECTURA.md`; las sesiones usan acceso de 15 minutos y refresh rotativo de 30 días como máximo, persistido con hash y revocable por dispositivo.
 
 La identidad visual se configura en `configuracion_marca` y los clientes la consumen de `GET /api/configuracion/marca`.
+
+## Skills locales y auditorías
+
+- Para explorar módulos usar `$iua-arquitectura-contexto`; para seguridad, UX, recorridos y revisión previa al PR usar las skills de `.agents/skills/` descritas en `docs/AGENTES_Y_SKILLS.md`.
+- Toda auditoría es solo lectura hasta que una tarea autorice cambios. Prohibido usar datos reales o emitir correos, cobros, migraciones o despliegues en auditorías automáticas.
+- `.github/workflows/auditoria-agentes.yml` comprueba estructura/contratos y ejecuta smoke web simulado semanal; no es una auditoría continua por IA ni certificación UAT.
