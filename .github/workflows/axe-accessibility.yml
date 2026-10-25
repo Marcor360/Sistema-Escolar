@@ -30,6 +30,8 @@ jobs:
         run: node ../scripts/ci-install.cjs
       - name: Navegador de pruebas
         run: npx playwright install --with-deps chromium
+      - name: Verificar aislamiento de colores forzados
+        run: node --test test/a11y-media.test.cjs
       - name: Auditar páginas con datos simulados
         env:
           RUN_AXE_AUDIT: '1'

@@ -20,6 +20,6 @@ RUN_AXE_AUDIT=1 npm run test:responsive
 
 **Seguridad:** solo `127.0.0.1`, sin credenciales ni datos de menores reales; jamás auditar páginas internas de staging con sesiones activas desde GitHub Actions.
 
-## Línea base local de la revisión (25/oct/2026)
+## Estado de la línea base
 
-Chromium, axe-core 4.14.0 y API simulada completaron el recorrido responsive y los cuatro escenarios: acceso y alta de alumno sin infracciones detectadas; inicio con `color-contrast` serio en 19 nodos y Finanzas con la misma regla en 6 nodos. Los nodos incluyen el monograma y títulos de grupos del menú. No son 25 defectos independientes: las pantallas comparten elementos. El modo informativo conserva estos hallazgos para remediación; no permite afirmar conformidad WCAG ni aceptación institucional.
+La primera ejecución local heredaba colores forzados del smoke anterior: sus conteos no constituyen una línea base válida del tema normal. La auditoría ahora establece explícitamente colores forzados desactivados, tema claro y movimiento normal, y registra esos medios en el JSON. Una regresión con Chromium parte de colores forzados activos y exige detectar un contraste insuficiente después del reinicio. El reporte final de CI contiene los hallazgos del tema normal; no certifica WCAG ni aceptación institucional.

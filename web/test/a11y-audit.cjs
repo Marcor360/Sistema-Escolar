@@ -1,10 +1,15 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
+async function prepararPagina(page) {
+  await page.emulateMedia({ forcedColors: 'none', colorScheme: 'light', reducedMotion: 'no-preference' });
+}
+
 // Este módulo funciona dentro del runner Playwright con respuestas de prueba.
 // Nunca usa URLs institucionales ni lee expedientes de alumnos.
 async function ejecutarAuditoria(page, baseUrl) {
   const axe = require('axe-core');
+  await prepararPagina(page);
   const rutas = [
     { nombre: 'acceso', ruta: '/login' },
     { nombre: 'inicio', ruta: '/' },
@@ -43,6 +48,7 @@ async function ejecutarAuditoria(page, baseUrl) {
     tipo: 'WCAG automatizado / API simulada',
     fecha: new Date().toISOString(),
     axeVersion: axe.version,
+    medios: { forcedColors: 'none', colorScheme: 'light', reducedMotion: 'no-preference' },
     escenarios: hallazgos,
     pendientes: ['lector de pantalla humano', 'teclado completo', 'UAT institucional'],
   }, null, 2));
@@ -54,4 +60,4 @@ async function ejecutarAuditoria(page, baseUrl) {
   }
   console.log('Reporte axe guardado: .qa/axe-report.json; sin UAT ni certificación automática');
 }
-module.exports = { ejecutarAuditoria };
+module.exports = { ejecutarAuditoria, prepararPagina };
