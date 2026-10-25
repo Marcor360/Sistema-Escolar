@@ -25,7 +25,7 @@
 
 ## Correcciones y cobertura de revisión
 
-- Confirmación y emisión bloquean primero el ciclo, igual que el generador masivo, antes de bloquear plantel/plan.
+- Confirmación y emisión comparten el orden ciclo → alumno → plantel → programación con el generador masivo. La integración también compite entre dos ciclos del mismo alumno para detectar bloqueos cruzados.
 - La idempotencia no depende del orden de campos JSON. Emitir vuelve a comprobar periodo activo y tipo de concepto compatible; un reintento ya emitido conserva su cargo incluso si después se cierra el ciclo.
 - La interfaz permite consultar por número una programación persistida y emitir sus cuotas tras recargar.
 - Integración con fixtures: confirmar/reintentar, emitir simultáneamente una cuota, competir con el generador COL sin cobro duplicado, denegar periodo inactivo, concepto alterado y otro plantel. La cola automática de cobranza se desactiva en el harness para que sus pruebas controlen el envío simulado.

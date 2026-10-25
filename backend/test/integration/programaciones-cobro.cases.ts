@@ -42,11 +42,24 @@ export function registrarProgramacionesCobro(ctx: ContextoIntegracion) {
     } })]);
     expect([201, 409]).toContain(cuota.response.status); expect(masiva.response.status).toBe(201);
     expect(await ds.getRepository(Cargo).count({ where: { alumnoId, cicloId: ciclo.id, periodo: '2027-02', concepto: { tipo: 'COLEGIATURA' } } })).toBe(1);
+    // Dos ciclos del mismo alumno conservan el mismo orden de locks: no se bloquean mutuamente.
+    const cicloB = await ds.getRepository(CicloEscolar).save({ clave: `PB${ctx.sufijo}`, nombre: 'Otro ciclo sintético',
+      fechaInicio: '2027-01-01', fechaFin: '2027-12-31', estado: 'ACTIVO', activo: true });
+    const periodoB = await ds.getRepository(PeriodoAcademico).save({ plantelId: ctx.plantelId, carreraId: carrera.id, cicloId: cicloB.id,
+      clave: 'CUAT1', nombre: 'Otro periodo sintético', tipo: 'CUATRIMESTRAL', numero: 1, activo: true });
+    const grupoB = await ds.getRepository(Grupo).save({ plantelId: ctx.plantelId, cicloId: cicloB.id, nombre: 'Otro grupo sintético',
+      nivelId: nivel.id, carreraId: carrera.id, periodoAcademicoId: periodoB.id, tipo: 'REGULAR', activo: true });
+    await ds.getRepository(Inscripcion).save({ alumnoId, grupoId: grupoB.id, estatus: 'ACTIVA' });
+    const cruzados = await Promise.all([emitir(3), ctx.api('/finanzas/cargos/generar-colegiaturas', { method: 'POST', token, body: {
+      plantelId: ctx.plantelId, cicloId: cicloB.id, periodo: '2027-03', monto: 100, confirmado: true,
+    } })]);
+    expect(cruzados.map(r => r.response.status)).toEqual([201, 201]);
+    expect(await ds.getRepository(Cargo).countBy({ alumnoId, periodo: '2027-03' })).toBe(2);
     await ds.getRepository(PeriodoAcademico).update(periodo.id, { activo: false });
-    expect((await emitir(3)).response.status).toBe(409);
+    expect((await emitir(4)).response.status).toBe(409);
     await ds.getRepository(PeriodoAcademico).update(periodo.id, { activo: true });
     await ds.getRepository(ConceptoPago).update(concepto.id, { tipo: 'OTRO' });
-    expect((await emitir(3)).response.status).toBe(409);
+    expect((await emitir(4)).response.status).toBe(409);
     expect((await ctx.api(`/finanzas/programaciones/${id}`, { token: await ctx.emitirFinanzasB() })).response.status).toBe(403);
   });
 }
