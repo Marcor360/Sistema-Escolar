@@ -1,5 +1,6 @@
 import { it, expect, jest } from '@jest/globals';
 import { ConfigService } from '@nestjs/config';
+import { ConfiguracionService } from '../../src/configuracion/configuracion.service';
 import { createHash } from 'crypto';
 import { In } from 'typeorm';
 import { CorreoAccesoOutboxService } from '../../src/auth/correo-acceso-outbox.service';
@@ -14,7 +15,7 @@ export function registrarOutbox(ctx: ContextoIntegracion) {
     const root = await ctx.dataSource.getRepository(Usuario).findOne({ where: { id: ctx.superadminId }, select: ['id', 'passwordHash'] });
     return ctx.dataSource.getRepository(Usuario).save({ email: `outbox_${clave}_${ctx.sufijo}@example.invalid`, nombre: 'Outbox', apellidoPaterno: 'Prueba', activo: true, activacionPendiente: pendiente, passwordHash: root!.passwordHash, sessionVersion: 0 });
   };
-  const reiniciar = () => new CorreoAccesoOutboxService(ctx.dataSource, ctx.app.get(NotificacionesService), ctx.app.get(ConfigService));
+  const reiniciar = () => new CorreoAccesoOutboxService(ctx.dataSource, ctx.app.get(NotificacionesService), ctx.app.get(ConfigService), ctx.app.get(ConfiguracionService));
   const repo = () => ctx.dataSource.getRepository(AuthCorreoOutbox);
   const drenar = () => ctx.app.get(CorreoAccesoOutboxService).procesar();
   const anticipar = async (id: string) => repo().update(id, { proximoIntento: new Date(Date.now() - 1000) });
