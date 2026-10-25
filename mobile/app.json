@@ -2,7 +2,7 @@
   "expo": {
     "name": "Sistema Escolar",
     "slug": "sistema-escolar",
-    "version": "1.27.49",
+    "version": "1.27.50",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "ios": {
@@ -14,12 +14,7 @@
     },
     "plugins": [
       "expo-asset",
-      [
-        "expo-secure-store",
-        {
-          "faceIDPermission": "Permitir usar Face ID para proteger el acceso a la cuenta escolar."
-        }
-      ],
+      "expo-secure-store",
       "expo-status-bar",
       [
         "expo-splash-screen",

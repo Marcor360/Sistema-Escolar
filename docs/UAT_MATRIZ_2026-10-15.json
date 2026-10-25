@@ -1,5 +1,5 @@
 {
-  "version": "1.27.49",
+  "version": "1.27.50",
   "alcance": "Escenarios de aceptación institucional sin resultados fabricados",
   "escenarios": [
     {
@@ -379,6 +379,22 @@
       ],
       "estado": "pendiente",
       "responsable": "Finanzas institucional, QA y SUPERADMIN",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-29",
+      "rol": "FINANZAS",
+      "escenario": "Persistir programación financiera de alumno inscrito, emitir solo cuotas del periodo académico activo, bloquear duplicados de COL e idempotencia, emitir ficha BBVA y registrar abonos parciales o totales, comprobar roles y ambos motores.",
+      "canales": [
+        "api",
+        "web",
+        "mysql",
+        "sqlserver",
+        "android",
+        "ios"
+      ],
+      "estado": "pendiente",
+      "responsable": "Finanzas, Control Escolar y QA",
       "evidencias": []
     }
   ]

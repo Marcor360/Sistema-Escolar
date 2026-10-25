@@ -218,7 +218,7 @@ export class CargosService {
 
     const existentes = await this.cargos.find({
       select: { alumnoId: true },
-      where: { conceptoId: concepto.id, cicloId: dto.cicloId, periodo: dto.periodo, alumnoId: In(alumnoIds) },
+      where: { concepto: { tipo: 'COLEGIATURA' }, cicloId: dto.cicloId, periodo: dto.periodo, alumnoId: In(alumnoIds) },
     });
     const yaGenerados = new Set(existentes.map((c) => c.alumnoId));
 
@@ -252,6 +252,12 @@ export class CargosService {
           if (!alumno || alumno.estatus !== 'ACTIVO' || !alumno.usuario.activo || (planteles !== null && !planteles.includes(alumno.plantelId))) return false;
           if (!await manager.getRepository(ConceptoPago).existsBy({ id: concepto.id, activo: true, tipo: 'COLEGIATURA' })) return false;
           if (!await manager.getRepository(Inscripcion).existsBy({ alumnoId: alumno.id, estatus: 'ACTIVA', grupo: { tipo: 'REGULAR', cicloId: dto.cicloId, plantelId: alumno.plantelId, activo: true, plantel: { activo: true } } })) return false;
+          // Una cuota de programación y COL no pueden generar dos colegiaturas del mismo mes.
+          if (await manager.getRepository(Cargo).exists({ where: {
+            alumnoId: alumno.id, cicloId: dto.cicloId, periodo: dto.periodo,
+            concepto: { tipo: 'COLEGIATURA' },
+            estatus: In(['PENDIENTE', 'PARCIAL', 'PAGADO', 'VENCIDO']),
+          } })) return false;
           nuevo.plantelId = alumno.plantelId;
           const cargo = await manager.getRepository(Cargo).save(nuevo);
           const plantelId = alumno.plantelId;
