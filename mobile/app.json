@@ -14,7 +14,12 @@
     },
     "plugins": [
       "expo-asset",
-      "expo-secure-store",
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": "Permitir usar Face ID para proteger el acceso a la cuenta escolar."
+        }
+      ],
       "expo-status-bar",
       [
         "expo-splash-screen",
