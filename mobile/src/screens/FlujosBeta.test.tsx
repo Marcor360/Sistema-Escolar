@@ -44,7 +44,7 @@ vi.mock("../marca", () => ({
   }),
 }));
 vi.mock("../push", () => ({ activarPush: vi.fn(), desactivarPush: vi.fn() }));
-vi.mock("expo-secure-store", () => ({ getItemAsync: vi.fn(async () => null), setItemAsync: vi.fn(async () => undefined), deleteItemAsync: vi.fn(async () => undefined) }));
+vi.mock("expo-secure-store", () => ({ getItemAsync: vi.fn(async () => null), setItemAsync: vi.fn(async () => undefined), deleteItemAsync: vi.fn(async () => undefined), canUseBiometricAuthentication: vi.fn(() => false) }));
 vi.mock("expo-document-picker", () => ({ getDocumentAsync: vi.fn() }));
 vi.mock("@react-navigation/native", () => ({
   useNavigation: () => ({ navigate: sesion.navegar }),

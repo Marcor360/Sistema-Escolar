@@ -8,12 +8,20 @@ import { api } from './api/client';
 
 Notifications.setNotificationHandler({ handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: false }) });
 const INSTALACION = 'escolar_push_instalacion';
+let revisionPreferencias = 0;
+let operacionesPreferencias: Promise<void> = Promise.resolve();
+function serializarPreferencia(accion: () => Promise<void>): Promise<void> {
+  const operacion = operacionesPreferencias.then(accion);
+  operacionesPreferencias = operacion.catch(() => undefined);
+  return operacion;
+}
 async function instalacion() {
   const previa = await SecureStore.getItemAsync(INSTALACION);
   if (previa) return previa;
   const nueva = Crypto.randomUUID(); await SecureStore.setItemAsync(INSTALACION, nueva); return nueva;
 }
 export async function activarPush(usuarioId: number, solicitarPermiso = true) {
+  const revision = revisionPreferencias;
   if (!solicitarPermiso && await SecureStore.getItemAsync(`push_optin_${usuarioId}`) !== 'true') return;
   if (!Device.isDevice) throw new Error('Las notificaciones push requieren un dispositivo físico y una build firmada.');
   const projectId = Constants.easConfig?.projectId || Constants.expoConfig?.extra?.eas?.projectId || process.env.EXPO_PUBLIC_EAS_PROJECT_ID;
@@ -23,13 +31,25 @@ export async function activarPush(usuarioId: number, solicitarPermiso = true) {
   if (permiso.status !== 'granted' && solicitarPermiso) permiso = await Notifications.requestPermissionsAsync();
   if (permiso.status !== 'granted') throw new Error('El permiso de notificaciones está desactivado. Puedes habilitarlo desde los ajustes del dispositivo.');
   const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
+  if (revision !== revisionPreferencias) return false;
   const { data } = await api.post<{ habilitado: boolean }>('/notificaciones/push/dispositivos', { instalacionId: await instalacion(), token });
-  await SecureStore.setItemAsync(`push_optin_${usuarioId}`, 'true');
-  return data.habilitado;
+  if (revision !== revisionPreferencias) return false;
+  await serializarPreferencia(async () => {
+    if (revision === revisionPreferencias)
+      await SecureStore.setItemAsync(`push_optin_${usuarioId}`, 'true');
+  });
+  return revision === revisionPreferencias && data.habilitado;
 }
 export async function desactivarPush(usuarioId: number) {
+  revisionPreferencias++;
   const id = await SecureStore.getItemAsync(INSTALACION);
   if (id) await api.delete(`/notificaciones/push/dispositivos/${id}`);
-  await SecureStore.deleteItemAsync(`push_optin_${usuarioId}`);
+  await serializarPreferencia(() => SecureStore.deleteItemAsync(`push_optin_${usuarioId}`));
   await Notifications.dismissAllNotificationsAsync();
+}
+
+/** La preferencia de avisos pertenece a la cuenta y se borra al cerrar su sesión. */
+export async function limpiarPreferenciaPushLocal(usuarioId: number): Promise<void> {
+  revisionPreferencias++;
+  await serializarPreferencia(() => SecureStore.deleteItemAsync(`push_optin_${usuarioId}`));
 }

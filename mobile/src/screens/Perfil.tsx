@@ -1,4 +1,5 @@
 import { activarPush, desactivarPush } from "../push";
+import { habilitarBiometria, borrarPreferenciaBiometrica, preferenciaBiometrica, biometriaDisponible } from "../biometria";
 import { crearControlLectura } from "../api/lectura-vigente";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -41,6 +42,33 @@ export default function PerfilScreen({ abrirDocumentos }: { abrirDocumentos?: ()
   const { marca } = useMarca();
   const { sesion, cerrar, finalizarSesionLocal } = useSesion();
   const [perfil, setPerfil] = useState<Perfil | null>(null);
+  const [bioDisponible] = useState(() => biometriaDisponible());
+  const [bioActiva, setBioActiva] = useState(false);
+  const [bioEnCurso, setBioEnCurso] = useState(false);
+  useEffect(() => {
+    let vigente = true;
+    void preferenciaBiometrica().then((id) => {
+      if (vigente) setBioActiva(id === sesion?.sub);
+    }).catch(() => { if (vigente) setBioActiva(false); });
+    return () => { vigente = false; };
+  }, [sesion?.sub]);
+  const configurarBiometria = async () => {
+    if (!sesion || bioEnCurso) return;
+    setBioEnCurso(true);
+    try {
+      if (bioActiva) {
+        await borrarPreferenciaBiometrica();
+        setBioActiva(false);
+        Alert.alert("Acceso biométrico", "Se desactivó el acceso con huella o rostro.");
+      } else {
+        await habilitarBiometria(sesion.sub);
+        setBioActiva(true);
+        Alert.alert("Acceso biométrico", "Se protegerá el acceso al abrir de nuevo la aplicación mientras tu sesión siga vigente.");
+      }
+    } catch (error) {
+      Alert.alert("Acceso biométrico", mensajeDeError(error));
+    } finally { setBioEnCurso(false); }
+  };
   const [edicion, setEdicion] = useState<{
     correoPersonal: string; telefono: string; fechaNacimiento: string;
     tutorNombre: string; tutorTelefono: string; direccion: string;
@@ -342,6 +370,22 @@ export default function PerfilScreen({ abrirDocumentos }: { abrirDocumentos?: ()
       </Tarjeta>
 
       <Tarjeta>
+        <Text accessibilityRole="header" style={base.tituloTarjeta}>🔐 Acceso rápido y privado</Text>
+        <Text style={base.secundario}>
+          {bioDisponible
+            ? "Usa la huella o el rostro configurados en el teléfono para desbloquear tu sesión. No guardamos datos biométricos ni contraseñas."
+            : "Este teléfono no tiene autenticación biométrica compatible y configurada."}
+        </Text>
+        <TouchableOpacity style={base.botonAccesible} accessibilityRole="button"
+          accessibilityLabel={bioActiva ? "Desactivar acceso biométrico" : "Activar acceso biométrico"}
+          accessibilityState={{ disabled: !bioDisponible || bioEnCurso, busy: bioEnCurso }}
+          disabled={!bioDisponible || bioEnCurso}
+          onPress={() => { void configurarBiometria(); }}>
+          <Text>{bioEnCurso ? "Comprobando…" : bioActiva ? "Desactivar acceso biométrico" : "Activar acceso con huella o rostro"}</Text>
+        </TouchableOpacity>
+        <Text style={base.secundario}>Al cerrar sesión se eliminan los tokens, preferencias y la caché de tu cuenta. El acceso biométrico no prolonga el límite de 30 minutos sin actividad.</Text>
+      </Tarjeta>
+      <Tarjeta>
         <Text accessibilityRole="header">Avisos en este dispositivo</Text>
         <Text style={base.secundario}>
           Recibe un aviso cuando haya novedades. Puedes desactivarlo aquí; tus
@@ -383,7 +427,7 @@ export default function PerfilScreen({ abrirDocumentos }: { abrirDocumentos?: ()
         onPress={() => {
           Alert.alert(
             "Cerrar sesión",
-            "Se cerrará tu acceso en este dispositivo. Para volver necesitarás tu correo y contraseña.",
+            "Se eliminarán tus datos temporales y el acceso biométrico de este dispositivo. Para volver necesitarás tu correo y contraseña.",
             [
               { text: "Cancelar", style: "cancel" },
               {
