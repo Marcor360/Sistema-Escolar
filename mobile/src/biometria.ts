@@ -2,6 +2,13 @@ import * as SecureStore from 'expo-secure-store';
 
 const PREFERENCIA = 'escolar_biometria_usuario';
 const GUARDIA = 'escolar_biometria_guardia';
+let revision = 0;
+let preferencias: Promise<void> = Promise.resolve();
+function serializarPreferencia(accion: () => Promise<void>): Promise<void> {
+  const operacion = preferencias.then(accion);
+  preferencias = operacion.catch(() => undefined);
+  return operacion;
+}
 
 /** SecureStore delega al sistema operativo; nunca se guardan huellas ni rostros. */
 export function biometriaDisponible(): boolean {
@@ -13,6 +20,7 @@ export async function preferenciaBiometrica(): Promise<number | null> {
   return Number(valor);
 }
 export async function habilitarBiometria(usuarioId: number): Promise<void> {
+  const intento = ++revision;
   if (!biometriaDisponible()) throw new Error('Este dispositivo no tiene biometría disponible o configurada.');
   await SecureStore.setItemAsync(GUARDIA, String(usuarioId), {
     requireAuthentication: true,
@@ -20,7 +28,10 @@ export async function habilitarBiometria(usuarioId: number): Promise<void> {
   });
   const verificado = await desbloquearBiometria(usuarioId);
   if (!verificado) throw new Error('No se autorizó la biometría.');
-  await SecureStore.setItemAsync(PREFERENCIA, String(usuarioId));
+  await serializarPreferencia(async () => {
+    if (intento !== revision) throw new Error('La sesión cambió durante la activación biométrica.');
+    await SecureStore.setItemAsync(PREFERENCIA, String(usuarioId));
+  });
 }
 export async function desbloquearBiometria(usuarioId: number): Promise<boolean> {
   try {
@@ -34,6 +45,9 @@ export async function desbloquearBiometria(usuarioId: number): Promise<boolean> 
   }
 }
 export async function borrarPreferenciaBiometrica(): Promise<void> {
-  await SecureStore.deleteItemAsync(PREFERENCIA);
-  await SecureStore.deleteItemAsync(GUARDIA);
+  revision++;
+  await serializarPreferencia(async () => {
+    await SecureStore.deleteItemAsync(PREFERENCIA);
+    await SecureStore.deleteItemAsync(GUARDIA);
+  });
 }

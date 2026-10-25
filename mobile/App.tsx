@@ -89,6 +89,7 @@ function AppInterna() {
   const [sesion, setSesion] = useState<Sesion | null>(null);
   const [bloqueoBiometrico, setBloqueoBiometrico] = useState(false);
   const usuarioEnDesbloqueo = useRef<number | null>(null);
+  const revisionSesion = useRef(0);
   const [consentimiento, setConsentimiento] = useState<EstadoConsentimiento | null>(null);
   const [errorConsentimiento, setErrorConsentimiento] = useState("");
   const consultarConsentimiento = useCallback(async () => {
@@ -172,14 +173,18 @@ function AppInterna() {
   );
 
   const restaurarSesion = useCallback(async () => {
+    const revision = ++revisionSesion.current;
     setListo(false);
     setErrorInicio("");
     try {
       const token = await SecureStore.getItemAsync(TOKEN_KEY);
+      if (revision !== revisionSesion.current) return;
       if (token) {
         const usuarioBiometrico = await preferenciaBiometrica();
+        if (revision !== revisionSesion.current) return;
         usuarioEnDesbloqueo.current = usuarioBiometrico;
         const guardada = await SecureStore.getItemAsync(CLAVE_ULTIMA_ACTIVIDAD).catch(() => null);
+        if (revision !== revisionSesion.current) return;
         const ultima = actividadRestaurable(guardada, Date.now());
         if (ultima === null) {
           configurarCacheAcademica(null);
@@ -192,7 +197,9 @@ function AppInterna() {
           return;
         }
         if (usuarioBiometrico !== null) {
-          if (!await desbloquearBiometria(usuarioBiometrico)) {
+          const desbloqueado = await desbloquearBiometria(usuarioBiometrico);
+          if (revision !== revisionSesion.current) return;
+          if (!desbloqueado) {
             setBloqueoBiometrico(true);
             return;
           }
@@ -203,6 +210,12 @@ function AppInterna() {
         if (guardada === null) guardarActividad(ultima);
         try {
           const { data } = await api.get("/auth/me");
+          if (revision !== revisionSesion.current) return;
+          if (usuarioBiometrico !== null && data.id !== usuarioBiometrico) {
+            await eliminarTokensSesion();
+            setAvisoCierre("La cuenta cambió. Ingresa nuevamente para verificar tu identidad.");
+            return;
+          }
           setSesion({
             sub: data.id,
             email: data.email,
@@ -211,6 +224,7 @@ function AppInterna() {
             passwordChangeRequired: data.passwordChangeRequired,
           });
         } catch (error) {
+          if (revision !== revisionSesion.current) return;
           if (
             (error as { response?: { status?: number } }).response?.status !==
             401
@@ -220,9 +234,10 @@ function AppInterna() {
         }
       }
     } catch (error) {
+      if (revision !== revisionSesion.current) return;
       setErrorInicio(mensajeDeError(error));
     } finally {
-      setListo(true);
+      if (revision === revisionSesion.current) setListo(true);
     }
   }, []);
 
@@ -261,6 +276,8 @@ function AppInterna() {
 
   useEffect(() => {
     registrarSesionExpirada(() => {
+      revisionSesion.current++;
+      setListo(true);
       configurarCacheAcademica(null);
       if (sesion?.sub) void limpiarPreferenciaPushLocal(sesion.sub).catch(() => undefined);
       void persistenciaActividad.current.borrar().catch(() => undefined);
@@ -277,8 +294,11 @@ function AppInterna() {
   }, [sesion, consentimiento?.pendiente]);
 
   const iniciar = async (email: string, password: string) => {
+    const revision = ++revisionSesion.current;
     const { data } = await api.post("/auth/login", { email, password });
+    if (revision !== revisionSesion.current) throw new Error("La sesión cambió. Vuelve a iniciar sesión.");
     await establecerTokensSesion(data.accessToken, data.refreshToken);
+    if (revision !== revisionSesion.current) return;
     const ahora = Date.now();
     ultimaActividadGuardada.current = ahora;
     ultimaActividadPersistida.current = ahora;
@@ -300,6 +320,8 @@ function AppInterna() {
   }, [sesion]);
 
   const finalizarSesionLocal = async (motivo: "manual" | "inactividad" = "manual") => {
+    revisionSesion.current++;
+    setListo(true);
     controlInactividad.current?.detener();
     controlInactividad.current = null;
     configurarCacheAcademica(null);
@@ -323,10 +345,13 @@ function AppInterna() {
   };
 
   const cerrar = async (motivo: "manual" | "inactividad" = "manual") => {
+    const revision = ++revisionSesion.current;
+    setListo(true);
     const [token, refresh] = await Promise.all([
       SecureStore.getItemAsync(TOKEN_KEY).catch(() => null),
       SecureStore.getItemAsync(REFRESH_KEY).catch(() => null),
     ]);
+    if (revision !== revisionSesion.current) return;
     await finalizarSesionLocal(motivo);
     // El acceso de 15 minutos puede haber caducado; renovar SOLO para revocar el
     // dispositivo, sin restaurar los tokens ni la interfaz después del cierre.

@@ -32,3 +32,14 @@ describe('Protección de sesión por biometría del dispositivo',()=>{
     expect(await preferenciaBiometrica()).toBeNull();
   });
 });
+
+it('no reactiva la preferencia si se cierra sesión durante la confirmación biométrica', async () => {
+  let completar!: (valor: string) => void;
+  mock.get.mockImplementationOnce(() => new Promise<string>(resolve => { completar = resolve; }));
+  const pendiente = habilitarBiometria(7);
+  await vi.waitFor(() => expect(completar).toBeTypeOf('function'));
+  await borrarPreferenciaBiometrica();
+  completar('7');
+  await expect(pendiente).rejects.toThrow('sesión cambió');
+  expect(await preferenciaBiometrica()).toBeNull();
+});
