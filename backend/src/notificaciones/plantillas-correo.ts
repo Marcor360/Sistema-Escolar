@@ -6,7 +6,7 @@ const colorSeguro = (color: string, reemplazo: string) => /^#[0-9a-fA-F]{6}$/.te
 const textoContraste = (color: string): string => {
   const c = [1, 3, 5].map((i) => { const n = Number.parseInt(color.slice(i, i+2),16)/255; return n <= .04045 ? n/12.92 : ((n+.055)/1.055)**2.4; });
   const l = c[0]*.2126+c[1]*.7152+c[2]*.0722;
-  return 1.05/(l+.05) >= 4.5 ? '#FFFFFF' : '#19272C';
+  return 1.05/(l+.05) >= 4.5 ? '#FFFFFF' : '#000000';
 };
 const marco = (titulo: string, subtitulo: string, contenido: string, marca: MarcaCorreo): string => {
   const primario = colorSeguro(marca.colorPrimario, BASE.colorPrimario), acento = colorSeguro(marca.colorAcento, BASE.colorAcento);

@@ -1,4 +1,4 @@
-# Correos de acceso con marca institucional · 1.27.42
+# Correos de acceso con marca institucional · 1.27.45
 
 El proceso outbox consulta `ConfiguracionService.obtener()` antes de cada envío de activación o recuperación. Así se aplican los colores y nombre de marca configurados desde el portal web. Los mensajes enviados previamente NO cambian retroactivamente.
 
