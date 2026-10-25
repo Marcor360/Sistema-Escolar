@@ -234,6 +234,7 @@ describe('CargosService.generarColegiaturas', () => {
     ]) };
     const cargos = {
       find: jest.fn().mockResolvedValue([]),
+      exists: jest.fn().mockResolvedValue(false),
       create: jest.fn((dato) => dato),
       save: guardar,
     };
