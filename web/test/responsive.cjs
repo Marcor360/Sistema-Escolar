@@ -624,6 +624,9 @@ async function esperarServidor() {
       console.log('PASS extended ' + ruta + ' ' + width + 'x' + height + ' text=' + escala);
     }
   }
+  if (process.env.RUN_AXE_AUDIT === '1') {
+    await require('./a11y-audit.cjs').ejecutarAuditoria(page, baseUrl);
+  }
   await page.route('**/api/auth/refresh', route => route.fulfill({ status: 401, json: { message: 'No autenticado' } }));
   for (const [width, height] of [[320, 568], [568, 320], [1440, 900]]) {
     await page.setViewportSize({ width, height });
