@@ -28,8 +28,6 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - name: Dependencias fijadas del portal
         run: node ../scripts/ci-install.cjs
-      - name: Instalar axe-core para auditoría de CI (sin alterar el lockfile)
-        run: npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund axe-core@4.14.0
       - name: Navegador de pruebas
         run: npx playwright install --with-deps chromium
       - name: Auditar páginas con datos simulados

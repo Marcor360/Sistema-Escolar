@@ -15,6 +15,8 @@ async function ejecutarAuditoria(page, baseUrl) {
   for (const paso of rutas) {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto(baseUrl + paso.ruta);
+    if (paso.nombre === 'acceso') await page.getByRole('button', { name: 'Entrar', exact: true }).waitFor();
+    if (paso.nombre === 'finanzas') await page.getByRole('heading', { name: 'Finanzas', exact: true }).waitFor();
     if (paso.nombre === 'inicio') await page.locator('.panel-bienvenida').waitFor();
     if (paso.nombre === 'expedientes') {
       await page.getByRole('button', { name: /Registrar alumno/ }).click();
@@ -40,6 +42,7 @@ async function ejecutarAuditoria(page, baseUrl) {
   fs.writeFileSync(archivo, JSON.stringify({
     tipo: 'WCAG automatizado / API simulada',
     fecha: new Date().toISOString(),
+    axeVersion: axe.version,
     escenarios: hallazgos,
     pendientes: ['lector de pantalla humano', 'teclado completo', 'UAT institucional'],
   }, null, 2));

@@ -60,3 +60,6 @@ DerivedData/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Local accessibility audit reports (uploaded separately by CI)
+web/.qa/
