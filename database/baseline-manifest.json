@@ -40,7 +40,8 @@
         "migracion_aceptaciones_institucionales.sql",
         "migracion_marca_opciones_globales.sql",
         "migracion_proveedor_correo_usuario.sql",
-        "migracion_correo_personal_usuario.sql"
+        "migracion_correo_personal_usuario.sql",
+        "migracion_conceptos_finanzas_institucionales.sql"
       ]
     },
     "sqlserver": {
@@ -81,7 +82,8 @@
         "migracion_aceptaciones_institucionales.sql",
         "migracion_marca_opciones_globales.sql",
         "migracion_proveedor_correo_usuario.sql",
-        "migracion_correo_personal_usuario.sql"
+        "migracion_correo_personal_usuario.sql",
+        "migracion_conceptos_finanzas_institucionales.sql"
       ]
     }
   }
