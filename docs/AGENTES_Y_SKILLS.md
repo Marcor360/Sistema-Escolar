@@ -1,6 +1,6 @@
 # Agentes y skills para el Sistema Escolar IUA
 
-**Corte:** 25/oct/2026 · propuesta 1.27.42. Estas herramientas estructuran el trabajo de Codex y agentes compatibles; **no conceden acceso a cuentas reales ni ejecutan cambios en servidores**.
+**Corte:** 25/oct/2026 · propuesta 1.27.43. Estas herramientas estructuran el trabajo de Codex y agentes compatibles; **no conceden acceso a cuentas reales ni ejecutan cambios en servidores**.
 
 ## Modo de uso
 

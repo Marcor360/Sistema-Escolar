@@ -1,5 +1,5 @@
 {
-  "version": "1.27.42",
+  "version": "1.27.43",
   "alcance": "Escenarios de aceptación institucional sin resultados fabricados",
   "escenarios": [
     {
@@ -337,6 +337,20 @@
       ],
       "estado": "pendiente",
       "responsable": "Responsable institucional por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-26",
+      "rol": "FINANZAS",
+      "escenario": "Verificar catálogo 001–037 en MySQL y SQL Server, claves previas intactas, tarifas base cero, tipos, pantalla web, cargo adicional de prueba con monto autorizado y bloqueo de colegiaturas mensuales para captura manual.",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver"
+      ],
+      "estado": "pendiente",
+      "responsable": "Finanzas institucional y QA",
       "evidencias": []
     }
   ]
