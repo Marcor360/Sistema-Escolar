@@ -9,6 +9,7 @@ import { Usuario } from '../entities/usuario.entity';
 import { Alumno } from '../entities/alumno.entity';
 import { UsuarioPlantel } from '../entities/usuario-plantel.entity';
 import { NotificacionesService } from '../notificaciones/notificaciones.service';
+import { ConfiguracionService } from '../configuracion/configuracion.service';
 import { plantillaInvitacion, plantillaRecuperacion } from '../notificaciones/plantillas-correo';
 import { ClavesCorreoAcceso } from './correo-acceso-claves';
 
@@ -24,7 +25,7 @@ export class CorreoAccesoOutboxService implements OnModuleInit, OnModuleDestroy 
   private timer?: ReturnType<typeof setInterval>;
   private enCurso?: Promise<number>;
   private readonly retencionDias: number;
-  constructor(private readonly ds: DataSource, private readonly correo: NotificacionesService, private readonly config: ConfigService) {
+  constructor(private readonly ds: DataSource, private readonly correo: NotificacionesService, private readonly config: ConfigService, private readonly marca: ConfiguracionService) {
     this.claves = new ClavesCorreoAcceso(config);
     this.retencionDias = Number(config.get('AUTH_OUTBOX_RETENTION_DAYS') || 30);
     if (!Number.isInteger(this.retencionDias) || this.retencionDias < 1 || this.retencionDias > 365) throw new Error('AUTH_OUTBOX_RETENTION_DAYS debe ser 1..365');
@@ -145,9 +146,10 @@ export class CorreoAccesoOutboxService implements OnModuleInit, OnModuleDestroy 
       // El reintento conserva referencia de correlación; SMTP/Graph son al menos una vez.
       const from = this.config.get<string>('SMTP_FROM') || '';
       const dominio = from.trim().match(/@([a-z0-9.-]+)>?$/i)?.[1];
+      const marcaVigente = await this.marca.obtener();
       const enviado = await this.correo.enviarEmail(usuario.email,
         trabajo.tipo === 'ACTIVACION' ? 'Activación de tu cuenta escolar' : 'Recuperación de contraseña',
-        trabajo.tipo === 'ACTIVACION' ? plantillaInvitacion(token) : plantillaRecuperacion(token),
+        trabajo.tipo === 'ACTIVACION' ? plantillaInvitacion(token, marcaVigente) : plantillaRecuperacion(token, marcaVigente),
         dominio ? `acceso-${trabajo.id}@${dominio}` : undefined);
       if (enviado.simulado) throw new Error('SMTP_NO_DISPONIBLE');
       const actualizado = await repo.update({ id, claim, estado: 'PROCESANDO' }, {

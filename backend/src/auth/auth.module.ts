@@ -16,6 +16,7 @@ import { ActivacionService } from './activacion.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { NotificacionesModule } from '../notificaciones/notificaciones.module';
+import { ConfiguracionModule } from '../configuracion/configuracion.module';
 
 @Global()
 @Module({
@@ -23,6 +24,7 @@ import { NotificacionesModule } from '../notificaciones/notificaciones.module';
     TypeOrmModule.forFeature([Usuario, Alumno, Docente, PasswordResetToken, BitacoraActividad]),
     PassportModule,
     NotificacionesModule,
+    ConfiguracionModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
