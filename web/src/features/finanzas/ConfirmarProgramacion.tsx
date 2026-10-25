@@ -32,6 +32,7 @@ export function ConfirmarProgramacion({ cotizacion }: { cotizacion: DatosCotizad
   const [error,setError]=useState('');
   const [mensaje,setMensaje]=useState('');
   const [plan,setPlan]=useState<Programacion|null>(null);
+  const [consultaId,setConsultaId]=useState('');
   const intento=useRef<{firma:string;clave:string}|null>(null);
 
   useEffect(()=>{let vigente=true;
@@ -42,6 +43,10 @@ export function ConfirmarProgramacion({ cotizacion }: { cotizacion: DatosCotizad
     return()=>{vigente=false;};
   },[]);
 
+  const consultar=async(e:FormEvent)=>{e.preventDefault();if(ocupado||!consultaId)return;setOcupado(true);setError('');setMensaje('');setPlan(null);
+    try{const {data}=await api.get<Programacion>('/finanzas/programaciones/'+Number(consultaId));setPlan(data);}
+    catch(err){setError(mensajeDeError(err));}finally{setOcupado(false);}
+  };
   const cambiar=()=>{setPlan(null);setMensaje('');setError('');};
   const opciones=conceptos.filter(c=>c.activo&&(cotizacion.modalidad==='ADICIONAL'?c.tipo==='OTRO':cotizacion.modalidad==='SECUNDARIA'?['OTRO','COLEGIATURA'].includes(c.tipo):c.tipo==='COLEGIATURA'));
   const confirmar=async(e:FormEvent)=>{e.preventDefault();if(ocupado)return;setOcupado(true);setError('');setMensaje('');
@@ -69,6 +74,11 @@ export function ConfirmarProgramacion({ cotizacion }: { cotizacion: DatosCotizad
   return <section className="panel" aria-label="Autorizar programación de cobros">
     <h3>Vincular la cotización con un alumno inscrito</h3>
     <p>La programación se guarda por alumno y periodo académico; no modifica inscripciones. Cada emisión de cuota crea un cargo separado y conserva su propia ficha, identificador y saldo.</p>
+    <form onSubmit={consultar} className="fila">
+      <div className="campo"><label htmlFor="prog-consulta">Número de programación guardada</label><input id="prog-consulta" required type="number" min="1" step="1" value={consultaId} onChange={e=>setConsultaId(e.target.value)}/></div>
+      <button className="boton" disabled={ocupado||!consultaId}>Consultar programación</button>
+    </form>
+    {plan&&<button type="button" disabled={ocupado} onClick={()=>{setPlan(null);setMensaje('');}}>Preparar otra programación</button>}
     {cargando&&<p role="status">Cargando alumnos y catálogos…</p>}
     {!cargando&&<form onSubmit={confirmar}>
       <fieldset disabled={ocupado||!!plan}><legend>Contexto académico real</legend>
@@ -89,6 +99,7 @@ export function ConfirmarProgramacion({ cotizacion }: { cotizacion: DatosCotizad
     </form>}
     {plan&&<section aria-label="Cuotas autorizadas" aria-live="polite">
       <h3>Programación #{plan.id} · {pesos(plan.total)}</h3>
+      <p>Alumno #{plan.alumnoId} · Plantel #{plan.plantelId} · Ciclo #{plan.cicloId}</p>
       <p>Antes de emitir una cuota, el alumno debe estar inscrito en el grupo regular de ese periodo y el ciclo debe estar activo. No es posible emitir dos cobros de colegiatura del mismo mes.</p>
       <div className="tabla-contenedor" role="region" aria-label="Cuotas de la programación" tabIndex={0}>
         <table className="tabla"><thead><tr><th>Concepto/cuota</th><th>Periodo</th><th>Vence</th><th>Monto</th><th>Emisión</th></tr></thead><tbody>

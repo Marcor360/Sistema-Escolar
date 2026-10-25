@@ -6,7 +6,6 @@ import { basename, join } from 'path';
 import PDFDocument from 'pdfkit';
 import { uploadsPath } from '../common/uploads-path';
 import { Cargo } from '../entities/cargo.entity';
-import { Pago } from '../entities/pago.entity';
 import { CuentaDeposito } from '../entities/cuenta-deposito.entity';
 import { JwtUser } from '../common/current-user.decorator';
 import { ConfiguracionService } from '../configuracion/configuracion.service';
@@ -31,7 +30,6 @@ export class FichasService {
   constructor(
     @InjectRepository(Cargo) private readonly cargosRepo: Repository<Cargo>,
     @InjectRepository(CuentaDeposito) private readonly cuentas: Repository<CuentaDeposito>,
-    @InjectRepository(Pago) private readonly pagosRepo: Repository<Pago>,
     private readonly scope: ScopeService,
     private readonly cargos: CargosService,
     private readonly pagos: PagosService,
@@ -39,7 +37,7 @@ export class FichasService {
   ) {}
 
   private async autorizado(id: number, usuario: JwtUser): Promise<Cargo> {
-    const cargo = await this.cargosRepo.findOneBy({ id });
+    const cargo = await this.cargosRepo.findOne({ where: { id }, relations: { plantel: true } });
     if (!cargo) throw new NotFoundException('Cargo no encontrado');
     if (usuario.roles.includes('ALUMNO')) {
       if (cargo.alumno.usuarioId !== usuario.sub) throw new ForbiddenException('Solo puedes consultar tus fichas');
@@ -56,7 +54,7 @@ export class FichasService {
       total: cargo.monto - cargo.descuento + cargo.recargo, saldo,
       estatus: cargo.estatus === 'CANCELADO' ? 'CANCELADO' : saldo <= 0 ? 'PAGADO' : cargo.estatus,
       alumno: { matricula: cargo.alumno.matricula, nombre: cargo.alumno.usuario.nombreCompleto },
-      plantel: cargo.alumno.plantel.nombre,
+      plantel: cargo.plantel.nombre,
       banco: banco ? { nombre: 'BBVA', titular: banco.titular, cuenta: banco.numeroCuenta, clabe: banco.clabe } : null,
     };
   }
@@ -66,16 +64,10 @@ export class FichasService {
     const cargo = await this.autorizado(id, usuario);
     if (cargo.estatus === 'CANCELADO') throw new ConflictException('No se registra un pago para cargo cancelado');
     if (dto.referenciaBancaria.trim() === dto.identificador) throw new BadRequestException('Registra el folio bancario real, no el identificador interno');
-    const anterior = await this.pagosRepo.findOne({
-      where: { referencia: dto.referenciaBancaria.trim(), metodo: dto.metodo, estatus: 'CONFIRMADO' },
-    });
-    if (anterior && anterior.claveIdempotencia !== dto.claveIdempotencia) {
-      throw new ConflictException('El folio bancario ya fue utilizado en un pago; requiere conciliación');
-    }
     const pago = await this.pagos.registrarManual({
       alumnoId: cargo.alumnoId, cargoId: cargo.id, monto: dto.monto,
       metodo: dto.metodo, referencia: dto.referenciaBancaria.trim(), claveIdempotencia: dto.claveIdempotencia,
-    }, usuario);
+    }, usuario, { verificarFolioFicha: true });
     const actual = await this.cargos.obtener(cargo.id);
     return { identificador: dto.identificador, pagoId: pago.id, estatus: actual.estatus };
   }

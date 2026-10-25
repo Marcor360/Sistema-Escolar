@@ -1,4 +1,4 @@
-# Persistencia y emisión segura de planes de cobro · 1.27.45
+# Persistencia y emisión segura de planes de cobro · 1.27.50
 
 ## Funcionalidad nueva
 1. Desde la previsualización financiera 1.27.43 se identifica explícitamente plantel, alumno ya inscrito, ciclo, nivel/carrera, periodo y concepto existente. La API valida todos los IDs contra el catálogo real y el alcance del rol FINANZAS; no infiere estudios por cadenas de texto.
@@ -22,3 +22,10 @@
 - Secundaria: una anualidad, sin cargos mensuales duplicados.
 - Servicio adicional: titulación en pago único o parcialidades, montos positivos y suma exacta, con validación del concepto `OTRO`.
 - Dos alumnos y dos planteles: consulta ajena 403. Probar copia de UUID y conflicto de clave. Ensayar MySQL/SQL Server, migración y restore aislado.
+
+## Correcciones y cobertura de revisión
+
+- Confirmación y emisión bloquean primero el ciclo, igual que el generador masivo, antes de bloquear plantel/plan.
+- La idempotencia no depende del orden de campos JSON. Emitir vuelve a comprobar periodo activo y tipo de concepto compatible; un reintento ya emitido conserva su cargo incluso si después se cierra el ciclo.
+- La interfaz permite consultar por número una programación persistida y emitir sus cuotas tras recargar.
+- Integración con fixtures: confirmar/reintentar, emitir simultáneamente una cuota, competir con el generador COL sin cobro duplicado, denegar periodo inactivo, concepto alterado y otro plantel. La cola automática de cobranza se desactiva en el harness para que sus pruebas controlen el envío simulado.

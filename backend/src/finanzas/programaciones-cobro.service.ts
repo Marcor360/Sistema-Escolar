@@ -7,7 +7,8 @@ import { ScopeService } from '../planteles/scope.service';
 import { ConfirmarProgramacionDto, CuotaProgramada } from './programaciones-persistidas.dto';
 import { previsualizarProgramacion } from './programaciones';
 
-const hash = (valor: unknown) => createHash('sha256').update(JSON.stringify(valor)).digest('hex');
+const hash = (valor: ConfirmarProgramacionDto) => createHash('sha256')
+  .update(JSON.stringify(Object.fromEntries(Object.entries(valor).sort(([a], [b]) => a.localeCompare(b))))).digest('hex');
 
 @Injectable()
 export class ProgramacionesCobroService {
@@ -40,6 +41,10 @@ export class ProgramacionesCobroService {
     const calculo = previsualizarProgramacion(dto);
     return this.dataSource.transaction('READ COMMITTED', async manager => {
       await this.scope.validarGestion(user, dto.plantelId);
+      // Mismo primer lock que el generador masivo y el cierre académico.
+      const ciclo = await manager.getRepository(CicloEscolar).findOne({
+        where: { id: dto.cicloId }, lock: { mode: 'pessimistic_write' },
+      });
       const plantel = await manager.getRepository(Plantel).findOne({
         where: { id: dto.plantelId, activo: true }, lock: { mode: 'pessimistic_write' },
       });
@@ -52,6 +57,7 @@ export class ProgramacionesCobroService {
         }
         return this.presentar(previa);
       }
+      if (!ciclo || !['ACTIVO', 'PREPARACION'].includes(ciclo.estado)) throw new ConflictException('El ciclo no admite nuevos cobros');
       if (await repo.existsBy({
         alumnoId: dto.alumnoId, cicloId: dto.cicloId,
         periodoAcademicoId: dto.periodoAcademicoId, conceptoId: dto.conceptoId,
@@ -61,8 +67,6 @@ export class ProgramacionesCobroService {
       if (!alumno || alumno.estatus !== 'ACTIVO' || !alumno.usuario.activo) {
         throw new ConflictException('El alumno no está activo en el plantel');
       }
-      const ciclo = await manager.getRepository(CicloEscolar).findOneBy({ id: dto.cicloId });
-      if (!ciclo || !['ACTIVO', 'PREPARACION'].includes(ciclo.estado)) throw new ConflictException('El ciclo no admite nuevos cobros');
       const origen = await manager.getRepository(PeriodoAcademico).findOneBy({
         id: dto.periodoAcademicoId, plantelId: dto.plantelId, cicloId: dto.cicloId, activo: true,
       });
@@ -76,6 +80,7 @@ export class ProgramacionesCobroService {
       }
       const concepto = await manager.getRepository(ConceptoPago).findOneBy({ id: dto.conceptoId, activo: true });
       if (!concepto || ['BECA', 'DESCUENTO', 'RECARGO'].includes(concepto.tipo)) throw new ConflictException('El concepto financiero no está disponible');
+      if (dto.modalidad === 'SECUNDARIA' && !['OTRO', 'COLEGIATURA'].includes(concepto.tipo)) throw new ConflictException('La anualidad requiere un concepto OTRO o COLEGIATURA');
       if (dto.modalidad === 'ADICIONAL' && concepto.tipo !== 'OTRO') throw new ConflictException('Un servicio adicional requiere un concepto de tipo OTRO');
       if (['BACHILLERATO', 'SUPERIOR'].includes(dto.modalidad) && concepto.tipo !== 'COLEGIATURA') {
         throw new ConflictException('Para semestres y cuatrimestres el concepto debe ser COLEGIATURA');
@@ -118,6 +123,7 @@ export class ProgramacionesCobroService {
       const anterior = await repo.findOneBy({ id });
       if (!anterior) throw new NotFoundException('Programación no encontrada');
       await this.scope.validarGestion(user, anterior.plantelId);
+      const ciclo = await manager.getRepository(CicloEscolar).findOne({ where: { id: anterior.cicloId }, lock: { mode: 'pessimistic_write' } });
       const plantel = await manager.getRepository(Plantel).findOne({
         where: { id: anterior.plantelId, activo: true }, lock: { mode: 'pessimistic_write' },
       });
@@ -127,13 +133,19 @@ export class ProgramacionesCobroService {
       const cuota = plan.cuotas.find(c => c.numero === numero);
       if (!cuota) throw new NotFoundException('La cuota no existe');
       if (cuota.cargoId) return { cargoId: cuota.cargoId, identificador: 'IUA-C' + String(cuota.cargoId).padStart(10, '0'), duplicado: true };
-      const ciclo = await manager.getRepository(CicloEscolar).findOne({ where: { id: plan.cicloId }, lock: { mode: 'pessimistic_write' } });
       if (!ciclo || ciclo.estado !== 'ACTIVO') throw new ConflictException('Para emitir un cargo, el ciclo debe estar ACTIVO');
       const alumno = await manager.getRepository(Alumno).findOne({ where: { id: plan.alumnoId, plantelId: plan.plantelId }, lock: { mode: 'pessimistic_write' } });
       if (!alumno || alumno.estatus !== 'ACTIVO' || !alumno.usuario.activo) throw new ConflictException('Alumno no disponible');
+      const periodo = await manager.getRepository(PeriodoAcademico).findOneBy({ id: cuota.periodoAcademicoId, plantelId: plan.plantelId, cicloId: plan.cicloId, activo: true });
+      if (!periodo) throw new ConflictException('El periodo académico ya no está activo');
       await this.validarInscripcion(manager, plan.alumnoId, plan.plantelId, plan.cicloId, cuota.periodoAcademicoId);
       const concepto = await manager.getRepository(ConceptoPago).findOneBy({ id: plan.conceptoId, activo: true });
       if (!concepto) throw new ConflictException('El concepto fue desactivado; Finanzas debe revisar');
+      if ((['BACHILLERATO', 'SUPERIOR'].includes(plan.modalidad) && concepto.tipo !== 'COLEGIATURA') ||
+          (plan.modalidad === 'ADICIONAL' && concepto.tipo !== 'OTRO') ||
+          (plan.modalidad === 'SECUNDARIA' && !['OTRO', 'COLEGIATURA'].includes(concepto.tipo))) {
+        throw new ConflictException('El tipo del concepto cambió; Finanzas debe revisar la programación');
+      }
       const cargos = manager.getRepository(Cargo);
       const clave = 'PROGRAMACION:' + plan.id + ':' + numero;
       const porClave = await cargos.findOneBy({ claveGeneracion: clave });
