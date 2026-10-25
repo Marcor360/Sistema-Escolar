@@ -1,13 +1,15 @@
 import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { ActivityIndicator, Linking, TouchableOpacity, View } from 'react-native';
-import { colores } from '../theme';
+import { colores, textoSobreFondo } from '../theme';
+import { useMarca } from '../marca';
 import { Text } from '../components/Texto';
 import { api, archivosBase, mensajeDeError } from '../api/client';
 import { resolverEnlacePrivado } from '../api/enlaces-privados';
 import { base } from './comunes';
 interface Boleta { institucion:string;alumno:string;matricula:string;plan:string;plantel:string;periodo:string;ciclo:string;escala:string;disponible:boolean;aviso:string;promedioGeneral:number|null;filas:{clave:string;asignatura:string;creditos:number;seriacion:string;ciclo:string;promedioFinal:number|null;observaciones:string}[] }
 export function BoletaInformativa({inscripcionId}:{inscripcionId:number}) {
+ const { marca } = useMarca();
  const vigente=useRef(0);
  const [datos,setDatos]=useState<Boleta|null>(null),[error,setError]=useState(''),[ocupado,setOcupado]=useState(false),[intento,setIntento]=useState(0);
  useFocusEffect(useCallback(()=>{const turno=++vigente.current;let activo=true;const controller=new AbortController();setDatos(null);setError('');
@@ -40,7 +42,7 @@ export function BoletaInformativa({inscripcionId}:{inscripcionId:number}) {
     {f.observaciones?<Text style={{color:colores.gris}}>Observaciones: {f.observaciones}</Text>:null}
    </View>)}
    <Text style={{color:colores.gris,marginBottom:10}}>{datos.aviso}</Text>
-   <TouchableOpacity accessibilityRole="button" accessibilityLabel="Descargar boleta informativa PDF" accessibilityState={{disabled:ocupado,busy:ocupado}} disabled={ocupado} style={{minHeight:48,justifyContent:'center',borderRadius:12,padding:12,backgroundColor:colores.pizarra,marginBottom:8}} onPress={()=>void descargar('informativa-pdf')}><Text style={{color:'#FFFFFF',textAlign:'center',fontWeight:'700'}}>{ocupado?'Preparando archivo…':'Descargar boleta PDF'}</Text></TouchableOpacity>
+   <TouchableOpacity accessibilityRole="button" accessibilityLabel="Descargar boleta informativa PDF" accessibilityState={{disabled:ocupado,busy:ocupado}} disabled={ocupado} style={{minHeight:48,justifyContent:'center',borderRadius:12,padding:12,backgroundColor:marca.colorPrimario,marginBottom:8}} onPress={()=>void descargar('informativa-pdf')}><Text style={{color:textoSobreFondo(marca.colorPrimario),textAlign:'center',fontWeight:'700'}}>{ocupado?'Preparando archivo…':'Descargar boleta PDF'}</Text></TouchableOpacity>
    <TouchableOpacity accessibilityRole="button" accessibilityLabel="Descargar mi boleta Excel" accessibilityState={{disabled:ocupado,busy:ocupado}} disabled={ocupado} style={{minHeight:48,justifyContent:'center',padding:12}} onPress={()=>void descargar('informativa-excel')}><Text style={{textAlign:'center',color:colores.tinta}}>Descargar también en Excel</Text></TouchableOpacity>
    <Text style={{color:colores.gris,fontSize:12}}>El archivo se guarda o abre con el navegador del dispositivo. Necesitas conexión para solicitarlo.</Text>
   </>:null}

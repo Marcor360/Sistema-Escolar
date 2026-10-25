@@ -263,6 +263,8 @@ function AppInterna() {
     registrarSesionExpirada(() => {
       configurarCacheAcademica(null);
       if (sesion?.sub) void limpiarPreferenciaPushLocal(sesion.sub);
+      void persistenciaActividad.current.borrar().catch(() => undefined);
+      void Notifications.dismissAllNotificationsAsync().catch(() => undefined);
       setBloqueoBiometrico(false);
       setSesion(null);
     });
