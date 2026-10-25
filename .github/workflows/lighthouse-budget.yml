@@ -30,7 +30,7 @@ jobs:
         run: node ../scripts/ci-install.cjs
       - name: Compilar portal de prueba sin API real
         env:
-          VITE_API_URL: http://127.0.0.1:9/api
+          VITE_API_URL: https://api.example.invalid/api
         run: npm run build
       - name: Instalar Chrome para el entorno de laboratorio
         run: |
