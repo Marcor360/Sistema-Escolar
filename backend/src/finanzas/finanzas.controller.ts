@@ -3,6 +3,8 @@ import { Request } from 'express';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 import { ConceptosService } from './conceptos.service';
+import { PrevisualizarProgramacionDto } from './programaciones.dto';
+import { previsualizarProgramacion } from './programaciones';
 import { CargosService } from './cargos.service';
 import { PagosService } from './pagos.service';
 import { OrdenesService } from './ordenes.service';
@@ -57,6 +59,11 @@ export class FinanzasController {
   obtenerOrden(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) {
     return this.ordenes.obtener(id, user);
   }
+
+  @Post('programaciones/previsualizar')
+  @ApiBearerAuth() @ApiOperation({ summary: 'Previsualizar importes y plazos por nivel sin crear cargos ni pagos' })
+  @UseGuards(JwtAuthGuard, RolesGuard) @Roles('FINANZAS')
+  previsualizarProgramacion(@Body() dto: PrevisualizarProgramacionDto) { return previsualizarProgramacion(dto); }
 
   // ---------- Catálogo de conceptos ----------
   @Get('conceptos')

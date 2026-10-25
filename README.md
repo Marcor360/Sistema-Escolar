@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.27.43`** · Skills IUA y auditorías automáticas no destructivas sobre `main` 1.27.42. La integración en Git no acredita despliegue ni aceptación institucional; la app Expo instalada requiere actualización propia.
+**Versión candidata: `1.27.44`** · Previsualización financiera y fichas BBVA con registro auditado sobre `main` 1.27.42. La integración en Git no acredita despliegue ni aceptación institucional; la app Expo instalada requiere actualización propia.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -19,7 +19,9 @@ Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [ín
 
 ### Cambios consolidados recientes
 
-- **1.27.43 (PR):** nueve skills Codex propias de IUA, guía de agentes, validación estructural y smoke semanal Playwright simulado. Sin cambios de negocio, migraciones ni despliegue. [Catálogo y uso](docs/AGENTES_Y_SKILLS.md).
+- **1.27.44 (PR):** configuración BBVA restringida a SUPERADMIN, ficha PDF por cargo, identificador estable y registro manual de depósitos por FINANZAS; Expo muestra solo adeudos. [Contrato y límites](docs/FICHAS_DEPOSITO_BBVA_1.27.44.md).
+
+- **1.27.43 (incluida en este PR):** previsualización de calendario financiero por nivel/modalidad, ajuste de semestres y cuotas de conceptos adicionales; sin generación de cargos. Prueba de permisos SUPERADMIN para configuración. [Contrato de programación](docs/PROGRAMACION_PAGOS_DISENO_1.27.43.md).
 
 - **1.27.42 (PR):** incorporación de 37 conceptos financieros 001–037 en MySQL y SQL Server (migración de datos idempotente), con montos base 0 sin tarifas inventadas y sin modificar conceptos previos; pruebas de paridad y aviso web. Sin cargos automáticos ni cambios de app alumno. [Contrato del catálogo](docs/CATALOGO_CONCEPTOS_FINANZAS_2026-10-25.md).
 
@@ -31,6 +33,9 @@ Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [ín
 - **1.27.33–1.27.35:** remitente GoDaddy/Microsoft 365 por usuario, importación parcial de alumnos con proveedor obligatorio y Excel de correcciones, perfil propio editable web/Expo. [Correo dual](docs/CORREO_DUAL_GRAPH_GODADDY.md), [importación y perfil](docs/IMPORTACION_PARCIAL_Y_PERFIL_1.27.35.md).
 
 El [historial de versiones anteriores](docs/HISTORIAL_VERSIONES.md) conserva los detalles sin mezclar planes de entregas previas con el estado actual.
+
+
+- **1.27.43 (PR):** nueve skills Codex propias de IUA, guía de agentes, validación estructural y smoke semanal Playwright simulado. Sin cambios de negocio, migraciones ni despliegue. [Catálogo y uso](docs/AGENTES_Y_SKILLS.md).
 
 ## Arquitectura
 

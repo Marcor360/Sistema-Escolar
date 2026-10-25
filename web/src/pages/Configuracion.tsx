@@ -1,3 +1,4 @@
+import { ConfiguracionBbva } from '../features/finanzas/ConfiguracionBbva';
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from 'react';
 import { api, archivosBase, mensajeDeError } from '../api/client';
 import { useMarca } from '../marca/MarcaContext';
@@ -191,5 +192,6 @@ export default function ConfiguracionPage() {
       {estadoOpciones && <p role="status" className="mensaje-ok">{estadoOpciones}</p>}
       <button type="submit" className="boton" disabled={guardandoOpciones || guardando}>Guardar opciones globales</button>
     </form>
+    <ConfiguracionBbva />
   </>;
 }

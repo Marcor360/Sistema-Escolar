@@ -179,7 +179,7 @@ export default function EstadoCuentaScreen() {
     >
       <GuiaPantalla
         titulo="Estado de cuenta"
-        detalle="Consulta cargos, saldo e historial. Pagar en línea abre la pasarela; el saldo cambia cuando el servidor confirma el pago."
+        detalle="Consulta solo tus pagos pendientes. El saldo cambia cuando el servidor confirma el pago."
       />
       {error !== "" && <ErrorCarga mensaje={error} reintentar={cargar} />}
       {!estado && cargando && (
@@ -216,10 +216,10 @@ export default function EstadoCuentaScreen() {
             </Text>
           </View>
 
-          {estado.cargos.length === 0 && (
-            <Vacio mensaje="No tienes cargos registrados." />
+          {estado.cargos.filter((c) => c.saldo > 0).length === 0 && (
+            <Vacio mensaje="No tienes pagos pendientes." />
           )}
-          {estado.cargos.map((c) => (
+          {estado.cargos.filter((c) => c.saldo > 0).map((c) => (
             <Tarjeta key={c.id}>
               <Text style={base.tituloTarjeta}>{c.descripcion}</Text>
               <Text style={base.secundario}>
@@ -266,24 +266,7 @@ export default function EstadoCuentaScreen() {
             </Tarjeta>
           ))}
 
-          {estado.pagos.length > 0 && (
-            <>
-              <Text style={estilos.subtitulo}>Historial de pagos</Text>
-              {estado.pagos.map((p) => (
-                <Tarjeta key={p.id}>
-                  <Text style={base.tituloTarjeta}>{pesos(p.monto)}</Text>
-                  <Text style={base.secundario}>
-                    {p.estatus}
-                    {p.estatus === "CONFIRMADO" && !p.aplicado
-                      ? " · Pendiente de aplicación por Finanzas"
-                      : ""}{" "}
-                    · {p.metodo} ·{" "}
-                    {new Date(p.fechaPago).toLocaleDateString("es-MX")}
-                  </Text>
-                </Tarjeta>
-              ))}
-            </>
-          )}
+
         </>
       )}
     </ScrollView>

@@ -1,5 +1,5 @@
 {
-  "version": "1.27.43",
+  "version": "1.27.44",
   "alcance": "Escenarios de aceptación institucional sin resultados fabricados",
   "escenarios": [
     {
@@ -351,6 +351,34 @@
       ],
       "estado": "pendiente",
       "responsable": "Finanzas institucional y QA",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-27",
+      "rol": "FINANZAS",
+      "escenario": "Previsualizar anualidad Secundaria, dos semestres editables cuyo total cuadra, 4 mensualidades de cuatrimestre y cuotas de concepto adicional; comprobar que no genera cargos y que configuración global solo se permite a SUPERADMIN.",
+      "canales": [
+        "api",
+        "web"
+      ],
+      "estado": "pendiente",
+      "responsable": "Finanzas institucional, QA y Superadministración",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-28",
+      "rol": "FINANZAS",
+      "escenario": "SUPERADMIN define cuenta BBVA; FINANZAS descarga ficha protegida y aplica pago manual cotejado con comprobante externo; alumno solo ve cargos de saldo pendiente. Revisar PDF y permisos multi-plantel.",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver",
+        "android",
+        "ios"
+      ],
+      "estado": "pendiente",
+      "responsable": "Finanzas institucional, QA y SUPERADMIN",
       "evidencias": []
     }
   ]
