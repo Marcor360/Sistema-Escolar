@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.27.44`** · Alta no destructiva de 37 conceptos institucionales de Finanzas sobre `main` 1.27.41. La integración en Git no acredita despliegue ni aceptación institucional; la app Expo instalada requiere actualización propia.
+**Versión candidata: `1.27.44`** · Previsualización financiera y fichas BBVA con registro auditado sobre `main` 1.27.42. La integración en Git no acredita despliegue ni aceptación institucional; la app Expo instalada requiere actualización propia.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -19,9 +19,9 @@ Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [ín
 
 ### Cambios consolidados recientes
 
-- **1.27.44 (PR apilado):** configuración BBVA restringida a SUPERADMIN, ficha PDF por cargo, identificador estable y registro manual de depósitos por FINANZAS; Expo muestra solo adeudos. [Contrato y límites](docs/FICHAS_DEPOSITO_BBVA_1.27.44.md).
+- **1.27.44 (PR):** configuración BBVA restringida a SUPERADMIN, ficha PDF por cargo, identificador estable y registro manual de depósitos por FINANZAS; Expo muestra solo adeudos. [Contrato y límites](docs/FICHAS_DEPOSITO_BBVA_1.27.44.md).
 
-- **1.27.43 (PR apilado):** previsualización de calendario financiero por nivel/modalidad, ajuste de semestres y cuotas de conceptos adicionales; sin generación de cargos. Prueba de permisos SUPERADMIN para configuración. [Contrato de programación](docs/PROGRAMACION_PAGOS_DISENO_1.27.43.md).
+- **1.27.43 (incluida en este PR):** previsualización de calendario financiero por nivel/modalidad, ajuste de semestres y cuotas de conceptos adicionales; sin generación de cargos. Prueba de permisos SUPERADMIN para configuración. [Contrato de programación](docs/PROGRAMACION_PAGOS_DISENO_1.27.43.md).
 
 - **1.27.42 (PR):** incorporación de 37 conceptos financieros 001–037 en MySQL y SQL Server (migración de datos idempotente), con montos base 0 sin tarifas inventadas y sin modificar conceptos previos; pruebas de paridad y aviso web. Sin cargos automáticos ni cambios de app alumno. [Contrato del catálogo](docs/CATALOGO_CONCEPTOS_FINANZAS_2026-10-25.md).
 
