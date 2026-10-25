@@ -1,6 +1,6 @@
 {
   "name": "escolar-mobile",
-  "version": "1.27.47",
+  "version": "1.27.48",
   "private": true,
   "main": "index.ts",
   "scripts": {

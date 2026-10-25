@@ -328,6 +328,8 @@ describe('Integración de flujos críticos (base aislada)', () => {
     app.setGlobalPrefix('api', { exclude: [{ path: 'uploads/:filename', method: RequestMethod.GET }] });
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
     await app.listen(0, '127.0.0.1');
+    // Los casos drenan cobranza manualmente; el timer real no compite con los mocks.
+    app.get(CobranzaService).onModuleDestroy();
     const address = app.getHttpServer().address() as AddressInfo;
     baseUrl = `http://127.0.0.1:${address.port}/api`;
     dataSource = app.get(DataSource);

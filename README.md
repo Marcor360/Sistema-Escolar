@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.27.47`** · Mantenimiento documental sobre `main` 1.27.39. Los cambios de #180–186 están integrados. La integración en Git no acredita despliegue ni aceptación institucional; la app Expo instalada requiere actualización propia.
+**Versión candidata: `1.27.48`** · Presupuestos Lighthouse del portal sobre `main` 1.27.42. La integración en Git no acredita despliegue ni aceptación institucional; la app Expo instalada requiere actualización propia.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -19,7 +19,7 @@ Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [ín
 
 ### Cambios consolidados recientes
 
-- **1.27.47 (PR):** auditoría axe-core WCAG en pantallas web con API simulada y reporte JSON descargable por Actions; [alcance y limitaciones](docs/AUDITORIA_AXE_1.27.47.md).
+- **1.27.48 (PR):** presupuesto Lighthouse CI de laboratorio para `/login` móvil (LCP, CLS y TBT como gates iniciales; performance/FCP y accesibilidad informativas). Evidencias privadas en Actions. [Detalle](docs/LIGHTHOUSE_PRESUPUESTOS_1.27.48.md).
 
 - **1.27.42 (PR):** incorporación de 37 conceptos financieros 001–037 en MySQL y SQL Server (migración de datos idempotente), con montos base 0 sin tarifas inventadas y sin modificar conceptos previos; pruebas de paridad y aviso web. Sin cargos automáticos ni cambios de app alumno. [Contrato del catálogo](docs/CATALOGO_CONCEPTOS_FINANZAS_2026-10-25.md).
 
@@ -33,9 +33,12 @@ Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [ín
 El [historial de versiones anteriores](docs/HISTORIAL_VERSIONES.md) conserva los detalles sin mezclar planes de entregas previas con el estado actual.
 
 
-- **1.27.46 (PR):** recorrido integrado en base aislada: alta/activación, grupo, colegiatura `COL`, estado de cuenta y límites por plantel. [Escenario](docs/RECORRIDO_INSTITUCIONAL_1.27.46.md).
+- **1.27.47 (PR):** auditoría axe-core WCAG en pantallas web con API simulada y reporte JSON descargable por Actions; [alcance y limitaciones](docs/AUDITORIA_AXE_1.27.47.md).
 
 El [historial de versiones anteriores](docs/HISTORIAL_VERSIONES.md) conserva los detalles sin mezclar planes de entregas previas con el estado actual.
+
+
+- **1.27.46 (PR):** recorrido integrado en base aislada: alta/activación, grupo, colegiatura `COL`, estado de cuenta y límites por plantel. [Escenario](docs/RECORRIDO_INSTITUCIONAL_1.27.46.md).
 
 
 - **1.27.45 (PR):** mensajes de activación y recuperación usan colores y nombre de la marca vigente en la entrega; se eliminan los tonos verdes fijos del encabezado.
@@ -47,7 +50,6 @@ El [historial de versiones anteriores](docs/HISTORIAL_VERSIONES.md) conserva los
 
 
 - **1.27.43 (PR):** nueve skills Codex propias de IUA, guía de agentes, validación estructural y smoke semanal Playwright simulado. Sin cambios de negocio, migraciones ni despliegue. [Catálogo y uso](docs/AGENTES_Y_SKILLS.md).
-
 
 ## Arquitectura
 
