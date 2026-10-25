@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Header, Param, ParseIntPipe, Post, Res, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
@@ -15,6 +15,7 @@ import { FichasService } from './fichas.service';
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class FichasController {
   constructor(private readonly servicio: FichasService) {}
+  @Header('Cache-Control', 'private, no-store')
   @Get(':id') @Roles('ALUMNO', 'ADMINISTRATIVO', 'FINANZAS')
   @ApiOperation({ summary: 'Consultar ficha de cargo dentro del alcance del usuario' })
   obtener(@Param('id', ParseIntPipe) id: number, @CurrentUser() u: JwtUser) { return this.servicio.obtener(id,u); }

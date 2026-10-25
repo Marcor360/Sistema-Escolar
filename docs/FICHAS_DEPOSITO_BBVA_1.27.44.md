@@ -19,3 +19,14 @@
 3. Cambiar ID para intentar ver datos de otro alumno/plantel: API debe devolver 403.
 4. Pago parcial y total: registrar solo tras validación externa, sin exceder saldo; reintentar mismo UUID y bloquear referencia diferente.
 5. Fichas PDF en impresora A4; revisar caso de WebP y activo BBVA antes de certificar.
+
+## Correcciones de revisión
+
+- El plantel impreso es el origen histórico del cargo, aunque el alumno se traslade.
+- La comprobación de folio de la ruta de fichas se realiza dentro de la transacción de pago, con un bloqueo compartido de la cuenta BBVA antes de bloquear el cargo. Esto serializa registros por fichas en ambos motores; exige configurar la cuenta previamente y conserva reintentos con la misma clave. No cambia la política de folios del endpoint general de pagos manuales.
+- Cambiar cargo, monto, método o folio en web exige volver a confirmar el cotejo.
+- Pruebas nuevas: aislamiento de alumno, origen histórico, generación PDF y reintentos/folios confirmados mientras se espera el bloqueo.
+
+## Variante imprimible (PR de logos, candidata 1.27.51)
+
+Las pruebas de revisión verifican la incrustación real del PNG como recurso de imagen del PDF, la limpieza de temporales al rechazar un logo ya reemplazado y el retiro conjunto de WebP/PNG. Los mensajes distinguen fallo del WebP, fallo del PNG de 3 MiB y error de actualización de vista; guardar solo el nombre/colores no afirma haber creado una variante imprimible. Para logos previos es necesaria una nueva carga institucional; la impresión física y ACL de IIS requieren UAT.

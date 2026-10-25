@@ -77,10 +77,13 @@ export class ConfiguracionService {
       const imagen = await fs.open(file.path, 'r');
       let cabecera: Buffer;
       try {
-        cabecera = Buffer.alloc(24);
-        const { bytesRead } = await imagen.read(cabecera, 0, 24, 0);
-        if (bytesRead !== 24) throw new BadRequestException('El logo PNG está incompleto');
+        cabecera = Buffer.alloc(33);
+        const { bytesRead } = await imagen.read(cabecera, 0, 33, 0);
+        if (bytesRead !== 33) throw new BadRequestException('El logo PNG está incompleto');
       } finally { await imagen.close(); }
+      if (cabecera.readUInt32BE(8) !== 13 || cabecera.subarray(12, 16).toString('ascii') !== 'IHDR') {
+        throw new BadRequestException('La cabecera PNG no es válida');
+      }
       const ancho = cabecera.readUInt32BE(16);
       const alto = cabecera.readUInt32BE(20);
       if (!ancho || !alto || ancho > 1024 || alto > 1024 || ancho * alto > 1024 * 1024) {
