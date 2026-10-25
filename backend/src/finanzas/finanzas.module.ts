@@ -16,6 +16,10 @@ import { OrdenesService } from './ordenes.service';
 import { CobranzaService } from './cobranza.service';
 import { BitacoraFinancieraService } from './bitacora-financiera.service';
 import { OpenpayService } from './openpay.service';
+import { FichasController } from './fichas.controller';
+import { FichasService } from './fichas.service';
+import { CuentaDeposito } from '../entities/cuenta-deposito.entity';
+import { ConfiguracionModule } from '../configuracion/configuracion.module';
 import { AlumnosModule } from '../alumnos/alumnos.module';
 import { NotificacionesModule } from '../notificaciones/notificaciones.module';
 import { PlantelesModule } from '../planteles/planteles.module';
@@ -23,16 +27,17 @@ import { PlantelesModule } from '../planteles/planteles.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
-      Cargo, ConceptoPago, Pago, OrdenPago, Inscripcion, Grupo, BitacoraFinanciera, PlantillaCorreo,
+      Cargo, ConceptoPago, Pago, OrdenPago, Inscripcion, Grupo, BitacoraFinanciera, PlantillaCorreo, CuentaDeposito,
     ]),
     AlumnosModule,
     NotificacionesModule,
     PlantelesModule,
+    ConfiguracionModule,
   ],
-  controllers: [FinanzasController],
+  controllers: [FinanzasController, FichasController],
   providers: [
     ConceptosService, CargosService, PagosService, OrdenesService,
-    CobranzaService, BitacoraFinancieraService, OpenpayService,
+    CobranzaService, BitacoraFinancieraService, OpenpayService, FichasService,
   ],
   exports: [CargosService],
 })
