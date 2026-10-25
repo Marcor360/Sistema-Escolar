@@ -1,3 +1,4 @@
+export { PrevisualizarProgramacionDto } from './programaciones.dto';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { OpcionalNoNulo } from '../common/opcional-no-nulo';
 import { IsBoolean, IsDateString, IsIn, IsInt, IsNumber, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, MinLength } from 'class-validator';
