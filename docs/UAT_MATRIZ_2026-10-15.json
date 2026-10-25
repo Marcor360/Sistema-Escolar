@@ -1,5 +1,5 @@
 {
-  "version": "1.27.42",
+  "version": "1.27.43",
   "alcance": "Escenarios de aceptación institucional sin resultados fabricados",
   "escenarios": [
     {
@@ -351,6 +351,18 @@
       ],
       "estado": "pendiente",
       "responsable": "Finanzas institucional y QA",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-27",
+      "rol": "FINANZAS",
+      "escenario": "Previsualizar anualidad Secundaria, dos semestres editables cuyo total cuadra, 4 mensualidades de cuatrimestre y cuotas de concepto adicional; comprobar que no genera cargos y que configuración global solo se permite a SUPERADMIN.",
+      "canales": [
+        "api",
+        "web"
+      ],
+      "estado": "pendiente",
+      "responsable": "Finanzas institucional, QA y Superadministración",
       "evidencias": []
     }
   ]
