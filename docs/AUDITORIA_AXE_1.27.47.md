@@ -23,3 +23,7 @@ RUN_AXE_AUDIT=1 npm run test:responsive
 ## Estado de la línea base
 
 La primera ejecución local heredaba colores forzados del smoke anterior: sus conteos no constituyen una línea base válida del tema normal. La auditoría ahora establece explícitamente colores forzados desactivados, tema claro y movimiento normal, y registra esos medios en el JSON. Una regresión con Chromium parte de colores forzados activos y exige detectar un contraste insuficiente después del reinicio. El reporte final de CI contiene los hallazgos del tema normal; no certifica WCAG ni aceptación institucional.
+
+## Remediación de Inicio
+
+Las notas de indicadores, subtítulos, rango de eventos, estados y descripciones de accesos rápidos reutilizan `--texto-secundario`. Una nueva ejecución completa de Chromium con `A11Y_STRICT=1` y medios restablecidos detectó cero infracciones en acceso, Inicio, alta de alumno y Finanzas. Corrige los 14 nodos de contraste de la línea base del tema normal; no extiende la cobertura a pantallas no analizadas ni sustituye pruebas humanas.
