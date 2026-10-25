@@ -69,6 +69,7 @@ export default function ConfiguracionPage() {
     setError(''); setMensaje(''); setGuardando(true);
     let datosInstitucionalesGuardados = false;
     let logoGuardado = false;
+    let logoPdfGuardado = false;
     try {
       if (archivo) setMensaje('Optimizando el logotipo a WebP…');
       const webp = archivo ? await optimizarLogo(archivo) : null;
@@ -81,11 +82,13 @@ export default function ConfiguracionPage() {
         datos.append('logo', webp);
         const { data } = await api.post<{ logoUrl: string }>('/configuracion/marca/logo', datos);
         logoGuardado = true;
-        if (logoPdfPng && data.logoUrl) {
+        if (!data.logoUrl) throw new Error('La API no devolvió el nombre del logo guardado; vuelve a cargarlo.');
+        if (logoPdfPng) {
           const archivoPdf = new FormData();
           archivoPdf.append('logoPdf', logoPdfPng);
           archivoPdf.append('logoUrl', data.logoUrl);
           await api.post('/configuracion/marca/logo/pdf', archivoPdf);
+          logoPdfGuardado = true;
         }
         if (data.logoUrl) {
           const respuesta = await fetch(archivosBase + data.logoUrl, { cache: 'no-store' });
@@ -99,14 +102,18 @@ export default function ConfiguracionPage() {
       if (selectorLogo.current) selectorLogo.current.value = '';
       setArchivoRechazado(false);
       setLogoNoDisponible(false);
-      setMensaje('Identidad institucional actualizada; logo listo para portal y fichas PDF.');
+      setMensaje(archivo ? 'Identidad institucional actualizada; logo listo para portal y fichas PDF.' : 'Identidad institucional actualizada.');
     } catch (err) {
       const detalle = mensajeDeError(err);
       const mensaje = detalle === 'File too large'
-        ? 'El WebP optimizado supera los 10 MiB permitidos por la API. Selecciona una imagen más ligera.'
+        ? logoGuardado && !logoPdfGuardado
+          ? 'El PNG imprimible supera los 3 MiB permitidos por la API. Selecciona una imagen más ligera.'
+          : 'El WebP optimizado supera los 10 MiB permitidos por la API. Selecciona una imagen más ligera.'
         : detalle;
       setError(logoGuardado
-        ? `El logotipo WebP se guardó, pero la versión PNG para fichas PDF o su verificación falló: ${mensaje}`
+        ? logoPdfGuardado
+          ? `Los datos y el logotipo se guardaron, pero no se pudo verificar o actualizar la vista: ${mensaje}`
+          : `El logotipo WebP se guardó, pero la versión PNG para fichas PDF no: ${mensaje}`
         : datosInstitucionalesGuardados && archivo
         ? `Los datos institucionales se guardaron, pero el logotipo no: ${mensaje}`
         : mensaje);
