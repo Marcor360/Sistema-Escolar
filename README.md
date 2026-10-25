@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.27.42`** · Alta no destructiva de 37 conceptos institucionales de Finanzas sobre `main` 1.27.41. La integración en Git no acredita despliegue ni aceptación institucional; la app Expo instalada requiere actualización propia.
+**Versión candidata: `1.27.43`** · Skills IUA y auditorías automáticas no destructivas sobre `main` 1.27.42. La integración en Git no acredita despliegue ni aceptación institucional; la app Expo instalada requiere actualización propia.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -18,6 +18,8 @@ Sistema escolar multiplataforma para operación académica, administrativa y fin
 Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [índice documental](docs/README.md) e [historial de documentos retirados](docs/HISTORIAL.md).
 
 ### Cambios consolidados recientes
+
+- **1.27.43 (PR):** nueve skills Codex propias de IUA, guía de agentes, validación estructural y smoke semanal Playwright simulado. Sin cambios de negocio, migraciones ni despliegue. [Catálogo y uso](docs/AGENTES_Y_SKILLS.md).
 
 - **1.27.42 (PR):** incorporación de 37 conceptos financieros 001–037 en MySQL y SQL Server (migración de datos idempotente), con montos base 0 sin tarifas inventadas y sin modificar conceptos previos; pruebas de paridad y aviso web. Sin cargos automáticos ni cambios de app alumno. [Contrato del catálogo](docs/CATALOGO_CONCEPTOS_FINANZAS_2026-10-25.md).
 
