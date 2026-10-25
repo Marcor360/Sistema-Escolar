@@ -262,7 +262,7 @@ function AppInterna() {
   useEffect(() => {
     registrarSesionExpirada(() => {
       configurarCacheAcademica(null);
-      if (sesion?.sub) void limpiarPreferenciaPushLocal(sesion.sub);
+      if (sesion?.sub) void limpiarPreferenciaPushLocal(sesion.sub).catch(() => undefined);
       void persistenciaActividad.current.borrar().catch(() => undefined);
       void Notifications.dismissAllNotificationsAsync().catch(() => undefined);
       setBloqueoBiometrico(false);
