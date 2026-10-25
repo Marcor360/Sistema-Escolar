@@ -20,6 +20,7 @@ import { registrarBeta } from './integration/beta.cases';
 import { registrarRebarrido } from './integration/rebarrido.cases';
 import { registrarBarrido } from './integration/barrido.cases';
 import { registrarCicloOperativo } from './integration/recorrido-academico';
+import { registrarRecorridoInstitucional } from './integration/recorrido-institucional.cases';
 import { ContextoIntegracion } from './integration/contexto';
 import { casos_baseline } from './integration/baseline.cases';
 import { casos_identidad, registrarAltasInstitucionales } from './integration/identidad.cases';
@@ -492,5 +493,6 @@ Object.keys(casos).map(Number).sort((a,b) => a-b).forEach((id) => casos[id](cont
     });
   }
   registrarFichas(contexto);
+  registrarRecorridoInstitucional(contexto);
   registrarCicloOperativo(contexto);
 });
