@@ -127,9 +127,9 @@ export class ProgramacionesCobroService {
       const cuota = plan.cuotas.find(c => c.numero === numero);
       if (!cuota) throw new NotFoundException('La cuota no existe');
       if (cuota.cargoId) return { cargoId: cuota.cargoId, identificador: 'IUA-C' + String(cuota.cargoId).padStart(10, '0'), duplicado: true };
-      const ciclo = await manager.getRepository(CicloEscolar).findOneBy({ id: plan.cicloId });
+      const ciclo = await manager.getRepository(CicloEscolar).findOne({ where: { id: plan.cicloId }, lock: { mode: 'pessimistic_write' } });
       if (!ciclo || ciclo.estado !== 'ACTIVO') throw new ConflictException('Para emitir un cargo, el ciclo debe estar ACTIVO');
-      const alumno = await manager.getRepository(Alumno).findOneBy({ id: plan.alumnoId, plantelId: plan.plantelId });
+      const alumno = await manager.getRepository(Alumno).findOne({ where: { id: plan.alumnoId, plantelId: plan.plantelId }, lock: { mode: 'pessimistic_write' } });
       if (!alumno || alumno.estatus !== 'ACTIVO' || !alumno.usuario.activo) throw new ConflictException('Alumno no disponible');
       await this.validarInscripcion(manager, plan.alumnoId, plan.plantelId, plan.cicloId, cuota.periodoAcademicoId);
       const concepto = await manager.getRepository(ConceptoPago).findOneBy({ id: plan.conceptoId, activo: true });

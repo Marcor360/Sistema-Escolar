@@ -260,7 +260,7 @@ describe('CargosService.generarColegiaturas', () => {
     );
 
     expect(cargos.find).toHaveBeenCalledWith(expect.objectContaining({
-      where: expect.objectContaining({ conceptoId: 5, cicloId: 3, periodo: '2026-09' }),
+      where: expect.objectContaining({ concepto: { tipo: 'COLEGIATURA' }, cicloId: 3, periodo: '2026-09' }),
     }));
     expect(grupos.find).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({ tipo: 'REGULAR', cicloId: 3, activo: true }),
