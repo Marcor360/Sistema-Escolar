@@ -1,3 +1,4 @@
+import { registrarFichas } from './integration/fichas.cases';
 import { registrarMaestroPaginado } from './integration/maestro-paginado.cases';
 import { registrarTemarios } from './integration/temarios.cases';
 import { registrarAlumnoPaginado } from './integration/alumno-paginado.cases';
@@ -490,5 +491,6 @@ Object.keys(casos).map(Number).sort((a,b) => a-b).forEach((id) => casos[id](cont
       await (await import('./recorridos-web')).recorridoWeb({ baseUrl, email: usuario.email, password: passwords.get(usuario.email) ?? 'Integracion_Segura_42!', sufijo, plantelId, cicloId: clase.grupo.cicloId, materiaId: clase.materiaId, docenteId: docente.data.id, docenteEmail: `browserdoc_${tipo}_${sufijo}@example.invalid`, docentePassword: passwords.get(`browserdoc_${tipo}_${sufijo}@example.invalid`) ?? 'Integracion_Segura_42!', conceptoId: concepto.id }, tipo);
     });
   }
+  registrarFichas(contexto);
   registrarCicloOperativo(contexto);
 });
