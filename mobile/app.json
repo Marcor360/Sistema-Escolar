@@ -2,7 +2,7 @@
   "expo": {
     "name": "Sistema Escolar",
     "slug": "sistema-escolar",
-    "version": "1.27.45",
+    "version": "1.27.46",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "ios": {

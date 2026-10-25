@@ -3,6 +3,7 @@ import { ChangeEvent, FormEvent, useEffect, useRef, useState } from 'react';
 import { api, archivosBase, mensajeDeError } from '../api/client';
 import { useMarca } from '../marca/MarcaContext';
 import { MAX_LOGO_ORIGINAL_BYTES, optimizarLogo } from '../utils/optimizar-logo';
+import { crearLogoPdfPng } from '../utils/crear-logo-pdf';
 
 export default function ConfiguracionPage() {
   const { marca, recargar } = useMarca();
@@ -71,6 +72,7 @@ export default function ConfiguracionPage() {
     try {
       if (archivo) setMensaje('Optimizando el logotipo a WebP…');
       const webp = archivo ? await optimizarLogo(archivo) : null;
+      const logoPdfPng = archivo ? await crearLogoPdfPng(archivo) : null;
       setMensaje('');
       await api.put('/configuracion/marca', { nombreInstitucion, nombreCorto, colorPrimario, colorAcento });
       datosInstitucionalesGuardados = true;
@@ -79,6 +81,12 @@ export default function ConfiguracionPage() {
         datos.append('logo', webp);
         const { data } = await api.post<{ logoUrl: string }>('/configuracion/marca/logo', datos);
         logoGuardado = true;
+        if (logoPdfPng && data.logoUrl) {
+          const archivoPdf = new FormData();
+          archivoPdf.append('logoPdf', logoPdfPng);
+          archivoPdf.append('logoUrl', data.logoUrl);
+          await api.post('/configuracion/marca/logo/pdf', archivoPdf);
+        }
         if (data.logoUrl) {
           const respuesta = await fetch(archivosBase + data.logoUrl, { cache: 'no-store' });
           if (!respuesta.ok || !/^image\/webp\b/i.test(respuesta.headers.get('content-type') ?? '')) {
@@ -91,14 +99,14 @@ export default function ConfiguracionPage() {
       if (selectorLogo.current) selectorLogo.current.value = '';
       setArchivoRechazado(false);
       setLogoNoDisponible(false);
-      setMensaje('Identidad institucional actualizada.');
+      setMensaje('Identidad institucional actualizada; logo listo para portal y fichas PDF.');
     } catch (err) {
       const detalle = mensajeDeError(err);
       const mensaje = detalle === 'File too large'
         ? 'El WebP optimizado supera los 10 MiB permitidos por la API. Selecciona una imagen más ligera.'
         : detalle;
       setError(logoGuardado
-        ? `Los datos y el logotipo se guardaron, pero no se pudo actualizar la vista: ${mensaje}`
+        ? `El logotipo WebP se guardó, pero la versión PNG para fichas PDF o su verificación falló: ${mensaje}`
         : datosInstitucionalesGuardados && archivo
         ? `Los datos institucionales se guardaron, pero el logotipo no: ${mensaje}`
         : mensaje);

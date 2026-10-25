@@ -1,5 +1,5 @@
 {
-  "version": "1.27.45",
+  "version": "1.27.46",
   "alcance": "Escenarios de aceptación institucional sin resultados fabricados",
   "escenarios": [
     {
@@ -395,6 +395,19 @@
       ],
       "estado": "pendiente",
       "responsable": "Finanzas, Control Escolar y QA",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-30",
+      "rol": "SUPERADMIN",
+      "escenario": "Subir logo PNG/JPG/WebP convertido a WebP y variante PNG segura, verificar marca pública y ficha PDF impresa, probar cambio de logo y eliminación, seguridad de rol y limpieza diferida de ambas variantes.",
+      "canales": [
+        "web",
+        "api",
+        "windows"
+      ],
+      "estado": "pendiente",
+      "responsable": "SUPERADMIN y QA visual",
       "evidencias": []
     }
   ]

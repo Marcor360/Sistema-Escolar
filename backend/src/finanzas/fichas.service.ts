@@ -9,7 +9,7 @@ import { Cargo } from '../entities/cargo.entity';
 import { Pago } from '../entities/pago.entity';
 import { CuentaDeposito } from '../entities/cuenta-deposito.entity';
 import { JwtUser } from '../common/current-user.decorator';
-import { ConfiguracionService } from '../configuracion/configuracion.service';
+import { ConfiguracionService, nombreLogoPdf } from '../configuracion/configuracion.service';
 import { ScopeService } from '../planteles/scope.service';
 import { CargosService } from './cargos.service';
 import { PagosService } from './pagos.service';
@@ -93,12 +93,17 @@ export class FichasService {
       doc.on('error', reject);
     });
     let tieneLogo = false;
-    if (marca.logoUrl && /^\/uploads\/marca-logo-[0-9a-f-]+\.(png|jpe?g)$/i.test(marca.logoUrl)) {
+    if (marca.logoUrl) {
       try {
-        const archivo = await fs.readFile(join(uploadsPath(), basename(marca.logoUrl)));
-        doc.image(archivo, 48, 48, { fit: [80, 70] });
-        tieneLogo = true;
-      } catch { /* Se mantiene la identidad textual institucional. */ }
+        const nombre = marca.logoUrl.endsWith('.webp')
+          ? nombreLogoPdf(marca.logoUrl)
+          : basename(marca.logoUrl);
+        if (/^marca-logo-[0-9a-f-]+\.(png|jpe?g)$/i.test(nombre)) {
+          const archivo = await fs.readFile(join(uploadsPath(), nombre));
+          doc.image(archivo, 48, 48, { fit: [80, 70] });
+          tieneLogo = true;
+        }
+      } catch { /* La ficha mantiene nombre institucional sin exponer archivos privados. */ }
     }
     if (!tieneLogo) doc.font('Helvetica-Bold').fontSize(17).text(marca.nombreCorto, 48, 54, { width: 85 });
     doc.font('Helvetica-Bold').fontSize(17).text(marca.nombreInstitucion, 145, 52, { width: 400 });
