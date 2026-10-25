@@ -10,6 +10,8 @@ module.exports = {
         formFactor: 'mobile',
         screenEmulation: { mobile: true, width: 390, height: 844, deviceScaleFactor: 2, disabled: false },
         maxWaitForLoad: 30000,
+        // Runner efímero con sitio local de prueba; Chrome no dispone de sandbox Linux.
+        chromeFlags: '--no-sandbox',
       },
     },
     assert: {
