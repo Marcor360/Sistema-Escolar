@@ -31,3 +31,9 @@ describe('Plantillas institucionales de correo', () => {
     expect(html).toContain('Olvidé mi contraseña');
   });
 });
+
+// #777777 no admite blanco AA y exige negro puro para mantener al menos 4.5:1.
+it('mantiene contraste AA en colores primarios intermedios', () => {
+  const html = plantillaInvitacion('abc', { nombreInstitucion: 'Prueba', nombreCorto: 'P', colorPrimario: '#777777', colorAcento: '#FFFFFF' });
+  expect(html).toContain('padding:30px 32px;color:#000000');
+});

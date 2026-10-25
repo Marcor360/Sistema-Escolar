@@ -16,6 +16,7 @@ export function CatalogoConceptos({ cambiado }: { cambiado: () => void }) {
   };
   return <section className="panel"><h2>Catálogo de conceptos</h2><p>La beca o descuento reduce el cargo. Los recargos se calculan sobre el cargo vencido y solo si el concepto tiene «Aplica recargo» habilitado.</p>
     {error && <p role="alert" className="mensaje-error">{error}</p>}{mensaje && <p role="status">{mensaje}</p>}
+    <p className="texto-ayuda">Los conceptos institucionales dados de alta con monto base $0 requieren que Finanzas autorice su tarifa antes de utilizarlos. Las colegiaturas por mes están en el catálogo, pero no pueden cargarse desde «Asignar cargo adicional» para evitar cargos duplicados.</p>
     <p className="texto-ayuda">Los ejemplos siguientes no son cargos obligatorios ni tarifas oficiales. Antes de crear cada concepto, Finanzas debe comprobar el servicio, el costo autorizado y el contrato vigente. No incluir derechos gubernamentales cobrados directamente por una autoridad.</p>
     <div className="fila">
       <label htmlFor="filtro-concepto-nivel">Nivel de referencia</label>
