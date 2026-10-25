@@ -69,7 +69,7 @@ it("abre únicamente boleta y material con enlace firmado de la API", async () =
   vi.mocked(api.get).mockResolvedValueOnce({ data: { url: "/api/reportes/boleta-descarga/4?t=firmado" } });
   await pulsar("Abrir boleta PDF de 2026, 1-A");
   expect(api.get).toHaveBeenCalledWith("/reportes/mi-boleta/enlace",
-    { params: { cicloId: 2, inscripcionId: 3 } });
+    { params: { cicloId: 2, inscripcionId: 3, formato: "informativa-pdf" } });
   expect(Linking.openURL).toHaveBeenCalledWith("https://api.escuela.test/api/reportes/boleta-descarga/4?t=firmado");
   await pulsar("Abrir carpeta Matemáticas");
   vi.mocked(api.get).mockResolvedValueOnce({ data: { url: "/api/archivos/materiales/20?t=firmado" } });

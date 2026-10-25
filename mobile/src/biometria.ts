@@ -5,7 +5,7 @@ const GUARDIA = 'escolar_biometria_guardia';
 
 /** SecureStore delega al sistema operativo; nunca se guardan huellas ni rostros. */
 export function biometriaDisponible(): boolean {
-  return SecureStore.canUseBiometricAuthentication();
+  return typeof SecureStore.canUseBiometricAuthentication === 'function' && SecureStore.canUseBiometricAuthentication();
 }
 export async function preferenciaBiometrica(): Promise<number | null> {
   const valor = await SecureStore.getItemAsync(PREFERENCIA);
