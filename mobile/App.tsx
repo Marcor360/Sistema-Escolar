@@ -3,7 +3,8 @@ import {
   limpiarCacheAcademica,
 } from "./src/api/cache-academica";
 import * as Notifications from "expo-notifications";
-import { activarPush } from "./src/push";
+import { activarPush, limpiarPreferenciaPushLocal } from "./src/push";
+import { preferenciaBiometrica, desbloquearBiometria } from "./src/biometria";
 import { CLAVE_ULTIMA_ACTIVIDAD, crearControlInactividad, crearPersistenciaActividad, actividadRestaurable } from "./src/utils/inactividad";
 import { debeNotificarActividad } from "./src/utils/pulso-actividad";
 import { ETIQUETAS_NAVEGACION } from "./src/utils/etiquetas-navegacion";
@@ -86,6 +87,7 @@ const iconos: Record<string, string> = {
 function AppInterna() {
   const fuenteLista = useContext(FuenteContext);
   const [sesion, setSesion] = useState<Sesion | null>(null);
+  const [bloqueoBiometrico, setBloqueoBiometrico] = useState(false);
   const [consentimiento, setConsentimiento] = useState<EstadoConsentimiento | null>(null);
   const [errorConsentimiento, setErrorConsentimiento] = useState("");
   const consultarConsentimiento = useCallback(async () => {
@@ -174,6 +176,14 @@ function AppInterna() {
     try {
       const token = await SecureStore.getItemAsync(TOKEN_KEY);
       if (token) {
+        const usuarioBiometrico = await preferenciaBiometrica();
+        if (usuarioBiometrico !== null) {
+          if (!await desbloquearBiometria(usuarioBiometrico)) {
+            setBloqueoBiometrico(true);
+            return;
+          }
+          setBloqueoBiometrico(false);
+        }
         const guardada = await SecureStore.getItemAsync(CLAVE_ULTIMA_ACTIVIDAD).catch(() => null);
         const ultima = actividadRestaurable(guardada, Date.now());
         if (ultima === null) {
@@ -246,10 +256,12 @@ function AppInterna() {
   useEffect(() => {
     registrarSesionExpirada(() => {
       configurarCacheAcademica(null);
+      if (sesion?.sub) void limpiarPreferenciaPushLocal(sesion.sub);
+      setBloqueoBiometrico(false);
       setSesion(null);
     });
     return () => registrarSesionExpirada(null);
-  }, []);
+  }, [sesion?.sub]);
 
   useEffect(() => {
     if (sesion && !sesion.passwordChangeRequired && consentimiento && !consentimiento.pendiente)
@@ -265,6 +277,7 @@ function AppInterna() {
     ultimoAvisoServidor.current = ahora;
     guardarActividad(ahora);
     setAvisoCierre("");
+    setBloqueoBiometrico(false);
     setSesion(data.usuario);
   };
 
@@ -281,9 +294,12 @@ function AppInterna() {
     controlInactividad.current?.detener();
     controlInactividad.current = null;
     configurarCacheAcademica(null);
+    const borrarPreferenciaPush = sesion?.sub
+      ? limpiarPreferenciaPushLocal(sesion.sub) : Promise.resolve();
     const borrarTokens = eliminarTokensSesion();
     const borrarActividad = persistenciaActividad.current.borrar();
     setSesion(null);
+    setBloqueoBiometrico(false);
     setConsentimiento(null);
     setAvisoCierre(motivo === "inactividad"
       ? "La sesión se cerró tras 30 minutos sin actividad. Ingresa nuevamente." : "");
@@ -291,7 +307,7 @@ function AppInterna() {
     try {
       await borrarTokens;
     } finally {
-      await borrarActividad;
+      await Promise.all([borrarActividad, borrarPreferenciaPush]);
     }
   };
 
@@ -379,6 +395,22 @@ function AppInterna() {
       </View>
     );
   }
+
+  if (bloqueoBiometrico) return (
+    <MarcaContext.Provider value={{ marca }}>
+      <View style={{ flex: 1, justifyContent: "center", padding: 28, gap: 20, backgroundColor: colores.papel }}>
+        <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: "700", color: colores.tinta }}>🔒 Tu espacio escolar</Text>
+        <Text style={{ fontSize: 16, color: colores.gris }}>Verifica tu huella o rostro para volver a consultar tu información. No guardamos datos biométricos.</Text>
+        <TouchableOpacity accessibilityRole="button" onPress={() => void restaurarSesion()}
+          style={{ backgroundColor: marca.colorPrimario, padding: 16, borderRadius: 12, minHeight: 52, justifyContent: "center" }}>
+          <Text style={{ color: textoSobreFondo(marca.colorPrimario), fontWeight: "700", textAlign: "center" }}>Desbloquear con biometría</Text>
+        </TouchableOpacity>
+        <TouchableOpacity accessibilityRole="button" onPress={() => void cerrar()} style={{ minHeight: 48, justifyContent: "center" }}>
+          <Text style={{ color: colores.tinta, textAlign: "center" }}>Cerrar sesión y usar otra cuenta</Text>
+        </TouchableOpacity>
+      </View>
+    </MarcaContext.Provider>
+  );
 
   if (sesion?.passwordChangeRequired)
     return (

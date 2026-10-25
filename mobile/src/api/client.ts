@@ -1,4 +1,5 @@
 import { limpiarCacheAcademica } from "./cache-academica";
+import { borrarPreferenciaBiometrica } from "../biometria";
 import axios, { CanceledError } from "axios";
 import * as SecureStore from "expo-secure-store";
 import Constants from "expo-constants";
@@ -46,6 +47,7 @@ export function eliminarTokensSesion() {
     await Promise.all([
       SecureStore.deleteItemAsync(REFRESH_KEY),
       SecureStore.deleteItemAsync(TOKEN_KEY),
+      borrarPreferenciaBiometrica(),
     ]);
   });
 }

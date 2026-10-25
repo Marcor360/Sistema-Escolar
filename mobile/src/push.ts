@@ -33,3 +33,8 @@ export async function desactivarPush(usuarioId: number) {
   await SecureStore.deleteItemAsync(`push_optin_${usuarioId}`);
   await Notifications.dismissAllNotificationsAsync();
 }
+
+/** La preferencia de avisos pertenece a la cuenta y se borra al cerrar su sesión. */
+export async function limpiarPreferenciaPushLocal(usuarioId: number): Promise<void> {
+  await SecureStore.deleteItemAsync(`push_optin_${usuarioId}`);
+}
