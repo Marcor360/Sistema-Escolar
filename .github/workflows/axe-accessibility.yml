@@ -1,0 +1,46 @@
+name: Accesibilidad axe IUA
+
+on:
+  pull_request:
+    paths:
+      - 'web/**'
+      - '.github/workflows/axe-accessibility.yml'
+  workflow_dispatch:
+  schedule:
+    - cron: '40 10 * * 3'
+
+permissions:
+  contents: read
+
+jobs:
+  axe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Dependencias fijadas del portal
+        run: node ../scripts/ci-install.cjs
+      - name: Navegador de pruebas
+        run: npx playwright install --with-deps chromium
+      - name: Verificar aislamiento de colores forzados
+        run: node --test test/a11y-media.regression.cjs
+      - name: Auditar páginas con datos simulados
+        env:
+          RUN_AXE_AUDIT: '1'
+          A11Y_STRICT: '0'
+        run: npm run test:responsive
+      - name: Guardar reporte aunque existan fallos
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: axe-iua-resultados
+          path: web/.qa/axe-report.json
+          if-no-files-found: warn

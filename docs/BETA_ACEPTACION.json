@@ -1,5 +1,5 @@
 {
-  "version": "1.27.46",
+  "version": "1.27.47",
   "alcance": "Puertas de aceptación institucional; pruebas locales se documentan aparte y no sustituyen firmas de UAT. Inclusión de 37 conceptos financieros institucionales pendiente de revisión tarifaria y UAT con ambos motores.",
   "puertas": [
     {
