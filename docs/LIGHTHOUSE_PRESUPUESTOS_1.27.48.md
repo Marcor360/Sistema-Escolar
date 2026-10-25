@@ -1,6 +1,6 @@
 # Presupuestos Lighthouse del portal IUA
 
-**Propuesta 1.27.46**, separada de los PR de recorridos integrados y axe-core.
+**Propuesta 1.27.48**, separada de los PR de recorridos integrados y axe-core.
 
 El workflow `.github/workflows/lighthouse-budget.yml` compila Vite desde el lockfile y mide `/login` en modo móvil, 3 pasadas por SHA. El portal **no tiene backend real** ni sesiones ni datos de alumnos. `web/lighthouserc.cjs` define los umbrales iniciales de laboratorio:
 
