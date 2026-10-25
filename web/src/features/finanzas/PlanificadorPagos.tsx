@@ -1,3 +1,4 @@
+import { ConfirmarProgramacion, type DatosCotizados } from './ConfirmarProgramacion';
 import { FormEvent, useState } from 'react';
 import { api, mensajeDeError } from '../../api/client';
 import { pesos } from '../../utils/formato';
@@ -21,10 +22,11 @@ export function PlanificadorPagos() {
   const [segundoSemestre, setSegundoSemestre] = useState('');
   const [personalizar, setPersonalizar] = useState(false);
   const [cotizacion, setCotizacion] = useState<Cotizacion | null>(null);
+  const [datosCotizados, setDatosCotizados] = useState<DatosCotizados | null>(null);
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
   const descripcion = modalidades.find(m => m.valor === modalidad)?.descripcion ?? '';
-  const limpiar = () => { setCotizacion(null); setError(''); };
+  const limpiar = () => { setCotizacion(null); setDatosCotizados(null); setError(''); };
   const cambiarModalidad = (valor: Modalidad) => { setModalidad(valor); setPersonalizar(false); setPrimerSemestre(''); setSegundoSemestre(''); limpiar(); };
   const enviar = async (e: FormEvent) => {
     e.preventDefault(); if (cargando) return;
@@ -34,7 +36,7 @@ export function PlanificadorPagos() {
       ...(modalidad === 'ADICIONAL' ? { numeroCuotas: Number(numeroCuotas) } : {}),
       ...(modalidad === 'BACHILLERATO' && personalizar ? { importes: [Number(primerSemestre), Number(segundoSemestre)] } : {}),
     };
-    try { const { data } = await api.post<Cotizacion>('/finanzas/programaciones/previsualizar', datos); setCotizacion(data); }
+    try { const { data } = await api.post<Cotizacion>('/finanzas/programaciones/previsualizar', datos); setCotizacion(data); setDatosCotizados(datos); }
     catch(err) { setError(mensajeDeError(err)); }
     finally { setCargando(false); }
   };
@@ -72,5 +74,6 @@ export function PlanificadorPagos() {
         </tbody></table>
       </div><p className="texto-ayuda">{cotizacion.advertencia}</p>
     </section>}
+    {cotizacion&&datosCotizados&&<ConfirmarProgramacion key={JSON.stringify(datosCotizados)} cotizacion={datosCotizados} />}
   </section>;
 }
