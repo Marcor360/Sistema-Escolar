@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.27.41`** · Mantenimiento documental sobre `main` 1.27.39. Los cambios de #180–186 están integrados. La integración en Git no acredita despliegue ni aceptación institucional; la app Expo instalada requiere actualización propia.
+**Versión candidata: `1.27.44`** · Mantenimiento documental sobre `main` 1.27.39. Los cambios de #180–186 están integrados. La integración en Git no acredita despliegue ni aceptación institucional; la app Expo instalada requiere actualización propia.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -18,6 +18,9 @@ Sistema escolar multiplataforma para operación académica, administrativa y fin
 Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [índice documental](docs/README.md) e [historial de documentos retirados](docs/HISTORIAL.md).
 
 ### Cambios consolidados recientes
+
+- **1.27.44 (PR):** recorrido integrado en base aislada: alta/activación, grupo, colegiatura `COL`, estado de cuenta y límites por plantel. [Escenario](docs/RECORRIDO_INSTITUCIONAL_1.27.44.md).
+
 
 - **1.27.41 (PR):** selección Microsoft 365 o GoDaddy por fila al importar docentes y personal. Los valores no reconocidos no se redirigen a SMTP; se refuerzan pruebas y ejemplo de staging. Sin migraciones ni cambios de pantallas móviles.
 
