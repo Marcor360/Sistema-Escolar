@@ -41,10 +41,11 @@ export class ProgramacionesCobroService {
     const calculo = previsualizarProgramacion(dto);
     return this.dataSource.transaction('READ COMMITTED', async manager => {
       await this.scope.validarGestion(user, dto.plantelId);
-      // Mismo primer lock que el generador masivo y el cierre académico.
+      // Orden compartido: ciclo -> alumno -> plantel -> programación.
       const ciclo = await manager.getRepository(CicloEscolar).findOne({
         where: { id: dto.cicloId }, lock: { mode: 'pessimistic_write' },
       });
+      const alumno = await manager.getRepository(Alumno).findOne({ where: { id: dto.alumnoId, plantelId: dto.plantelId }, lock: { mode: 'pessimistic_write' } });
       const plantel = await manager.getRepository(Plantel).findOne({
         where: { id: dto.plantelId, activo: true }, lock: { mode: 'pessimistic_write' },
       });
@@ -63,7 +64,6 @@ export class ProgramacionesCobroService {
         periodoAcademicoId: dto.periodoAcademicoId, conceptoId: dto.conceptoId,
       })) throw new ConflictException('Ya existe una programación con el concepto y periodo seleccionados');
 
-      const alumno = await manager.getRepository(Alumno).findOneBy({ id: dto.alumnoId, plantelId: dto.plantelId });
       if (!alumno || alumno.estatus !== 'ACTIVO' || !alumno.usuario.activo) {
         throw new ConflictException('El alumno no está activo en el plantel');
       }
@@ -124,6 +124,7 @@ export class ProgramacionesCobroService {
       if (!anterior) throw new NotFoundException('Programación no encontrada');
       await this.scope.validarGestion(user, anterior.plantelId);
       const ciclo = await manager.getRepository(CicloEscolar).findOne({ where: { id: anterior.cicloId }, lock: { mode: 'pessimistic_write' } });
+      const alumno = await manager.getRepository(Alumno).findOne({ where: { id: anterior.alumnoId, plantelId: anterior.plantelId }, lock: { mode: 'pessimistic_write' } });
       const plantel = await manager.getRepository(Plantel).findOne({
         where: { id: anterior.plantelId, activo: true }, lock: { mode: 'pessimistic_write' },
       });
@@ -134,7 +135,6 @@ export class ProgramacionesCobroService {
       if (!cuota) throw new NotFoundException('La cuota no existe');
       if (cuota.cargoId) return { cargoId: cuota.cargoId, identificador: 'IUA-C' + String(cuota.cargoId).padStart(10, '0'), duplicado: true };
       if (!ciclo || ciclo.estado !== 'ACTIVO') throw new ConflictException('Para emitir un cargo, el ciclo debe estar ACTIVO');
-      const alumno = await manager.getRepository(Alumno).findOne({ where: { id: plan.alumnoId, plantelId: plan.plantelId }, lock: { mode: 'pessimistic_write' } });
       if (!alumno || alumno.estatus !== 'ACTIVO' || !alumno.usuario.activo) throw new ConflictException('Alumno no disponible');
       const periodo = await manager.getRepository(PeriodoAcademico).findOneBy({ id: cuota.periodoAcademicoId, plantelId: plan.plantelId, cicloId: plan.cicloId, activo: true });
       if (!periodo) throw new ConflictException('El periodo académico ya no está activo');
