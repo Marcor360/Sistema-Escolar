@@ -41,6 +41,7 @@ export function registrarRecorridoInstitucional(ctx: ContextoIntegracion) {
     });
     expect(preview.response.status).toBe(201);
     expect(preview.data.registros).toBeGreaterThanOrEqual(1);
+    expect(await ctx.dataSource.getRepository(Cargo).countBy({ alumnoId })).toBe(0);
     const generar = () => ctx.api('/finanzas/cargos/generar-colegiaturas', {
       method: 'POST', token: tokenAdmin, body: { ...datos, confirmado: true },
     });
