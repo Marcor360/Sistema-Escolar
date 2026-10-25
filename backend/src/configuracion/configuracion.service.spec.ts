@@ -1,4 +1,7 @@
 import { promises as fs } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import { ConflictException } from '@nestjs/common';
 import { validarContenidoArchivo } from '../common/validar-archivo';
 jest.mock('../common/validar-archivo', () => ({ validarContenidoArchivo: jest.fn().mockResolvedValue(undefined) }));
 
@@ -63,6 +66,28 @@ describe('ConfiguracionService', () => {
     expect(rename).toHaveBeenCalledWith('/tmp/logo-nuevo.png', expect.stringMatching(/marca-logo-[0-9a-f-]+\.webp$/));
     expect(unlink).toHaveBeenCalledWith('/tmp/logo-nuevo.png');
     expect(unlink).toHaveBeenCalledWith(expect.stringMatching(/marca-logo-[0-9a-f-]+\.webp$/));
+  });
+
+  it('retira ambas variantes al quitar un logo WebP', async () => {
+    const nombre = 'marca-logo-a1b2c3d4-1234-4567-89ab-d0123456789a';
+    const { service, limpiezas } = crear({ id: 1, logoUrl: '/uploads/' + nombre + '.webp', colorPrimario: '#14343B' });
+    await service.quitarLogo();
+    expect(limpiezas.insert).toHaveBeenCalledWith(expect.objectContaining({ nombre: nombre + '.webp' }));
+    expect(limpiezas.insert).toHaveBeenCalledWith(expect.objectContaining({ nombre: nombre + '.png' }));
+  });
+  it('rechaza una variante de un logo reemplazado y limpia el temporal', async () => {
+    const carpeta = await fs.mkdtemp(join(tmpdir(), 'logo-pdf-'));
+    const temporal = join(carpeta, 'prueba.png');
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=', 'base64');
+    await fs.writeFile(temporal, png);
+    const { service } = crear({ id: 1, logoUrl: '/uploads/marca-logo-otro.webp' });
+    const rename = jest.spyOn(fs, 'rename').mockResolvedValue(undefined);
+    try {
+      await expect(service.guardarLogoPdf({ path: temporal, originalname: 'prueba.png' } as Express.Multer.File,
+        '/uploads/marca-logo-a1b2c3d4-1234-4567-89ab-d0123456789a.webp')).rejects.toBeInstanceOf(ConflictException);
+      expect(rename).not.toHaveBeenCalled();
+      await expect(fs.access(temporal)).rejects.toMatchObject({ code: 'ENOENT' });
+    } finally { await fs.rm(carpeta, { recursive: true, force: true }); }
   });
 
 });

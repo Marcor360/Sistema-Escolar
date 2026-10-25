@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.27.50`** · Programaciones de cobro persistidas sobre la rama de fichas 1.27.44. La integración en Git no acredita despliegue ni aceptación institucional; la app Expo instalada requiere actualización propia.
+**Versión candidata: `1.27.51`** · Logo institucional PNG para fichas PDF sobre programaciones 1.27.50. La integración en Git no acredita despliegue ni aceptación institucional; la app Expo instalada requiere actualización propia.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -18,6 +18,8 @@ Sistema escolar multiplataforma para operación académica, administrativa y fin
 Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [índice documental](docs/README.md) e [historial de documentos retirados](docs/HISTORIAL.md).
 
 ### Cambios consolidados recientes
+
+- **1.27.51 (PR apilado):** PNG de logo generado desde el navegador al actualizar WebP, subida protegida para SUPERADMIN y uso en fichas PDF con fallback seguro; logos anteriores requieren nueva carga. Sin nuevas dependencias ni migraciones.
 
 - **1.27.50 (PR apilado):** autorización y persistencia de un plan de cobro por alumno/periodo, emisión manual idempotente por cuota y vínculo a fichas BBVA existentes; inscripción regular activa obligatoria. [Alcance y UAT](docs/PROGRAMACIONES_COBRO_PERSISTIDAS_1.27.50.md).
 

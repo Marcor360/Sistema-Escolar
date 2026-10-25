@@ -9,7 +9,7 @@
 
 ## Límites de implementación (sin fingir integración)
 - **No hay conexión a BBVA** ni autorización para consumir sus movimientos o webhooks. El identificador no produce acreditación bancaria automática: FINANZAS debe verificar movimientos y dar conformidad. El pago se marca PAGADO solo cuando la API liquida su saldo, o PARCIAL si resta pendiente.
-- **Logo raster WebP pendiente**: el portal institucional actual guarda logos como WebP y PDFKit 0.15 solo incrusta PNG/JPEG. Para esas marcas se imprimirá monograma, no la imagen del logo. Se necesitará conservar un derivado PNG autorizado o implementar un conversor probado. Tampoco existe en el repositorio archivo oficial del logotipo BBVA: se incluye el nombre BBVA en texto, no un logo falsificado.
+- **Logo raster WebP:** a partir del PR 1.27.46 se genera al subir un logo una variante PNG de 768 px con el mismo identificador; el servidor la valida y la ficha la incrusta, con fallback a monograma si no está. Logos ya cargados antes de 1.27.46 requieren que SUPERADMIN los vuelva a subir. Tampoco existe en el repositorio archivo oficial del logotipo BBVA: se incluye el nombre BBVA en texto, no un logo falsificado.
 - La migración no emite fichas ni cambia cargos automáticamente. La programación previa 1.27.43 todavía es una previsualización, no un plan persistido y no genera cuotas. Las restricciones existentes impiden otra apertura por alumno+ciclo. Resolver esto en fase transaccional específica, no con escrituras destructivas.
 - Evitar autorizar producción hasta probar ambos motores, permiso multi-plantel, devolución/anulación, verificación de folios concurrentes y la representación del logo real.
 
@@ -26,3 +26,7 @@
 - La comprobación de folio de la ruta de fichas se realiza dentro de la transacción de pago, con un bloqueo compartido de la cuenta BBVA antes de bloquear el cargo. Esto serializa registros por fichas en ambos motores; exige configurar la cuenta previamente y conserva reintentos con la misma clave. No cambia la política de folios del endpoint general de pagos manuales.
 - Cambiar cargo, monto, método o folio en web exige volver a confirmar el cotejo.
 - Pruebas nuevas: aislamiento de alumno, origen histórico, generación PDF y reintentos/folios confirmados mientras se espera el bloqueo.
+
+## Variante imprimible (PR de logos, candidata 1.27.51)
+
+Las pruebas de revisión verifican la incrustación real del PNG como recurso de imagen del PDF, la limpieza de temporales al rechazar un logo ya reemplazado y el retiro conjunto de WebP/PNG. Los mensajes distinguen fallo del WebP, fallo del PNG de 3 MiB y error de actualización de vista; guardar solo el nombre/colores no afirma haber creado una variante imprimible. Para logos previos es necesaria una nueva carga institucional; la impresión física y ACL de IIS requieren UAT.

@@ -6,7 +6,7 @@ import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { RolesGuard } from '../common/roles.guard';
 
 describe('configuración institucional', () => {
-  it.each(['actualizarMarca','actualizarOpciones','guardarLogo','quitarLogo'] as const)(
+  it.each(['actualizarMarca','actualizarOpciones','guardarLogo','guardarLogoPdf','quitarLogo'] as const)(
     'protege %s exclusivamente con SUPERADMIN y con autenticación',
     (accion) => {
       const handler = ConfiguracionController.prototype[accion];

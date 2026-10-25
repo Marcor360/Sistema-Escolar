@@ -1,3 +1,4 @@
+import { promises as fs } from 'fs';
 import { ForbiddenException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { Cargo } from '../entities/cargo.entity';
@@ -8,13 +9,13 @@ import { CargosService } from './cargos.service';
 import { PagosService } from './pagos.service';
 import { FichasService } from './fichas.service';
 
-function contexto() {
+function contexto(logoUrl: string | null = null) {
   const cargo = { id: 1, alumnoId: 10, plantelId: 2, monto: 100, descuento: 0, recargo: 0,
     descripcion: 'Cargo sintético', estatus: 'PENDIENTE', plantel: { nombre: 'Plantel de origen' },
     alumno: { usuarioId: 5, matricula: 'QA', usuario: { nombreCompleto: 'Alumno QA' }, plantel: { nombre: 'Plantel tras traslado' } } };
   const scope = { validarGestion: jest.fn().mockResolvedValue(undefined) };
   const cargos = { saldoDeCargo: jest.fn().mockResolvedValue(100) };
-  const marca = { obtener: jest.fn().mockResolvedValue({ nombreInstitucion: 'Institución sintética', nombreCorto: 'QA', logoUrl: null }) };
+  const marca = { obtener: jest.fn().mockResolvedValue({ nombreInstitucion: 'Institución sintética', nombreCorto: 'QA', logoUrl }) };
   const service = new FichasService(
     { findOne: jest.fn().mockResolvedValue(cargo) } as unknown as Repository<Cargo>,
     { findOneBy: jest.fn().mockResolvedValue({ titular: 'Prueba', numeroCuenta: '0000000000', clabe: null }) } as unknown as Repository<CuentaDeposito>,
@@ -41,4 +42,16 @@ describe('FichasService', () => {
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
     expect(pdf.length).toBeGreaterThan(500);
   });
+  it('incrusta en el PDF la variante PNG asociada al WebP vigente', async () => {
+    const nombre = 'marca-logo-a1b2c3d4-1234-4567-89ab-d0123456789a';
+    const { service } = contexto('/uploads/' + nombre + '.webp');
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=', 'base64');
+    const leer = jest.spyOn(fs, 'readFile').mockResolvedValue(png);
+    try {
+      const pdf = await service.generarPdf(1, { sub: 5, email: 'qa@example.invalid', nombre: 'QA', roles: ['ALUMNO'] });
+      expect(leer).toHaveBeenCalledWith(expect.stringContaining(nombre + '.png'));
+      expect(pdf.toString('latin1')).toContain('/Subtype /Image');
+    } finally { leer.mockRestore(); }
+  });
+
 });

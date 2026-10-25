@@ -6,8 +6,9 @@ import { Roles } from '../common/roles.decorator';
 import { RolesGuard } from '../common/roles.guard';
 import { ActualizarMarcaDto, ActualizarOpcionesGlobalesDto } from './configuracion.dto';
 import { ConfiguracionService } from './configuracion.service';
-import { LogoUploadErrorInterceptor } from './logo-upload-error.interceptor';
+import { LogoUploadErrorInterceptor, LogoPdfUploadErrorInterceptor } from './logo-upload-error.interceptor';
 import { logoUploadConfig } from './logo-upload.config';
+import { logoPdfUploadConfig } from './logo-pdf-upload.config';
 
 @ApiTags('configuracion')
 @Controller('configuracion')
@@ -46,6 +47,19 @@ export class ConfiguracionController {
   guardarLogo(@UploadedFile() file?: Express.Multer.File) {
     if (!file) throw new BadRequestException('Debes seleccionar un logo válido');
     return this.service.guardarLogo(file);
+  }
+
+  @Post('marca/logo/pdf')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Registrar variante PNG segura del logo institucional para fichas imprimibles, exclusivamente SUPERADMIN' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPERADMIN')
+  @ApiConsumes('multipart/form-data')
+  @ApiPayloadTooLargeResponse({ description: 'El logo PNG supera los 3 MiB permitidos' })
+  @UseInterceptors(LogoPdfUploadErrorInterceptor, FileInterceptor('logoPdf', logoPdfUploadConfig))
+  guardarLogoPdf(@UploadedFile() file?: Express.Multer.File, @Body('logoUrl') logoUrl?: string) {
+    if (!file) throw new BadRequestException('Debes seleccionar el logo PNG imprimible');
+    return this.service.guardarLogoPdf(file, logoUrl);
   }
 
   @Delete('marca/logo')
