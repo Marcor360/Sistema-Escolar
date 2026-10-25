@@ -88,6 +88,7 @@ function AppInterna() {
   const fuenteLista = useContext(FuenteContext);
   const [sesion, setSesion] = useState<Sesion | null>(null);
   const [bloqueoBiometrico, setBloqueoBiometrico] = useState(false);
+  const usuarioEnDesbloqueo = useRef<number | null>(null);
   const [consentimiento, setConsentimiento] = useState<EstadoConsentimiento | null>(null);
   const [errorConsentimiento, setErrorConsentimiento] = useState("");
   const consultarConsentimiento = useCallback(async () => {
@@ -177,20 +178,25 @@ function AppInterna() {
       const token = await SecureStore.getItemAsync(TOKEN_KEY);
       if (token) {
         const usuarioBiometrico = await preferenciaBiometrica();
+        usuarioEnDesbloqueo.current = usuarioBiometrico;
+        const guardada = await SecureStore.getItemAsync(CLAVE_ULTIMA_ACTIVIDAD).catch(() => null);
+        const ultima = actividadRestaurable(guardada, Date.now());
+        if (ultima === null) {
+          configurarCacheAcademica(null);
+          if (usuarioBiometrico !== null) await limpiarPreferenciaPushLocal(usuarioBiometrico).catch(() => undefined);
+          await eliminarTokensSesion();
+          await persistenciaActividad.current.borrar();
+          usuarioEnDesbloqueo.current = null;
+          setBloqueoBiometrico(false);
+          setAvisoCierre("La sesión se cerró tras 30 minutos sin actividad. Ingresa nuevamente.");
+          return;
+        }
         if (usuarioBiometrico !== null) {
           if (!await desbloquearBiometria(usuarioBiometrico)) {
             setBloqueoBiometrico(true);
             return;
           }
           setBloqueoBiometrico(false);
-        }
-        const guardada = await SecureStore.getItemAsync(CLAVE_ULTIMA_ACTIVIDAD).catch(() => null);
-        const ultima = actividadRestaurable(guardada, Date.now());
-        if (ultima === null) {
-          await eliminarTokensSesion();
-          await persistenciaActividad.current.borrar();
-          setAvisoCierre("La sesión se cerró tras 30 minutos sin actividad. Ingresa nuevamente.");
-          return;
         }
         ultimaActividadGuardada.current = ultima;
         ultimaActividadPersistida.current = ultima;
@@ -277,6 +283,7 @@ function AppInterna() {
     ultimoAvisoServidor.current = ahora;
     guardarActividad(ahora);
     setAvisoCierre("");
+    usuarioEnDesbloqueo.current = null;
     setBloqueoBiometrico(false);
     setSesion(data.usuario);
   };
@@ -294,8 +301,10 @@ function AppInterna() {
     controlInactividad.current?.detener();
     controlInactividad.current = null;
     configurarCacheAcademica(null);
-    const borrarPreferenciaPush = sesion?.sub
-      ? limpiarPreferenciaPushLocal(sesion.sub) : Promise.resolve();
+    const usuarioParaLimpiar = sesion?.sub ?? usuarioEnDesbloqueo.current;
+    usuarioEnDesbloqueo.current = null;
+    const borrarPreferenciaPush = usuarioParaLimpiar !== null
+      ? limpiarPreferenciaPushLocal(usuarioParaLimpiar) : Promise.resolve();
     const borrarTokens = eliminarTokensSesion();
     const borrarActividad = persistenciaActividad.current.borrar();
     setSesion(null);

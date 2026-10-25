@@ -23,3 +23,5 @@ El permiso de notificaciones se solicita al activar avisos desde Perfil (Expo No
 
 ## Límites
 No existe caché persistente de expedientes de menores ni documentos descargados offline. No se añade biblioteca externa para biometría ni permisos amplios de almacenamiento. Sin migraciones, rutas de roles docentes/administrativos ni cambios ajenos a las boletas. No considerar esta rama publicada hasta CI, QA Android/iOS y UAT staging.
+
+La restauración comprueba primero los 30 minutos de actividad y solo después muestra el prompt biométrico, para no autenticar una sesión ya expirada. El cierre desde la pantalla de bloqueo también borra las preferencias locales de avisos del usuario protegido.
