@@ -1,4 +1,4 @@
-import { plantillaInvitacion, plantillaRecuperacion } from './plantillas-correo';
+import { plantillaInvitacion, plantillaRecuperacion, plantillaApoyoAcceso } from './plantillas-correo';
 
 describe('Plantillas institucionales de correo', () => {
   it('incluye contenido accesible y código de activación de un solo uso', () => {
@@ -37,3 +37,15 @@ it('mantiene contraste AA en colores primarios intermedios', () => {
   const html = plantillaInvitacion('abc', { nombreInstitucion: 'Prueba', nombreCorto: 'P', colorPrimario: '#777777', colorAcento: '#FFFFFF' });
   expect(html).toContain('padding:30px 32px;color:#000000');
 });
+
+it('distingue activación de recuperación y explica los pasos, caducidad y solicitud no reconocida', () => {
+  const html=plantillaRecuperacion('a'.repeat(32));
+  expect(html).toContain('32 caracteres');
+  expect(html).toContain('solo se puede usar una vez');
+  expect(html).toContain('Tu contraseña todavía no ha cambiado');
+  expect(html).toContain('No lo pegues en Activar cuenta');
+  expect(html).toContain('no amplía su plazo');
+  expect(plantillaInvitacion('a'.repeat(64))).toContain('64 caracteres');
+});
+
+it('el aviso de apoyo escapa la cuenta y evita pedir cambios automáticos',()=>{const html=plantillaApoyoAcceso('<img src=x>');expect(html).toContain('&lt;img');expect(html).not.toContain('<img');expect(html).toContain('no requiere que cambies');expect(html).toContain('verifica su identidad');});

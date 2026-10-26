@@ -1,6 +1,6 @@
-# Estado de implementación — candidata 1.27.54
+# Estado de implementación — candidata 1.27.55
 
-Corte documental: 26 de octubre de 2026. Base: `main` 1.27.53 tras integración #202. La candidata 1.27.54 añade [recorridos por área y comparativas](RECORRIDOS_COMPARATIVAS_1.27.54.md), cierra diferencias de UX y completa la vista previa de correcciones y las etiquetas de sesiones. La infraestructura de seguimiento/asistencias de #202 se conserva. No acredita despliegue, UAT, instalación de tareas ni restore institucional. La escala 0–100 y P1–P3/Final no cambia.
+Corte documental: 26 de octubre de 2026. La candidata 1.27.55 añade [correos y UX de acceso/Inicio](CORREOS_UX_1.27.55.md) sobre #203 (1.27.54), aún abierto al iniciar esta entrega. Se integra después de #203. Base: `main` 1.27.53 tras integración #202. La candidata 1.27.54 añade [recorridos por área y comparativas](RECORRIDOS_COMPARATIVAS_1.27.54.md), cierra diferencias de UX y completa la vista previa de correcciones y las etiquetas de sesiones. La infraestructura de seguimiento/asistencias de #202 se conserva. No acredita despliegue, UAT, instalación de tareas ni restore institucional. La escala 0–100 y P1–P3/Final no cambia.
 
 ## Clasificación
 

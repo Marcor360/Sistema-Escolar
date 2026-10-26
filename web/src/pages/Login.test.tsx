@@ -27,3 +27,19 @@ it('solicita activación sin acreditar entrega, conserva errores y vuelve al log
   expect(post).toHaveBeenLastCalledWith('/auth/activar-cuenta', { token: 'a'.repeat(64), password: 'Nueva_Segura_42!' });
   expect(screen.getByRole('status').textContent).toContain('Cuenta activada');
 });
+it('guía la recuperación, normaliza el código y borra los secretos al terminar', async () => {
+  const post=vi.spyOn(api,'post').mockResolvedValueOnce({data:{mensaje:'Si la cuenta existe recibirás instrucciones'}});
+  render(<MemoryRouter><Login/></MemoryRouter>);
+  fireEvent.click(screen.getByRole('button',{name:'¿Olvidaste tu contraseña?'}));
+  fireEvent.change(screen.getByLabelText('Correo institucional'),{target:{value:'alumno@example.test'}});
+  fireEvent.click(screen.getByRole('button',{name:'Enviar código'}));
+  await screen.findByRole('heading',{name:'Crear nueva contraseña · Paso 2 de 2'});
+  expect(screen.getByText(/Copia los 32 caracteres/)).toBeTruthy();
+  fireEvent.change(screen.getByLabelText('Código de recuperación'),{target:{value:' '+ 'A'.repeat(32)+' '}});
+  fireEvent.change(screen.getByLabelText('Nueva contraseña (mínimo 8)'),{target:{value:'Nueva_Segura_42!'}});
+  post.mockResolvedValueOnce({data:{mensaje:'Guardado'}});
+  fireEvent.click(screen.getByRole('button',{name:'Restablecer contraseña'}));
+  await screen.findByRole('button',{name:'Entrar'});
+  expect(post).toHaveBeenLastCalledWith('/auth/reset-password',{token:'a'.repeat(32),password:'Nueva_Segura_42!'});
+  expect(screen.getByLabelText('Contraseña').getAttribute('value')).toBe('');
+});

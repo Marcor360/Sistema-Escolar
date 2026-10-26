@@ -47,3 +47,5 @@ Antes de eliminar otro archivo, comprobar usos y enlaces y conservar requisitos,
 - [Seguimiento, asistencias y operación 1.27.53](SEGUIMIENTO_ASISTENCIAS_1.27.53.md).
 
 - [Recorridos por área y comparativas 1.27.54](RECORRIDOS_COMPARATIVAS_1.27.54.md).
+
+- [Correos y UX de acceso/Inicio · 1.27.55](CORREOS_UX_1.27.55.md)

@@ -10,7 +10,7 @@ import { Alumno } from '../entities/alumno.entity';
 import { UsuarioPlantel } from '../entities/usuario-plantel.entity';
 import { NotificacionesService } from '../notificaciones/notificaciones.service';
 import { ConfiguracionService } from '../configuracion/configuracion.service';
-import { plantillaInvitacion, plantillaRecuperacion } from '../notificaciones/plantillas-correo';
+import { plantillaInvitacion, plantillaRecuperacion, plantillaApoyoAcceso } from '../notificaciones/plantillas-correo';
 import { ClavesCorreoAcceso } from './correo-acceso-claves';
 
 const VIGENCIA_MS = 3600000;
@@ -179,11 +179,8 @@ export class CorreoAccesoOutboxService implements OnModuleInit, OnModuleDestroy 
     if (!ids.length) return;
     const responsables = await this.ds.getRepository(UsuarioPlantel).find({ where: { plantelId: In(ids), activo: true }, relations: { usuario: true } });
     const correos = [...new Set(responsables.filter(a => a.usuario.activo && a.usuario.roles.some(r => r.clave === 'ADMINISTRATIVO')).map(a => a.usuario.email))];
-    const solicitante = usuario.email.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
-    for (const email of correos) await this.correo.enviarEmail(email, 'IUA · Solicitud de apoyo para acceso',
-      '<p>Se registró una solicitud de recuperación de acceso en uno de tus planteles.</p>' +
-      `<p>Cuenta institucional solicitante: <strong>${solicitante}</strong></p>` +
-      '<p>Ingresa al portal administrativo y consulta la sección Usuarios para identificar al titular y, si corresponde, emitir una contraseña temporal.</p>' +
-      '<p>Esta notificación no incluye códigos ni contraseñas. Verifica la identidad del solicitante antes de realizar cambios.</p>');
+    const marca = await this.marca.obtener();
+    for (const email of correos) await this.correo.enviarEmail(email, 'Apoyo de acceso · Cuenta escolar', plantillaApoyoAcceso(usuario.email, marca));
+
   }
 }

@@ -1,5 +1,5 @@
 {
-  "version": "1.27.54",
+  "version": "1.27.55",
   "alcance": "Escenarios de aceptación institucional sin resultados fabricados",
   "escenarios": [
     {
@@ -562,6 +562,46 @@
         "android",
         "ios",
         "api",
+        "ux"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable institucional por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-42",
+      "rol": "ALUMNO",
+      "escenario": "Recuperación Expo desde Login: código de 32 caracteres, confirmación, error/vencimiento, reintento sin duplicar y limpieza de secretos",
+      "canales": [
+        "android",
+        "ios",
+        "api",
+        "ux"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable institucional por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-43",
+      "rol": "ADMINISTRATIVO",
+      "escenario": "Correos de activación, recuperación y apoyo: pasos, marca, caducidad, código completo y distinción entre solicitud y cambio efectivo; comprobar recepción real en los proveedores autorizados",
+      "canales": [
+        "web",
+        "api",
+        "ux"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable institucional por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-44",
+      "rol": "ALUMNO",
+      "escenario": "Inicio con pendientes antes del resumen, acciones a actividades y pagos, datos anteriores identificados ante fallo, lectura con texto ampliado",
+      "canales": [
+        "android",
+        "ios",
         "ux"
       ],
       "estado": "pendiente",
