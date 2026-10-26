@@ -29,11 +29,15 @@ export async function recorridoWeb(d: Datos, tipo: 'academico' | 'financiero' | 
     await expect(page.getByRole('link', { name: 'Alumnos', exact: true })).toBeVisible();
     const bienvenida = page.locator('aside.recorrido-panel');
     await expect(bienvenida).toBeVisible();
+    // La guía especializada comienza eligiendo un área autorizada para este actor.
+    await bienvenida.getByRole('button', { name: /Administración y control escolar/ }).click();
+    await expect(bienvenida.locator('.recorrido-progreso')).toContainText('1 de');
     {
       while (await bienvenida.getByRole('button', { name: 'Siguiente' }).count()) {
         await bienvenida.getByRole('button', { name: 'Siguiente' }).click();
       }
       await bienvenida.getByRole('button', { name: 'Finalizar' }).click();
+      await expect(bienvenida).toHaveCount(0);
     }
     const matricula = `BW${tipo === 'academico' ? 'A' : tipo === 'financiero' ? 'F' : 'U'}${d.sufijo}`;
     await page.getByRole('link', { name: 'Alumnos', exact: true }).click();
@@ -97,10 +101,13 @@ export async function recorridoWeb(d: Datos, tipo: 'academico' | 'financiero' | 
       const page = await browser.newPage({ extraHTTPHeaders: { 'x-forwarded-for': '203.0.113.4' } });
       page.on('pageerror', (e: Error) => errores.push(e.message)); page.on('dialog', (dialog: { accept: () => Promise<void> }) => { void dialog.accept(); });
       await page.goto('http://127.0.0.1:5181/login'); await page.getByLabel('Correo institucional').fill(d.docenteEmail); await page.getByLabel('Contraseña', { exact: true }).fill(d.docentePassword); await page.getByRole('button', { name: 'Entrar', exact: true }).click(); await expect(page.getByRole('link', { name: 'Mis clases', exact: true })).toBeVisible(); const bienvenidaDocente = page.locator('aside.recorrido-panel'); await expect(bienvenidaDocente).toBeVisible();
+      await bienvenidaDocente.getByRole('button', { name: /Docencia y seguimiento de clases/ }).click();
+      await expect(bienvenidaDocente.locator('.recorrido-progreso')).toContainText('1 de');
       while (await bienvenidaDocente.getByRole('button', { name: 'Siguiente' }).count()) {
         await bienvenidaDocente.getByRole('button', { name: 'Siguiente' }).click();
       }
       await bienvenidaDocente.getByRole('button', { name: 'Finalizar' }).click();
+      await expect(bienvenidaDocente).toHaveCount(0);
       await page.goto('http://127.0.0.1:5181/maestro?vista=clase&clase='+claseImportacion); await page.getByRole('button',{name:'Crear actividad',exact:true}).click(); await page.getByLabel('Título',{exact:true}).fill('Actividad enfocada de navegador'); await page.getByRole('button',{name:'Crear actividad',exact:true}).click(); await expect(page.getByRole('heading',{name:'Actividad enfocada de navegador',exact:true})).toBeVisible();
       await page.getByRole('button',{name:'Editar actividad Actividad enfocada de navegador',exact:true}).click(); await page.getByLabel('Descripción',{exact:true}).fill('Texto corregido'); await page.getByRole('button',{name:'Guardar corrección',exact:true}).click(); await expect(page.getByRole('heading',{name:'Actividad enfocada de navegador',exact:true})).toBeVisible();
       await page.getByRole('button',{name:'Entregas de Actividad enfocada de navegador',exact:true}).click(); await expect(page.getByText('Sin registros para esta consulta.',{exact:true})).toBeVisible(); await page.getByRole('button',{name:'Volver a operaciones de la clase',exact:true}).click();
