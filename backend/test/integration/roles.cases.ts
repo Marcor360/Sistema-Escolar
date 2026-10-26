@@ -39,7 +39,7 @@ it('aplica capacidades por operación a seis combinaciones de roles sin ampliar 
       await consultar(`/calificaciones/alumno/${alumnos[1].id}`, admin);
       const captura = await ctx.api('/calificaciones/captura', { method: 'POST', token, body: { grupoMateriaId: ajena.id, parcial: 1, motivo: 'Comprobación de capacidad', items: [{ alumnoId: alumnos[1].id, calificacion: 80 }] } }); expect(captura.response.status).toBe(admin ? 201 : 403);
       await consultar(`/reportes/grupo-materias/${ajena.id}/calificaciones.xlsx`, admin);
-      await consultar('/calendario', admin || maestro);
+      await consultar('/calendario', financiero || maestro);
       await consultar(`/conducta/incidencias/${incidencia.data.id}`, admin);
       await consultar('/finanzas/cargos', financiero);
       const analitica = await ctx.api(`/analitica?cicloId=${ciclo.id}`, { token }); expect(analitica.response.status).toBe(200);

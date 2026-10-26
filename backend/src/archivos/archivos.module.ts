@@ -1,3 +1,4 @@
+import { CalendarioModule } from '../calendario/calendario.module';
 import { TemariosModule } from '../temarios/temarios.module';
 import { BibliotecaService } from '../biblioteca/biblioteca.service';
 import { BibliotecaController } from '../biblioteca/biblioteca.controller';
@@ -18,7 +19,7 @@ import { LogoPublicoController } from './logo-publico.controller';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Material, Entrega, Inscripcion, Usuario]),
-    PlantelesModule, TemariosModule,
+    PlantelesModule, TemariosModule, CalendarioModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({

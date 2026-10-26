@@ -1,3 +1,4 @@
+import { registrarCalendarioCiclo } from './integration/calendario-ciclo.cases';
 import { registrarProgramacionesCobro } from './integration/programaciones-cobro.cases';
 import { registrarFichas } from './integration/fichas.cases';
 import { registrarMaestroPaginado } from './integration/maestro-paginado.cases';
@@ -498,5 +499,6 @@ Object.keys(casos).map(Number).sort((a,b) => a-b).forEach((id) => casos[id](cont
   registrarProgramacionesCobro(contexto);
   registrarFichas(contexto);
   registrarRecorridoInstitucional(contexto);
+  registrarCalendarioCiclo(contexto);
   registrarCicloOperativo(contexto);
 });

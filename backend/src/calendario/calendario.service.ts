@@ -1,3 +1,10 @@
+import { promises as fs } from 'fs';
+import { join } from 'path';
+import { CicloEscolar, NivelAcademico } from '../entities';
+import { In } from 'typeorm';
+import { uploadsPath } from '../common/uploads-path';
+import { validarContenidoArchivo } from '../common/validar-archivo';
+import { programarLimpieza } from '../archivos/archivo-limpieza.service';
 import { createHash } from 'crypto';
 import { esMaestroRestringido } from '../common/politica-acceso';
 import { exigirGrupoConfigurable, grupoVigente, inscripcionVigente } from '../common/contexto-academico';
@@ -36,11 +43,14 @@ export class CalendarioService {
     if (finVentana.getTime() - inicioVentana.getTime() > 366 * 24 * 60 * 60 * 1000) throw new BadRequestException('Consulta una ventana de hasta un año');
     qb.andWhere('(e.fecha_inicio >= :desde OR e.fecha_fin >= :desde)', { desde: inicioVentana });
     qb.andWhere('e.fecha_inicio <= :hasta', { hasta: finVentana });
+    if (!user.roles.some(r => ['SUPERADMIN','ADMINISTRATIVO','FINANZAS'].includes(r))) qb.andWhere('e.audiencia = :audiencia', { audiencia: 'ACADEMICA' });
     if (user.roles.includes('ALUMNO')) {
       const alumno = await this.alumnos.findOne({ where: { usuarioId: user.sub } });
       if (!alumno) throw new NotFoundException('El usuario no tiene expediente de alumno');
       const inscripciones = await this.inscripciones.find({ where: { ...inscripcionVigente, alumnoId: alumno.id } });
       const grupos = inscripciones.map((i) => i.grupoId);
+      const niveles = [...new Set(inscripciones.map(i => i.grupo?.nivelId).filter((n): n is number => !!n))];
+      qb.andWhere(niveles.length ? '(e.nivel_id IS NULL OR e.nivel_id IN (:...niveles))' : 'e.nivel_id IS NULL', { niveles });
       qb.andWhere(
         grupos.length
           ? '((e.plantel_id IS NULL AND e.grupo_id IS NULL) OR (e.plantel_id = :plantelAlumno AND e.grupo_id IS NULL) OR e.grupo_id IN (:...gruposAlumno))'
@@ -48,7 +58,7 @@ export class CalendarioService {
         { plantelAlumno: alumno.plantelId, gruposAlumno: grupos },
       );
     } else {
-      const maestroPuro = esMaestroRestringido(user);
+      const maestroPuro = (esMaestroRestringido(user) && !user.roles.includes('FINANZAS'));
       if (maestroPuro) {
         const docente = await this.docentes.findOne({ where: { usuarioId: user.sub } });
         const asignaciones = docente
@@ -56,6 +66,8 @@ export class CalendarioService {
           : [];
         const gruposActivos = asignaciones.filter((asignacion) => grupoVigente(asignacion.grupo));
         const grupoIds = [...new Set(gruposActivos.map((grupo) => grupo.grupoId))];
+        const niveles = [...new Set(gruposActivos.map(g => g.grupo.nivelId).filter((n): n is number => !!n))];
+        qb.andWhere(niveles.length ? '(e.nivel_id IS NULL OR e.nivel_id IN (:...niveles))' : 'e.nivel_id IS NULL', { niveles });
         const plantelesDocente = [...new Set(gruposActivos.map((grupo) => grupo.grupo.plantelId))];
         if (plantelId !== undefined && !plantelesDocente.includes(plantelId)) {
           throw new ForbiddenException('El plantel solicitado no contiene grupos activos asignados a este docente');
@@ -81,13 +93,17 @@ export class CalendarioService {
     }
     return qb.orderBy('e.fechaInicio','ASC');
   }
-  async listar(user: JwtUser, desde?: string, hasta?: string, plantelId?: number) {
+  async listar(user: JwtUser, desde?: string, hasta?: string, plantelId?: number, cicloId?: number, nivelId?: number) {
     const qb = await this.consulta(user,desde,hasta,plantelId);
+    if (cicloId) qb.andWhere('(e.ciclo_id = :cicloId OR e.ciclo_id IS NULL)', { cicloId });
+    if (nivelId) qb.andWhere('(e.nivel_id = :nivelId OR e.nivel_id IS NULL)', { nivelId });
     const eventos = await qb.getMany();
     return eventos.map(e=>({...e,revision:this.revision(e)}));
   }
   async consultar(q: ConsultarEventosDto, user: JwtUser) {
     const qb = await this.consulta(user,q.desde,q.hasta,q.plantelId);
+    if(q.cicloId) qb.andWhere('(e.ciclo_id = :cicloId OR e.ciclo_id IS NULL)', { cicloId:q.cicloId });
+    if(q.nivelId) qb.andWhere('(e.nivel_id = :nivelId OR e.nivel_id IS NULL)', { nivelId:q.nivelId });
     if(q.buscar?.trim()) { const termino = '%'+q.buscar.trim().toLowerCase().replace(/[!%_[]/g,c=>'!'+c)+'%'; qb.andWhere("LOWER(e.titulo) LIKE :termino ESCAPE '!'",{termino}); }
     const [eventos,total] = await qb.addOrderBy('e.id','ASC').skip((q.pagina-1)*q.porPagina).take(q.porPagina).getManyAndCount();
     return {datos:eventos.map(e=>({...e,revision:this.revision(e)})),total,pagina:q.pagina,porPagina:q.porPagina};
@@ -110,7 +126,7 @@ export class CalendarioService {
       throw new BadRequestException('Las fechas deben ser válidas y fechaFin no puede preceder a fechaInicio');
     }
     const superadmin = user.roles.includes('SUPERADMIN');
-    const maestroPuro = user.roles.includes('MAESTRO') && !user.roles.includes('ADMINISTRATIVO') && !superadmin;
+    const maestroPuro = (esMaestroRestringido(user) && !user.roles.includes('FINANZAS'));
     let plantelId = dto.plantelId ?? null;
     if (maestroPuro) {
       if (!dto.grupoId) throw new ForbiddenException('El maestro debe seleccionar uno de sus grupos');
@@ -133,7 +149,26 @@ export class CalendarioService {
       if (plantelId && grupo.plantelId !== plantelId) throw new ForbiddenException('El grupo no pertenece al plantel indicado');
       plantelId = grupo.plantelId;
     }
+    let nivelId = dto.nivelId ?? null;
+    if (dto.grupoId) {
+      const grupo = await this.grupos.findOne({ where: { id: dto.grupoId } });
+      if (nivelId && grupo?.nivelId !== nivelId) throw new BadRequestException('El nivel no coincide con el grupo');
+      nivelId = grupo?.nivelId ?? nivelId;
+    }
+    if (nivelId) {
+      const nivel = await this.eventos.manager.getRepository(NivelAcademico).findOneBy({ id: nivelId, activo: true });
+      if (!nivel || nivel.plantelId !== plantelId) throw new BadRequestException('El nivel no pertenece al plantel');
+    }
+    if (dto.cicloId) {
+      const ciclo = await this.eventos.manager.getRepository(CicloEscolar).findOneBy({ id: dto.cicloId });
+      if (!ciclo) throw new BadRequestException('Ciclo no encontrado');
+      const desde = new Date(ciclo.fechaInicio + 'T00:00:00-06:00').getTime();
+      const hasta = new Date(ciclo.fechaFin + 'T23:59:59-06:00').getTime();
+      if (inicio < desde || fin > hasta) throw new BadRequestException('El evento debe quedar dentro del ciclo');
+    }
+    if (maestroPuro && dto.audiencia && dto.audiencia !== 'ACADEMICA') throw new ForbiddenException('El maestro solo publica información académica');
     return {
+      cicloId: dto.cicloId ?? null, nivelId, audiencia: dto.audiencia ?? 'ACADEMICA',
       titulo: dto.titulo,
       descripcion: dto.descripcion ?? null,
       tipo: dto.tipo ?? 'GENERAL',
@@ -146,12 +181,12 @@ export class CalendarioService {
   }
 
   private revision(e: EventoCalendario) {
-    return createHash('sha256').update(JSON.stringify([e.id, e.titulo, e.descripcion, e.tipo, e.fechaInicio, e.fechaFin, e.plantelId, e.grupoId, e.creadoPorId])).digest('hex');
+    return createHash('sha256').update(JSON.stringify([e.id, e.titulo, e.descripcion, e.tipo, e.fechaInicio, e.fechaFin, e.plantelId, e.grupoId, e.creadoPorId, e.cicloId, e.nivelId, e.audiencia, e.imagenNombre])).digest('hex');
   }
 
   private async autorizarOrigen(evento: EventoCalendario, user: JwtUser) {
     if (user.roles.includes('SUPERADMIN')) return;
-    if (esMaestroRestringido(user)) {
+    if ((esMaestroRestringido(user) && !user.roles.includes('FINANZAS'))) {
       if (evento.creadoPorId !== user.sub || !evento.grupoId) throw new ForbiddenException('Solo puedes modificar eventos propios de tus grupos actuales');
       const docente = await this.docentes.findOne({ where: { usuarioId: user.sub } });
       const gm = docente ? await this.grupoMaterias.findOne({ where: { grupoId: evento.grupoId, docenteId: docente.id } }) : null;
@@ -163,7 +198,7 @@ export class CalendarioService {
   }
 
   async editar(id: number, dto: EditarEventoDto, user: JwtUser) {
-    if (!['titulo', 'descripcion', 'tipo', 'fechaInicio', 'fechaFin', 'plantelId', 'grupoId'].some((campo) => dto[campo as keyof EditarEventoDto] !== undefined)) throw new BadRequestException('No se indicaron cambios');
+    if (!['titulo', 'descripcion', 'tipo', 'fechaInicio', 'fechaFin', 'plantelId', 'grupoId', 'nivelId', 'cicloId', 'audiencia'].some((campo) => dto[campo as keyof EditarEventoDto] !== undefined)) throw new BadRequestException('No se indicaron cambios');
     if (dto.titulo !== undefined) { if (typeof dto.titulo !== 'string' || !dto.titulo.trim()) throw new BadRequestException('El título es obligatorio'); dto = { ...dto, titulo: dto.titulo.trim() }; }
     return this.eventos.manager.transaction(async (manager) => {
       const repo = manager.getRepository(EventoCalendario);
@@ -171,7 +206,7 @@ export class CalendarioService {
       if (!evento) throw new NotFoundException('Evento no encontrado');
       await this.autorizarOrigen(evento, user);
       if (dto.revision !== this.revision(evento)) throw new ConflictException('El evento cambió; recarga antes de editar');
-      const destino = await this.preparar({ titulo: dto.titulo ?? evento.titulo, descripcion: dto.descripcion === undefined ? evento.descripcion ?? undefined : dto.descripcion, tipo: dto.tipo ?? evento.tipo, fechaInicio: dto.fechaInicio ?? evento.fechaInicio.toISOString(), fechaFin: dto.fechaFin === undefined ? evento.fechaFin?.toISOString() : dto.fechaFin, plantelId: dto.plantelId === undefined ? evento.plantelId ?? undefined : dto.plantelId, grupoId: dto.grupoId === undefined ? evento.grupoId ?? undefined : dto.grupoId }, user);
+      const destino = await this.preparar({ cicloId: dto.cicloId ?? evento.cicloId ?? undefined, nivelId: dto.nivelId ?? evento.nivelId ?? undefined, audiencia: dto.audiencia ?? evento.audiencia, titulo: dto.titulo ?? evento.titulo, descripcion: dto.descripcion === undefined ? evento.descripcion ?? undefined : dto.descripcion, tipo: dto.tipo ?? evento.tipo, fechaInicio: dto.fechaInicio ?? evento.fechaInicio.toISOString(), fechaFin: dto.fechaFin === undefined ? evento.fechaFin?.toISOString() : dto.fechaFin, plantelId: dto.plantelId === undefined ? evento.plantelId ?? undefined : dto.plantelId, grupoId: dto.grupoId === undefined ? evento.grupoId ?? undefined : dto.grupoId }, user);
       Object.assign(evento, destino, { creadoPorId: evento.creadoPorId });
       const actualizado = await repo.save(evento);
       return { ...actualizado, revision: this.revision(actualizado) };
@@ -182,7 +217,47 @@ export class CalendarioService {
     const evento = await this.eventos.findOne({ where: { id } });
     if (!evento) throw new NotFoundException('Evento no encontrado');
     await this.autorizarOrigen(evento, user);
-    await this.eventos.delete(id);
+    await this.eventos.manager.transaction(async manager => {
+      await manager.getRepository(EventoCalendario).delete(id);
+      if (evento.imagenNombre) await programarLimpieza(manager, '/uploads/' + evento.imagenNombre);
+    });
     return { ok: true };
   }
+  async opciones(user: JwtUser) {
+    let planteles: number[] | null;
+    let niveles: number[] | null = null;
+    if (user.roles.includes('ALUMNO')) {
+      const alumno = await this.alumnos.findOne({ where: { usuarioId: user.sub } });
+      if (!alumno) throw new ForbiddenException();
+      planteles = [alumno.plantelId];
+      const inscripciones = await this.inscripciones.find({ where: { ...inscripcionVigente, alumnoId: alumno.id } });
+      niveles = inscripciones.map(i => i.grupo.nivelId).filter((n): n is number => !!n);
+    } else if ((esMaestroRestringido(user) && !user.roles.includes('FINANZAS'))) {
+      const docente = await this.docentes.findOne({ where: { usuarioId: user.sub } });
+      const clases = docente ? await this.grupoMaterias.find({ where: { docenteId: docente.id } }) : [];
+      const grupos = clases.filter(c => grupoVigente(c.grupo));
+      planteles = grupos.map(c => c.grupo.plantelId);
+      niveles = grupos.map(c => c.grupo.nivelId).filter((n): n is number => !!n);
+    } else planteles = await this.scope.resolverFiltro(user);
+    const nivelesVisibles = niveles?.length === 0 || planteles?.length === 0 ? [] : await this.eventos.manager.getRepository(NivelAcademico).find({
+      where: { activo: true, ...(planteles ? { plantelId: In(planteles) } : {}), ...(niveles ? { id: In(niveles) } : {}) }, order: { nombre: 'ASC' },
+    });
+    return { ciclos: await this.eventos.manager.getRepository(CicloEscolar).find({ order: { fechaInicio: 'DESC' } }), niveles: nivelesVisibles };
+  }
+  async crearImagen(dto: EventoDto, file: Express.Multer.File, user: JwtUser) {
+    try {
+      if (!dto.cicloId || !dto.nivelId) throw new BadRequestException('Selecciona ciclo y nivel académico');
+      await validarContenidoArchivo(file);
+      return await this.eventos.save(this.eventos.create({ ...await this.preparar(dto, user), imagenNombre: file.filename }));
+    } catch (e) { await fs.unlink(file.path).catch(() => undefined); throw e; }
+  }
+  async imagen(id: number, user: JwtUser) {
+    const evento = await this.eventos.findOneBy({ id });
+    if (!evento) throw new NotFoundException();
+    const qb = await this.consulta(user, evento.fechaInicio.toISOString(), evento.fechaInicio.toISOString());
+    if (!await qb.andWhere('e.id = :id', { id }).getOne()) throw new ForbiddenException();
+    if (!evento.imagenNombre || !/^calendario-[0-9a-f-]+\.(png|jpg|jpeg|webp)$/.test(evento.imagenNombre)) throw new NotFoundException();
+    return { archivo: await fs.readFile(join(uploadsPath(), evento.imagenNombre)), tipo: evento.imagenNombre.endsWith('.png') ? 'image/png' : evento.imagenNombre.endsWith('.webp') ? 'image/webp' : 'image/jpeg' };
+  }
+
 }

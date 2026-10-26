@@ -246,6 +246,10 @@ CREATE TABLE calificaciones (
 );
 
 CREATE TABLE eventos_calendario (
+  ciclo_id INT NULL,
+  nivel_id INT NULL,
+  audiencia NVARCHAR(20) NOT NULL DEFAULT 'ACADEMICA',
+  imagen_nombre NVARCHAR(100) NULL,
   id INT IDENTITY(1,1) PRIMARY KEY,
   titulo NVARCHAR(150) NOT NULL,
   descripcion NVARCHAR(400) NULL,
@@ -257,8 +261,10 @@ CREATE TABLE eventos_calendario (
   creado_por_id INT NULL,
   CONSTRAINT fk_ev_grupo FOREIGN KEY (grupo_id) REFERENCES grupos(id) ON DELETE SET NULL,
   CONSTRAINT fk_ev_plantel FOREIGN KEY (plantel_id) REFERENCES planteles(id) ON DELETE SET NULL,
-  CONSTRAINT fk_evento_creador FOREIGN KEY (creado_por_id) REFERENCES usuarios(id) ON DELETE SET NULL
+  CONSTRAINT fk_evento_creador FOREIGN KEY (creado_por_id) REFERENCES usuarios(id) ON DELETE SET NULL,
+  CONSTRAINT fk_evento_ciclo FOREIGN KEY (ciclo_id) REFERENCES ciclos_escolares(id)
 );
+CREATE INDEX idx_evento_ciclo_nivel ON eventos_calendario(ciclo_id,nivel_id);
 
 CREATE TABLE notificaciones (
     push_pendiente BIT NOT NULL DEFAULT 0,
@@ -895,3 +901,6 @@ CREATE TABLE aceptaciones_institucionales (
   CONSTRAINT uq_aceptacion_documento_version UNIQUE (usuario_id, documento, version_documento),
   CONSTRAINT fk_aceptacion_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
+
+-- El catálogo de niveles se define después del calendario en este esquema documental.
+ALTER TABLE eventos_calendario ADD CONSTRAINT fk_evento_nivel FOREIGN KEY (nivel_id) REFERENCES niveles_academicos(id);

@@ -1,3 +1,4 @@
+import { CalendarioCiclo } from '../components/CalendarioCiclo';
 import { useModuloTrabajo } from '../components/ModuloTrabajo';
 import { Paginador } from '../components/Paginador';
 import { useConfirmacion } from '../components/useConfirmacion';
@@ -30,7 +31,7 @@ export default function CalendarioPage() {
   const confirmacion = useConfirmacion();
   const { sesion } = useAuth();
   const esSuperadmin = sesion?.roles.includes('SUPERADMIN') ?? false;
-  const maestroPuro = sesion?.roles.includes('MAESTRO') && !sesion.roles.includes('ADMINISTRATIVO') && !esSuperadmin;
+  const maestroPuro = sesion?.roles.includes('MAESTRO') && !sesion.roles.includes('ADMINISTRATIVO') && !sesion.roles.includes('FINANZAS') && !esSuperadmin;
   const [guardando,setGuardando] = useState(false), mutando = useRef(false);
   const trabajo = useModuloTrabajo(guardando), legado = trabajo.modo === 'legado', consultaVisible = legado || trabajo.modo === 'consulta';
   const pagina = Math.max(1,Number(trabajo.query.get('pagina')) || 1), desdeQuery = trabajo.query.get('desde') || diaLocal(), hastaQuery = trabajo.query.get('hasta') || diaLocal(new Date(Date.now()+90*86400000)), plantelQuery=trabajo.query.get('plantel') || '', buscarQuery=trabajo.query.get('buscar') || '';
@@ -50,14 +51,14 @@ export default function CalendarioPage() {
   const eventos=resultado.datos,total=resultado.total;
   const { datos: planteles } = useDatos<Plantel[]>(() => api.get('/planteles/mios').then((r) => r.data), []);
   const { datos: clases, recargar: cargarClases } = useDatos<GrupoMateria[]>(
-    () => consultaVisible && !legado ? Promise.resolve([]) : api.get(maestroPuro ? '/academico/mis-grupos' : '/academico/grupo-materias').then((r) => r.data), [],
+    () => sesion?.roles.includes('ALUMNO') || (consultaVisible && !legado) ? Promise.resolve([]) : api.get(maestroPuro ? '/academico/mis-grupos' : '/academico/grupo-materias').then((r) => r.data), [],
   );
   const faseAnterior = useRef(consultaVisible);
   useEffect(()=>{if(!legado && faseAnterior.current && !consultaVisible) cargarClases();faseAnterior.current=consultaVisible;},[legado,consultaVisible,cargarClases]);
   const puedeEliminar = (evento: Evento) => {
     if (esSuperadmin) return true;
     if (maestroPuro) return evento.creadoPorId === sesion?.sub;
-    return !!sesion?.roles.includes('ADMINISTRATIVO') && evento.plantel !== null && planteles.some((plantel) => plantel.id === evento.plantel?.id);
+    return !!sesion?.roles.some(r=>['ADMINISTRATIVO','FINANZAS'].includes(r)) && evento.plantel !== null && planteles.some((plantel) => plantel.id === evento.plantel?.id);
   };
   const [form, setForm] = useState(FORM_INICIAL);
   const [editando, setEditando] = useState<Evento | null>(null);
@@ -128,11 +129,12 @@ export default function CalendarioPage() {
       {consultaVisible && <div className="fila"><div className="campo"><label htmlFor="cal-desde">Desde</label><input id="cal-desde" type="date" value={desde} onChange={(e) => setDesde(e.target.value)} /></div>
         <div className="campo"><label htmlFor="cal-hasta">Hasta</label><input id="cal-hasta" type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} /></div>
         <button disabled={cargando} onClick={filtrarEventos}>Consultar intervalo</button></div>}
+      <CalendarioCiclo/>
       <Encabezado titulo="Calendario académico" detalle="Exámenes, entregas, días festivos y avisos generales" />
       {(error || errorCarga) && <p role="alert" className="mensaje-error">{error || errorCarga}</p>}
 
       {mensaje && <p role="status">{mensaje}</p>}
-      {(legado || trabajo.modo === 'nuevo' || (trabajo.modo === 'editar' && editando?.id === trabajo.id)) && <section className="panel" aria-labelledby="cal-form-titulo">
+      {!sesion?.roles.includes('ALUMNO') && (legado || trabajo.modo === 'nuevo' || (trabajo.modo === 'editar' && editando?.id === trabajo.id)) && <section className="panel" aria-labelledby="cal-form-titulo">
         <h2 id="cal-form-titulo">{editando ? 'Editar evento' : 'Nuevo evento'}</h2>
         {editando && <p>La edición conserva el plantel y grupo. Si otra persona modifica el evento, recarga antes de volver a guardar.</p>}
         <form onSubmit={crear} className="fila" aria-busy={guardando}>

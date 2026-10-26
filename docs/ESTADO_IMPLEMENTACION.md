@@ -1,6 +1,6 @@
-# Estado de implementación — candidata 1.27.40
+# Estado de implementación — candidata 1.27.52
 
-Corte documental: 24 de octubre de 2026. Base: `main` 1.27.39 (`e4b815e`), con #180–186 integrados. Esta entrega limpia documentación y estilos sin uso, actualiza referencias y metadatos; no añade funciones ni migraciones. La propuesta de evaluación 1.28.0 sigue pendiente de aprobación: se conservan escala 0–100 y P1–P3/Final.
+Corte documental: 26 de octubre de 2026. Base: `main` 1.27.51 (`2227427`), integración #200 de nueve PR. Esta candidata añade calendario por ciclo/nivel, imágenes privadas y audiencias internas. Ver [contrato](CALENDARIO_CICLO_NIVEL_1.27.52.md) y [barrido](BARRIDO_PROYECTO_2026-10-26.md). La propuesta de evaluación 1.28.0 sigue pendiente: se conservan escala 0–100 y P1–P3/Final.
 
 ## Clasificación
 
@@ -16,7 +16,7 @@ Marca en #163: entrada web PNG/JPEG/WebP ≤20 MiB, salida/API WebP ≤10 MiB, m
 | Sesiones | Access 15 minutos, refresh rotativo de hasta 30 días, hash, revocación, cookie HttpOnly web y SecureStore móvil | Ensayo HTTPS, expiración y cambio de cuenta en entornos/dispositivos objetivo |
 | Academia | Ciclos en preparación/activo/cierre, grupos, asignaciones, inscripción y promoción transaccional | Validación institucional de cierre/promoción y datos representativos |
 | Calificaciones | P1-P3 y Final independiente; motivo/historial, cierre/reapertura, XLSX/CSV con preview cifrado y confirmación única/transaccional | Regla y formatos aceptados por control escolar; archivos institucionales |
-| Calendario | Consulta, alta, PATCH y baja; autorización de origen/destino y revision completa para conflictos; web conserva ámbito al editar | Uso real y posibles vistas/exportaciones futuras |
+| Calendario | Consulta, alta, PATCH y baja; ciclo/nivel y audiencias; vistas mensual/ciclo/imagen en web y Expo alumno; enlaces firmados privados | Migración incremental, carga institucional de imágenes, accesibilidad y UAT por nivel/plantel |
 | Documentos | Boleta propia por ciclo/inscripción y enlace de dos minutos; concentrados y adeudos Excel | Formatos oficiales y abrir/guardar PDF en Android/iOS |
 | Biblioteca | Administración privada por plantel; carpetas, PNG/JPEG/PDF, firma/MIME, ClamAV obligatorio, cuota y enlaces revocables | Scanner real, ACL, conservación y restore; no concede acceso a alumno/maestro |
 | Importaciones | ALUMNOS/DOCENTES/PERSONAL/INSCRIPCIONES, hasta 500 filas/5 MB; plantillas legibles, IDs visibles, preview cifrado por actor de 15 minutos; alumnos nuevos válidos se confirman en transacción, existentes se omiten e inválidos se exportan para corrección | Ensayo institucional de entrega y activación por correo; cuentas nuevas permanecen pendientes sin SMTP operativo |
@@ -48,4 +48,4 @@ Marca en #163: entrada web PNG/JPEG/WebP ≤20 MiB, salida/API WebP ≤10 MiB, m
 | Accesibilidad y app física (#141) | [Matriz UAT](UAT_MATRIZ_2026-10-15.json), Android/iOS, lectores de pantalla, red y sesiones. |
 | Operación y datos | [Puertas beta](BETA_ACEPTACION.json): SMTP, antivirus real, restore y UAT. ETL requiere esquema sanitizado, TLS y conciliación. |
 
-Las ocho puertas institucionales y los 24 escenarios UAT permanecen pendientes. El consentimiento institucional y la política de inscripción ordinaria conservan su habilitación explícita; esta limpieza no los activa. El informe histórico de staging 1.27.17 no acredita la versión actual del host; comprobar health y release activa. No se obtuvo evidencia nueva del servidor. La app instalada requiere compilación/actualización para ejecutar cambios nuevos.
+Las puertas institucionales y los escenarios UAT conservan sus estados registrados en las matrices. El consentimiento institucional y la política de inscripción ordinaria conservan su habilitación explícita; esta entrega no los activa. El informe histórico de staging 1.27.17 no acredita la versión actual del host; comprobar health y release activa. No se obtuvo evidencia nueva del servidor. La app instalada requiere compilación/actualización para ejecutar cambios nuevos.

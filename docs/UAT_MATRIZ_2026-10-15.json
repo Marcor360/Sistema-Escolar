@@ -1,5 +1,5 @@
 {
-  "version": "1.27.51",
+  "version": "1.27.52",
   "alcance": "Escenarios de aceptación institucional sin resultados fabricados",
   "escenarios": [
     {
@@ -408,6 +408,22 @@
       ],
       "estado": "pendiente",
       "responsable": "SUPERADMIN y QA visual",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-31",
+      "rol": "ALUMNO",
+      "escenario": "Calendario por ciclo y nivel: imagen privada, vistas mes/ciclo, secundaria sin bachillerato ni cortes internos; personal por plantel y SUPERADMIN global; comprobar web y Expo alumno",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver",
+        "android",
+        "ios"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable institucional por designar",
       "evidencias": []
     }
   ]
