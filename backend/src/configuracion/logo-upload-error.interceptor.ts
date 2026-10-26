@@ -4,11 +4,17 @@ import { catchError, Observable, throwError } from 'rxjs';
 /** Traduce el rechazo de Multer sin cambiar los límites de otros archivos. */
 @Injectable()
 export class LogoUploadErrorInterceptor implements NestInterceptor {
+  protected readonly limiteMiB: number = 10;
   intercept(_context: ExecutionContext, next: CallHandler): Observable<unknown> {
     return next.handle().pipe(catchError((error: unknown) => throwError(() =>
       error instanceof PayloadTooLargeException
-        ? new PayloadTooLargeException('El logotipo supera los 10 MB permitidos. Selecciona una imagen más ligera.')
+        ? new PayloadTooLargeException(`El logotipo supera los ${this.limiteMiB} MB permitidos. Selecciona una imagen más ligera.`)
         : error,
     )));
   }
+}
+
+@Injectable()
+export class LogoPdfUploadErrorInterceptor extends LogoUploadErrorInterceptor {
+  protected readonly limiteMiB = 3;
 }

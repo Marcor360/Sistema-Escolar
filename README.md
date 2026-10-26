@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.27.42`** · Alta no destructiva de 37 conceptos institucionales de Finanzas sobre `main` 1.27.41. La integración en Git no acredita despliegue ni aceptación institucional; la app Expo instalada requiere actualización propia.
+**Versión candidata: `1.27.51`** · Logo institucional PNG para fichas PDF sobre programaciones 1.27.50. La integración en Git no acredita despliegue ni aceptación institucional; la app Expo instalada requiere actualización propia.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -19,6 +19,14 @@ Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [ín
 
 ### Cambios consolidados recientes
 
+- **1.27.51 (PR apilado):** PNG de logo generado desde el navegador al actualizar WebP, subida protegida para SUPERADMIN y uso en fichas PDF con fallback seguro; logos anteriores requieren nueva carga. Sin nuevas dependencias ni migraciones.
+
+- **1.27.50 (PR apilado):** autorización y persistencia de un plan de cobro por alumno/periodo, emisión manual idempotente por cuota y vínculo a fichas BBVA existentes; inscripción regular activa obligatoria. [Alcance y UAT](docs/PROGRAMACIONES_COBRO_PERSISTIDAS_1.27.50.md).
+
+- **1.27.44 (PR):** configuración BBVA restringida a SUPERADMIN, ficha PDF por cargo, identificador estable y registro manual de depósitos por FINANZAS; Expo muestra solo adeudos. [Contrato y límites](docs/FICHAS_DEPOSITO_BBVA_1.27.44.md).
+
+- **1.27.43 (incluida en este PR):** previsualización de calendario financiero por nivel/modalidad, ajuste de semestres y cuotas de conceptos adicionales; sin generación de cargos. Prueba de permisos SUPERADMIN para configuración. [Contrato de programación](docs/PROGRAMACION_PAGOS_DISENO_1.27.43.md).
+
 - **1.27.42 (PR):** incorporación de 37 conceptos financieros 001–037 en MySQL y SQL Server (migración de datos idempotente), con montos base 0 sin tarifas inventadas y sin modificar conceptos previos; pruebas de paridad y aviso web. Sin cargos automáticos ni cambios de app alumno. [Contrato del catálogo](docs/CATALOGO_CONCEPTOS_FINANZAS_2026-10-25.md).
 
 - **1.27.41 (PR):** selección Microsoft 365 o GoDaddy por fila al importar docentes y personal. Los valores no reconocidos no se redirigen a SMTP; se refuerzan pruebas y ejemplo de staging. Sin migraciones ni cambios de pantallas móviles.
@@ -29,6 +37,31 @@ Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [ín
 - **1.27.33–1.27.35:** remitente GoDaddy/Microsoft 365 por usuario, importación parcial de alumnos con proveedor obligatorio y Excel de correcciones, perfil propio editable web/Expo. [Correo dual](docs/CORREO_DUAL_GRAPH_GODADDY.md), [importación y perfil](docs/IMPORTACION_PARCIAL_Y_PERFIL_1.27.35.md).
 
 El [historial de versiones anteriores](docs/HISTORIAL_VERSIONES.md) conserva los detalles sin mezclar planes de entregas previas con el estado actual.
+
+
+- **1.27.49 (PR):** mejoras de privacidad y UX Expo alumno: desbloqueo biométrico opcional, boleta PDF superior, aislamiento de caché y limpieza de avisos al salir.
+
+- **1.27.45 (PR):** mensajes de activación y recuperación usan colores y nombre de la marca vigente en la entrega; se eliminan los tonos verdes fijos del encabezado.
+
+El [historial de versiones anteriores](docs/HISTORIAL_VERSIONES.md) conserva los detalles sin mezclar planes de entregas previas con el estado actual.
+
+
+- **1.27.48 (PR):** presupuesto Lighthouse CI de laboratorio para `/login` móvil (LCP, CLS y TBT como gates iniciales; performance/FCP y accesibilidad informativas). Evidencias privadas en Actions. [Detalle](docs/LIGHTHOUSE_PRESUPUESTOS_1.27.48.md).
+
+
+- **1.27.47 (PR):** auditoría axe-core WCAG en pantallas web con API simulada y reporte JSON descargable por Actions; [alcance y limitaciones](docs/AUDITORIA_AXE_1.27.47.md).
+
+
+- **1.27.46 (PR):** recorrido integrado en base aislada: alta/activación, grupo, colegiatura `COL`, estado de cuenta y límites por plantel. [Escenario](docs/RECORRIDO_INSTITUCIONAL_1.27.46.md).
+
+
+- **1.27.45 (PR):** mensajes de activación y recuperación usan colores y nombre de la marca vigente en la entrega; se eliminan los tonos verdes fijos del encabezado.
+
+
+- **1.27.44 (PR):** configuración BBVA restringida a SUPERADMIN, ficha PDF por cargo, identificador estable y registro manual de depósitos por FINANZAS; Expo muestra solo adeudos. [Contrato y límites](docs/FICHAS_DEPOSITO_BBVA_1.27.44.md).
+
+
+- **1.27.43 (PR):** nueve skills Codex propias de IUA, guía de agentes, validación estructural y smoke semanal Playwright simulado. Sin cambios de negocio, migraciones ni despliegue. [Catálogo y uso](docs/AGENTES_Y_SKILLS.md).
 
 ## Arquitectura
 

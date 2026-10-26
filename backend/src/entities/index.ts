@@ -56,3 +56,5 @@ export * from './auth-correo-outbox.entity';
 export * from './materia-contexto.entity';
 
 export * from './tema.entity';
+export * from './cuenta-deposito.entity';
+export * from './programacion-cobro.entity';

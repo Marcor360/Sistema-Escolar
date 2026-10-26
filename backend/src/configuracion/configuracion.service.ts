@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { constants, promises as fs } from 'fs';
 import { randomUUID } from 'crypto';
@@ -9,6 +9,12 @@ import { Repository } from 'typeorm';
 import { programarLimpieza } from '../archivos/archivo-limpieza.service';
 import { ConfiguracionMarca } from '../entities';
 import { ActualizarMarcaDto, ActualizarOpcionesGlobalesDto, MarcaPublicaDto } from './configuracion.dto';
+
+/** Asocia una copia PNG validada con el WebP publicado, sin aceptar nombres ajenos. */
+export function nombreLogoPdf(logoUrl: string): string {
+  if (!/^\/uploads\/marca-logo-[0-9a-f-]+\.webp$/i.test(logoUrl)) throw new BadRequestException('Logo institucional inválido');
+  return logoUrl.slice('/uploads/'.length).replace(/\.webp$/i, '.png');
+}
 
 const VALORES_INICIALES = {
   id: 1,
@@ -64,6 +70,37 @@ export class ConfiguracionService {
     }
   }
 
+  async guardarLogoPdf(file: Express.Multer.File, logoUrl?: string) {
+    try {
+      const nombre = nombreLogoPdf(logoUrl ?? '');
+      await validarContenidoArchivo(file);
+      const imagen = await fs.open(file.path, 'r');
+      let cabecera: Buffer;
+      try {
+        cabecera = Buffer.alloc(33);
+        const { bytesRead } = await imagen.read(cabecera, 0, 33, 0);
+        if (bytesRead !== 33) throw new BadRequestException('El logo PNG está incompleto');
+      } finally { await imagen.close(); }
+      if (cabecera.readUInt32BE(8) !== 13 || cabecera.subarray(12, 16).toString('ascii') !== 'IHDR') {
+        throw new BadRequestException('La cabecera PNG no es válida');
+      }
+      const ancho = cabecera.readUInt32BE(16);
+      const alto = cabecera.readUInt32BE(20);
+      if (!ancho || !alto || ancho > 1024 || alto > 1024 || ancho * alto > 1024 * 1024) {
+        throw new BadRequestException('La imagen PDF excede las dimensiones permitidas');
+      }
+      const destino = join(uploadsPath(), nombre);
+      await this.repo.manager.transaction(async (manager) => {
+        const actual = await manager.getRepository(ConfiguracionMarca).findOne({ where: { id: 1 }, lock: { mode: 'pessimistic_write' } });
+        if (!actual || actual.logoUrl !== logoUrl) throw new ConflictException('El logo cambió; vuelve a cargar el archivo antes de asociar su variante PDF');
+        await fs.rename(file.path, destino);
+      });
+      return { logoPdfUrl: '/uploads/' + nombre };
+    } finally {
+      await fs.unlink(file.path).catch(() => undefined);
+    }
+  }
+
   async quitarLogo(): Promise<MarcaPublicaDto> {
     return this.modificar((marca) => { marca.logoUrl = null; });
   }
@@ -76,7 +113,12 @@ export class ConfiguracionService {
       const anterior = marca.logoUrl;
       cambio(marca);
       const guardada = await repo.save(marca);
-      if (anterior && anterior !== guardada.logoUrl) await programarLimpieza(manager, anterior);
+      if (anterior && anterior !== guardada.logoUrl) {
+        await programarLimpieza(manager, anterior);
+        if (/^\/uploads\/marca-logo-[0-9a-f-]+\.webp$/i.test(anterior)) {
+          await programarLimpieza(manager, '/uploads/' + nombreLogoPdf(anterior));
+        }
+      }
       return this.aPublica(guardada);
     });
   }

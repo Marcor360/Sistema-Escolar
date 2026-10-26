@@ -4,6 +4,7 @@ import { DataSource, In, Repository } from 'typeorm';
 import { Pago } from '../entities/pago.entity';
 import { OrdenPago } from '../entities/orden-pago.entity';
 import { Cargo } from '../entities/cargo.entity';
+import { CuentaDeposito } from '../entities/cuenta-deposito.entity';
 import { BitacoraFinanciera } from '../entities/bitacora-financiera.entity';
 import { AlumnosService } from '../alumnos/alumnos.service';
 import { CargosService } from './cargos.service';
@@ -58,7 +59,7 @@ export class PagosService {
   }
 
   /** Pago manual de ventanilla (efectivo/transferencia/tarjeta). */
-  async registrarManual(dto: RegistrarPagoDto, user: JwtUser) {
+  async registrarManual(dto: RegistrarPagoDto, user: JwtUser, opciones: { verificarFolioFicha?: boolean } = {}) {
     if (!dto.cargoId) throw new BadRequestException('Selecciona el cargo al que aplicar el pago; el piloto no admite anticipos sin cargo');
     const origen = await this.cargos.obtener(dto.cargoId);
     await this.scope.validarGestion(user, origen.plantelId);
@@ -66,6 +67,21 @@ export class PagosService {
     if (existente) return this.verificarReintento(existente, dto, user);
     try {
       return await this.dataSource.transaction(async (manager) => {
+        if (opciones.verificarFolioFicha) {
+          // Un único lock compartido por las fichas evita aplicar el mismo folio
+          // simultáneamente a cargos distintos. Se toma antes del lock de cargo.
+          const cuenta = await manager.getRepository(CuentaDeposito).findOne({
+            where: { id: 1 }, lock: { mode: 'pessimistic_write' },
+          });
+          if (!cuenta) throw new ConflictException('Configura la cuenta BBVA antes de registrar pagos por ficha');
+          const anterior = await manager.getRepository(Pago).findOne({
+            where: { referencia: dto.referencia, metodo: dto.metodo, estatus: 'CONFIRMADO' },
+          });
+          if (anterior) {
+            if (anterior.claveIdempotencia === dto.claveIdempotencia) return this.verificarReintento(anterior, dto, user);
+            throw new ConflictException('El folio ya fue utilizado en un pago; requiere conciliación');
+          }
+        }
         {
           const cargo = await manager.getRepository(Cargo).findOne({
             where: { id: dto.cargoId }, lock: { mode: 'pessimistic_write' },

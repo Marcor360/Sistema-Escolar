@@ -1,4 +1,6 @@
+import { FichasCobro } from '../features/finanzas/FichasCobro';
 import ReinscribirAlumnoPage from './ReinscribirAlumno';
+import { PlanificadorPagos } from '../features/finanzas/PlanificadorPagos';
 import { PanelIndicadoresFinanzas } from '../features/finanzas/PanelIndicadoresFinanzas';
 import { PanelSeguimientoPagos } from '../features/finanzas/PanelSeguimientoPagos';
 import { useModuloTrabajo } from '../components/ModuloTrabajo';
@@ -226,6 +228,8 @@ export default function FinanzasPage() {
     } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
   };
 
+  if (modo === 'fichas') return <FichasCobro />;
+  if (modo === 'programaciones') return <PlanificadorPagos />;
   if (modo === 'reinscribir') return <ReinscribirAlumnoPage />;
   if (modo === 'indicadores') return <PanelIndicadoresFinanzas />;
   if (modo === 'contactos') return <PanelSeguimientoPagos />;

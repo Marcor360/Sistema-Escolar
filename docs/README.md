@@ -1,11 +1,12 @@
 # Documentación de Sistema Escolar
 
-Entrada de lectura para la candidata 1.27.40. Revisión documental: 24 de octubre de 2026. Las guías vigentes describen el código consolidado; las auditorías anteriores conservan su propio corte. El README principal resume las funciones y los requisitos de desarrollo, operación y validación.
+Entrada de lectura para la candidata 1.27.43. Revisión documental: 24 de octubre de 2026. Las guías vigentes describen el código consolidado; las auditorías anteriores conservan su propio corte. El README principal resume las funciones y los requisitos de desarrollo, operación y validación.
 
 ## Leer según la tarea
 
 | Tarea | Fuente vigente |
 |---|---|
+| Skills de agentes, auditorías y recorridos | [Guía de agentes y skills](AGENTES_Y_SKILLS.md) |
 | Código, evidencias y pendientes actuales | [Estado de implementación](ESTADO_IMPLEMENTACION.md) |
 | Logos, caché de marca y diagnóstico IIS | [Contrato WebP y UAT](LOGO_WEBP_STAGING_1.27.18.md) |
 | Versionado único y correlativo por PR | [Política de versiones](VERSIONADO_PR.md) |

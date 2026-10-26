@@ -126,9 +126,9 @@ export class FormatosEscolaresService {
     doc.fontSize(12).text('BOLETA INFORMATIVA DE CALIFICACIONES FINALES',{ align:'center' });
     doc.y=Math.max(doc.y,100);doc.x=36;
     doc.moveDown().font('Escolar').fontSize(10);
-    for (const linea of [`PLANTEL: ${datos.plantel}`,`PLAN DE ESTUDIOS: ${datos.plan}`,`NOMBRE DEL ALUMNO: ${datos.alumno}`,`MATRÍCULA: ${datos.matricula}`,`PERIODO: ${datos.periodo} · CICLO: ${datos.ciclo}`,`GRUPO: ${datos.grupo} · ESCALA: ${datos.escala}`, ...(datos.disponible ? [] : ['BORRADOR — CAPTURA O CIERRE PENDIENTE'])]) doc.text(linea);
+    for (const linea of [`PLANTEL: ${datos.plantel}`,`PLAN DE ESTUDIOS: ${datos.plan}`,`NOMBRE DEL ALUMNO: ${datos.alumno}`,`MATRÍCULA: ${datos.matricula}`,`CUATRIMESTRE/PERIODO: ${datos.periodo} · CICLO ESCOLAR: ${datos.ciclo}`,`GRUPO: ${datos.grupo} · ESCALA: ${datos.escala}`, ...(datos.disponible ? [] : ['BORRADOR — CAPTURA O CIERRE PENDIENTE'])]) doc.text(linea);
     doc.moveDown();
-    const widths = [44,196,42,52,55,55,96], headers=['Clave','Asignatura','Créditos','Seriación','Ciclo','Prom. final','Observaciones'];
+    const widths = [24,43,170,48,43,62,55,95], headers=['N°','Clave','Asignatura','Créditos','Seriación','Ciclo escolar','Prom. final','Observaciones'];
     // 540 puntos disponibles en carta; la tabla no se recorta al imprimir.
     const row = (values: string[], bold = false) => {
       doc.font('Escolar').fontSize(bold?8.5:8);
@@ -139,7 +139,7 @@ export class FormatosEscolaresService {
       doc.y=y+h;doc.x=36;
     };
     row(headers,true);
-    for(const f of datos.filas) row([f.clave,f.asignatura,f.creditos.toFixed(2),f.seriacion,f.ciclo,f.promedioFinal == null?'':String(f.promedioFinal),f.observaciones]);
+    for(const [indice,f] of datos.filas.entries()) row([String(indice + 1),f.clave,f.asignatura,f.creditos.toFixed(2),f.seriacion,f.ciclo,f.promedioFinal == null?'':String(f.promedioFinal),f.observaciones]);
     doc.moveDown().font('Escolar').text(`PROMEDIO GENERAL: ${datos.promedioGeneral ?? 'Pendiente'}`);
     doc.moveDown().font('Escolar').fontSize(8).text(datos.aviso);
     doc.moveDown(3).text('____________________________________________________________',{align:'center'});

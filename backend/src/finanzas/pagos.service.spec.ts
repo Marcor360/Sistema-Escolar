@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { BitacoraFinanciera } from '../entities/bitacora-financiera.entity';
 import { Cargo } from '../entities/cargo.entity';
+import { CuentaDeposito } from '../entities/cuenta-deposito.entity';
 import { OrdenPago } from '../entities/orden-pago.entity';
 import { Pago } from '../entities/pago.entity';
 import { PagosService } from './pagos.service';
@@ -24,6 +25,7 @@ function servicioTransaccional(options: {
     create: jest.fn((datos) => datos),
     save: jest.fn(async (datos) => ({ id: 40, ...datos })),
   };
+  const cuentaRepo = { findOne: jest.fn().mockResolvedValue({ id: 1 }) };
   const cargoRepo = { findOne: jest.fn().mockResolvedValue(cargo) };
   const ordenRepo = {
     findOne: jest.fn().mockResolvedValue(orden),
@@ -32,6 +34,7 @@ function servicioTransaccional(options: {
   const bitacoraRepo = { insert: jest.fn().mockResolvedValue(undefined) };
   const manager = {
     getRepository: jest.fn((entity) => {
+      if (entity === CuentaDeposito) return cuentaRepo;
       if (entity === Cargo) return cargoRepo;
       if (entity === OrdenPago) return ordenRepo;
       if (entity === Pago) return pagosRepo;
@@ -48,7 +51,7 @@ function servicioTransaccional(options: {
   const alumnos = { obtener: jest.fn().mockResolvedValue(alumno) };
   const pagosGlobal = { findOne: jest.fn().mockResolvedValue(null) };
   const service = new PagosService(pagosGlobal as any, alumnos as any, cargos as any, { validarGestion: jest.fn().mockResolvedValue(undefined) } as any, dataSource as any);
-  return { service, cargo, orden, pagosRepo, pagosGlobal, cargoRepo, ordenRepo, bitacoraRepo, manager, cargos, alumnos, claveIdempotencia };
+  return { service, cuentaRepo, cargo, orden, pagosRepo, pagosGlobal, cargoRepo, ordenRepo, bitacoraRepo, manager, cargos, alumnos, claveIdempotencia };
 }
 
 describe('PagosService.registrarManual', () => {
@@ -161,5 +164,23 @@ describe('PagosService.registrarDePasarela', () => {
 
     expect(ctx.pagosRepo.save).not.toHaveBeenCalled();
     expect(ctx.ordenRepo.save).not.toHaveBeenCalled();
+  });
+});
+
+
+describe('folios de fichas BBVA', () => {
+  const dto = { alumnoId: 8, cargoId: 3, monto: 50, metodo: 'TRANSFERENCIA' as const,
+    referencia: 'FOLIO-SINTETICO', claveIdempotencia: '6a99e643-b51b-4ee4-8f23-603ab0e61253' };
+  it('rechaza un folio que otro cargo confirmó mientras esperaba el lock', async () => {
+    const ctx = servicioTransaccional({ pagoExistente: { cargoId: 9, claveIdempotencia: 'otra-clave' } });
+    await expect(ctx.service.registrarManual(dto, user, { verificarFolioFicha: true })).rejects.toBeInstanceOf(ConflictException);
+    expect(ctx.cuentaRepo.findOne).toHaveBeenCalledWith({ where: { id: 1 }, lock: { mode: 'pessimistic_write' } });
+    expect(ctx.pagosRepo.save).not.toHaveBeenCalled();
+  });
+  it('reconoce el mismo pago confirmado durante la espera sin volver a escribir', async () => {
+    const previo = { ...dto, id: 40, registradoPorId: 77, estatus: 'CONFIRMADO' };
+    const ctx = servicioTransaccional({ pagoExistente: previo });
+    await expect(ctx.service.registrarManual(dto, user, { verificarFolioFicha: true })).resolves.toBe(previo);
+    expect(ctx.pagosRepo.save).not.toHaveBeenCalled();
   });
 });

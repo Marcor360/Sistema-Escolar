@@ -41,7 +41,9 @@
         "migracion_marca_opciones_globales.sql",
         "migracion_proveedor_correo_usuario.sql",
         "migracion_correo_personal_usuario.sql",
-        "migracion_conceptos_finanzas_institucionales.sql"
+        "migracion_conceptos_finanzas_institucionales.sql",
+        "migracion_cuenta_deposito_bbva.sql",
+        "migracion_programaciones_cobro.sql"
       ]
     },
     "sqlserver": {
@@ -83,7 +85,9 @@
         "migracion_marca_opciones_globales.sql",
         "migracion_proveedor_correo_usuario.sql",
         "migracion_correo_personal_usuario.sql",
-        "migracion_conceptos_finanzas_institucionales.sql"
+        "migracion_conceptos_finanzas_institucionales.sql",
+        "migracion_cuenta_deposito_bbva.sql",
+        "migracion_programaciones_cobro.sql"
       ]
     }
   }

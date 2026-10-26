@@ -1,0 +1,57 @@
+name: Presupuestos Lighthouse IUA
+
+on:
+  pull_request:
+    paths:
+      - 'web/**'
+      - '.github/workflows/lighthouse-budget.yml'
+  workflow_dispatch:
+  schedule:
+    - cron: '30 11 * * 5'
+
+permissions:
+  contents: read
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Instalar dependencias bloqueadas
+        run: node ../scripts/ci-install.cjs
+      - name: Compilar portal de prueba sin API real
+        env:
+          VITE_API_URL: https://api.example.invalid/api
+        run: npm run build
+      - name: Instalar Chrome para el entorno de laboratorio
+        run: |
+          npx playwright install --with-deps chromium
+          echo "CHROME_PATH=$(node -e "process.stdout.write(require('playwright').chromium.executablePath())")" >> "$GITHUB_ENV"
+      - name: Instalar Lighthouse CI en el runner (no en el bundle)
+        run: npm install --global --no-audit --no-fund @lhci/cli@0.15.1
+      - name: Medir tres ejecuciones de login
+        run: lhci collect --config=lighthouserc.cjs
+      - name: Comprobar presupuestos de laboratorio
+        run: lhci assert --config=lighthouserc.cjs
+      - name: Exportar HTML/JSON localmente sin almacenamiento público
+        if: always()
+        run: |
+          if [ -d .lighthouseci ]; then lhci upload --config=lighthouserc.cjs; fi
+      - name: Adjuntar evidencia Lighthouse
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-iua-presupuestos
+          path: |
+            web/.qa/lighthouse/**
+            web/.lighthouseci/**
+          if-no-files-found: warn

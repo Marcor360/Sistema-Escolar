@@ -186,7 +186,7 @@ export default function DocumentosScreen() {
     try {
       const url = tipo === "boleta"
         ? (await api.get<{ url: string }>("/reportes/mi-boleta/enlace", {
-            params: { cicloId, inscripcionId: id },
+            params: { cicloId, inscripcionId: id, formato: "informativa-pdf" },
           })).data.url
         : (await api.get<{ url: string }>(`/archivos/materiales/${id}/enlace`)).data.url;
       if (actual !== solicitudArchivo.current) return;
@@ -206,7 +206,7 @@ export default function DocumentosScreen() {
     <ScrollView style={base.pantalla}
       refreshControl={<RefreshControl refreshing={cargando} onRefresh={cargar} />}>
       <GuiaPantalla titulo="Mis documentos"
-        detalle="Consulta tus boletas en PDF y los materiales que tus docentes han compartido. Las carpetas organizan documentos por ciclo y materia; no son archivos almacenados en el teléfono." />
+        detalle="Descarga boletas informativas en PDF y abre materiales de clase mediante enlaces privados. Se requiere internet; no se guardan documentos dentro de la app." />
       {sinConexion && <Text accessibilityRole="alert" style={estilos.aviso}>
         Sin conexión: muestra temporal disponible durante un máximo de cinco minutos. Para abrir o descargar archivos necesitas internet.
       </Text>}
@@ -222,7 +222,7 @@ export default function DocumentosScreen() {
           disabled={abriendo || sinConexion}
           onPress={() => { void abrirArchivo("boleta", b.inscripcionId, b.cicloId); }}>
           <Text style={base.tituloTarjeta}>📄 Boleta · {b.ciclo}</Text>
-          <Text style={base.secundario}>{b.grupo} · {b.plantel} · PDF</Text>
+          <Text style={base.secundario}>{b.grupo} · {b.plantel} · PDF informativo para descarga</Text>
         </TouchableOpacity>
       ))}
       <Text accessibilityRole="header" style={estilos.tituloSeccion}>Materiales de mis materias</Text>
@@ -256,7 +256,7 @@ export default function DocumentosScreen() {
           )}
         </Tarjeta>
       ))}
-      <Text style={estilos.nota}>Las boletas y los archivos oficiales se generan en el servidor. Esta pantalla no crea plantillas administrativas, carpetas compartidas ni documentos nuevos.</Text>
+      <Text style={estilos.nota}>Los PDF se entregan desde el servidor al navegador o gestor de archivos del teléfono; su destino depende del sistema operativo. No se almacenan en la caché de la app. La boleta informativa exige calificaciones P1–P3 completas y cerradas.</Text>
       <View style={{ height: espacio.xl }} />
     </ScrollView>
   );
