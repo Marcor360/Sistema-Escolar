@@ -292,8 +292,7 @@ CREATE TABLE eventos_calendario (
   CONSTRAINT fk_ev_grupo FOREIGN KEY (grupo_id) REFERENCES grupos(id) ON DELETE SET NULL,
   CONSTRAINT fk_ev_plantel FOREIGN KEY (plantel_id) REFERENCES planteles(id) ON DELETE SET NULL,
   CONSTRAINT fk_evento_creador FOREIGN KEY (creado_por_id) REFERENCES usuarios(id) ON DELETE SET NULL,
-  CONSTRAINT fk_evento_ciclo FOREIGN KEY (ciclo_id) REFERENCES ciclos_escolares(id),
-  CONSTRAINT fk_evento_nivel FOREIGN KEY (nivel_id) REFERENCES niveles_academicos(id)
+  CONSTRAINT fk_evento_ciclo FOREIGN KEY (ciclo_id) REFERENCES ciclos_escolares(id)
 ) ENGINE=InnoDB;
 CREATE INDEX idx_evento_ciclo_nivel ON eventos_calendario(ciclo_id,nivel_id);
 
@@ -881,3 +880,6 @@ CREATE TABLE aceptaciones_institucionales (
   CONSTRAINT uq_aceptacion_documento_version UNIQUE (usuario_id, documento, version_documento),
   CONSTRAINT fk_aceptacion_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
+
+-- El catálogo de niveles se define después del calendario en este esquema documental.
+ALTER TABLE eventos_calendario ADD CONSTRAINT fk_evento_nivel FOREIGN KEY (nivel_id) REFERENCES niveles_academicos(id);
