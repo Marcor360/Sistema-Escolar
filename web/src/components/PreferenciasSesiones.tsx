@@ -10,6 +10,7 @@ interface Preferencia {
 interface Sesion {
   id: string;
   portal: string;
+  dispositivo?:string;
   actual: boolean;
   ultimaActividadEn: string;
   expiraEn: string;
@@ -88,10 +89,10 @@ export function PreferenciasSesiones() {
         Guardar preferencias
       </button>
       <h3>Sesiones abiertas</h3>
-      <p>Se muestran el portal y la última actividad registrada; no se identifica el modelo del dispositivo.</p>
+      <p>La etiqueta de navegador/sistema es orientativa. No prueba quién usa el dispositivo; las sesiones anteriores pueden figurar sin identificar.</p>
       {sesiones.map((s) => (
         <p key={s.id}>
-          {s.portal} · {s.ultimaActividadEn ? new Date(s.ultimaActividadEn).toLocaleString('es-MX') : 'Sin actividad'}{' '}
+          {s.dispositivo??'Dispositivo no identificado'} · {s.portal} · {s.ultimaActividadEn ? new Date(s.ultimaActividadEn).toLocaleString('es-MX') : 'Sin actividad'}{' '}
           {s.actual ? (
             ' · Esta sesión'
           ) : (

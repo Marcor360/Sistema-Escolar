@@ -1,5 +1,5 @@
 {
-  "version": "1.27.53",
+  "version": "1.27.54",
   "alcance": "Escenarios de aceptación institucional sin resultados fabricados",
   "escenarios": [
     {
@@ -494,6 +494,75 @@
         "windows",
         "mysql",
         "sqlserver"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable institucional por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-37",
+      "rol": "FINANZAS",
+      "escenario": "Recorrido profundo de cargos, programación, fichas, pagos, conciliación e indicadores; no anuncia operaciones académicas ajenas",
+      "canales": [
+        "web",
+        "api",
+        "ux"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable institucional por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-38",
+      "rol": "MAESTRO",
+      "escenario": "Guía de clases, temarios, actividades, asistencias y notas, sin ampliar alcance al combinar MAESTRO y FINANZAS",
+      "canales": [
+        "web",
+        "api",
+        "ux"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable institucional por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-39",
+      "rol": "ADMINISTRATIVO",
+      "escenario": "Guía de control escolar y correcciones con vista previa; rechaza confirmaciones obsoletas o alteradas y expedientes de otro plantel",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable institucional por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-40",
+      "rol": "SUPERADMIN",
+      "escenario": "Comparativas separadas por plantel, carrera y mes: ingresos frente a inscritos, sumas de pagos sin duplicación y cobros sin carrera separados; tablas accesibles y barras/líneas",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver",
+        "ux"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable institucional por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-41",
+      "rol": "ALUMNO",
+      "escenario": "Recorrido Expo por pantallas reales, pausa/continuación, omitir y repetir desde Perfil, preferencia por cuenta, avisos y datos exclusivamente propios",
+      "canales": [
+        "android",
+        "ios",
+        "api",
+        "ux"
       ],
       "estado": "pendiente",
       "responsable": "Responsable institucional por designar",

@@ -1,3 +1,4 @@
+import { RecorridoAlumno } from './src/components/RecorridoAlumno';
 import {
   configurarCacheAcademica,
   limpiarCacheAcademica,
@@ -575,6 +576,7 @@ function AppInterna() {
             <LoginScreen aviso={avisoCierre} />
           )}
         </NavigationContainer>
+        {sesion&&<RecorridoAlumno key={sesion.sub} usuarioId={sesion.sub} navegar={pantalla=>{if(navegacion.isReady())navegacion.navigate(pantalla);}}/>}
         </View>
       </SesionContext.Provider>
     </MarcaContext.Provider>

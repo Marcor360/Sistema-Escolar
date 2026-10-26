@@ -1,5 +1,5 @@
 import { esMaestroRestringido, puedeConsultarAcademico, puedeAdministrarFinanzas } from '../common/politica-acceso';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { ScopeService } from '../planteles/scope.service';
 import { JwtUser } from '../common/current-user.decorator';
@@ -15,8 +15,13 @@ export class AnaliticaService {
     const ciclo = await this.ds.getRepository(CicloEscolar).findOne({ where: query.cicloId ? { id: query.cicloId } : { activo: true } });
     if (!ciclo) throw new NotFoundException('Selecciona un ciclo existente');
     const historico = ciclo.estado === 'CERRADO';
-    const planteles = await this.scope.resolverFiltro(user, query.plantelId);
     const maestro = esMaestroRestringido(user);
+    let planteles:number[]|null;
+    if(maestro&&!puedeAdministrarFinanzas(user)){
+      const asignaciones=await this.ds.getRepository(GrupoMateria).createQueryBuilder('gm').innerJoin('gm.grupo','g').innerJoin('gm.docente','d').select('g.plantel_id','plantel').distinct(true).where('d.usuario_id=:sub AND d.estatus=:estatus AND g.ciclo_id=:ciclo',{sub:user.sub,estatus:'ACTIVO',ciclo:ciclo.id}).getRawMany<{plantel:number}>();
+      planteles=asignaciones.map(a=>Number(a.plantel));
+      if(query.plantelId){if(!planteles.includes(query.plantelId))throw new ForbiddenException('Plantel sin clases asignadas');planteles=[query.plantelId];}
+    }else planteles=await this.scope.resolverFiltro(user,query.plantelId);
     let academico: { clases: unknown[]; regla: string } | undefined;
     if (puedeConsultarAcademico(user)) {
       const qb = this.ds.getRepository(GrupoMateria).createQueryBuilder('gm').innerJoin('gm.grupo', 'g').innerJoin('gm.materia', 'm').innerJoin('g.plantel', 'p')
@@ -24,7 +29,7 @@ export class AnaliticaService {
         .where('g.ciclo_id = :ciclo', { ciclo: ciclo.id });
       if (!historico) qb.andWhere('g.activo = :activo AND m.activo = :activo AND p.activo = :activo', { activo: true });
       if (maestro) qb.innerJoin('gm.docente', 'd').andWhere('d.usuario_id = :usuario AND d.estatus = :docenteActivo', { usuario: user.sub, docenteActivo: 'ACTIVO' });
-      if (planteles !== null) qb.andWhere('g.plantel_id IN (:...planteles)', { planteles });
+      if (planteles !== null) {if(planteles.length)qb.andWhere('g.plantel_id IN (:...planteles)', { planteles });else qb.andWhere('1=0');}
       if (query.grupoId) qb.andWhere('g.id = :grupo', { grupo: query.grupoId });
       if (query.materiaId) qb.andWhere('gm.materia_id = :materia', { materia: query.materiaId });
       const clases = await qb.orderBy('gm.id', 'ASC').getRawMany<Fila>();

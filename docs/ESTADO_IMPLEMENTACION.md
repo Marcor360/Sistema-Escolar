@@ -1,6 +1,6 @@
-# Estado de implementación — candidata 1.27.53
+# Estado de implementación — candidata 1.27.54
 
-Corte documental: 26 de octubre de 2026. Base: `main` 1.27.52 tras integración #201. La candidata 1.27.53 incorpora [seguimiento, asistencias y operación](SEGUIMIENTO_ASISTENCIAS_1.27.53.md), con captura exclusiva del profesor asignado y consulta propia/por plantel/global según rol. No acredita despliegue, instalación de tareas programadas ni restauración institucional. La propuesta de evaluación 1.28.0 sigue pendiente: se conservan escala 0–100 y P1–P3/Final.
+Corte documental: 26 de octubre de 2026. Base: `main` 1.27.53 tras integración #202. La candidata 1.27.54 añade [recorridos por área y comparativas](RECORRIDOS_COMPARATIVAS_1.27.54.md), cierra diferencias de UX y completa la vista previa de correcciones y las etiquetas de sesiones. La infraestructura de seguimiento/asistencias de #202 se conserva. No acredita despliegue, UAT, instalación de tareas ni restore institucional. La escala 0–100 y P1–P3/Final no cambia.
 
 ## Clasificación
 

@@ -168,6 +168,13 @@ export function registrarOutbox(ctx: ContextoIntegracion) {
   });
 
   it('outbox: 112 solicitudes distintas sobreviven sin el antiguo tope de cien, en lotes de diez', async () => {
+    // Otros flujos dejan reintentos sintéticos que pueden vencer mientras se crea
+    // este lote en un motor lento. Drenarlos antes evita depender del reloj/orden.
+    const previos = jest.spyOn(ctx.app.get(NotificacionesService), 'enviarEmail').mockResolvedValue({ simulado: false });
+    try {
+      await repo().update({ estado: 'PENDIENTE' }, { proximoIntento: new Date(Date.now() - 1000) });
+      while (await reiniciar().procesar()) { /* Solo fixtures de la base aislada. */ }
+    } finally { previos.mockRestore(); }
     const usuarios: Usuario[] = [];
     for (let i = 0; i < 112; i++) {
       const usuario = await nuevo('lote' + i); usuarios.push(usuario);

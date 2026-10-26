@@ -1239,3 +1239,5 @@ dialog :is(.boton.secundario, button.secundario) {
   border: 1px solid var(--pizarra);
 }
 dialog :is(.boton, button):focus-visible { outline: 3px solid var(--dorado); outline-offset: 3px; }
+
+.recorrido-areas {display:grid;gap:10px;max-height:45vh;overflow:auto;padding:3px}.recorrido-areas .boton {display:grid;white-space:normal;text-align:left;gap:5px;min-width:0}.recorrido-areas span{font-size:.85rem;font-weight:400}.recorrido-comprobar{border-left:3px solid var(--acento);padding-left:12px;line-height:1.6}.recorrido-panel{max-height:85dvh;overflow:auto;overscroll-behavior:contain}.recorrido-panel:focus{outline:2px solid var(--acento);outline-offset:3px}

@@ -1,3 +1,4 @@
+import { PendientesAlumno } from '../components/PendientesAlumno';
 import { SeguimientoAlumno } from '../components/SeguimientoAlumno';
 import { CalendarioCiclo } from '../components/CalendarioCiclo';
 import { crearControlLectura } from "../api/lectura-vigente";
@@ -238,7 +239,7 @@ export default function InicioScreen() {
             </Text>
           </Tarjeta>
         ))}
-      <SeguimientoAlumno/><CalendarioCiclo />
+      <PendientesAlumno/><SeguimientoAlumno/><CalendarioCiclo />
       <View style={{ height: 24 }} />
     </ScrollView>
   );

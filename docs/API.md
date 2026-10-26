@@ -301,3 +301,10 @@ Contrato detallado y límites: [Seguimiento y asistencias](SEGUIMIENTO_ASISTENCI
 | GET /api/calendario/:id/historial | Autor/acción/alcance para personal autorizado a gestionar el evento |
 
 No se añade gestión de personal ni captura de asistencias a Expo. Migraciones incrementales espejo necesarias antes de iniciar la API nueva.
+
+
+## Recorridos y comparativas · 1.27.54
+
+- GET /api/analitica/comparativas: ciclo/plantel/desde/hasta; series y categorías agregadas por capacidades; no expone expedientes. Ver [definiciones y límites](RECORRIDOS_COMPARATIVAS_1.27.54.md).
+- POST /api/seguimiento/calidad/preview y /confirmar: alumnoId, teléfono/CURP opcionales; confirmar exige revisión vinculada a valores y expediente actual, con control de plantel y bloqueo transaccional.
+- GET /api/seguimiento/sesiones incorpora dispositivo informativo, sin agente bruto ni identificadores de hardware.

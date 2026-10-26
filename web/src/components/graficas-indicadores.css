@@ -1,0 +1,139 @@
+.indicador-grafica {
+  border: 1px solid var(--linea);
+  border-radius: 20px;
+  box-shadow: 0 8px 28px #14343b08;
+  min-width: 0;
+  padding: clamp(16px, 3vw, 28px);
+  margin-block: 22px;
+}
+.indicador-cabecera {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.indicador-cabecera h2 {
+  font-size: clamp(1.1rem, 2vw, 1.45rem);
+  margin: 4px 0 8px;
+}
+.indicador-cabecera p {
+  max-width: 78ch;
+  line-height: 1.6;
+}
+.indicador-conmutador {
+  display: flex;
+  padding: 4px;
+  background: var(--papel);
+  border: 1px solid var(--linea);
+  border-radius: 12px;
+  gap: 4px;
+}
+.indicador-conmutador button {
+  background: transparent;
+  color: var(--tinta);
+  border: 0;
+  padding: 10px 15px;
+  min-height: 44px;
+  border-radius: 8px;
+}
+.indicador-grafica .indicador-conmutador button[aria-pressed='true'] {
+  background: var(--pizarra);
+  color: var(--texto-sobre-pizarra, #fff);
+  box-shadow: 0 2px 6px #0002;
+}
+.indicador-resumen {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  flex-wrap: wrap;
+  border-block: 1px solid var(--linea);
+  padding: 16px 0;
+  margin: 18px 0;
+}
+.indicador-resumen div {
+  display: grid;
+  gap: 6px;
+}
+.indicador-resumen span {
+  font-size: 0.8rem;
+  color: var(--texto-secundario, var(--tinta));
+}
+.indicador-resumen strong {
+  font-variant-numeric: tabular-nums;
+  font-size: 1.5rem;
+  letter-spacing: -0.04em;
+}
+.indicador-resumen label {
+  margin-left: auto;
+}
+.indicador-lienzo {
+  overflow: auto;
+  max-width: 100%;
+  color: var(--tinta);
+}
+.indicador-lienzo svg {
+  display: block;
+  width: 100%;
+  max-height: 360px;
+}
+.indicador-leyenda {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+.indicador-leyenda button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--papel);
+  border: 1px solid var(--linea);
+  border-radius: 10px;
+  color: var(--tinta);
+  padding: 8px;
+  min-height: 44px;
+  max-width: 100%;
+  text-align: left;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.indicador-leyenda button span {
+  background: var(--pizarra);
+  color: var(--texto-sobre-pizarra, #fff);
+  min-width: 24px;
+  border-radius: 6px;
+  text-align: center;
+  padding: 3px;
+}
+.indicador-leyenda button[aria-pressed='true'] {
+  outline: 2px solid var(--pizarra);
+}
+.indicador-vacio {
+  padding: 28px;
+  border: 1px dashed var(--linea);
+  border-radius: 12px;
+}
+.indicador-grafica summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding-block: 12px;
+}
+.indicador-grafica :focus-visible {
+  outline: 3px solid var(--dorado);
+  outline-offset: 3px;
+}
+@media (max-width: 700px) {
+  .indicador-cabecera {
+    flex-direction: column;
+  }
+  .indicador-resumen {
+    gap: 16px;
+  }
+  .indicador-resumen label {
+    margin-left: 0;
+    width: 100%;
+  }
+  .indicador-resumen strong {
+    font-size: 1.2rem;
+  }
+}

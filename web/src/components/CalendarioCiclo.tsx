@@ -57,7 +57,9 @@ async function cargarEventosCiclo(ciclo: Ciclo, nivelId: string) {
 }
 function ImagenCalendario({ evento }: { evento: Evento }) {
   const [url, setUrl] = useState('');
+  const [cargandoImagen,setCargandoImagen]=useState(true),[errorImagen,setErrorImagen]=useState(''),[intento,setIntento]=useState(0);
   useEffect(() => {
+    setUrl('');setCargandoImagen(true);setErrorImagen('');
     let activa = true,
       objeto = '';
     api
@@ -69,21 +71,22 @@ function ImagenCalendario({ evento }: { evento: Evento }) {
           setUrl(objeto);
         }
       })
-      .catch(() => undefined);
+      .catch(()=>{if(activa)setErrorImagen('No se pudo cargar la imagen.');}).finally(()=>{if(activa)setCargandoImagen(false);});
     return () => {
       activa = false;
       if (objeto) URL.revokeObjectURL(objeto);
     };
-  }, [evento.id]);
+  }, [evento.id,evento.imagenNombre,intento]);
   return (
     <figure>
       {url ? (
         <a href={url} target="_blank" rel="noreferrer">
-          <img src={url} alt={evento.titulo} style={{ maxWidth: '100%', maxHeight: 900 }} />
+          <img onError={()=>{setUrl('');setErrorImagen('No se pudo interpretar la imagen. Vuelve a intentarlo.');}} src={url} alt={evento.titulo} style={{ maxWidth: '100%', maxHeight: 900 }} />
         </a>
       ) : (
-        <p>Imagen no disponible; vuelve a consultar.</p>
+        <p role={errorImagen?'alert':'status'}>{cargandoImagen?'Cargando imagen…':errorImagen||'Imagen no disponible.'}</p>
       )}
+      {!cargandoImagen&&!!errorImagen&&<button type="button" onClick={()=>setIntento(i=>i+1)}>Reintentar imagen</button>}
       <figcaption>{evento.titulo}</figcaption>
     </figure>
   );
@@ -114,7 +117,7 @@ export function CalendarioCiclo() {
   const [revision, setRevision] = useState(0);
   const [avisar, setAvisar] = useState(false);
   const [historial, setHistorial] = useState<
-    { id: number; usuarioId: number; accion: string; alcance: string; createdAt: string }[]
+    { id: number; usuarioId: number; autor?:string; accion: string; alcance: string; createdAt: string }[]
   >([]);
   useEffect(() => {
     let activo = true;
@@ -188,6 +191,7 @@ export function CalendarioCiclo() {
       d = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1, 12));
     }
   }
+  const describirAlcance=(valor:string)=>{try{const a=JSON.parse(valor) as {nivelId?:number;plantelId?:number;cicloId?:number;audiencia?:string;grupoId?:number};const n=opciones.niveles.find(n=>n.id===a.nivelId),c=opciones.ciclos.find(c=>c.id===a.cicloId);return [c?.nombre??'Sin ciclo específico',n?.nombre??'Todos los niveles',n?.plantel?.nombre??(a.plantelId?'Plantel '+a.plantelId:'Todos los planteles'),a.audiencia==='ACADEMICA'?'Alumnos y docentes':a.audiencia==='FINANCIERA'?'Personal · fechas financieras':'Solo personal',...(a.grupoId?['Grupo específico']:[])].join(' · ');}catch{return 'Alcance histórico no disponible';}};
   const guardar = async (e: FormEvent) => {
     e.preventDefault();
     if (ocupado || !ciclo) return;
@@ -305,7 +309,7 @@ export function CalendarioCiclo() {
             value={editando?.id ?? ''}
             onChange={(e) => {
               const evento = eventos.find((v) => v.id === Number(e.target.value));
-              setEditando(evento ?? null);
+              setEditando(evento ?? null); setHistorial([]);
               if (evento) {
                 setTitulo(evento.titulo);
                 setFecha(dia(evento.fechaInicio));
@@ -390,7 +394,7 @@ export function CalendarioCiclo() {
           <ul>
             {historial.map((h) => (
               <li key={h.id}>
-                {new Date(h.createdAt).toLocaleString('es-MX')} · {h.accion} · Usuario {h.usuarioId} · {h.alcance}
+                {new Date(h.createdAt).toLocaleString('es-MX')} · {({CREAR:'Publicado',EDITAR:'Editado',ELIMINAR:'Eliminado',CREAR_IMAGEN:'Imagen publicada',REEMPLAZAR_IMAGEN:'Imagen reemplazada',IMPORTAR_ICS:'Importado de calendario'} as Record<string,string>)[h.accion]??h.accion} · {h.autor??'Usuario '+h.usuarioId} · {describirAlcance(h.alcance)}
               </li>
             ))}
           </ul>

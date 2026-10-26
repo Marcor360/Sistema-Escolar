@@ -35,6 +35,7 @@ export default function AsistenciasPage() {
     [puede, setPuede] = useState(false),
     [historial, setHistorial] = useState<Registro[]>([]),
     [pagina, setPagina] = useState(1);
+  const [cambios,setCambios]=useState<{id:number;datos:{id:number;anterior:string|null;nuevo:string;motivo:string;usuarioId:number;createdAt:string}[]}|null>(null);
   const [error, setError] = useState(''),
     [mensaje, setMensaje] = useState(''),
     [ocupado, setOcupado] = useState(false),
@@ -267,12 +268,13 @@ export default function AsistenciasPage() {
                 <td>
                   {r.grupo} · {r.materia}
                 </td>
-                <td>{r.estado}</td>
+                <td>{r.estado}{!alumno&&<button type="button" onClick={()=>{void api.get('/asistencias/'+r.id+'/historial').then(res=>setCambios({id:r.id,datos:res.data})).catch(e=>setError(mensajeDeError(e)));}}>Ver cambios de {r.matricula}</button>}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      {cambios&&!alumno&&<section aria-label="Historial de correcciones de asistencia"><h3>Cambios del registro #{cambios.id}</h3><ul>{cambios.datos.map(c=><li key={c.id}>{new Date(c.createdAt).toLocaleString('es-MX')} · Usuario {c.usuarioId} · {c.anterior??'Sin registro'} → {c.nuevo}: {c.motivo}</li>)}</ul></section>}
       {!historial.length && <p>No hay registros en este intervalo.</p>}
       <button disabled={pagina === 1} onClick={() => setPagina((p) => p - 1)}>
         Anterior

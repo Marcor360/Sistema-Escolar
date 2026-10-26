@@ -6,6 +6,8 @@ import {
   Alumno,
   CarreraPlan,
   PeriodoAcademico,
+  ProgramacionCobro,
+  Cargo,
   CicloEscolar,
   ConceptoPago,
   Docente,
@@ -226,6 +228,7 @@ export function registrarSeguimiento(ctx: ContextoIntegracion) {
         alumnoId: alumno.id,
         conceptoId: concepto.id,
         descripcion: 'Conciliación de prueba',
+        cicloId:ciclo.id,
         monto: 100,
         descuento: 0,
         recargo: 0,
@@ -256,5 +259,28 @@ export function registrarSeguimiento(ctx: ContextoIntegracion) {
     const pago = await aplicar();
     expect(pago.response.status).toBe(201);
     expect((await aplicar()).data.pagoId).toBe(pago.data.pagoId);
+
+    const consultaGrafica=`/analitica/comparativas?cicloId=${ciclo.id}&desde=${fecha}&hasta=${fecha}`;
+    const graficas=await ctx.api(consultaGrafica,{token:fin});expect(graficas.response.status).toBe(200);
+    expect(graficas.data.financiero.porPlantel.reduce((n:number,p:{valor:number})=>n+p.valor,0)).toBe(10);
+    expect(graficas.data.financiero.porCarrera.find((p:{id:string})=>p.id==='sin-asignar').valor).toBe(10);
+    expect(graficas.data.inscripciones).toBeUndefined();
+    const academicas=await ctx.api(consultaGrafica,{token:admin});expect(academicas.response.status).toBe(200);expect(academicas.data.inscripciones.porCarrera.reduce((n:number,p:{valor:number})=>n+p.valor,0)).toBe(2);
+    expect((await ctx.api(consultaGrafica,{token:propio})).response.status).toBe(403);
+    const maestroGraficas=await ctx.api(consultaGrafica,{token:maestro});expect(maestroGraficas.response.status).toBe(200);expect(maestroGraficas.data.financiero).toBeUndefined();
+    const plan=await ds.getRepository(ProgramacionCobro).save({idempotencia:randomUUID(),peticionHash:'a'.repeat(64),alumnoId:alumno.id,plantelId:ctx.plantelId,cicloId:ciclo.id,periodoAcademicoId:periodo.id,conceptoId:concepto.id,modalidad:'ADICIONAL',total:100,cuotas:[],creadoPorId:ctx.adminId});
+    await ds.getRepository(Cargo).update(cargo.id,{claveGeneracion:'PROGRAMACION:'+plan.id+':1'});
+    const vinculadas=await ctx.api(consultaGrafica,{token:fin});expect(vinculadas.data.financiero.porCarrera.find((p:{id:string})=>p.id===String(carrera.id)).valor).toBe(10);
+    const grupoExtra=await ds.getRepository(Grupo).save({plantelId:ctx.plantelId,cicloId:ciclo.id,nivelId:nivel.id,carreraId:carrera.id,periodoAcademicoId:periodo.id,nombre:'Otra inscripción '+ctx.sufijo,activo:true});
+    await ds.getRepository(Inscripcion).save({alumnoId:alumno.id,grupoId:grupoExtra.id,estatus:'ACTIVA'});
+    const distintas=await ctx.api(consultaGrafica,{token:admin});expect(distintas.data.inscripciones.porCarrera.reduce((n:number,p:{valor:number})=>n+p.valor,0)).toBe(2);
+
+    expect((await ctx.api(consultaGrafica+`&plantelId=${ctx.otroPlantelId}`,{token:fin})).response.status).toBe(403);
+    const correccion={alumnoId:alumno.id,telefono:'5512345678'};
+    const preview=await ctx.api('/seguimiento/calidad/preview',{method:'POST',token:admin,body:correccion});expect(preview.response.status).toBe(201);
+    expect((await ctx.api('/seguimiento/calidad/confirmar',{method:'POST',token:admin,body:{...correccion,telefono:'5599999999',revision:preview.data.revision}})).response.status).toBe(409);
+    expect((await ctx.api('/seguimiento/calidad/confirmar',{method:'POST',token:admin,body:{...correccion,revision:preview.data.revision}})).response.status).toBe(201);
+    expect((await ctx.api('/seguimiento/calidad/confirmar',{method:'POST',token:admin,body:{...correccion,revision:preview.data.revision}})).response.status).toBe(409);
+    expect((await ctx.api('/seguimiento/calidad/preview',{method:'POST',token:adminB,body:correccion})).response.status).toBe(403);
   });
 }
