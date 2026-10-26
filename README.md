@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.27.52`** · Calendario digital por ciclo/nivel e imagen privada, con audiencias académica, administrativa y financiera. Requiere migraciones incrementales y UAT antes de operar en IIS.
+**Versión candidata: `1.27.53`** · Asistencias por profesor y consulta propia, seguimiento de trámites y pendientes, conciliación CSV, preferencias/sesiones y gestión ampliada de calendario. Requiere migración incremental, UAT y configuración operativa antes de operar en IIS.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -18,6 +18,8 @@ Sistema escolar multiplataforma para operación académica, administrativa y fin
 Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [índice documental](docs/README.md) e [historial de documentos retirados](docs/HISTORIAL.md).
 
 ### Cambios consolidados recientes
+
+- **1.27.53:** [Seguimiento, asistencias y operación](docs/SEGUIMIENTO_ASISTENCIAS_1.27.53.md): solo el profesor asignado captura; alumnos consultan lo propio, administrativos sus planteles y SUPERADMIN global.
 
 - **1.27.52:** calendario por ciclo y nivel, vistas mensual y de ciclo completo, imágenes privadas y fechas internas para personal. Consulta de alumno en web/Expo. [Contrato](docs/CALENDARIO_CICLO_NIVEL_1.27.52.md) y [barrido del proyecto](docs/BARRIDO_PROYECTO_2026-10-26.md).
 - **1.27.51:** logotipo institucional imprimible en fichas PDF, con fallback seguro para logos anteriores.

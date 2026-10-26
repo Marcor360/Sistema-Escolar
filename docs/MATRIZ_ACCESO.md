@@ -34,7 +34,7 @@ Rutas y roles por endpoint: [API.md](API.md). La decisión final debe documentar
 
 ## Cuentas con varios roles (1.16.1)
 
-La capacidad depende de la operación. SUPERADMIN es global. ADMINISTRATIVO concede gestión académica en planteles asignados, incluso combinado con MAESTRO. MAESTRO sin ADMINISTRATIVO/SUPERADMIN sigue limitado a clases asignadas aunque también tenga FINANZAS. FINANZAS no concede consulta/captura/exportación de calificaciones, gestión de inscripciones ni conducta. Concede operación financiera por planteles; `/finanzas/alumnos` es el selector mínimo financiero independiente. La analítica suma el bloque financiero a las clases propias del maestro sin ampliar el alcance académico. Calendario GET admite ALUMNO, MAESTRO, ADMINISTRATIVO y SUPERADMIN; FINANZAS solo recibe 403.
+La capacidad depende de la operación. SUPERADMIN es global. ADMINISTRATIVO concede gestión académica en planteles asignados, incluso combinado con MAESTRO. MAESTRO sin ADMINISTRATIVO/SUPERADMIN sigue limitado a clases asignadas aunque también tenga FINANZAS. FINANZAS no concede consulta/captura/exportación de calificaciones, gestión de inscripciones ni conducta. Concede operación financiera por planteles; `/finanzas/alumnos` es el selector mínimo financiero independiente. La analítica suma el bloque financiero a las clases propias del maestro sin ampliar el alcance académico. Calendario GET admite ALUMNO, MAESTRO, ADMINISTRATIVO, FINANZAS y SUPERADMIN; las audiencias internas quedan restringidas a personal administrativo/financiero por plantel y SUPERADMIN.
 
 
 ## Biblioteca y documentos
@@ -42,3 +42,13 @@ La capacidad depende de la operación. SUPERADMIN es global. ADMINISTRATIVO conc
 Biblioteca administrativa: ADMINISTRATIVO por planteles y SUPERADMIN global; MAESTRO, FINANZAS y ALUMNO no reciben acceso por sí solos. Mis documentos en Expo no amplía estos permisos: usa boletas propias por inscripción/ciclo y materiales de clases autorizadas. Cada enlace firmado revalida recurso, sesión y alcance; un catálogo cacheado no concede permiso de descarga.
 
 Calendario PATCH conserva autorización por creador/plantel y valida destino si se solicita cambiar ámbito. No basta que la interfaz muestre el botón.
+
+## Asistencias y seguimiento · 1.27.53
+
+- **Captura de asistencias:** exige rol MAESTRO, expediente activo y asignación actual de la clase. ADMINISTRATIVO y SUPERADMIN no capturan por su rol administrativo; si además son MAESTRO, solo capturan sus clases asignadas. FINANZAS por sí solo no consulta ni captura.
+- **Consulta de asistencias:** ALUMNO ve exclusivamente registros propios, incluso al alterar alumnoId; MAESTRO ve sus clases; ADMINISTRATIVO sus planteles y SUPERADMIN global. Histórico conservado, sin sanciones ni cálculo de calificaciones.
+- **Trámites:** ALUMNO inicia y consulta los propios, cancela solo antes de atención; ADMINISTRATIVO por plantel y SUPERADMIN gestionan. FINANZAS/MAESTRO no reciben acceso por sí solos.
+- **Calidad de datos:** ADMINISTRATIVO por plantel y SUPERADMIN global. Diagnóstico limitado, sin fusiones automáticas.
+- **Movimientos bancarios:** FINANZAS por plantel y SUPERADMIN global. Vista previa y confirmación separadas; no acceden alumnos ni docentes por sí solos.
+- **Preferencias/sesiones:** cada cuenta ve y modifica únicamente las propias. Revocar requiere sesión autenticada y no expone secretos.
+- **Estado de respaldo:** exclusivo SUPERADMIN; la API no ejecuta tareas de sistema ni acepta rutas del cliente.

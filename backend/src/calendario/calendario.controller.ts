@@ -25,7 +25,22 @@ import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { Roles } from '../common/roles.decorator';
 import { RolesGuard } from '../common/roles.guard';
 import { CalendarioService } from './calendario.service';
-import { EventoDto, EditarEventoDto, ConsultarEventosDto } from './calendario.dto';
+import { EventoDto, EditarEventoDto, ConsultarEventosDto, ImportarCalendarioDto } from './calendario.dto';
+
+const ImagenInterceptor = FileInterceptor('imagen', {
+  storage: diskStorage({
+    destination: (_r, _f, cb) => cb(null, uploadsPath()),
+    filename: (_r, f, cb) => cb(null, 'calendario-' + randomUUID() + extname(f.originalname).toLowerCase()),
+  }),
+  limits: { fileSize: 10 * 1024 * 1024, files: 1 },
+  fileFilter: (_r, f, cb) =>
+    cb(
+      ['.png', '.jpg', '.jpeg', '.webp'].includes(extname(f.originalname).toLowerCase())
+        ? null
+        : new BadRequestException('Usa PNG, JPG o WebP'),
+      true,
+    ),
+});
 
 @ApiTags('calendario')
 @ApiBearerAuth()
@@ -34,6 +49,21 @@ import { EventoDto, EditarEventoDto, ConsultarEventosDto } from './calendario.dt
 export class CalendarioController {
   constructor(private readonly service: CalendarioService) {}
 
+  @Post('ics/preview')
+  @Roles('ADMINISTRATIVO', 'FINANZAS')
+  previewIcs(@Body() dto: ImportarCalendarioDto, @CurrentUser() u: JwtUser) {
+    return this.service.importarIcs(dto, u);
+  }
+  @Post('ics')
+  @Roles('ADMINISTRATIVO', 'FINANZAS')
+  importarIcs(@Body() dto: ImportarCalendarioDto, @CurrentUser() u: JwtUser) {
+    return this.service.importarIcs(dto, u, true);
+  }
+  @Get(':id/historial')
+  @Roles('ADMINISTRATIVO', 'FINANZAS', 'MAESTRO')
+  historial(@Param('id', ParseIntPipe) id: number, @CurrentUser() u: JwtUser) {
+    return this.service.historial(id, u);
+  }
   @Get('opciones')
   @Roles('ALUMNO', 'MAESTRO', 'ADMINISTRATIVO', 'FINANZAS')
   opciones(@CurrentUser() user: JwtUser) {
@@ -41,26 +71,22 @@ export class CalendarioController {
   }
   @Post('imagen')
   @Roles('ADMINISTRATIVO', 'FINANZAS')
-  @UseInterceptors(
-    CalendarioUploadInterceptor,
-    FileInterceptor('imagen', {
-      storage: diskStorage({
-        destination: (_r, _f, cb) => cb(null, uploadsPath()),
-        filename: (_r, f, cb) => cb(null, 'calendario-' + randomUUID() + extname(f.originalname).toLowerCase()),
-      }),
-      limits: { fileSize: 10 * 1024 * 1024, files: 1 },
-      fileFilter: (_r, f, cb) =>
-        cb(
-          ['.png', '.jpg', '.jpeg', '.webp'].includes(extname(f.originalname).toLowerCase())
-            ? null
-            : new BadRequestException('Usa PNG, JPG o WebP'),
-          true,
-        ),
-    }),
-  )
+  @UseInterceptors(CalendarioUploadInterceptor, ImagenInterceptor)
   imagenNueva(@Body() dto: EventoDto, @UploadedFile() file: Express.Multer.File, @CurrentUser() user: JwtUser) {
     if (!file) throw new BadRequestException('Selecciona una imagen');
     return this.service.crearImagen(dto, file, user);
+  }
+  @Post(':id/imagen')
+  @Roles('ADMINISTRATIVO', 'FINANZAS')
+  @UseInterceptors(CalendarioUploadInterceptor, ImagenInterceptor)
+  reemplazar(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: EditarEventoDto,
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user: JwtUser,
+  ) {
+    if (!file) throw new BadRequestException('Selecciona una imagen');
+    return this.service.reemplazarImagen(id, dto, file, user);
   }
   @Get('listado')
   @Roles('ALUMNO', 'MAESTRO', 'ADMINISTRATIVO', 'FINANZAS')

@@ -1,3 +1,4 @@
+import { Plantel } from '../entities/plantel.entity';
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { BitacoraFinanciera } from '../entities/bitacora-financiera.entity';
 import { Cargo } from '../entities/cargo.entity';
@@ -9,16 +10,23 @@ import { PagosService } from './pagos.service';
 const user = { sub: 77, roles: ['FINANZAS'] } as any;
 const alumno = { id: 8, plantelId: 2 } as any;
 
-function servicioTransaccional(options: {
-  cargo?: any;
-  orden?: any;
-  pagoExistente?: any;
-  saldo?: number;
-} = {}) {
+function servicioTransaccional(
+  options: {
+    cargo?: any;
+    orden?: any;
+    pagoExistente?: any;
+    saldo?: number;
+  } = {},
+) {
   const claveIdempotencia = '6a99e643-b51b-4ee4-8f23-603ab0e61253';
   const cargo = options.cargo ?? { id: 3, plantelId: 2, alumnoId: 8, estatus: 'PENDIENTE' };
   const orden = options.orden ?? {
-    id: 12, alumnoId: 8, cargoId: 3, monto: 125, estatus: 'PENDIENTE', alumno,
+    id: 12,
+    alumnoId: 8,
+    cargoId: 3,
+    monto: 125,
+    estatus: 'PENDIENTE',
+    alumno,
   };
   const pagosRepo = {
     findOne: jest.fn().mockResolvedValue(options.pagoExistente ?? null),
@@ -34,6 +42,7 @@ function servicioTransaccional(options: {
   const bitacoraRepo = { insert: jest.fn().mockResolvedValue(undefined) };
   const manager = {
     getRepository: jest.fn((entity) => {
+      if (entity === Plantel) return { findOne: jest.fn().mockResolvedValue({ id: 2 }) };
       if (entity === CuentaDeposito) return cuentaRepo;
       if (entity === Cargo) return cargoRepo;
       if (entity === OrdenPago) return ordenRepo;
@@ -50,26 +59,55 @@ function servicioTransaccional(options: {
   };
   const alumnos = { obtener: jest.fn().mockResolvedValue(alumno) };
   const pagosGlobal = { findOne: jest.fn().mockResolvedValue(null) };
-  const service = new PagosService(pagosGlobal as any, alumnos as any, cargos as any, { validarGestion: jest.fn().mockResolvedValue(undefined) } as any, dataSource as any);
-  return { service, cuentaRepo, cargo, orden, pagosRepo, pagosGlobal, cargoRepo, ordenRepo, bitacoraRepo, manager, cargos, alumnos, claveIdempotencia };
+  const service = new PagosService(
+    pagosGlobal as any,
+    alumnos as any,
+    cargos as any,
+    { validarGestion: jest.fn().mockResolvedValue(undefined) } as any,
+    dataSource as any,
+  );
+  return {
+    service,
+    cuentaRepo,
+    cargo,
+    orden,
+    pagosRepo,
+    pagosGlobal,
+    cargoRepo,
+    ordenRepo,
+    bitacoraRepo,
+    manager,
+    cargos,
+    alumnos,
+    claveIdempotencia,
+  };
 }
 
 describe('PagosService.registrarManual', () => {
   const pagoPrevio = {
-    id: 40, alumnoId: 8, cargoId: 3, monto: 50, metodo: 'EFECTIVO',
-    referencia: null as string | null, estatus: 'CONFIRMADO', registradoPorId: 77,
+    id: 40,
+    alumnoId: 8,
+    cargoId: 3,
+    monto: 50,
+    metodo: 'EFECTIVO',
+    referencia: null as string | null,
+    estatus: 'CONFIRMADO',
+    registradoPorId: 77,
   };
 
   it('devuelve el mismo pago ante un reintento y rechaza reutilizar la clave con otro importe', async () => {
     const ctx = servicioTransaccional();
     ctx.pagosGlobal.findOne.mockResolvedValue(pagoPrevio);
     const dto = {
-      alumnoId: 8, cargoId: 3, monto: 50, metodo: 'EFECTIVO', claveIdempotencia: ctx.claveIdempotencia,
+      alumnoId: 8,
+      cargoId: 3,
+      monto: 50,
+      metodo: 'EFECTIVO',
+      claveIdempotencia: ctx.claveIdempotencia,
     } as any;
 
     await expect(ctx.service.registrarManual(dto, user)).resolves.toBe(pagoPrevio);
-    await expect(ctx.service.registrarManual({ ...dto, monto: 60 }, user))
-      .rejects.toBeInstanceOf(ConflictException);
+    await expect(ctx.service.registrarManual({ ...dto, monto: 60 }, user)).rejects.toBeInstanceOf(ConflictException);
     expect(ctx.pagosRepo.save).not.toHaveBeenCalled();
     expect(ctx.bitacoraRepo.insert).not.toHaveBeenCalled();
   });
@@ -80,9 +118,18 @@ describe('PagosService.registrarManual', () => {
     ctx.ordenRepo.findOne.mockResolvedValue(null);
     ctx.cargos.saldoDeCargo.mockResolvedValue(0);
 
-    await expect(ctx.service.registrarManual({
-      alumnoId: 8, cargoId: 3, monto: 50, metodo: 'EFECTIVO', claveIdempotencia: ctx.claveIdempotencia,
-    } as any, user)).resolves.toBe(pagoPrevio);
+    await expect(
+      ctx.service.registrarManual(
+        {
+          alumnoId: 8,
+          cargoId: 3,
+          monto: 50,
+          metodo: 'EFECTIVO',
+          claveIdempotencia: ctx.claveIdempotencia,
+        } as any,
+        user,
+      ),
+    ).resolves.toBe(pagoPrevio);
     expect(ctx.pagosRepo.save).not.toHaveBeenCalled();
   });
 
@@ -90,14 +137,24 @@ describe('PagosService.registrarManual', () => {
     const ctx = servicioTransaccional({ saldo: 100 });
     ctx.ordenRepo.findOne.mockResolvedValue(null);
 
-    await expect(ctx.service.registrarManual({
-      alumnoId: 8, cargoId: 3, monto: 100.01, metodo: 'EFECTIVO', claveIdempotencia: ctx.claveIdempotencia,
-    } as any, user)).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      ctx.service.registrarManual(
+        {
+          alumnoId: 8,
+          cargoId: 3,
+          monto: 100.01,
+          metodo: 'EFECTIVO',
+          claveIdempotencia: ctx.claveIdempotencia,
+        } as any,
+        user,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
 
     expect(ctx.pagosRepo.save).not.toHaveBeenCalled();
     expect(ctx.bitacoraRepo.insert).not.toHaveBeenCalled();
     expect(ctx.cargoRepo.findOne).toHaveBeenCalledWith({
-      where: { id: 3 }, lock: { mode: 'pessimistic_write' },
+      where: { id: 3 },
+      lock: { mode: 'pessimistic_write' },
     });
   });
 
@@ -105,9 +162,18 @@ describe('PagosService.registrarManual', () => {
     const ctx = servicioTransaccional({ saldo: 100 });
     ctx.ordenRepo.findOne.mockResolvedValue(null);
 
-    await expect(ctx.service.registrarManual({
-      alumnoId: 8, cargoId: 3, monto: 100, metodo: 'TRANSFERENCIA', claveIdempotencia: ctx.claveIdempotencia,
-    } as any, user)).resolves.toMatchObject({ monto: 100, cargoId: 3, estatus: 'CONFIRMADO' });
+    await expect(
+      ctx.service.registrarManual(
+        {
+          alumnoId: 8,
+          cargoId: 3,
+          monto: 100,
+          metodo: 'TRANSFERENCIA',
+          claveIdempotencia: ctx.claveIdempotencia,
+        } as any,
+        user,
+      ),
+    ).resolves.toMatchObject({ monto: 100, cargoId: 3, estatus: 'CONFIRMADO' });
 
     expect(ctx.cargos.recalcularEstatus).toHaveBeenCalledWith(3, ctx.manager);
     expect(ctx.bitacoraRepo.insert).toHaveBeenCalledTimes(1);
@@ -117,9 +183,18 @@ describe('PagosService.registrarManual', () => {
     const ctx = servicioTransaccional();
     ctx.ordenRepo.findOne.mockResolvedValue({ id: 12, estatus: 'PENDIENTE' });
 
-    await expect(ctx.service.registrarManual({
-      alumnoId: 8, cargoId: 3, monto: 50, metodo: 'EFECTIVO', claveIdempotencia: ctx.claveIdempotencia,
-    } as any, user)).rejects.toBeInstanceOf(ConflictException);
+    await expect(
+      ctx.service.registrarManual(
+        {
+          alumnoId: 8,
+          cargoId: 3,
+          monto: 50,
+          metodo: 'EFECTIVO',
+          claveIdempotencia: ctx.claveIdempotencia,
+        } as any,
+        user,
+      ),
+    ).rejects.toBeInstanceOf(ConflictException);
 
     expect(ctx.pagosRepo.save).not.toHaveBeenCalled();
   });
@@ -127,7 +202,12 @@ describe('PagosService.registrarManual', () => {
 
 describe('PagosService.registrarDePasarela', () => {
   const orden = {
-    id: 12, alumnoId: 8, cargoId: 3, monto: 125, estatus: 'PENDIENTE', alumno,
+    id: 12,
+    alumnoId: 8,
+    cargoId: 3,
+    monto: 125,
+    estatus: 'PENDIENTE',
+    alumno,
   } as any;
 
   it('reutiliza el pago si Openpay reenvía el webhook', async () => {
@@ -135,7 +215,9 @@ describe('PagosService.registrarDePasarela', () => {
     const ctx = servicioTransaccional({ pagoExistente: pago });
 
     await expect(ctx.service.registrarDePasarela(orden, 125, 'ch_12')).resolves.toEqual({
-      pago, creado: false, aplicado: true,
+      pago,
+      creado: false,
+      aplicado: true,
     });
     expect(ctx.pagosRepo.save).not.toHaveBeenCalled();
     expect(ctx.cargos.recalcularEstatus).toHaveBeenCalledWith(3, ctx.manager);
@@ -147,14 +229,22 @@ describe('PagosService.registrarDePasarela', () => {
     const resultado = await ctx.service.registrarDePasarela(orden, 125, 'ch_12');
 
     expect(resultado).toMatchObject({ creado: true, aplicado: false });
-    expect(ctx.pagosRepo.save).toHaveBeenCalledWith(expect.objectContaining({
-      alumnoId: 8, cargoId: null, ordenPagoId: 12, monto: 125, estatus: 'CONFIRMADO',
-    }));
+    expect(ctx.pagosRepo.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        alumnoId: 8,
+        cargoId: null,
+        ordenPagoId: 12,
+        monto: 125,
+        estatus: 'CONFIRMADO',
+      }),
+    );
     expect(ctx.orden.estatus).toBe('COMPLETADA');
     expect(ctx.cargos.recalcularEstatus).not.toHaveBeenCalled();
-    expect(ctx.bitacoraRepo.insert).toHaveBeenCalledWith(expect.objectContaining({
-      accion: 'PAGO_PASARELA_NO_APLICADO',
-    }));
+    expect(ctx.bitacoraRepo.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accion: 'PAGO_PASARELA_NO_APLICADO',
+      }),
+    );
   });
 
   it('rechaza un importe confirmado que no coincide con la orden', async () => {
@@ -167,13 +257,20 @@ describe('PagosService.registrarDePasarela', () => {
   });
 });
 
-
 describe('folios de fichas BBVA', () => {
-  const dto = { alumnoId: 8, cargoId: 3, monto: 50, metodo: 'TRANSFERENCIA' as const,
-    referencia: 'FOLIO-SINTETICO', claveIdempotencia: '6a99e643-b51b-4ee4-8f23-603ab0e61253' };
+  const dto = {
+    alumnoId: 8,
+    cargoId: 3,
+    monto: 50,
+    metodo: 'TRANSFERENCIA' as const,
+    referencia: 'FOLIO-SINTETICO',
+    claveIdempotencia: '6a99e643-b51b-4ee4-8f23-603ab0e61253',
+  };
   it('rechaza un folio que otro cargo confirmó mientras esperaba el lock', async () => {
     const ctx = servicioTransaccional({ pagoExistente: { cargoId: 9, claveIdempotencia: 'otra-clave' } });
-    await expect(ctx.service.registrarManual(dto, user, { verificarFolioFicha: true })).rejects.toBeInstanceOf(ConflictException);
+    await expect(ctx.service.registrarManual(dto, user, { verificarFolioFicha: true })).rejects.toBeInstanceOf(
+      ConflictException,
+    );
     expect(ctx.cuentaRepo.findOne).toHaveBeenCalledWith({ where: { id: 1 }, lock: { mode: 'pessimistic_write' } });
     expect(ctx.pagosRepo.save).not.toHaveBeenCalled();
   });

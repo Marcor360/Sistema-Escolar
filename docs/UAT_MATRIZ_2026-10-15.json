@@ -1,5 +1,5 @@
 {
-  "version": "1.27.52",
+  "version": "1.27.53",
   "alcance": "Escenarios de aceptación institucional sin resultados fabricados",
   "escenarios": [
     {
@@ -421,6 +421,79 @@
         "sqlserver",
         "android",
         "ios"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable institucional por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-32",
+      "rol": "MAESTRO",
+      "escenario": "Asistencias: solo el profesor asignado captura y corrige con motivo y revisión; alumno consulta solo registros propios; ADMINISTRATIVO por plantel y SUPERADMIN global solo consultan sin rol docente asignado",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver",
+        "android",
+        "ios"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable institucional por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-33",
+      "rol": "ADMINISTRATIVO",
+      "escenario": "Trámites, calidad de datos y centro de pendientes: revisar aislamiento, asignación, transiciones y conflictos; no fusionar expedientes automáticamente",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable institucional por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-34",
+      "rol": "FINANZAS",
+      "escenario": "CSV bancario: revisar vista previa, folios repetidos, coincidencias, montos parciales, saldo, reintento sin duplicados y bloqueo entre planteles",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable institucional por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-35",
+      "rol": "ALUMNO",
+      "escenario": "Sesiones propias, revocación remota, preferencias, avisos de calendario y lectura accesible en web y Expo",
+      "canales": [
+        "web",
+        "api",
+        "android",
+        "ios",
+        "smtp",
+        "ux"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable institucional por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-36",
+      "rol": "SUPERADMIN",
+      "escenario": "Respaldos programados: configurar cuenta exclusiva y ACL, copia externa, alerta de error/antigüedad, restore en base aislada y verificación de SQL y uploads; no confundir VERIFYONLY con restore",
+      "canales": [
+        "windows",
+        "mysql",
+        "sqlserver"
       ],
       "estado": "pendiente",
       "responsable": "Responsable institucional por designar",

@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Repository } from 'typeorm';
+import { Plantel } from '../entities/plantel.entity';
 import { Pago } from '../entities/pago.entity';
 import { OrdenPago } from '../entities/orden-pago.entity';
 import { Cargo } from '../entities/cargo.entity';
@@ -27,7 +28,8 @@ export class PagosService {
     const pagina = query.pagina || 1;
     const porPagina = query.porPagina || 10;
     const planteles = await this.scope.resolverFiltro(user);
-    const qb = this.pagos.createQueryBuilder('p')
+    const qb = this.pagos
+      .createQueryBuilder('p')
       .innerJoinAndSelect('p.alumno', 'a')
       .leftJoinAndSelect('a.usuario', 'u');
     if (planteles !== null) qb.andWhere('p.plantel_id IN (:...planteles)', { planteles });
@@ -54,37 +56,64 @@ export class PagosService {
           },
         },
       })),
-      total, pagina, porPagina,
+      total,
+      pagina,
+      porPagina,
     };
   }
 
   /** Pago manual de ventanilla (efectivo/transferencia/tarjeta). */
-  async registrarManual(dto: RegistrarPagoDto, user: JwtUser, opciones: { verificarFolioFicha?: boolean } = {}) {
-    if (!dto.cargoId) throw new BadRequestException('Selecciona el cargo al que aplicar el pago; el piloto no admite anticipos sin cargo');
+  async registrarManual(
+    dto: RegistrarPagoDto,
+    user: JwtUser,
+    opciones: { verificarFolioFicha?: boolean; verificarReferenciaPlantel?: boolean; fechaPago?: Date } = {},
+  ) {
+    if (!dto.cargoId)
+      throw new BadRequestException(
+        'Selecciona el cargo al que aplicar el pago; el piloto no admite anticipos sin cargo',
+      );
     const origen = await this.cargos.obtener(dto.cargoId);
     await this.scope.validarGestion(user, origen.plantelId);
     const existente = await this.pagos.findOne({ where: { claveIdempotencia: dto.claveIdempotencia } });
     if (existente) return this.verificarReintento(existente, dto, user);
     try {
       return await this.dataSource.transaction(async (manager) => {
+        if (dto.metodo === 'TRANSFERENCIA' && dto.referencia) {
+          await manager
+            .getRepository(Plantel)
+            .findOne({ where: { id: origen.plantelId }, lock: { mode: 'pessimistic_write' } });
+          if (opciones.verificarReferenciaPlantel) {
+            const previo = await manager
+              .getRepository(Pago)
+              .findOneBy({ plantelId: origen.plantelId, referencia: dto.referencia, estatus: 'CONFIRMADO' });
+            if (previo) {
+              if (previo.claveIdempotencia === dto.claveIdempotencia) return this.verificarReintento(previo, dto, user);
+              throw new ConflictException('El folio bancario ya tiene un pago confirmado; requiere revisión');
+            }
+          }
+        }
+
         if (opciones.verificarFolioFicha) {
           // Un único lock compartido por las fichas evita aplicar el mismo folio
           // simultáneamente a cargos distintos. Se toma antes del lock de cargo.
           const cuenta = await manager.getRepository(CuentaDeposito).findOne({
-            where: { id: 1 }, lock: { mode: 'pessimistic_write' },
+            where: { id: 1 },
+            lock: { mode: 'pessimistic_write' },
           });
           if (!cuenta) throw new ConflictException('Configura la cuenta BBVA antes de registrar pagos por ficha');
           const anterior = await manager.getRepository(Pago).findOne({
             where: { referencia: dto.referencia, metodo: dto.metodo, estatus: 'CONFIRMADO' },
           });
           if (anterior) {
-            if (anterior.claveIdempotencia === dto.claveIdempotencia) return this.verificarReintento(anterior, dto, user);
+            if (anterior.claveIdempotencia === dto.claveIdempotencia)
+              return this.verificarReintento(anterior, dto, user);
             throw new ConflictException('El folio ya fue utilizado en un pago; requiere conciliación');
           }
         }
         {
           const cargo = await manager.getRepository(Cargo).findOne({
-            where: { id: dto.cargoId }, lock: { mode: 'pessimistic_write' },
+            where: { id: dto.cargoId },
+            lock: { mode: 'pessimistic_write' },
           });
           if (!cargo) throw new NotFoundException('Cargo no encontrado');
           await this.scope.validarGestion(user, cargo.plantelId);
@@ -97,7 +126,9 @@ export class PagosService {
             where: { cargoId: cargo.id, estatus: In(['CREADA', 'PENDIENTE']) },
           });
           if (ordenPendiente) {
-            throw new ConflictException('El cargo tiene una orden Openpay pendiente; espera su resultado antes de registrar otro pago');
+            throw new ConflictException(
+              'El cargo tiene una orden Openpay pendiente; espera su resultado antes de registrar otro pago',
+            );
           }
           const saldo = await this.cargos.saldoDeCargo(cargo, manager);
           if (Math.round(dto.monto * 100) > Math.round(saldo * 100)) {
@@ -108,14 +139,15 @@ export class PagosService {
         const pagos = manager.getRepository(Pago);
         const pago = await pagos.save(
           pagos.create({
-            alumnoId: dto.alumnoId, plantelId: origen.plantelId,
+            alumnoId: dto.alumnoId,
+            plantelId: origen.plantelId,
             cargoId: dto.cargoId,
             monto: dto.monto,
             metodo: dto.metodo,
             referencia: dto.referencia ?? null,
             claveIdempotencia: dto.claveIdempotencia,
             estatus: 'CONFIRMADO',
-            fechaPago: new Date(),
+            fechaPago: opciones.fechaPago ?? new Date(),
             registradoPorId: user.sub,
           }),
         );
@@ -139,33 +171,73 @@ export class PagosService {
 
   async noAplicados(user: JwtUser, pagina = 1) {
     const planteles = await this.scope.resolverFiltro(user);
-    const qb = this.pagos.createQueryBuilder('p').innerJoinAndSelect('p.alumno', 'a').leftJoinAndSelect('a.usuario', 'u')
+    const qb = this.pagos
+      .createQueryBuilder('p')
+      .innerJoinAndSelect('p.alumno', 'a')
+      .leftJoinAndSelect('a.usuario', 'u')
       .where('p.cargo_id IS NULL AND p.estatus = :estatus', { estatus: 'CONFIRMADO' });
     if (planteles !== null) qb.andWhere('p.plantel_id IN (:...planteles)', { planteles });
-    const [datos, total] = await qb.orderBy('p.fechaPago', 'DESC').addOrderBy('p.id', 'DESC').skip((pagina - 1) * 10).take(10).getManyAndCount();
-    return { datos: datos.map((p) => ({ id: p.id, monto: p.monto, referencia: p.referencia, metodo: p.metodo, fecha: p.fechaPago,
-      alumnoId: p.alumnoId, matricula: p.alumno.matricula, motivo: 'Pago confirmado sin aplicación a cargo', estatus: p.estatus })), total, pagina, porPagina: 10 };
+    const [datos, total] = await qb
+      .orderBy('p.fechaPago', 'DESC')
+      .addOrderBy('p.id', 'DESC')
+      .skip((pagina - 1) * 10)
+      .take(10)
+      .getManyAndCount();
+    return {
+      datos: datos.map((p) => ({
+        id: p.id,
+        monto: p.monto,
+        referencia: p.referencia,
+        metodo: p.metodo,
+        fecha: p.fechaPago,
+        alumnoId: p.alumnoId,
+        matricula: p.alumno.matricula,
+        motivo: 'Pago confirmado sin aplicación a cargo',
+        estatus: p.estatus,
+      })),
+      total,
+      pagina,
+      porPagina: 10,
+    };
   }
 
   async aplicarNoAplicado(id: number, cargoId: number, motivo: string, user: JwtUser) {
     if (!motivo.trim()) throw new BadRequestException('Indica el motivo de conciliación');
     return this.dataSource.transaction(async (manager) => {
-      const cargo = await manager.getRepository(Cargo).findOne({ where: { id: cargoId }, lock: { mode: 'pessimistic_write' } });
+      const cargo = await manager
+        .getRepository(Cargo)
+        .findOne({ where: { id: cargoId }, lock: { mode: 'pessimistic_write' } });
       if (!cargo) throw new NotFoundException('Cargo no encontrado');
       await this.scope.validarGestion(user, cargo.plantelId);
       const pagos = manager.getRepository(Pago);
       const pago = await pagos.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!pago) throw new NotFoundException('Pago no encontrado');
       await this.scope.validarGestion(user, pago.plantelId);
-      if (pago.plantelId !== cargo.plantelId) throw new ConflictException('El pago y cargo deben pertenecer al mismo plantel de origen');
-      if (pago.cargoId !== null || pago.estatus !== 'CONFIRMADO') throw new ConflictException('El pago no está pendiente de aplicación');
-      if (pago.alumnoId !== cargo.alumnoId || cargo.estatus === 'CANCELADO') throw new BadRequestException('Selecciona un cargo válido del mismo alumno');
-      const ordenPendiente = await manager.getRepository(OrdenPago).findOne({ where: { cargoId, estatus: In(['CREADA', 'PENDIENTE']) } });
+      if (pago.plantelId !== cargo.plantelId)
+        throw new ConflictException('El pago y cargo deben pertenecer al mismo plantel de origen');
+      if (pago.cargoId !== null || pago.estatus !== 'CONFIRMADO')
+        throw new ConflictException('El pago no está pendiente de aplicación');
+      if (pago.alumnoId !== cargo.alumnoId || cargo.estatus === 'CANCELADO')
+        throw new BadRequestException('Selecciona un cargo válido del mismo alumno');
+      const ordenPendiente = await manager
+        .getRepository(OrdenPago)
+        .findOne({ where: { cargoId, estatus: In(['CREADA', 'PENDIENTE']) } });
       if (ordenPendiente) throw new ConflictException('El cargo está reservado por una orden pendiente');
-      if (Math.round(Number(pago.monto) * 100) > Math.round((await this.cargos.saldoDeCargo(cargo, manager)) * 100)) throw new ConflictException('El importe excede el saldo del cargo');
-      pago.cargoId = cargoId; await pagos.save(pago); await this.cargos.recalcularEstatus(cargoId, manager);
-      await manager.getRepository(BitacoraFinanciera).insert({ usuarioId: user.sub, plantelId: cargo.plantelId,
-        accion: 'CONCILIAR_PAGO', entidad: 'pago', entidadId: id, detalle: `cargo=${cargoId}; ${motivo.trim()}` });
+      if (Math.round(Number(pago.monto) * 100) > Math.round((await this.cargos.saldoDeCargo(cargo, manager)) * 100))
+        throw new ConflictException('El importe excede el saldo del cargo');
+      pago.cargoId = cargoId;
+      await pagos.save(pago);
+      await this.cargos.recalcularEstatus(cargoId, manager);
+      await manager
+        .getRepository(BitacoraFinanciera)
+        .insert({
+          usuarioId: user.sub,
+          plantelId: cargo.plantelId,
+          accion: 'CONCILIAR_PAGO',
+          entidad: 'pago',
+          entidadId: id,
+          detalle: `cargo=${cargoId}; ${motivo.trim()}`,
+        });
       return { ok: true };
     });
   }
@@ -176,25 +248,42 @@ export class PagosService {
     if (!previo) throw new NotFoundException('Pago no encontrado');
     await this.scope.validarGestion(user, previo.plantelId);
     return this.dataSource.transaction(async (manager) => {
-      if (previo.cargoId) await manager.getRepository(Cargo).findOne({ where: { id: previo.cargoId }, lock: { mode: 'pessimistic_write' } });
+      if (previo.cargoId)
+        await manager
+          .getRepository(Cargo)
+          .findOne({ where: { id: previo.cargoId }, lock: { mode: 'pessimistic_write' } });
       const pagos = manager.getRepository(Pago);
       const pago = await pagos.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!pago || pago.estatus !== 'CONFIRMADO') throw new ConflictException('El pago ya no admite anulación');
-      if (pago.metodo === 'PASARELA') throw new ConflictException('Los pagos de pasarela requieren conciliación o devolución en el proveedor');
+      if (pago.metodo === 'PASARELA')
+        throw new ConflictException('Los pagos de pasarela requieren conciliación o devolución en el proveedor');
       if (pago.cargoId !== previo.cargoId) throw new ConflictException('El pago cambió; vuelve a consultar');
       await this.scope.validarGestion(user, pago.plantelId);
-      pago.estatus = 'CANCELADO'; await pagos.save(pago);
+      pago.estatus = 'CANCELADO';
+      await pagos.save(pago);
       if (pago.cargoId) await this.cargos.recalcularEstatus(pago.cargoId, manager);
-      await manager.getRepository(BitacoraFinanciera).insert({ usuarioId: user.sub, plantelId: pago.plantelId,
-        accion: 'ANULAR_PAGO', entidad: 'pago', entidadId: id, detalle: motivo.trim() });
+      await manager
+        .getRepository(BitacoraFinanciera)
+        .insert({
+          usuarioId: user.sub,
+          plantelId: pago.plantelId,
+          accion: 'ANULAR_PAGO',
+          entidad: 'pago',
+          entidadId: id,
+          detalle: motivo.trim(),
+        });
       return { ok: true };
     });
   }
 
   private verificarReintento(pago: Pago, dto: RegistrarPagoDto, user: JwtUser): Pago {
-    const mismoPago = pago.registradoPorId === user.sub && pago.alumnoId === dto.alumnoId &&
-      pago.cargoId === (dto.cargoId ?? null) && pago.metodo === dto.metodo &&
-      pago.referencia === (dto.referencia ?? null) && pago.estatus === 'CONFIRMADO' &&
+    const mismoPago =
+      pago.registradoPorId === user.sub &&
+      pago.alumnoId === dto.alumnoId &&
+      pago.cargoId === (dto.cargoId ?? null) &&
+      pago.metodo === dto.metodo &&
+      pago.referencia === (dto.referencia ?? null) &&
+      pago.estatus === 'CONFIRMADO' &&
       Math.round(Number(pago.monto) * 100) === Math.round(dto.monto * 100);
     if (!mismoPago) throw new ConflictException('La clave de idempotencia ya se usó para otro pago');
     return pago;
@@ -202,17 +291,22 @@ export class PagosService {
 
   /** Pago confirmado por la pasarela (lo invoca el procesamiento del webhook). */
   async registrarDePasarela(
-    orden: OrdenPago, monto: number, referencia: string, payloadWebhook = orden.payloadWebhook ?? '',
+    orden: OrdenPago,
+    monto: number,
+    referencia: string,
+    payloadWebhook = orden.payloadWebhook ?? '',
   ) {
     return this.dataSource.transaction(async (manager) => {
       // Lock order is cargo first, then order, across manual and online payments.
       const cargo = orden.cargoId
         ? await manager.getRepository(Cargo).findOne({
-          where: { id: orden.cargoId }, lock: { mode: 'pessimistic_write' },
-        })
+            where: { id: orden.cargoId },
+            lock: { mode: 'pessimistic_write' },
+          })
         : null;
       const ordenActual = await manager.getRepository(OrdenPago).findOne({
-        where: { id: orden.id }, lock: { mode: 'pessimistic_write' },
+        where: { id: orden.id },
+        lock: { mode: 'pessimistic_write' },
       });
       if (!ordenActual) throw new NotFoundException('Orden no encontrada');
       if (ordenActual.cargoId !== orden.cargoId || ordenActual.alumnoId !== orden.alumnoId) {
@@ -241,16 +335,19 @@ export class PagosService {
       // funds as an unapplied receipt linked to the order for financial review.
       const saldo = cargo ? await this.cargos.saldoDeCargo(cargo, manager) : 0;
       const aplicado = !!cargo && cargo.estatus !== 'CANCELADO' && Math.round(monto * 100) <= Math.round(saldo * 100);
-      const nuevo = await pagos.save(pagos.create({
-        alumnoId: ordenActual.alumnoId, plantelId: ordenActual.plantelId,
-        cargoId: aplicado ? ordenActual.cargoId : null,
-        ordenPagoId: ordenActual.id,
-        monto,
-        metodo: 'PASARELA',
-        referencia,
-        estatus: 'CONFIRMADO',
-        fechaPago: new Date(),
-      }));
+      const nuevo = await pagos.save(
+        pagos.create({
+          alumnoId: ordenActual.alumnoId,
+          plantelId: ordenActual.plantelId,
+          cargoId: aplicado ? ordenActual.cargoId : null,
+          ordenPagoId: ordenActual.id,
+          monto,
+          metodo: 'PASARELA',
+          referencia,
+          estatus: 'CONFIRMADO',
+          fechaPago: new Date(),
+        }),
+      );
       ordenActual.estatus = 'COMPLETADA';
       ordenActual.idExterno = referencia;
       ordenActual.payloadWebhook = payloadWebhook;
@@ -269,5 +366,4 @@ export class PagosService {
       return { pago: nuevo, creado: true, aplicado };
     });
   }
-
 }

@@ -195,8 +195,8 @@ export class CobranzaService implements OnModuleInit, OnModuleDestroy {
           if (!usuario || !plantilla) throw Object.assign(new Error('Datos no disponibles'), { responseCode: 550 });
           const institucion = this.config.get<string>('NOMBRE_INSTITUCION') || 'Institución';
           const html = plantilla.cuerpoHtml.replace(/{{nombre}}/g, escapar(usuario.nombreCompleto)).replace(/{{saldo}}/g, envio.saldo.toFixed(2)).replace(/{{institucion}}/g, escapar(institucion));
-          const resultado = await this.notificaciones.enviarEmail(usuario.email, plantilla.asunto.replace(/{{institucion}}/g, institucion), html, `${envio.clave}@escolar.invalid`);
-          await this.resultado(envio, resultado.simulado ? 'ERROR' : 'ENVIADO', resultado.simulado ? 'SMTP_NO_CONFIGURADO' : null);
+          const resultado = await this.notificaciones.enviarEmail(usuario.email, plantilla.asunto.replace(/{{institucion}}/g, institucion), html, `${envio.clave}@escolar.invalid`, 'FINANCIERA');
+          await this.resultado(envio, resultado.omitido ? 'OMITIDO' : resultado.simulado ? 'ERROR' : 'ENVIADO', resultado.omitido ? 'PREFERENCIA_USUARIO' : resultado.simulado ? 'SMTP_NO_CONFIGURADO' : null);
         } catch (e) {
           const codigo = (e as { responseCode?: number }).responseCode;
           const rechazado = codigo !== undefined && codigo >= 400 && codigo < 600;

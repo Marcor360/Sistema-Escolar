@@ -7,6 +7,8 @@ import { RutaProtegida } from './auth/RutaProtegida';
 import { Shell } from './layout/Shell';
 
 // Cada página se descarga solo cuando se visita (code splitting)
+const AsistenciasPage = lazy(() => import('./pages/Asistencias'));
+const SeguimientoPage = lazy(() => import('./pages/Seguimiento'));
 const TemariosPage = lazy(() => import('./pages/Temarios'));
 const CicloFichaPage = lazy(() => import('./pages/CicloFicha'));
 const AperturaCarteraPage = lazy(() => import('./pages/AperturaCartera'));
@@ -56,6 +58,8 @@ export default function App() {
       {sesion ? (
         <Route element={<Shell />}>
           <Route path="/" element={<DashboardPage />} />
+          <Route path="/seguimiento" element={<SeguimientoPage />} />
+          <Route element={<RutaProtegida roles={['MAESTRO','ADMINISTRATIVO','ALUMNO']} />}><Route path="/asistencias" element={<AsistenciasPage />} /></Route>
           <Route path="/cuenta" element={<CuentaPage />} />
 
           <Route element={<RutaProtegida roles={['SUPERADMIN']} />}>

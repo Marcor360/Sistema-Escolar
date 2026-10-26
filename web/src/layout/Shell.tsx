@@ -11,6 +11,8 @@ import { RecorridoInicial } from '../components/RecorridoInicial';
 import { construirRecorrido } from '../components/recorrido-por-rol';
 
 const secciones = [
+  { destino: '/seguimiento', etiqueta: 'Seguimiento y pendientes', roles: ['ALUMNO','MAESTRO','ADMINISTRATIVO','FINANZAS'] },
+  { destino: '/asistencias', etiqueta: 'Asistencias', roles: ['ALUMNO','MAESTRO','ADMINISTRATIVO'] },
   { destino: '/biblioteca', etiqueta: 'Biblioteca', roles: ['ADMINISTRATIVO'] },
   { destino: '/operaciones', etiqueta: 'Importar y promover', roles: ['ADMINISTRATIVO'] },
   { destino: '/conducta', etiqueta: 'Conducta e incidencias', roles: ['ADMINISTRATIVO', 'MAESTRO'] },
@@ -28,7 +30,7 @@ const secciones = [
   { destino: '/temarios', etiqueta: 'Temarios', roles: ['MAESTRO', 'ADMINISTRATIVO'] },
   { destino: '/maestro', etiqueta: 'Mis clases', roles: ['MAESTRO'] },
   { destino: '/calificaciones', etiqueta: 'Calificaciones', roles: ['MAESTRO', 'ADMINISTRATIVO'] },
-  { destino: '/calendario', etiqueta: 'Calendario', roles: ['MAESTRO', 'ADMINISTRATIVO'] },
+  { destino: '/calendario', etiqueta: 'Calendario', roles: ['ALUMNO','MAESTRO', 'ADMINISTRATIVO','FINANZAS'] },
   { destino: '/avisos', etiqueta: 'Avisos', roles: ['ADMINISTRATIVO'] },
   { destino: '/finanzas', etiqueta: 'Finanzas', roles: ['FINANZAS'] },
   { destino: '/usuarios', etiqueta: 'Usuarios', roles: ['ADMINISTRATIVO', 'FINANZAS', 'MAESTRO'] },
@@ -36,7 +38,7 @@ const secciones = [
 ];
 
 const gruposMenu = [
-  { titulo: 'Inicio y seguimiento', rutas: ['/', '/calendario', '/avisos'] },
+  { titulo: 'Inicio y seguimiento', rutas: ['/', '/seguimiento', '/asistencias', '/calendario', '/avisos'] },
   { titulo: 'Control escolar', rutas: ['/alumnos', '/docentes', '/catalogos-academicos', '/apertura-cartera', '/recursamientos', '/programas-especiales', '/materias', '/grupos', '/operaciones'] },
   { titulo: 'Docencia', rutas: ['/maestro', '/temarios', '/calificaciones', '/conducta'] },
   { titulo: 'Finanzas e informes', rutas: ['/finanzas', '/analitica'] },
@@ -44,6 +46,8 @@ const gruposMenu = [
 ];
 
 const iconosPorRuta: Record<string, NombreIcono> = {
+  '/seguimiento': 'clipboard-check',
+  '/asistencias': 'clipboard-check',
   '/': 'layout-dashboard',
   '/biblioteca': 'book',
   '/operaciones': 'clipboard-check',

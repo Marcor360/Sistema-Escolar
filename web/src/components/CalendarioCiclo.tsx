@@ -1,3 +1,6 @@
+import { ImportarCalendario } from './ImportarCalendario';
+import { useConfirmacion } from './useConfirmacion';
+import { exportarIcs } from '../utils/calendario-ics';
 import { FormEvent, useEffect, useState, useRef } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
@@ -12,8 +15,13 @@ interface Nivel {
   id: number;
   nombre: string;
   plantelId: number;
+  plantel?: { nombre: string };
 }
 interface Evento {
+  revision: string;
+  tipo: string;
+  nivelId: number | null;
+  cicloId: number | null;
   id: number;
   titulo: string;
   fechaInicio: string;
@@ -82,6 +90,11 @@ function ImagenCalendario({ evento }: { evento: Evento }) {
 }
 export function CalendarioCiclo() {
   const { sesion } = useAuth();
+  const confirmar = useConfirmacion();
+  const [editando, setEditando] = useState<Evento | null>(null);
+  const [cargando, setCargando] = useState(false);
+  const [cargandoOpciones, setCargandoOpciones] = useState(true);
+  const [opcionesRevision, setOpcionesRevision] = useState(0);
   const formulario = useRef<HTMLDetailsElement>(null);
   const entradaArchivo = useRef<HTMLInputElement>(null);
   const gestionar = !!sesion?.roles.some((r) => ['SUPERADMIN', 'ADMINISTRATIVO', 'FINANZAS'].includes(r));
@@ -99,8 +112,13 @@ export function CalendarioCiclo() {
     [tipo, setTipo] = useState('GENERAL'),
     [archivo, setArchivo] = useState<File | null>(null);
   const [revision, setRevision] = useState(0);
+  const [avisar, setAvisar] = useState(false);
+  const [historial, setHistorial] = useState<
+    { id: number; usuarioId: number; accion: string; alcance: string; createdAt: string }[]
+  >([]);
   useEffect(() => {
     let activo = true;
+    setCargandoOpciones(true);
     api
       .get('/calendario/opciones')
       .then(({ data }) => {
@@ -112,11 +130,19 @@ export function CalendarioCiclo() {
         }
       })
       .catch((e) => {
-        if (activo) setError(mensajeDeError(e));
-      });
+        if (activo) {
+          setError(mensajeDeError(e));
+          setCargando(false);
+        }
+      }).finally(() => {if(activo)setCargandoOpciones(false);});
     return () => {
       activo = false;
     };
+  }, [opcionesRevision]);
+  useEffect(() => {
+    const recargar = () => setRevision((r) => r + 1);
+    window.addEventListener('calendario-cambio', recargar);
+    return () => window.removeEventListener('calendario-cambio', recargar);
   }, []);
   const ciclo = opciones.ciclos.find((c) => String(c.id) === cicloId);
   useEffect(() => {
@@ -129,18 +155,31 @@ export function CalendarioCiclo() {
     let activo = true;
     setError('');
     setEventos([]);
+    setCargando(true);
     cargarEventosCiclo(ciclo, nivelId)
       .then((data) => {
-        if (activo) setEventos(data);
+        if (activo) {
+          setEventos(data);
+          setCargando(false);
+        }
       })
       .catch((e) => {
-        if (activo) setError(mensajeDeError(e));
+        if (activo) {
+          setError(mensajeDeError(e));
+          setCargando(false);
+        }
       });
     return () => {
       activo = false;
     };
   }, [ciclo, nivelId, revision]);
-  if (!opciones.ciclos.length) return error ? <p role="alert">{error}</p> : null;
+  if (!opciones.ciclos.length)
+    return (
+      <section>
+        <p role={error ? 'alert' : 'status'}>{error || (cargandoOpciones ? 'Consultando ciclos escolares…' : 'No hay ciclos escolares disponibles.')}</p>
+        <button onClick={() => setOpcionesRevision((r) => r + 1)}>Reintentar calendario</button>
+      </section>
+    );
   const meses: string[] = [];
   if (ciclo) {
     let d = new Date(ciclo.fechaInicio.slice(0, 7) + '-01T12:00:00Z');
@@ -165,12 +204,26 @@ export function CalendarioCiclo() {
       nivelId: nivel.id,
       plantelId: nivel.plantelId,
       audiencia,
+      avisar,
       tipo,
-      fechaInicio: archivo ? ciclo.fechaInicio + 'T00:00:00-06:00' : fecha + 'T00:00:00-06:00',
-      fechaFin: archivo ? ciclo.fechaFin + 'T23:59:59-06:00' : undefined,
+      fechaInicio:
+        archivo || editando?.imagenNombre ? ciclo.fechaInicio + 'T00:00:00-06:00' : fecha + 'T00:00:00-06:00',
+      fechaFin: archivo || editando?.imagenNombre ? ciclo.fechaFin + 'T23:59:59-06:00' : undefined,
     };
     try {
-      if (archivo) {
+      if (editando) {
+        const { data: actualizado } = await api.patch<Evento>('/calendario/' + editando.id, {
+          ...datos,
+          revision: editando.revision,
+        });
+        setEditando(actualizado);
+        if (archivo) {
+          const form = new FormData();
+          form.append('revision', actualizado.revision);
+          form.append('imagen', archivo);
+          await api.post('/calendario/' + editando.id + '/imagen', form);
+        }
+      } else if (archivo) {
         const form = new FormData();
         Object.entries(datos).forEach(([k, v]) => {
           if (v !== undefined) form.append(k, String(v));
@@ -178,6 +231,8 @@ export function CalendarioCiclo() {
         form.append('imagen', archivo);
         await api.post('/calendario/imagen', form);
       } else await api.post('/calendario', datos);
+      window.dispatchEvent(new Event('calendario-cambio'));
+      setEditando(null);
       setTitulo('');
       setArchivo(null);
       if (entradaArchivo.current) entradaArchivo.current.value = '';
@@ -190,6 +245,7 @@ export function CalendarioCiclo() {
   };
   return (
     <section className="panel" aria-label="Calendario del ciclo escolar">
+      {confirmar.elemento}
       <h2>Calendario del ciclo escolar</h2>
       <div className="fila">
         <label>
@@ -208,7 +264,7 @@ export function CalendarioCiclo() {
             <option value="">Todos los niveles autorizados</option>
             {opciones.niveles.map((n) => (
               <option key={n.id} value={n.id}>
-                {n.nombre}
+                {n.nombre} · {n.plantel?.nombre ?? 'Plantel ' + n.plantelId}
               </option>
             ))}
           </select>
@@ -219,6 +275,7 @@ export function CalendarioCiclo() {
             <option value="ciclo">Ciclo completo</option>
             <option value="mes">Mes</option>
             <option value="imagen">Imagen institucional</option>
+            <option value="agenda">Agenda accesible</option>
           </select>
         </label>
         {vista === 'mes' && (
@@ -233,10 +290,121 @@ export function CalendarioCiclo() {
         )}
       </div>
       {error && <p role="alert">{error}</p>}
+      {cargando && <p role="status">Cargando calendario…</p>}
+      <button type="button" disabled={cargando || ocupado} onClick={() => setRevision((r) => r + 1)}>
+        Actualizar calendario / reintentar
+      </button>
+      <button type="button" disabled={cargando || !eventos.length} onClick={() => exportarIcs(eventos)}>
+        Exportar calendario (.ics)
+      </button>
+      {gestionar && (
+        <label>
+          Evento para gestionar
+          <select
+            disabled={ocupado}
+            value={editando?.id ?? ''}
+            onChange={(e) => {
+              const evento = eventos.find((v) => v.id === Number(e.target.value));
+              setEditando(evento ?? null);
+              if (evento) {
+                setTitulo(evento.titulo);
+                setFecha(dia(evento.fechaInicio));
+                setAudiencia(evento.audiencia);
+                setTipo(evento.tipo);
+                if (evento.nivelId) setNivelId(String(evento.nivelId));
+                if (formulario.current) formulario.current.open = true;
+              }
+            }}
+          >
+            <option value="">Publicar uno nuevo</option>
+            {eventos.map((e) => (
+              <option key={e.id} value={e.id}>
+                {e.titulo} · {e.audiencia}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      {editando && (
+        <>
+          <p>Editando: {editando.titulo}. El cambio se comprobará contra su revisión actual.</p>
+          <button
+            type="button"
+            disabled={ocupado}
+            onClick={async () => {
+              if (!(await confirmar.solicitar('¿Eliminar "' + editando.titulo + '" y su imagen, si existe?'))) return;
+              setOcupado(true);
+              try {
+                await api.delete('/calendario/' + editando.id);
+                setEditando(null);
+                setTitulo('');
+                setRevision((r) => r + 1);
+                window.dispatchEvent(new Event('calendario-cambio'));
+              } catch (e) {
+                setError(mensajeDeError(e));
+              } finally {
+                setOcupado(false);
+              }
+            }}
+          >
+            Eliminar evento seleccionado
+          </button>
+          <button
+            type="button"
+            disabled={ocupado}
+            onClick={() => {
+              setEditando(null);
+              setTitulo('');
+              setArchivo(null);
+              if (entradaArchivo.current) entradaArchivo.current.value = '';
+            }}
+          >
+            Cancelar edición
+          </button>
+        </>
+      )}
+
+      {gestionar && ciclo && (
+        <ImportarCalendario
+          key={cicloId + ':' + nivelId + ':' + audiencia}
+          cicloId={ciclo.id}
+          nivelId={Number(nivelId)}
+          plantelId={opciones.niveles.find((n) => String(n.id) === nivelId)?.plantelId ?? 0}
+          audiencia={audiencia}
+          alGuardar={() => window.dispatchEvent(new Event('calendario-cambio'))}
+        />
+      )}
+      {editando && (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              void api
+                .get('/calendario/' + editando.id + '/historial')
+                .then((r) => setHistorial(r.data))
+                .catch((e) => setError(mensajeDeError(e)));
+            }}
+          >
+            Consultar historial de publicación
+          </button>
+          <ul>
+            {historial.map((h) => (
+              <li key={h.id}>
+                {new Date(h.createdAt).toLocaleString('es-MX')} · {h.accion} · Usuario {h.usuarioId} · {h.alcance}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
       {gestionar && (
         <details ref={formulario}>
           <summary>Publicar evento o imagen del ciclo</summary>
           <form onSubmit={guardar} className="fila">
+            <p>
+              Destino: {opciones.niveles.find((n) => String(n.id) === nivelId)?.nombre ?? 'Selecciona un nivel'} ·
+              Plantel {opciones.niveles.find((n) => String(n.id) === nivelId)?.plantelId ?? '—'} · {audiencia} ·{' '}
+              {ciclo?.nombre}
+            </p>
             <label>
               Título del calendario o evento
               <input required maxLength={150} value={titulo} onChange={(e) => setTitulo(e.target.value)} />
@@ -279,8 +447,18 @@ export function CalendarioCiclo() {
                 />
               </label>
             )}
+            <label>
+              <input type="checkbox" checked={avisar} onChange={(e) => setAvisar(e.target.checked)} />
+              Avisar a los alumnos del ámbito académico al guardar
+            </label>
             <button disabled={ocupado}>
-              {ocupado ? 'Guardando…' : archivo ? 'Publicar imagen del ciclo' : 'Agregar fecha al calendario digital'}
+              {ocupado
+                ? 'Guardando…'
+                : editando
+                  ? 'Guardar cambios del evento'
+                  : archivo
+                    ? 'Publicar imagen del ciclo'
+                    : 'Agregar fecha al calendario digital'}
             </button>
           </form>
         </details>
@@ -294,6 +472,17 @@ export function CalendarioCiclo() {
             ))}
           {!eventos.some((e) => e.imagenNombre) && <p>No hay imagen publicada para este ámbito.</p>}
         </>
+      ) : vista === 'agenda' ? (
+        <ul aria-label="Agenda del ciclo">
+          {eventos
+            .filter((e) => !e.imagenNombre)
+            .map((e) => (
+              <li key={e.id}>
+                {dia(e.fechaInicio)}
+                {e.fechaFin ? ' — ' + dia(e.fechaFin) : ''}: {e.titulo}
+              </li>
+            ))}
+        </ul>
       ) : (
         <div className="calendario-meses">
           {(vista === 'mes' ? [mes] : meses).filter(Boolean).map((m) => {
@@ -329,7 +518,9 @@ export function CalendarioCiclo() {
                         <button
                           type="button"
                           aria-label={'Seleccionar ' + fechaDia}
-                          disabled={!gestionar}
+                          disabled={
+                            !gestionar || (!!ciclo && (fechaDia < ciclo.fechaInicio || fechaDia > ciclo.fechaFin))
+                          }
                           onClick={() => {
                             setFecha(fechaDia);
                             if (formulario.current) formulario.current.open = true;

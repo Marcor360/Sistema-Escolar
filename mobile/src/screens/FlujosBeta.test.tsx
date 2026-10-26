@@ -1,3 +1,4 @@
+vi.mock('expo-crypto',()=>({randomUUID:()=> 'be678c57-bdd4-48ef-a461-4c43951f754c'}));
 import { configurarCacheAcademica } from '../api/cache-academica';
 import Inicio from "./Inicio";
 import ActivarCuenta from "./ActivarCuenta";

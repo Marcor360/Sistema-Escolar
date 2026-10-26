@@ -13,7 +13,7 @@ export class CobranzaEnvio {
   @Column() actorId!: number;
   @ManyToOne(() => Usuario) @JoinColumn({ name: 'actor_id' }) actor!: Usuario;
   @Column('decimal', { precision: 12, scale: 2, transformer: decimalTransformer }) saldo!: number;
-  @Column({ type: 'varchar', length: 15, default: 'PENDIENTE' }) estado!: 'PENDIENTE' | 'ENVIANDO' | 'ENVIADO' | 'ERROR' | 'INCIERTO';
+  @Column({ type: 'varchar', length: 15, default: 'PENDIENTE' }) estado!: 'PENDIENTE' | 'ENVIANDO' | 'ENVIADO' | 'ERROR' | 'INCIERTO' | 'OMITIDO';
   @Column({ default: 0 }) intentos!: number;
   @Column({ type: 'datetime' }) proximoIntento!: Date;
   @Column({ type: 'varchar', length: 80, nullable: true }) error!: string | null;

@@ -86,7 +86,7 @@ function ContenidoCalendario() {
   const [ciclos, setCiclos] = useState<Ciclo[]>([]);
   const [seleccion, setSeleccion] = useState(0);
   const [mes, setMes] = useState("");
-  const [vista, setVista] = useState<"mes" | "ciclo" | "imagen">("mes");
+  const [vista, setVista] = useState<"mes" | "ciclo" | "imagen" | "agenda">("mes");
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [error, setError] = useState("");
   const [cargando, setCargando] = useState(true);
@@ -175,7 +175,7 @@ function ContenidoCalendario() {
           </Text>
         </TouchableOpacity>
       ))}
-      {(["mes", "ciclo", "imagen"] as const).map((v) => (
+      {(["mes", "ciclo", "imagen", "agenda"] as const).map((v) => (
         <TouchableOpacity
           key={v}
           accessibilityRole="button"
@@ -188,7 +188,7 @@ function ContenidoCalendario() {
               ? "Mes"
               : v === "ciclo"
                 ? "Ciclo completo"
-                : "Imagen institucional"}
+                : v === "agenda" ? "Agenda accesible" : "Imagen institucional"}
           </Text>
         </TouchableOpacity>
       ))}
@@ -219,7 +219,7 @@ function ContenidoCalendario() {
             <Text>No hay imagen publicada para tu nivel.</Text>
           )}
         </>
-      ) : (
+      ) : vista === "agenda" ? <View>{eventos.filter(e => !e.imagenNombre).map(e => <Text key={e.id}>{dia(e.fechaInicio)}{e.fechaFin ? ' — ' + dia(e.fechaFin) : ''}: {e.titulo}</Text>)}</View> : (
         <>
           {vista === "mes" && (
             <View

@@ -58,3 +58,17 @@ export * from './materia-contexto.entity';
 export * from './tema.entity';
 export * from './cuenta-deposito.entity';
 export * from './programacion-cobro.entity';
+
+export * from './asistencia.entity';
+
+export * from './asistencia-historial.entity';
+
+export * from './tramite.entity';
+
+export * from './tramite-historial.entity';
+
+export * from './preferencia-notificacion.entity';
+
+export * from './movimiento-bancario.entity';
+
+export * from './calendario-historial.entity';

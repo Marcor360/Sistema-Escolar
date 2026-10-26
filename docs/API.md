@@ -274,3 +274,30 @@ Aplicar migraciones incrementales de agrupación ordinaria, apertura de cartera 
 El logo se consulta fuera del prefijo API, en `/uploads/marca-logo-UUID.webp`, mediante el controlador público del módulo archivos: UUID nuevo por actualización, caché pública de un año e inmutable y `nosniff`. Logos previos PNG/JPEG/WebP mantienen lectura. Los documentos privados siguen requiriendo enlaces firmados y autorización; no habilitar estáticos de uploads ni publicar su directorio en IIS.
 
 La API inspecciona firma RIFF/WEBP; no decodifica ni optimiza la imagen. Tras validar, renombra el temporal, verifica lectura y guarda la referencia en transacción. Los fallos conservan la referencia anterior y limpian el archivo nuevo. Tamaño excesivo devuelve 413; formato inválido, 400. IIS debe permitir al menos 11 MiB de solicitud multipart para este contrato. [Diagnóstico y UAT pendiente](LOGO_WEBP_STAGING_1.27.18.md).
+
+
+## Seguimiento y asistencias · 1.27.53
+
+Contrato detallado y límites: [Seguimiento y asistencias](SEGUIMIENTO_ASISTENCIAS_1.27.53.md).
+
+| Ruta | Uso y permisos |
+|---|---|
+| GET /api/asistencias | Consulta paginada; ALUMNO propia, MAESTRO clases asignadas, ADMINISTRATIVO por plantel, SUPERADMIN global |
+| GET /api/asistencias/clases y /lista | Clases/lista autorizadas; devuelve puedeCapturar y revision |
+| POST /api/asistencias | Solo MAESTRO activo asignado; fecha civil, registros explícitos, motivo y revision; no bypass de SUPERADMIN para escritura |
+| GET /api/asistencias/:id/historial | Personal académico autorizado; el alumno no recibe motivos internos |
+| GET /api/seguimiento/pendientes | Conteos según capacidades y alcance |
+| GET /api/seguimiento/calidad | Diagnóstico administrativo por plantel/global |
+| GET, POST /api/seguimiento/tramites | Lista autorizada; alta solo ALUMNO con clave UUID |
+| GET /api/seguimiento/tramites/:id/historial | Propio o personal autorizado |
+| PATCH /api/seguimiento/tramites/:id | Transición con revision y mensaje, asignación validada; alumno solo cancela SOLICITADO |
+| GET, PATCH /api/seguimiento/preferencias | Preferencias de la cuenta autenticada |
+| GET /api/seguimiento/sesiones y DELETE /sesiones/:id | Consulta/revocación propia sin secretos; sesión actual sale por logout |
+| GET, POST /api/seguimiento/movimientos | FINANZAS/SUPERADMIN; listado/importación por plantel |
+| POST /api/seguimiento/movimientos/preview y /:id/aplicar | Vista previa y aplicación individual a cargo; folio/clave persistidos |
+| GET /api/seguimiento/respaldo | Solo SUPERADMIN; estado/antigüedad seguros, no ejecuta tareas |
+| POST /api/calendario/ics/preview y /ics | Personal gestor del calendario, preview/importación de fechas UTC o civiles sin recurrencias |
+| POST /api/calendario/:id/imagen | Sustituye imagen con revision, firma y limpieza postcommit |
+| GET /api/calendario/:id/historial | Autor/acción/alcance para personal autorizado a gestionar el evento |
+
+No se añade gestión de personal ni captura de asistencias a Expo. Migraciones incrementales espejo necesarias antes de iniciar la API nueva.
