@@ -1,3 +1,5 @@
+import { DataSource } from 'typeorm';
+import { PreferenciaNotificacion } from '../entities/preferencia-notificacion.entity';
 import { randomUUID } from 'crypto';
 import { ServiceUnavailableException } from '@nestjs/common';
 import { PushService } from './push.service';
@@ -30,6 +32,7 @@ export class NotificacionesService {
     private readonly config: ConfigService,
     @Optional() private readonly push?: PushService,
     @Optional() private readonly microsoft?: CorreoMicrosoftService,
+    @Optional() private readonly ds?: DataSource,
   ) {
     const host = this.config.get<string>('SMTP_HOST');
     const puertoConfigurado = this.config.get<string>('SMTP_PORT') || '587';
@@ -114,8 +117,9 @@ export class NotificacionesService {
   }
 
   /** La preferencia persistida se aplica por destinatario; nunca se sustituye silenciosamente un proveedor. */
-  async enviarEmail(to: string, subject: string, html: string, messageId?: string) {
+  async enviarEmail(to: string, subject: string, html: string, messageId?: string, tipo?: Notificacion['tipo']): Promise<{simulado:boolean; omitido?:boolean}> {
     const usuario = await this.usuarios.findOne({ where: { email: to } });
+    if (usuario && tipo && this.ds && (await this.ds.getRepository(PreferenciaNotificacion).findOneBy({usuarioId:usuario.id,tipo}))?.correo === false) return {simulado:false,omitido:true};
     const proveedor = usuario
       ? (usuario.correoProveedor ?? proveedorCorreoPredeterminado(usuario.roles.map((r) => r.clave)))
       : 'GODADDY';

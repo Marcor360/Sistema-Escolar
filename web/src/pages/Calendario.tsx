@@ -49,6 +49,7 @@ export default function CalendarioPage() {
     }, {datos:[],total:0},
   );
   const eventos=resultado.datos,total=resultado.total;
+  useEffect(() => {const actualizar=()=>recargar();window.addEventListener('calendario-cambio',actualizar);return()=>window.removeEventListener('calendario-cambio',actualizar);},[recargar]);
   const { datos: planteles } = useDatos<Plantel[]>(() => api.get('/planteles/mios').then((r) => r.data), []);
   const { datos: clases, recargar: cargarClases } = useDatos<GrupoMateria[]>(
     () => sesion?.roles.includes('ALUMNO') || (consultaVisible && !legado) ? Promise.resolve([]) : api.get(maestroPuro ? '/academico/mis-grupos' : '/academico/grupo-materias').then((r) => r.data), [],
@@ -102,6 +103,7 @@ export default function CalendarioPage() {
       };
       if (editando) await api.patch(`/calendario/${editando.id}`, datos);
       else await api.post('/calendario', datos);
+      window.dispatchEvent(new Event('calendario-cambio'));
       trabajo.guardado();setMensaje('Evento guardado');
       setEditando(null); setForm(FORM_INICIAL);
       if(legado) recargar();else trabajo.ir('consulta');
@@ -112,7 +114,7 @@ export default function CalendarioPage() {
     if (!await confirmacion.solicitar(`¿Eliminar el evento "${evento.titulo}"?`)) return;
     if (mutando.current) return; mutando.current = true; setGuardando(true);
     setError('');
-    try { await api.delete(`/calendario/${evento.id}`); recargar(); }
+    try { await api.delete(`/calendario/${evento.id}`); window.dispatchEvent(new Event('calendario-cambio')); recargar(); }
     catch (err) { setError(mensajeDeError(err)); } finally { mutando.current = false; setGuardando(false); }
   };
 

@@ -1,6 +1,6 @@
-# Estado de implementación — candidata 1.27.52
+# Estado de implementación — candidata 1.27.53
 
-Corte documental: 26 de octubre de 2026. Base: `main` 1.27.51 (`2227427`), integración #200 de nueve PR. Esta candidata añade calendario por ciclo/nivel, imágenes privadas y audiencias internas. Ver [contrato](CALENDARIO_CICLO_NIVEL_1.27.52.md) y [barrido](BARRIDO_PROYECTO_2026-10-26.md). La propuesta de evaluación 1.28.0 sigue pendiente: se conservan escala 0–100 y P1–P3/Final.
+Corte documental: 26 de octubre de 2026. Base: `main` 1.27.52 tras integración #201. La candidata 1.27.53 incorpora [seguimiento, asistencias y operación](SEGUIMIENTO_ASISTENCIAS_1.27.53.md), con captura exclusiva del profesor asignado y consulta propia/por plantel/global según rol. No acredita despliegue, instalación de tareas programadas ni restauración institucional. La propuesta de evaluación 1.28.0 sigue pendiente: se conservan escala 0–100 y P1–P3/Final.
 
 ## Clasificación
 
@@ -16,6 +16,10 @@ Marca en #163: entrada web PNG/JPEG/WebP ≤20 MiB, salida/API WebP ≤10 MiB, m
 | Sesiones | Access 15 minutos, refresh rotativo de hasta 30 días, hash, revocación, cookie HttpOnly web y SecureStore móvil | Ensayo HTTPS, expiración y cambio de cuenta en entornos/dispositivos objetivo |
 | Academia | Ciclos en preparación/activo/cierre, grupos, asignaciones, inscripción y promoción transaccional | Validación institucional de cierre/promoción y datos representativos |
 | Calificaciones | P1-P3 y Final independiente; motivo/historial, cierre/reapertura, XLSX/CSV con preview cifrado y confirmación única/transaccional | Regla y formatos aceptados por control escolar; archivos institucionales |
+| Asistencias | Captura por profesor asignado, consulta propia en web/Expo y administrativa por plantel, historial y revisión | UAT por clase/plantel, ciclo y Android/iOS físicos; sin reglas de sanción o nota |
+| Seguimiento | Pendientes por rol, diagnóstico de datos, trámites con folio/estado/responsable, preferencias y sesiones propias | UAT de estados, alcance, accesibilidad y notificaciones reales |
+| Conciliación CSV | Vista previa, folios persistidos, sugerencia por referencia interna y aplicación individual idempotente | Formato bancario institucional y aceptación contable |
+| Recuperación | Scripts de respaldo diario y restore semanal aislado, hashes, copia externa opcional y alerta web de estado | Configuración/ACL/tareas en Windows, cifrado/retención externa, restore real y RPO/RTO |
 | Calendario | Consulta, alta, PATCH y baja; ciclo/nivel y audiencias; vistas mensual/ciclo/imagen en web y Expo alumno; enlaces firmados privados | Migración incremental, carga institucional de imágenes, accesibilidad y UAT por nivel/plantel |
 | Documentos | Boleta propia por ciclo/inscripción y enlace de dos minutos; concentrados y adeudos Excel | Formatos oficiales y abrir/guardar PDF en Android/iOS |
 | Biblioteca | Administración privada por plantel; carpetas, PNG/JPEG/PDF, firma/MIME, ClamAV obligatorio, cuota y enlaces revocables | Scanner real, ACL, conservación y restore; no concede acceso a alumno/maestro |

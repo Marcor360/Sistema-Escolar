@@ -44,7 +44,8 @@
         "migracion_conceptos_finanzas_institucionales.sql",
         "migracion_cuenta_deposito_bbva.sql",
         "migracion_programaciones_cobro.sql",
-        "migracion_calendario_ciclo_nivel.sql"
+        "migracion_calendario_ciclo_nivel.sql",
+        "migracion_seguimiento_asistencias.sql"
       ]
     },
     "sqlserver": {
@@ -89,7 +90,8 @@
         "migracion_conceptos_finanzas_institucionales.sql",
         "migracion_cuenta_deposito_bbva.sql",
         "migracion_programaciones_cobro.sql",
-        "migracion_calendario_ciclo_nivel.sql"
+        "migracion_calendario_ciclo_nivel.sql",
+        "migracion_seguimiento_asistencias.sql"
       ]
     }
   }

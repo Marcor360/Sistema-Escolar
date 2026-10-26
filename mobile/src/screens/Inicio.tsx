@@ -1,3 +1,4 @@
+import { SeguimientoAlumno } from '../components/SeguimientoAlumno';
 import { CalendarioCiclo } from '../components/CalendarioCiclo';
 import { crearControlLectura } from "../api/lectura-vigente";
 import { fechaHoraEscolar } from "../utils/fecha-evento";
@@ -237,7 +238,7 @@ export default function InicioScreen() {
             </Text>
           </Tarjeta>
         ))}
-      <CalendarioCiclo />
+      <SeguimientoAlumno/><CalendarioCiclo />
       <View style={{ height: 24 }} />
     </ScrollView>
   );

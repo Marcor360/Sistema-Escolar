@@ -1,3 +1,4 @@
+import { PreferenciaNotificacion } from '../entities/preferencia-notificacion.entity';
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DataSource, In, LessThan } from 'typeorm';
@@ -82,6 +83,9 @@ export class PushService implements OnModuleInit, OnModuleDestroy {
         const notificacion = await this.ds.getRepository(Notificacion).findOneBy({ id: reclamado.notificacionId });
         if (!dispositivo || !usuario || usuario.activacionPendiente || !sesion || sesion.version !== usuario.sessionVersion || sesion.expiraEn <= new Date() || sesionInactiva(sesion.ultimaActividadEn, new Date()) || !notificacion || notificacion.usuarioId !== dispositivo.usuarioId) {
           await repo.update(reclamado.id, { estado: 'OMITIDO', error: 'SESION_INACTIVA' }); continue;
+        }
+        if ((await this.ds.getRepository(PreferenciaNotificacion).findOneBy({usuarioId:usuario.id,tipo:notificacion.tipo}))?.push === false) {
+          await repo.update(reclamado.id, {estado:'OMITIDO',error:'PREFERENCIA_USUARIO'}); continue;
         }
         try {
           const respuesta = await axios.post<{ data: { status: string; id?: string; details?: { error?: string } } }>('https://exp.host/--/api/v2/push/send', {

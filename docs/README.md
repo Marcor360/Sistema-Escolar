@@ -43,3 +43,5 @@ Entrada de lectura para la candidata 1.27.43. Revisión documental: 24 de octubr
 Las guías operativas describen el código actual. Los informes fechados conservados son evidencia de su corte; no prueban el estado del servidor ni reemplazan las guías vigentes. Los resúmenes integrados y el inventario mecánico retirados se consultan en [Git](HISTORIAL.md).
 
 Antes de eliminar otro archivo, comprobar usos y enlaces y conservar requisitos, migraciones, recuperación operativa y evidencias que todavía respaldan una decisión. CI valida estructura de puertas y UAT; aprobarlas requiere sus evidencias institucionales.
+
+- [Seguimiento, asistencias y operación 1.27.53](SEGUIMIENTO_ASISTENCIAS_1.27.53.md).

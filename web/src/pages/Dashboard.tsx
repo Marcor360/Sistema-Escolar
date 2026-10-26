@@ -1,3 +1,4 @@
+import { CentroPendientes } from '../components/CentroPendientes';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { GraficaCobranza } from '../components/GraficaCobranza';
@@ -177,6 +178,7 @@ export default function DashboardPage() {
 
   return (
     <>
+      <CentroPendientes/>
       <div className="panel-bienvenida">
         <Link to="/calendario">Ver calendario del ciclo escolar</Link>
         <div>

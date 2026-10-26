@@ -42,6 +42,6 @@ import { PlantelesModule } from '../planteles/planteles.module';
     ConceptosService, CargosService, PagosService, OrdenesService,
     CobranzaService, BitacoraFinancieraService, OpenpayService, FichasService, ProgramacionesCobroService,
   ],
-  exports: [CargosService],
+  exports: [CargosService, PagosService],
 })
 export class FinanzasModule {}

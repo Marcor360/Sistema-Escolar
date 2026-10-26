@@ -188,6 +188,12 @@ async function esperarServidor() {
       if (path.endsWith('/auth/activar-cuenta')) data = { mensaje: 'Cuenta activada. Inicia sesión.' };
       if (path.endsWith('/auth/forgot-password')) data = { mensaje: 'Solicitud recibida' };
       if (path.endsWith('/finanzas/cobranza/envios')) data = { datos: [{ id: 1, usuarioId: 1, plantelId: 1, saldo: 123456.78, estado: 'ERROR', intentos: 1, error: 'SMTP_' + 'sin_conexion_'.repeat(20) }], total: 1, pagina: 1 };
+      if (path.endsWith('/seguimiento/calidad')) data={incompletos:[],duplicados:[],gruposSinNivel:[],inscripcionesInconsistentes:[]};
+      if (path.endsWith('/seguimiento/respaldo')) data={estado:'SIN_CONFIGURAR',vencido:true,ultimoExito:null};
+      if (path.endsWith('/seguimiento/preferencias')) data=[{tipo:'ACADEMICA',push:true,correo:true}];
+      if (path.endsWith('/asistencias/clases')) data=[{id:1,nombre:'Clase de seguimiento con nombre extenso para verificar el selector en pantallas pequeñas'}];
+      if (path.endsWith('/asistencias/lista')) data={revision:'a'.repeat(64),puedeCapturar:false,alumnos:[{id:1,matricula:'QA-001',nombre:'Alumno de seguimiento',estado:'PRESENTE'}]};
+      if (path.endsWith('/asistencias')) data={datos:[{id:1,fecha:'2026-10-26',matricula:'QA-001',nombre:'Alumno de seguimiento',apellido:'Prueba',grupo:'A',materia:'Matemáticas',estado:'PRESENTE'}],pagina:1};
       await route.fulfill({ json: data });
     },
   );
@@ -568,7 +574,7 @@ async function esperarServidor() {
   }
   for (const [width, height, escala] of [[320, 568, 1], [375, 667, 2], [568, 320, 1], [768, 1024, 1], [1024, 768, 1], [1440, 900, 2]]) {
     await page.setViewportSize({ width, height });
-    for (const ruta of ['/cuenta', '/configuracion', '/conducta', '/calendario', '/avisos', '/finanzas', '/pago-completado', '/temarios?vista=consulta&clase=1', '/temarios?vista=nuevo&clase=1', '/temarios?vista=detalle&id=1', '/temarios?vista=adjuntar&id=1', '/ciclos/1', '/maestro?vista=clase&clase=1', '/maestro?vista=actividades&clase=1', '/maestro?vista=actividad-nueva&clase=1', '/maestro?vista=actividad-editar&clase=1&id=1', '/maestro?vista=materiales&clase=1', '/maestro?vista=material-nuevo&clase=1', '/maestro?vista=material-editar&clase=1&id=1', '/maestro?vista=entregas&clase=1&actividad=1', '/maestro?vista=calificar-entrega&clase=1&actividad=1&id=1']) {
+    for (const ruta of ['/asistencias', '/seguimiento', '/cuenta', '/configuracion', '/conducta', '/calendario', '/avisos', '/finanzas', '/pago-completado', '/temarios?vista=consulta&clase=1', '/temarios?vista=nuevo&clase=1', '/temarios?vista=detalle&id=1', '/temarios?vista=adjuntar&id=1', '/ciclos/1', '/maestro?vista=clase&clase=1', '/maestro?vista=actividades&clase=1', '/maestro?vista=actividad-nueva&clase=1', '/maestro?vista=actividad-editar&clase=1&id=1', '/maestro?vista=materiales&clase=1', '/maestro?vista=material-nuevo&clase=1', '/maestro?vista=material-editar&clase=1&id=1', '/maestro?vista=entregas&clase=1&actividad=1', '/maestro?vista=calificar-entrega&clase=1&actividad=1&id=1']) {
       console.log('CHECK extended', ruta, width, height, escala);
       await page.goto(baseUrl + ruta);
       const accion = {'/conducta':'Consultar incidencias','/calendario':'Consultar calendario','/avisos':'Redactar aviso'}[ruta];
