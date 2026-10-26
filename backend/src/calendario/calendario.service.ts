@@ -5,7 +5,7 @@ import { ImportarCalendarioDto } from './calendario.dto';
 import { leerIcs } from './calendario-ics';
 import { promises as fs } from 'fs';
 import { join } from 'path';
-import { CicloEscolar, NivelAcademico } from '../entities';
+import { CicloEscolar, NivelAcademico, Usuario } from '../entities';
 import { In } from 'typeorm';
 import { uploadsPath } from '../common/uploads-path';
 import { validarContenidoArchivo } from '../common/validar-archivo';
@@ -450,9 +450,10 @@ export class CalendarioService {
   }
   async historial(id: number, user: JwtUser) {
     await this.paraEditar(id, user);
-    return this.eventos.manager
-      .getRepository(CalendarioHistorial)
-      .find({ where: { eventoId: id }, order: { id: 'DESC' }, take: 100 });
+    const filas=await this.eventos.manager.getRepository(CalendarioHistorial).find({where:{eventoId:id},order:{id:'DESC'},take:100});
+    if(!filas.length)return [];
+    const autores=await this.eventos.manager.getRepository(Usuario).find({where:{id:In([...new Set(filas.map(f=>f.usuarioId))])},select:{id:true,nombre:true,apellidoPaterno:true}});
+    return filas.map(f=>({...f,autor:autores.find(a=>a.id===f.usuarioId)?.nombreCompleto??'Cuenta no disponible'}));
   }
   async importarIcs(dto: ImportarCalendarioDto, user: JwtUser, confirmar = false) {
     const leidos = leerIcs(dto.contenido);

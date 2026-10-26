@@ -184,6 +184,7 @@ export class SeguimientoService {
     ).map((s) => ({
       id: s.id,
       portal: s.portal,
+      dispositivo:s.dispositivo,
       ultimaActividadEn: s.ultimaActividadEn,
       expiraEn: s.expiraEn,
       actual: s.id === u.sid,

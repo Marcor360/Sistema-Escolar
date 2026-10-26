@@ -1,4 +1,4 @@
-import { Body, Controller, ForbiddenException, Get, Ip, Post, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, Headers, Ip, Post, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
@@ -25,8 +25,8 @@ export class AuthController {
   @ApiResponse({ status: 409, description: 'Conflicto con el estado actual' })
   @Post('login')
   @Throttle(LIMITE_ESTRICTO)
-  async login(@Body() dto: LoginDto, @PortalActual() portal: Portal, @Ip() ip: string, @Res({ passthrough: true }) res: Response) {
-    return this.responder(await this.auth.login(dto.email, dto.password, portal, ip), portal, res);
+  async login(@Body() dto: LoginDto, @PortalActual() portal: Portal, @Ip() ip: string, @Res({ passthrough: true }) res: Response, @Headers('user-agent') agente?:string) {
+    return this.responder(await this.auth.login(dto.email, dto.password, portal, ip, agente), portal, res);
   }
 
   private responder(tokens: Awaited<ReturnType<AuthService['login']>>, portal: Portal, res: Response) {

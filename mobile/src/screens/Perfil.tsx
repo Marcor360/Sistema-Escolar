@@ -1,3 +1,4 @@
+import { repetirRecorridoAlumno } from '../recorrido-alumno';
 import { activarPush, desactivarPush } from "../push";
 import { habilitarBiometria, borrarPreferenciaBiometrica, preferenciaBiometrica, biometriaDisponible } from "../biometria";
 import { crearControlLectura } from "../api/lectura-vigente";
@@ -218,6 +219,7 @@ export default function PerfilScreen({ abrirDocumentos }: { abrirDocumentos?: ()
       {cargandoPerfil && !perfil && (
         <ActivityIndicator accessibilityLabel="Cargando perfil del alumno" />
       )}
+      <TouchableOpacity accessibilityRole="button" style={base.botonAccesible} onPress={repetirRecorridoAlumno}><Text>Ver recorrido especializado del alumno</Text></TouchableOpacity>
       <Tarjeta>
         <Text style={base.tituloTarjeta}>{sesion?.nombre}</Text>
         <Text style={base.secundario}>{sesion?.email}</Text>

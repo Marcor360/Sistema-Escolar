@@ -27,21 +27,23 @@ const dia = (s: string) =>
   }).format(new Date(s));
 function ImagenCiclo({ evento }: { evento: Evento }) {
   const [url, setUrl] = useState("");
+  const [cargando,setCargando]=useState(true),[intento,setIntento]=useState(0);
   const [error, setError] = useState("");
   useEffect(() => {
     let vigente = true;
+    setUrl("");setError("");setCargando(true);
     api
       .get<{ url: string }>(`/archivos/calendario/${evento.id}/enlace`)
       .then(({ data }) => {
         if (vigente) setUrl(archivosBase + data.url);
       })
       .catch((e) => {
-        if (vigente) setError(mensajeDeError(e));
+        if (vigente) { setError(mensajeDeError(e)); setCargando(false); }
       });
     return () => {
       vigente = false;
     };
-  }, [evento.id]);
+  }, [evento.id,evento.imagenNombre,intento]);
   return (
     <View>
       <Text>{evento.titulo}</Text>
@@ -51,14 +53,15 @@ function ImagenCiclo({ evento }: { evento: Evento }) {
           style={{ width: "100%", height: 450 }}
           resizeMode="contain"
           accessibilityLabel={evento.titulo}
-          onError={() =>
+          onLoad={()=>setCargando(false)}
+          onError={() => {setCargando(false);
             setError(
-              "No se pudo mostrar la imagen. Cierra y vuelve a abrir el calendario.",
-            )
-          }
+              "No se pudo mostrar la imagen. Puedes reintentar la carga.",
+            );}}
         />
       )}
-      {!!error && <Text accessibilityRole="alert">{error}</Text>}
+      {cargando&&<Text>Cargando imagen…</Text>}
+      {!!error && <><Text accessibilityRole="alert">{error}</Text><TouchableOpacity accessibilityRole="button" style={base.botonAccesible} onPress={()=>setIntento(i=>i+1)}><Text>Reintentar imagen</Text></TouchableOpacity></>}
     </View>
   );
 }

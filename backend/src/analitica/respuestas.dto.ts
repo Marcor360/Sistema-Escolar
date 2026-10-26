@@ -44,3 +44,23 @@ export class AnaliticaRespuestaDto {
   @ApiPropertyOptional({ type: AcademicoAnaliticaDto, description: 'Solo capacidad académica; maestro restringido incluso con Finanzas' }) academico?: AcademicoAnaliticaDto;
   @ApiPropertyOptional({ type: FinancieroAnaliticaDto, description: 'Solo capacidad financiera, sumada independientemente de clases propias' }) financiero?: FinancieroAnaliticaDto;
 }
+
+export class PuntoComparativaDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() etiqueta!: string;
+  @ApiProperty() valor!: number;
+}
+export class BloqueComparativaDto {
+  @ApiProperty({type:[PuntoComparativaDto]}) porPlantel!: PuntoComparativaDto[];
+  @ApiProperty({type:[PuntoComparativaDto]}) porCarrera!: PuntoComparativaDto[];
+  @ApiProperty({type:[PuntoComparativaDto]}) porMes!: PuntoComparativaDto[];
+  @ApiProperty({description:'Definición y límites de la métrica'}) base!: string;
+}
+export class ComparativasRespuestaDto {
+  @ApiProperty({type:CicloAnaliticaDto}) ciclo!: CicloAnaliticaDto;
+  @ApiProperty({format:'date'}) desde!: string;
+  @ApiProperty({format:'date'}) hasta!: string;
+  @ApiProperty({format:'date-time'}) generadoEn!: string;
+  @ApiPropertyOptional({type:BloqueComparativaDto,description:'Solo capacidad financiera dentro del alcance autorizado'}) financiero?: BloqueComparativaDto;
+  @ApiPropertyOptional({type:BloqueComparativaDto,description:'Solo capacidad académica; docente limitado a sus grupos'}) inscripciones?: BloqueComparativaDto;
+}

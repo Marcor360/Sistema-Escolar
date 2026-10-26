@@ -194,6 +194,11 @@ async function esperarServidor() {
       if (path.endsWith('/asistencias/clases')) data=[{id:1,nombre:'Clase de seguimiento con nombre extenso para verificar el selector en pantallas pequeñas'}];
       if (path.endsWith('/asistencias/lista')) data={revision:'a'.repeat(64),puedeCapturar:false,alumnos:[{id:1,matricula:'QA-001',nombre:'Alumno de seguimiento',estado:'PRESENTE'}]};
       if (path.endsWith('/asistencias')) data={datos:[{id:1,fecha:'2026-10-26',matricula:'QA-001',nombre:'Alumno de seguimiento',apellido:'Prueba',grupo:'A',materia:'Matemáticas',estado:'PRESENTE'}],pagina:1};
+      if(path.endsWith('/analitica/comparativas')){
+        const categorias=[{id:'1',etiqueta:'Plantel Centro · Carrera con nombre extenso',valor:125000},{id:'2',etiqueta:'Plantel Norte',valor:87000},{id:'sin-asignar',etiqueta:'Sin carrera identificada',valor:6000}];
+        const meses=[{id:'2026-09',etiqueta:'2026-09',valor:120000},{id:'2026-10',etiqueta:'2026-10',valor:98000}];
+        data={desde:'2026-09-01',hasta:'2026-10-31',financiero:{porPlantel:categorias,porCarrera:categorias,porMes:meses,base:'Pagos confirmados por origen'},inscripciones:{porPlantel:categorias.map(c=>({...c,valor:24})),porCarrera:categorias.map(c=>({...c,valor:16})),porMes:meses.map(c=>({...c,valor:12})),base:'Alumnos distintos, sin duplicar por grupo'}};
+      }
       await route.fulfill({ json: data });
     },
   );
@@ -286,6 +291,17 @@ async function esperarServidor() {
     await expect(page.getByText('Consulta los indicadores de tu institución')).toBeVisible();
     await page.getByRole('button', { name: 'Consultar indicadores' }).click();
     await expect(page.getByRole('heading', { name: 'Finanzas del ciclo' })).toBeVisible();
+    const comparativas = page.getByRole('region', { name: 'Comparativas institucionales' });
+    await expect(comparativas.locator('.indicador-grafica')).toHaveCount(6);
+    await expect(comparativas.getByRole('heading', { name: 'Ingresos por plantel', exact: true })).toBeVisible();
+    const primera = comparativas.locator('.indicador-grafica').first();
+    await primera.getByRole('button', { name: 'Líneas', exact: true }).click();
+    await expect(primera.getByRole('button', { name: 'Líneas', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(primera.getByRole('button', { name: 'Líneas', exact: true })).toHaveCSS('background-color', 'rgb(20, 52, 59)');
+    if (process.env.RESPONSIVE_CAPTURE_DIR && [375, 1440].includes(width)) {
+      await primera.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: resolve(process.env.RESPONSIVE_CAPTURE_DIR, 'comparativas-' + width + '.png') });
+    }
     const geometry = await page.evaluate(() => ({
       scroll: document.documentElement.scrollWidth,
       width: innerWidth,
@@ -585,6 +601,7 @@ async function esperarServidor() {
         const tutorial = page.getByRole('button', { name: 'Ver nuevamente el tutorial' });
         await tutorial.click();
         await expect(page.locator('aside.recorrido-panel')).toBeVisible();
+        await page.getByRole('button',{name:/Superadministración y operación/}).click();
         await expect(page.locator('.recorrido-progreso')).toContainText('1 de');
         const primeraRuta = new URL(page.url()).pathname;
         await page.getByRole('button', { name: 'Siguiente', exact: true }).click();

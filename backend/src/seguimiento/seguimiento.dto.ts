@@ -9,7 +9,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
-  MaxLength,
+  MaxLength, Length, Matches,
   Min,
   MinLength,
   ValidateNested,
@@ -46,4 +46,11 @@ export class PreferenciasDto {
   @ValidateNested({ each: true })
   @Type(() => PreferenciaDto)
   preferencias!: PreferenciaDto[];
+}
+
+export class CorreccionCalidadDto {
+ @IsInt() @Min(1) alumnoId!:number;
+ @IsOptional() @IsString() @MinLength(1) @MaxLength(20) telefono?:string;
+ @IsOptional() @IsString() @Matches(/^[A-Z0-9]{18}$/) curp?:string;
+ @IsOptional() @IsString() @Length(64,64) revision?:string;
 }

@@ -45,3 +45,5 @@ Las guías operativas describen el código actual. Los informes fechados conserv
 Antes de eliminar otro archivo, comprobar usos y enlaces y conservar requisitos, migraciones, recuperación operativa y evidencias que todavía respaldan una decisión. CI valida estructura de puertas y UAT; aprobarlas requiere sus evidencias institucionales.
 
 - [Seguimiento, asistencias y operación 1.27.53](SEGUIMIENTO_ASISTENCIAS_1.27.53.md).
+
+- [Recorridos por área y comparativas 1.27.54](RECORRIDOS_COMPARATIVAS_1.27.54.md).

@@ -1,3 +1,4 @@
+import { dispositivoSesion } from './dispositivo-sesion';
 import { compararPassword, hashPasswordNueva } from '../common/password-bcrypt';
 import { BadRequestException, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -28,7 +29,7 @@ export class AuthService {
     private readonly dataSource: DataSource,
   ) {}
 
-  async login(email: string, password: string, portal: Portal = 'WEB', ip?: string) {
+  async login(email: string, password: string, portal: Portal = 'WEB', ip?: string, agente?:string) {
     const usuario = await this.usuarios.findOne({
       where: { email, activo: true },
       select: ['id', 'email', 'passwordHash', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'sessionVersion', 'passwordChangeRequired', 'activacionPendiente'],
@@ -45,7 +46,7 @@ export class AuthService {
     }
     await this.validarExpediente(usuario.id, roles);
     const sesiones = this.dataSource.getRepository(Sesion);
-    const sesion = sesiones.create({ id: randomUUID(), usuarioId: usuario.id, portal,
+    const sesion = sesiones.create({ id: randomUUID(), usuarioId: usuario.id, portal, dispositivo:dispositivoSesion(agente,portal),
       version: usuario.sessionVersion ?? 0, expiraEn: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       ultimaActividadEn: instanteActividad(), revocada: false });
     const resultado = this.emitir(usuario, sesion);

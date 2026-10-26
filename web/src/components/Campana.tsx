@@ -59,7 +59,7 @@ export function Campana() {
       </button>
       {abierta && (
         <div className="campana-panel">
-          <p className="campana-titulo">Notificaciones</p>
+          <p className="campana-titulo">Avisos informativos</p><p>Marcar como leído no resuelve tareas, cargos ni trámites. Revisa las acciones en el centro de pendientes.</p>
           {error && <p className="mensaje-error" role="alert">{error} <button className="boton secundario chico" onClick={cargar}>Reintentar</button></p>}
           {lista.length === 0 && <p className="campana-vacia">Sin notificaciones.</p>}
           {lista.slice(0, 15).map((n) => (

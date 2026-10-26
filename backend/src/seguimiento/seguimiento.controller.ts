@@ -1,3 +1,5 @@
+import { CalidadService } from './calidad.service';
+import { CorreccionCalidadDto } from './seguimiento.dto';
 import {
   Body,
   Controller,
@@ -29,7 +31,10 @@ export class SeguimientoController {
     private readonly s: SeguimientoService,
     private readonly t: TramitesService,
     private readonly b: BancoService,
+    private readonly calidadService:CalidadService,
   ) {}
+  @Post('calidad/preview') @Roles('ADMINISTRATIVO') previewCalidad(@Body() d:CorreccionCalidadDto,@CurrentUser() u:JwtUser){return this.calidadService.preview(d,u);}
+  @Post('calidad/confirmar') @Roles('ADMINISTRATIVO') confirmarCalidad(@Body() d:CorreccionCalidadDto,@CurrentUser() u:JwtUser){return this.calidadService.confirmar(d,u);}
   @Get('respaldo') @Roles('SUPERADMIN') respaldo() {
     return this.s.respaldo();
   }

@@ -8,7 +8,7 @@ import { archivosBase } from '../api/client';
 import { useMarca } from '../marca/MarcaContext';
 import { IconoTabler, type NombreIcono } from '../components/IconoTabler';
 import { RecorridoInicial } from '../components/RecorridoInicial';
-import { construirRecorrido } from '../components/recorrido-por-rol';
+import { construirRecorrido, recorridosPorArea } from '../components/recorrido-por-rol';
 
 const secciones = [
   { destino: '/seguimiento', etiqueta: 'Seguimiento y pendientes', roles: ['ALUMNO','MAESTRO','ADMINISTRATIVO','FINANZAS'] },
@@ -292,7 +292,7 @@ export function Shell() {
           <Outlet />
         </Suspense>
       </main>
-      <RecorridoInicial usuarioId={sesion?.sub} roles={sesion?.roles ?? []} pasos={pasosRecorrido} />
+      <RecorridoInicial areas={recorridosPorArea(secciones,sesion?.roles??[])} usuarioId={sesion?.sub} roles={sesion?.roles ?? []} pasos={pasosRecorrido} />
     </div>
   );
 }

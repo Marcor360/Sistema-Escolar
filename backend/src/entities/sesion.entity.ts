@@ -7,6 +7,7 @@ export class Sesion {
   @PrimaryColumn({ length: 36 }) id!: string;
   @Column({ type: 'int' }) usuarioId!: number;
   @ManyToOne(() => Usuario, { onDelete: 'CASCADE' }) @JoinColumn({ name: 'usuario_id' }) usuario!: Usuario;
+  @Column({length:100,default:'Dispositivo no identificado'}) dispositivo!:string;
   @Column({ length: 5 }) portal!: 'WEB' | 'MOVIL';
   @Column({ length: 64 }) refreshHash!: string;
   @Column({ type: 'int' }) version!: number;

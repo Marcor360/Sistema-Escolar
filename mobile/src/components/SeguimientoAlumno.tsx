@@ -20,6 +20,7 @@ type Tramite = {
 };
 type Preferencia = { tipo: string; push: boolean; correo: boolean };
 type Sesion = {
+  dispositivo?:string;
   id: string;
   portal: string;
   actual: boolean;
@@ -345,7 +346,7 @@ function Contenido() {
         sesiones.map((s) => (
           <View key={s.id}>
             <Text>
-              {s.portal} · Última actividad:{" "}
+              {s.dispositivo??'Dispositivo no identificado'} · {s.portal} · Última actividad:{" "}
               {s.ultimaActividadEn
                 ? new Date(s.ultimaActividadEn).toLocaleString("es-MX")
                 : "Sin actividad"}{" "}

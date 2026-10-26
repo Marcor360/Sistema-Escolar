@@ -1,3 +1,4 @@
+import { CorreccionCalidad } from '../components/CorreccionCalidad';
 import { EstadoRespaldo } from '../components/EstadoRespaldo';
 import { FormEvent, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -192,6 +193,7 @@ function Calidad() {
       </p>
       {error && <p role="alert">{error}</p>}
       <button onClick={recargar}>Revisar datos</button>
+      <CorreccionCalidad alumnos={datos.incompletos} alGuardar={recargar}/>
       <h3>Expedientes con CURP o teléfono pendiente</h3>
       {datos.incompletos.map((a) => (
         <p key={a.id}>

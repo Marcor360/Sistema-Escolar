@@ -985,3 +985,5 @@ CREATE TABLE calendario_historial (
  accion VARCHAR(20) NOT NULL, alcance VARCHAR(600) NOT NULL,
  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE sesiones ADD dispositivo VARCHAR(100) NOT NULL DEFAULT 'Dispositivo no identificado';

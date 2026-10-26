@@ -52,3 +52,7 @@ Calendario PATCH conserva autorización por creador/plantel y valida destino si 
 - **Movimientos bancarios:** FINANZAS por plantel y SUPERADMIN global. Vista previa y confirmación separadas; no acceden alumnos ni docentes por sí solos.
 - **Preferencias/sesiones:** cada cuenta ve y modifica únicamente las propias. Revocar requiere sesión autenticada y no expone secretos.
 - **Estado de respaldo:** exclusivo SUPERADMIN; la API no ejecuta tareas de sistema ni acepta rutas del cliente.
+
+## Comparativas y correcciones · 1.27.54
+
+Comparativas financieras para capacidad financiera y planteles autorizados; comparativas de inscripciones para capacidad académica, con MAESTRO restringido a sus grupos incluso con FINANZAS. ALUMNO no accede a la analítica institucional. Las guías no conceden permisos. Preview/confirmación de teléfono/CURP requiere ADMINISTRATIVO por plantel o SUPERADMIN global, con verificación del origen y de la revisión en ambas solicitudes.
