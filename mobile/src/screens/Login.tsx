@@ -28,6 +28,8 @@ export default function LoginScreen({ aviso = "" }: { aviso?: string } = {}) {
   const [logoFallo, setLogoFallo] = useState(false);
   useEffect(() => setLogoFallo(false), [marca.logoUrl]);
   const [activacionVisible, setActivacionVisible] = useState(false);
+  const [recuperacionVisible, setRecuperacionVisible] = useState(false);
+  const passwordRef = useRef<TextInput>(null);
 
   const entrar = async () => {
     if (enCurso.current || !email.trim() || !password) return;
@@ -44,6 +46,7 @@ export default function LoginScreen({ aviso = "" }: { aviso?: string } = {}) {
     }
   };
 
+  if (recuperacionVisible) return <ActivarCuentaScreen recuperacion correoInicial={email} volver={() => setRecuperacionVisible(false)} />;
   if (activacionVisible) return <ActivarCuentaScreen correoInicial={email} volver={() => setActivacionVisible(false)} />;
 
   return (
@@ -95,10 +98,12 @@ export default function LoginScreen({ aviso = "" }: { aviso?: string } = {}) {
             autoCorrect={false}
             editable={!enviando}
             returnKeyType="next"
+            onSubmitEditing={() => passwordRef.current?.focus()}
           />
           <Text style={estilos.etiqueta}>Contraseña</Text>
           <TextInput
             style={estilos.input}
+            ref={passwordRef}
             secureTextEntry={!mostrarPassword}
             value={password}
             onChangeText={setPassword}
@@ -151,13 +156,11 @@ export default function LoginScreen({ aviso = "" }: { aviso?: string } = {}) {
               {enviando ? "Verificando…" : "Entrar"}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={estilos.controlPassword} onPress={() => setActivacionVisible(true)} accessibilityRole="button" accessibilityLabel="Activar mi cuenta por primera vez">
+          <TouchableOpacity style={estilos.controlPassword} disabled={enviando} onPress={() => { setPassword(""); setActivacionVisible(true); }} accessibilityRole="button" accessibilityLabel="Activar mi cuenta por primera vez">
             <Text>Activar mi cuenta por primera vez</Text>
           </TouchableOpacity>
-          <Text style={estilos.ayuda}>
-            Si no tienes acceso o necesitas recuperar tu contraseña, contacta a
-            control escolar. El personal utiliza el portal web.
-          </Text>
+          <TouchableOpacity style={estilos.controlPassword} disabled={enviando} onPress={() => { setPassword(""); setError(""); setRecuperacionVisible(true); }} accessibilityRole="button" accessibilityLabel="¿Olvidaste tu contraseña?"><Text>¿Olvidaste tu contraseña?</Text></TouchableOpacity>
+          <Text style={estilos.ayuda}>Si no puedes acceder a tu correo institucional, contacta a Control escolar. El personal utiliza el portal web.</Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

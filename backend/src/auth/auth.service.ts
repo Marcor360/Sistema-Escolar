@@ -185,7 +185,7 @@ export class AuthService {
   async resetPassword(token: string, password: string) {
     const registro = await this.tokens.findOne({ where: { token: this.hashToken(token), usado: false } });
     if (!registro || registro.expiraEn < new Date()) {
-      throw new BadRequestException('Token inválido o expirado');
+      throw new BadRequestException('El código no es válido, ya se utilizó o venció. Revisa que sea el de recuperación o solicita otro.');
     }
     await this.dataSource.transaction(async (manager) => {
       // Mismo orden de bloqueo que cambio de contraseña: usuario antes de tokens.
@@ -203,7 +203,7 @@ export class AuthService {
           id: registro.id, usado: false, ahora: new Date(),
         })
         .execute();
-      if (consumo.affected !== 1) throw new BadRequestException('Token inválido o expirado');
+      if (consumo.affected !== 1) throw new BadRequestException('El código no es válido, ya se utilizó o venció. Revisa que sea el de recuperación o solicita otro.');
 
       const actualizado = await usuarios.update({ id: usuario.id, activo: true }, {
         passwordHash: await hashPasswordNueva(password), passwordChangeRequired: false,

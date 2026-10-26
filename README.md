@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.27.54`** · Recorridos especializados por área y Expo alumno, gráficas comparativas por plantel/carrera e inscripciones, correcciones con vista previa y sesiones identificadas. Requiere migración incremental y UAT antes de operar en IIS.
+**Versión candidata: `1.27.55`** · Correos de acceso más claros, recuperación de contraseña en Expo y mejoras de acceso y pendientes. Entrega apilada sobre PR #203; requiere integrar primero esa base y completar UAT.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -18,6 +18,8 @@ Sistema escolar multiplataforma para operación académica, administrativa y fin
 Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [índice documental](docs/README.md) e [historial de documentos retirados](docs/HISTORIAL.md).
 
 ### Cambios consolidados recientes
+
+- **1.27.55:** [Correos claros y UX de acceso/Inicio](docs/CORREOS_UX_1.27.55.md).
 
 - **1.27.54:** [Recorridos por área, comparativas y cierre de pendientes](docs/RECORRIDOS_COMPARATIVAS_1.27.54.md).
 

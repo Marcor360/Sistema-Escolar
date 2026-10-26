@@ -1,3 +1,4 @@
+import { PendientesAlumno } from "../components/PendientesAlumno";
 vi.mock('expo-crypto',()=>({randomUUID:()=> 'be678c57-bdd4-48ef-a461-4c43951f754c'}));
 import { configurarCacheAcademica } from '../api/cache-academica';
 import Inicio from "./Inicio";
@@ -694,4 +695,62 @@ it("permite continuar después de solicitar el código si falla el almacenamient
   await act(async () => vista.root.findByProps({ accessibilityLabel: "Continuar" }).props.onPress());
   expect(api.post).toHaveBeenCalledTimes(1);
   expect(vista.root.findByProps({ accessibilityLabel: "Código de verificación de 64 caracteres" })).toBeTruthy();
+});
+
+it("recupera desde Login, valida confirmación y limpia código y contraseñas al guardar", async () => {
+  vi.mocked(api.post).mockResolvedValue({ data: { mensaje: "Si la cuenta existe, recibirás instrucciones" } });
+  await montar(<Login />);
+  await escribir("Correo institucional", " alumno@example.test ");
+  await act(async () => vista.root.findByProps({ accessibilityLabel: "¿Olvidaste tu contraseña?" }).props.onPress());
+  expect(texto()).toContain("Recupera tu contraseña");
+  await act(async () => vista.root.findByProps({ accessibilityLabel: "Continuar" }).props.onPress());
+  expect(api.post).toHaveBeenLastCalledWith("/auth/forgot-password", { email: "alumno@example.test" });
+  await escribir("Código de verificación de 32 caracteres", "A".repeat(32));
+  await act(async () => vista.root.findByProps({ accessibilityLabel: "Continuar" }).props.onPress());
+  await escribir("Nueva contraseña", "Nueva_Segura_42!");
+  await escribir("Confirmar nueva contraseña", "Diferente_42!");
+  await act(async () => vista.root.findByProps({ accessibilityLabel: "Guardar nueva contraseña" }).props.onPress());
+  expect(api.post).toHaveBeenCalledTimes(1);
+  expect(texto()).toContain("no coinciden");
+  await escribir("Confirmar nueva contraseña", "Nueva_Segura_42!");
+  let resolver!: (v: {data: {mensaje: string}}) => void;
+  vi.mocked(api.post).mockReturnValueOnce(new Promise(r => { resolver = r; }));
+  await act(async () => {
+    const boton = vista.root.findByProps({ accessibilityLabel: "Guardar nueva contraseña" });
+    boton.props.onPress(); boton.props.onPress();
+  });
+  expect(api.post).toHaveBeenCalledTimes(2);
+  expect(api.post).toHaveBeenLastCalledWith("/auth/reset-password", {token:"a".repeat(32),password:"Nueva_Segura_42!"});
+  await act(async () => resolver({data:{mensaje:"Guardado"}}));
+  expect(texto()).toContain("Contraseña actualizada");
+  expect(texto()).not.toContain("Nueva_Segura_42!");
+  expect(texto()).not.toContain("a".repeat(32));
+});
+it("permite usar el código recibido sin solicitar otro y conserva el flujo ante un código rechazado", async () => {
+  await montar(<ActivarCuenta recuperacion volver={vi.fn()} />);
+  await act(async () => vista.root.findByProps({ accessibilityLabel: "Ya tengo un código" }).props.onPress());
+  expect(api.post).not.toHaveBeenCalled();
+  await escribir("Código de verificación de 32 caracteres", "a".repeat(32));
+  await act(async () => vista.root.findByProps({ accessibilityLabel: "Continuar" }).props.onPress());
+  await escribir("Nueva contraseña", "Nueva_Segura_42!");
+  await escribir("Confirmar nueva contraseña", "Nueva_Segura_42!");
+  vi.mocked(api.post).mockRejectedValueOnce(new Error("Código vencido"));
+  await act(async () => vista.root.findByProps({ accessibilityLabel: "Guardar nueva contraseña" }).props.onPress());
+  expect(texto()).toContain("No se pudo completar");
+  expect(texto()).not.toContain("Contraseña actualizada");
+  expect(vista.root.findByProps({accessibilityLabel:"Guardar nueva contraseña"}).props.disabled).toBe(false);
+});
+
+it("los pendientes abren actividades y pagos y señalan datos anteriores cuando falla actualizar", async () => {
+  vi.mocked(api.get).mockResolvedValueOnce({data:[{titulo:"Actividades sin entrega",cantidad:2},{titulo:"Cargos por cubrir",cantidad:1}]});
+  await montar(<PendientesAlumno/>);
+  const botones=vista.root.findAllByType(TouchableOpacity);
+  await act(async () => botones[0].props.onPress());
+  expect(sesion.navegar).toHaveBeenLastCalledWith("Materias");
+  await act(async () => botones[1].props.onPress());
+  expect(sesion.navegar).toHaveBeenLastCalledWith("Pagos");
+  vi.mocked(api.get).mockRejectedValueOnce(new Error("Sin conexión"));
+  await act(async () => botones[botones.length-1].props.onPress());
+  expect(texto()).toContain("Los datos mostrados son de la consulta anterior");
+  expect(texto()).not.toContain("No hay pendientes señalados");
 });

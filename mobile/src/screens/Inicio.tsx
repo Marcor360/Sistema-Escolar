@@ -137,6 +137,7 @@ export default function InicioScreen() {
       {!cargaInicialCompleta && !error && (
         <ActivityIndicator accessibilityLabel="Cargando inicio" />
       )}
+      <PendientesAlumno/>
       {cargaInicialCompleta && (
         <View style={estilos.resumen}>
           <View style={[estilos.kpi, { backgroundColor: marca.colorPrimario, borderLeftColor: marca.colorAcento }]}>
@@ -239,7 +240,7 @@ export default function InicioScreen() {
             </Text>
           </Tarjeta>
         ))}
-      <PendientesAlumno/><SeguimientoAlumno/><CalendarioCiclo />
+      <SeguimientoAlumno/><CalendarioCiclo />
       <View style={{ height: 24 }} />
     </ScrollView>
   );
