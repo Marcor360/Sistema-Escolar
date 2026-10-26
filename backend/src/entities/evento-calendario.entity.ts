@@ -3,6 +3,10 @@ import { Plantel } from './plantel.entity';
 
 @Entity('eventos_calendario')
 export class EventoCalendario {
+  @Column({ type: 'int', nullable: true }) cicloId!: number | null;
+  @Column({ type: 'int', nullable: true }) nivelId!: number | null;
+  @Column({ length: 20, default: 'ACADEMICA' }) audiencia!: 'ACADEMICA' | 'ADMINISTRATIVA' | 'FINANCIERA';
+  @Column({ type: String, length: 100, nullable: true }) imagenNombre!: string | null;
   @PrimaryGeneratedColumn() id!: number;
   @Column({ length: 150 }) titulo!: string;
   @Column({ type: String, length: 400, nullable: true }) descripcion!: string | null;

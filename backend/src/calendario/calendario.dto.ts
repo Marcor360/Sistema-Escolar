@@ -6,6 +6,9 @@ import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, IsString } from 'class-validator';
 
 export class EventoDto {
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) cicloId?: number;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) nivelId?: number;
+  @IsOptional() @IsIn(['ACADEMICA','ADMINISTRATIVA','FINANCIERA']) audiencia?: 'ACADEMICA' | 'ADMINISTRATIVA' | 'FINANCIERA';
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsString() @MinLength(1) @MaxLength(150) titulo!: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
@@ -25,6 +28,8 @@ export class EditarEventoDto extends PartialType(EventoDto) {
 }
 
 export class ConsultarEventosDto extends PaginacionDto {
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) cicloId?: number;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) nivelId?: number;
   @IsOptional() @IsDateString({strict:true}) desde?: string;
   @IsOptional() @IsDateString({strict:true}) hasta?: string;
   @IsOptional() @Type(()=>Number) @IsInt() @Min(1) plantelId?: number;

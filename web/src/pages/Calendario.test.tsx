@@ -43,7 +43,7 @@ it.each([
   { roles: ['ADMINISTRATIVO', 'MAESTRO'], autorizados: 1 },
   { roles: ['MAESTRO', 'FINANZAS'], autorizados: 1 },
   { roles: ['SUPERADMIN'], autorizados: 3 },
-  { roles: ['FINANZAS'], autorizados: 0 },
+  { roles: ['FINANZAS'], autorizados: 1 },
 ])('respeta autorización para $roles', async ({ roles, autorizados }) => {
   contexto.roles = roles; contexto.sub = 7;
   const eventos = [

@@ -1,3 +1,4 @@
+import { CalendarioService } from '../calendario/calendario.service';
 import { TemariosService } from '../temarios/temarios.service';
 import { recursaClase } from '../recursamientos/acceso-recursamiento';
 import { BibliotecaArchivo } from '../entities/biblioteca.entity';
@@ -21,7 +22,7 @@ import { grupoVigente } from '../common/contexto-academico';
 import { ScopeService } from '../planteles/scope.service';
 import { JwtUser } from '../common/current-user.decorator';
 
-type RecursoArchivo = 'temario' | 'material' | 'entrega' | 'biblioteca' | 'boleta';
+type RecursoArchivo = 'temario' | 'material' | 'entrega' | 'biblioteca' | 'boleta' | 'calendario';
 
 interface EnlacePayload {
   sub: number;
@@ -67,7 +68,21 @@ export class ArchivosService {
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
     private readonly temarios: TemariosService,
+    private readonly calendario: CalendarioService,
   ) {}
+
+  async enlaceCalendario(id: number, user: JwtUser) {
+    await this.calendario.imagen(id, user);
+    return { url: '/api/archivos/calendario/' + id + '?t=' + this.firmar({ sub: user.sub, rec: 'calendario', id }, user) };
+  }
+  async descargarCalendario(id: number, token: string, res: Response) {
+    const payload = this.verificarToken(token, 'calendario', id);
+    const imagen = await this.calendario.imagen(id, await this.usuarioDesdeToken(payload));
+    res.setHeader('Content-Type', imagen.tipo);
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.send(imagen.archivo);
+  }
 
   async enlaceTemario(id: number, user: JwtUser) {
     await this.temarios.archivo(id, user);

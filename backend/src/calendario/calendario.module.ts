@@ -16,6 +16,7 @@ import { CalendarioService } from './calendario.service';
     PlantelesModule,
   ],
   providers: [CalendarioService],
+  exports: [CalendarioService],
   controllers: [CalendarioController],
 })
 export class CalendarioModule {}

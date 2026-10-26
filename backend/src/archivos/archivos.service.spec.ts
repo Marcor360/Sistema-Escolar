@@ -45,7 +45,7 @@ function crearService(overrides: {
   const config = { get: jest.fn().mockReturnValue(undefined) };
   const service = new ArchivosService(
     materialesRepo as any, entregasRepo as any, inscripcionesRepo as any, usuariosRepo as any,
-    scope, jwt as any, config as any, {} as any,
+    scope, jwt as any, config as any, {} as any, {} as any,
   );
   return { service, materialesRepo, entregasRepo, inscripcionesRepo, jwt };
 }

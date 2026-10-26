@@ -6,7 +6,7 @@ export const puedeAdministrarAcademico = (user: Actor) => user.roles.some((r) =>
 export const puedeAdministrarFinanzas = (user: Actor) => user.roles.some((r) => ['SUPERADMIN', 'ADMINISTRATIVO', 'FINANZAS'].includes(r));
 export const puedeConsultarAcademico = (user: Actor) => puedeAdministrarAcademico(user) || user.roles.includes('MAESTRO');
 export const esMaestroRestringido = (user: Actor) => user.roles.includes('MAESTRO') && !puedeAdministrarAcademico(user);
-export const puedeConsultarCalendario = (user: Actor) => puedeConsultarAcademico(user) || user.roles.includes('ALUMNO');
+export const puedeConsultarCalendario = (user: Actor) => puedeConsultarAcademico(user) || user.roles.includes('ALUMNO') || user.roles.includes('FINANZAS');
 export function exigirConsultaAcademica(user: Actor) {
   if (!puedeConsultarAcademico(user)) throw new ForbiddenException('La operación requiere una capacidad académica');
 }

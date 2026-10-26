@@ -178,6 +178,7 @@ export default function DashboardPage() {
   return (
     <>
       <div className="panel-bienvenida">
+        <Link to="/calendario">Ver calendario del ciclo escolar</Link>
         <div>
           <p className="sobrelinea">{tieneVariosRoles ? 'ESPACIO DE TRABAJO' : contextoRol.titulo.toUpperCase()}</p>
           <Encabezado
