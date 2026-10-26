@@ -28,7 +28,7 @@
   border-radius: 12px;
   gap: 4px;
 }
-.indicador-conmutador button {
+.indicador-grafica .indicador-conmutador button {
   background: transparent;
   color: var(--tinta);
   border: 0;
@@ -82,7 +82,7 @@
   flex-wrap: wrap;
   margin: 12px 0;
 }
-.indicador-leyenda button {
+.indicador-grafica .indicador-leyenda button {
   display: flex;
   align-items: center;
   gap: 8px;

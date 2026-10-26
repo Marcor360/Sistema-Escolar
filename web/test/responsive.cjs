@@ -297,6 +297,7 @@ async function esperarServidor() {
     const primera = comparativas.locator('.indicador-grafica').first();
     await primera.getByRole('button', { name: 'Líneas', exact: true }).click();
     await expect(primera.getByRole('button', { name: 'Líneas', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(primera.getByRole('button', { name: 'Líneas', exact: true })).toHaveCSS('background-color', 'rgb(20, 52, 59)');
     if (process.env.RESPONSIVE_CAPTURE_DIR && [375, 1440].includes(width)) {
       await primera.scrollIntoViewIfNeeded();
       await page.screenshot({ path: resolve(process.env.RESPONSIVE_CAPTURE_DIR, 'comparativas-' + width + '.png') });

@@ -45,7 +45,7 @@ export function GraficaIndicador({
         </div>
         <div className="indicador-conmutador" role="group" aria-label={'Presentación de ' + titulo}>
           {(['barras', 'lineas'] as const).map((t) => (
-            <button type="button" key={t} aria-pressed={tipo === t} onClick={() => setTipo(t)}>
+            <button className="boton" type="button" key={t} aria-pressed={tipo === t} onClick={() => setTipo(t)}>
               {t === 'barras' ? 'Barras' : 'Líneas'}
             </button>
           ))}
@@ -164,7 +164,7 @@ export function GraficaIndicador({
           </p>
           <div className="indicador-leyenda" aria-label={'Seleccionar categoría de ' + titulo}>
             {visibles.map((d, i) => (
-              <button key={d.id} type="button" aria-pressed={seleccion === d.id} onClick={() => setSeleccion(d.id)}>
+              <button className="boton" key={d.id} type="button" aria-pressed={seleccion === d.id} onClick={() => setSeleccion(d.id)}>
                 <span>{i + 1}</span>
                 {d.etiqueta}
               </button>
