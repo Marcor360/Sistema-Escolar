@@ -514,7 +514,7 @@ function AppInterna() {
       <SesionContext.Provider
         value={{ sesion, iniciar, cerrar, finalizarSesionLocal }}
       >
-        <SafeAreaView style={{ flex: 1, backgroundColor:colores.papel }} edges={sesion ? ["left","right"] : ["left","right","top","bottom"]} onTouchStart={registrarInteraccion}>
+        <SafeAreaView style={{ flex: 1, backgroundColor:sesion ? colores.papel : marca.colorPrimario }} edges={sesion ? ["left","right"] : ["left","right","top","bottom"]} onTouchStart={registrarInteraccion}>
         <NavigationContainer
           ref={navegacion}
           theme={tema}
