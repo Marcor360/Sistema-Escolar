@@ -1,3 +1,4 @@
+import { useDisenoAlumno } from "../use-diseno-alumno";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -41,6 +42,7 @@ const VIDA_CACHE = 5 * 60 * 1000;
 
 /** Carpetas de consulta del alumno: índices de la API, no archivos locales ni biblioteca administrativa. */
 export default function DocumentosScreen() {
+  const diseno = useDisenoAlumno();
   const { sesion } = useSesion();
   const [boletas, setBoletas] = useState<Boleta[]>([]);
   const [materias, setMaterias] = useState<Materia[]>([]);
@@ -203,7 +205,7 @@ export default function DocumentosScreen() {
   };
 
   return (
-    <ScrollView style={base.pantalla}
+    <ScrollView contentContainerStyle={base.contenidoLista} style={[base.pantalla, diseno.pantalla]}
       refreshControl={<RefreshControl refreshing={cargando} onRefresh={cargar} />}>
       <GuiaPantalla titulo="Mis documentos"
         detalle="Descarga boletas informativas en PDF y abre materiales de clase mediante enlaces privados. Se requiere internet; no se guardan documentos dentro de la app." />

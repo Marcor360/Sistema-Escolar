@@ -1,3 +1,4 @@
+vi.mock("react-native-safe-area-context",()=>({useSafeAreaInsets:()=>({top:0,bottom:0,left:0,right:0})}));
 import { PendientesAlumno } from "../components/PendientesAlumno";
 vi.mock('expo-crypto',()=>({randomUUID:()=> 'be678c57-bdd4-48ef-a461-4c43951f754c'}));
 import { configurarCacheAcademica } from '../api/cache-academica';
@@ -57,6 +58,7 @@ vi.mock("../components/Texto", () => ({ Text: "Text" }));
 vi.mock("react-native", async () => {
   const { createElement } = await import("react");
   return {
+    useWindowDimensions: () => ({width:390,height:844,fontScale:1,scale:1}),
     View: "View",
     Text: "Text",
     Image: "Image",

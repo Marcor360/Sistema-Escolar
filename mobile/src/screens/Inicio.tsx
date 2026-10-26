@@ -1,3 +1,4 @@
+import { useDisenoAlumno } from "../use-diseno-alumno";
 import { PendientesAlumno } from '../components/PendientesAlumno';
 import { SeguimientoAlumno } from '../components/SeguimientoAlumno';
 import { CalendarioCiclo } from '../components/CalendarioCiclo';
@@ -28,6 +29,7 @@ import { useMarca } from "../marca";
 import { base, Tarjeta } from "./comunes";
 
 export default function InicioScreen() {
+  const diseno = useDisenoAlumno();
   const { marca } = useMarca();
   const [logoFallo, setLogoFallo] = useState(false);
   useEffect(() => setLogoFallo(false), [marca.logoUrl]);
@@ -98,7 +100,8 @@ export default function InicioScreen() {
 
   return (
     <ScrollView
-      style={base.pantalla}
+      contentContainerStyle={base.contenidoLista}
+      style={[base.pantalla, diseno.pantalla]}
       refreshControl={
         <RefreshControl refreshing={cargando} onRefresh={cargar} />
       }
@@ -112,7 +115,7 @@ export default function InicioScreen() {
             : <Text style={[estilos.monograma, { color: textoSobreFondo(marca.colorPrimario) }]}>{marca.nombreCorto}</Text>}
           <Text style={[estilos.nombreInstitucion, { color: textoSobreFondo(marca.colorPrimario) }]}>{marca.nombreInstitucion}</Text>
         </View>
-        <Text style={[estilos.distintivo, { color: marca.colorAcento }]}>{marca.nombreCorto} · TU ESPACIO ESCOLAR</Text>
+        <Text style={[estilos.distintivo, { color: textoSobreFondo(marca.colorPrimario) }]}>{marca.nombreCorto} · TU ESPACIO ESCOLAR</Text>
         <Text style={[estilos.saludo, { color: textoSobreFondo(marca.colorPrimario) }]} accessibilityRole="header">
           Hola, {nombre}
         </Text>
@@ -171,19 +174,21 @@ export default function InicioScreen() {
       )}
 
       <Text accessibilityRole="header" style={estilos.subtitulo}>¿Qué necesitas hacer?</Text>
+      <View style={{flexDirection:"row",flexWrap:"wrap",gap:12,marginBottom:16}}>
       {accesos.map((acceso) => (
         <TouchableOpacity
           key={acceso.ruta}
           accessibilityRole="button"
           accessibilityLabel={acceso.titulo}
           accessibilityHint={acceso.detalle}
-          style={estilos.acceso}
+          style={[estilos.acceso,{width:diseno.anchoAcceso}]}
           onPress={() => navigation.navigate(acceso.ruta as never)}
         >
           <Text style={base.tituloTarjeta}>{acceso.titulo} →</Text>
           <Text style={base.secundario}>{acceso.detalle}</Text>
         </TouchableOpacity>
       ))}
+      </View>
       {cargaInicialCompleta && <Text style={estilos.subtitulo}>Avisos</Text>}
       {cargaInicialCompleta && avisos === null && (
         <Text style={base.secundario}>
@@ -251,9 +256,9 @@ const estilos = StyleSheet.create({
   logoInstitucional: { width: 88, height: 48 },
   monograma: { minWidth: 56, fontSize: 18, fontWeight: "700" },
   nombreInstitucion: { flex: 1, fontSize: 13, fontWeight: "600" },
-  encabezado: { backgroundColor: colores.pizarra, borderRadius: radio.md, padding: espacio.xl, marginBottom: espacio.xl, borderBottomWidth: 3, borderBottomColor: colores.dorado },
+  encabezado: { backgroundColor: colores.pizarra, borderRadius: radio.md, padding: espacio.lg, marginBottom: espacio.lg, borderBottomWidth: 3, borderBottomColor: colores.dorado },
   distintivo: { color: colores.dorado, fontSize: 11, fontWeight: '700', letterSpacing: 1.2, marginBottom: espacio.md },
-  acceso: { backgroundColor: "#fff", borderWidth: 1, borderColor: colores.linea, borderRadius: radio.md, padding: espacio.lg, marginBottom: espacio.md, minHeight: 64 },
+  acceso: { backgroundColor: "#fff", borderWidth: 1, borderColor: colores.linea, borderRadius: radio.md, padding: espacio.lg, minHeight: 88, minWidth: 0 },
   error: {
     borderWidth: 1,
     borderColor: colores.peligro,

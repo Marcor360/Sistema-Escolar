@@ -1,5 +1,5 @@
 {
-  "version": "1.27.55",
+  "version": "1.27.56",
   "alcance": "Escenarios de aceptación institucional sin resultados fabricados",
   "escenarios": [
     {
@@ -599,6 +599,32 @@
       "id": "UAT-44",
       "rol": "ALUMNO",
       "escenario": "Inicio con pendientes antes del resumen, acciones a actividades y pagos, datos anteriores identificados ante fallo, lectura con texto ampliado",
+      "canales": [
+        "android",
+        "ios",
+        "ux"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable institucional por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-45",
+      "rol": "ALUMNO",
+      "escenario": "Diseño Expo: teléfono pequeño, horizontal y tableta; contenido centrado, accesos de Inicio sin recorte, cambio a una columna con letra ampliada, notch y barra de gestos",
+      "canales": [
+        "android",
+        "ios",
+        "ux"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable institucional por designar",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-46",
+      "rol": "ALUMNO",
+      "escenario": "Acceso y lectura Expo: formularios con teclado y contraseñas visibles/ocultas, paginador táctil, texto largo, errores/reintentos, TalkBack y VoiceOver sin perder acciones",
       "canales": [
         "android",
         "ios",

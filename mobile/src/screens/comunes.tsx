@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "../components/Texto";
-import { colores, espacio, radio, tipografia } from "../theme";
+import { colores, espacio, radio, tipografia, textoSobreFondo } from "../theme";
 import { useMarca } from "../marca";
 
 export function GuiaPantalla({
@@ -12,14 +12,10 @@ export function GuiaPantalla({
 }) {
   return (
     <View style={{ marginBottom: espacio.lg }}>
-      <Text accessibilityRole="header" style={base.tituloTarjeta}>
+      <Text accessibilityRole="header" style={base.tituloPantalla}>
         {titulo}
       </Text>
       <Text style={base.secundario}>{detalle}</Text>
-      <Text style={base.secundario}>
-        Desliza hacia abajo para actualizar. Necesitas conexión para guardar
-        cambios.
-      </Text>
     </View>
   );
 }
@@ -64,12 +60,29 @@ export function ErrorCarga({
     <View accessibilityRole="alert" style={base.errorCarga}>
       <Text style={base.errorTexto}>{mensaje}</Text>
       <Pressable
-        style={base.botonAccesible}
+        style={[
+          base.botonAccesible,
+          {
+            backgroundColor: marca.colorPrimario,
+            paddingHorizontal: 16,
+            borderRadius: 12,
+          },
+        ]}
         onPress={reintentar}
         accessibilityRole="button"
         accessibilityLabel="Reintentar carga"
       >
-        <Text style={[base.reintentar, { color: marca.colorPrimario }]}>Reintentar</Text>
+        <Text
+          style={[
+            base.reintentar,
+            {
+              color: textoSobreFondo(marca.colorPrimario),
+              textDecorationLine: "none",
+            },
+          ]}
+        >
+          Reintentar
+        </Text>
       </Pressable>
     </View>
   );
@@ -77,7 +90,16 @@ export function ErrorCarga({
 
 export const base = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: colores.papel, padding: espacio.lg },
+  contenidoLista: { paddingBottom: 32 },
+  tituloPantalla: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: colores.tinta,
+    marginBottom: 8,
+    flexShrink: 1,
+  },
   tarjeta: {
+    minWidth: 0,
     backgroundColor: "#fff",
     borderWidth: 1,
     borderColor: colores.linea,
@@ -86,12 +108,18 @@ export const base = StyleSheet.create({
     borderRadius: radio.md,
   },
   tituloTarjeta: {
-    fontSize: tipografia.cuerpo,
+    fontSize: 17,
     fontWeight: "700",
+    flexShrink: 1,
     color: colores.tinta,
     marginBottom: 2,
   },
-  secundario: { fontSize: tipografia.secundaria, color: colores.gris },
+  secundario: {
+    fontSize: tipografia.secundaria,
+    lineHeight: 20,
+    color: colores.gris,
+    flexShrink: 1,
+  },
   sello: {
     alignSelf: "flex-start",
     borderWidth: 1,
@@ -124,6 +152,9 @@ export const base = StyleSheet.create({
     fontWeight: "600",
   },
   botonAccesible: {
+    maxWidth: "100%",
+    minWidth: 44,
+    paddingVertical: 8,
     minHeight: 44,
     justifyContent: "center",
     alignSelf: "flex-start",

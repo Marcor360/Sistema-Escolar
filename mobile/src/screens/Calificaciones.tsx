@@ -1,5 +1,6 @@
-import { BoletaInformativa } from './BoletaInformativa';
-import { Paginador } from '../components/Paginador';
+import { useDisenoAlumno } from "../use-diseno-alumno";
+import { BoletaInformativa } from "./BoletaInformativa";
+import { Paginador } from "../components/Paginador";
 import { ordenarPeriodos } from "../utils/orden-calificaciones";
 import { useSesion } from "../sesion";
 import { leerConCache } from "../api/cache-academica";
@@ -39,12 +40,19 @@ interface Calificacion {
 }
 
 export default function CalificacionesScreen() {
+  const diseno = useDisenoAlumno();
   const { sesion } = useSesion();
-  const [pagina,setPagina]=useState(1),[total,setTotal]=useState(0);
-  useEffect(()=>{setPagina(1);setTotal(0);},[sesion?.sub]);
+  const [pagina, setPagina] = useState(1),
+    [total, setTotal] = useState(0);
+  useEffect(() => {
+    setPagina(1);
+    setTotal(0);
+  }, [sesion?.sub]);
 
   const [boletas, setBoletas] = useState<Boleta[]>([]);
-  const [inscripcionBoleta,setInscripcionBoleta]=useState<number|null>(null);
+  const [inscripcionBoleta, setInscripcionBoleta] = useState<number | null>(
+    null,
+  );
   const [errorBoletas, setErrorBoletas] = useState("");
   const lecturaBoletas = useRef(crearControlLectura());
   const cargarBoletas = useCallback(() => {
@@ -93,7 +101,9 @@ export default function CalificacionesScreen() {
         { params: { cicloId, inscripcionId, formato: "informativa-pdf" } },
       );
       if (actual === descargaVigente.current)
-        await Linking.openURL(resolverEnlacePrivado(archivosBase, data.url, "boleta"));
+        await Linking.openURL(
+          resolverEnlacePrivado(archivosBase, data.url, "boleta"),
+        );
     } catch (e) {
       if (actual === descargaVigente.current) setError(mensajeDeError(e));
     } finally {
@@ -125,11 +135,15 @@ export default function CalificacionesScreen() {
     setCargando(true);
     void lectura.current.cargar(
       () =>
-        leerConCache("/calificaciones/mias/listado?pagina="+pagina, () =>
-          api.get<{datos:Calificacion[];total:number}>("/calificaciones/mias/listado",{params:{pagina,porPagina:10}}),
+        leerConCache("/calificaciones/mias/listado?pagina=" + pagina, () =>
+          api.get<{ datos: Calificacion[]; total: number }>(
+            "/calificaciones/mias/listado",
+            { params: { pagina, porPagina: 10 } },
+          ),
         ),
       (r) => {
-        setRegistros(r.data.datos);setTotal(r.data.total);
+        setRegistros(r.data.datos);
+        setTotal(r.data.total);
         setOffline(r.offline);
         setCacheExpira(r.fecha + 5 * 60000);
         setUltimaActualizacion(new Date(r.fecha).toLocaleString());
@@ -138,7 +152,7 @@ export default function CalificacionesScreen() {
       (fallo) => setError(mensajeDeError(fallo)),
       () => setCargando(false),
     );
-  }, [sesion?.sub,pagina]);
+  }, [sesion?.sub, pagina]);
 
   useFocusEffect(
     useCallback(() => {
@@ -151,9 +165,14 @@ export default function CalificacionesScreen() {
     }, [cargar]),
   );
 
-  useFocusEffect(useCallback(()=>{
-    cargarBoletas();return()=>{lecturaBoletas.current.invalidar();};
-  },[cargarBoletas]));
+  useFocusEffect(
+    useCallback(() => {
+      cargarBoletas();
+      return () => {
+        lecturaBoletas.current.invalidar();
+      };
+    }, [cargarBoletas]),
+  );
 
   // Agrupar por materia para lectura tipo boleta
   const materias = new Map<
@@ -172,41 +191,54 @@ export default function CalificacionesScreen() {
   const filas = [...materias.entries()];
 
   return (
-    <View style={base.pantalla}>
-      {error !== "" && <ErrorCarga mensaje={error} reintentar={cargar} />}
-      {ultimaActualizacion && (
-        <Text accessibilityRole="text">
-          Última actualización: {ultimaActualizacion}
-        </Text>
-      )}
-      {offline && (
-        <Text accessibilityRole="alert">
-          Sin conexión: copia de lectura de esta sesión, hasta 5 minutos. No
-          confirma cambios.
-        </Text>
-      )}
-      {errorBoletas && !offline && (
-        <ErrorCarga mensaje={errorBoletas} reintentar={cargarBoletas} />
-      )}
-      {!boletas.length && (
-        <TouchableOpacity
-          accessibilityRole="button"
-          disabled={descargando || offline}
-          onPress={() => descargar()}
-          style={base.tarjeta}
-        >
-          <Text>Descargar boleta del ciclo vigente</Text>
-        </TouchableOpacity>
-      )}
-      <Paginador pagina={pagina} total={total} ocupado={cargando} cambiar={setPagina} />
+    <View style={[base.pantalla, diseno.pantalla]}>
       <FlatList
+        contentContainerStyle={base.contenidoLista}
+        keyboardShouldPersistTaps="handled"
         ListHeaderComponent={
           <>
             <GuiaPantalla
               titulo="Mis calificaciones"
               detalle="El promedio oficial usa los parciales 1, 2 y 3. La evaluación Final se muestra por separado; un parcial pendiente no equivale a cero."
             />
-            {inscripcionBoleta !== null && <BoletaInformativa key={`${sesion?.sub}-${inscripcionBoleta}`} inscripcionId={inscripcionBoleta}/>}
+
+            {error !== "" && <ErrorCarga mensaje={error} reintentar={cargar} />}
+            {ultimaActualizacion && (
+              <Text accessibilityRole="text">
+                Última actualización: {ultimaActualizacion}
+              </Text>
+            )}
+            {offline && (
+              <Text accessibilityRole="alert">
+                Sin conexión: copia de lectura de esta sesión, hasta 5 minutos.
+                No confirma cambios.
+              </Text>
+            )}
+            {errorBoletas && !offline && (
+              <ErrorCarga mensaje={errorBoletas} reintentar={cargarBoletas} />
+            )}
+            {!boletas.length && (
+              <TouchableOpacity
+                accessibilityRole="button"
+                disabled={descargando || offline}
+                onPress={() => descargar()}
+                style={base.tarjeta}
+              >
+                <Text>Descargar boleta del ciclo vigente</Text>
+              </TouchableOpacity>
+            )}
+            <Paginador
+              pagina={pagina}
+              total={total}
+              ocupado={cargando}
+              cambiar={setPagina}
+            />
+            {inscripcionBoleta !== null && (
+              <BoletaInformativa
+                key={`${sesion?.sub}-${inscripcionBoleta}`}
+                inscripcionId={inscripcionBoleta}
+              />
+            )}
             {boletas.map((b) => (
               <TouchableOpacity
                 key={b.inscripcionId}
@@ -245,11 +277,11 @@ export default function CalificacionesScreen() {
                 {materia.nombre}
               </Text>
               {ordenarPeriodos(materia.parciales).map((p) => (
-                  <Text key={p.id} style={base.secundario}>
-                    {p.parcial === 0 ? "Final" : `Parcial ${p.parcial}`}:{" "}
-                    <Text style={base.monto}>{p.calificacion.toFixed(1)}</Text>
-                  </Text>
-                ))}
+                <Text key={p.id} style={base.secundario}>
+                  {p.parcial === 0 ? "Final" : `Parcial ${p.parcial}`}:{" "}
+                  <Text style={base.monto}>{p.calificacion.toFixed(1)}</Text>
+                </Text>
+              ))}
               <Text style={[base.secundario, { marginTop: 4 }]}>
                 Promedio oficial (P1–P3):{" "}
                 <Text style={base.monto}>

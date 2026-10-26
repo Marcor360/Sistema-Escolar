@@ -1,4 +1,5 @@
-import { Paginador } from '../components/Paginador';
+import { useDisenoAlumno } from "../use-diseno-alumno";
+import { Paginador } from "../components/Paginador";
 import { crearControlLectura } from "../api/lectura-vigente";
 import { validarArchivoEntrega } from "../utils/archivos-entrega";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -43,10 +44,15 @@ interface Tarea {
 }
 
 export default function TareasScreen() {
+  const diseno = useDisenoAlumno();
   const { marca } = useMarca();
-  const [pagina, setPagina] = useState(1), [total, setTotal] = useState(0);
+  const [pagina, setPagina] = useState(1),
+    [total, setTotal] = useState(0);
   const [tareas, setTareas] = useState<Tarea[]>([]);
-  useEffect(() => { setTareas([]); setTotal(0); }, [pagina]);
+  useEffect(() => {
+    setTareas([]);
+    setTotal(0);
+  }, [pagina]);
   const [cargando, setCargando] = useState(false);
   const [cargaInicialCompleta, setCargaInicialCompleta] = useState(false);
   const [datosVigentes, setDatosVigentes] = useState(false);
@@ -68,13 +74,21 @@ export default function TareasScreen() {
 
   useEffect(() => {
     if (!datosVigentes || !fechaConsulta) return;
-    const timer = setTimeout(() => setDatosVigentes(false), Math.max(0, fechaConsulta + 5 * 60_000 - Date.now()));
+    const timer = setTimeout(
+      () => setDatosVigentes(false),
+      Math.max(0, fechaConsulta + 5 * 60_000 - Date.now()),
+    );
     return () => clearTimeout(timer);
   }, [datosVigentes, fechaConsulta]);
 
   const vigencia = useRef(0);
-  const vigente = () => vigencia.current > 0 && Date.now() - vigencia.current < 5 * 60_000;
-  const avisarDatosVencidos = () => Alert.alert("Actualiza tus tareas", "Debes actualizar tus tareas con conexión antes de entregar un archivo.");
+  const vigente = () =>
+    vigencia.current > 0 && Date.now() - vigencia.current < 5 * 60_000;
+  const avisarDatosVencidos = () =>
+    Alert.alert(
+      "Actualiza tus tareas",
+      "Debes actualizar tus tareas con conexión antes de entregar un archivo.",
+    );
   const lectura = useRef(crearControlLectura());
   const cargar = useCallback(() => {
     setError("");
@@ -82,10 +96,15 @@ export default function TareasScreen() {
     setDatosVigentes(false);
     setCargando(true);
     void lectura.current.cargar(
-      () => api.get<{datos:Tarea[];total:number}>("/alumnos/me/tareas/listado",{params:{pagina,porPagina:10}}),
+      () =>
+        api.get<{ datos: Tarea[]; total: number }>(
+          "/alumnos/me/tareas/listado",
+          { params: { pagina, porPagina: 10 } },
+        ),
       (r) => {
         vigencia.current = Date.now();
-        setTareas(r.data.datos); setTotal(r.data.total);
+        setTareas(r.data.datos);
+        setTotal(r.data.total);
         setDatosVigentes(true);
         setFechaConsulta(Date.now());
         setUltimaActualizacion(new Date().toLocaleString());
@@ -109,25 +128,40 @@ export default function TareasScreen() {
   const entregaEnCurso = useRef(false);
   const entregar = async (tarea: Tarea) => {
     if (!activa.current || entregaEnCurso.current) return;
-    if (!vigente()) { avisarDatosVencidos(); return; }
+    if (!vigente()) {
+      avisarDatosVencidos();
+      return;
+    }
     entregaEnCurso.current = true;
     try {
       setEntregandoId(tarea.id);
       // Evitar crear otra copia privada en caché cuando la API no está disponible.
-      const { data: disponibles } = await api.get<{datos:Tarea[];total:number}>("/alumnos/me/tareas/listado",{params:{pagina,porPagina:10}});
+      const { data: disponibles } = await api.get<{
+        datos: Tarea[];
+        total: number;
+      }>("/alumnos/me/tareas/listado", { params: { pagina, porPagina: 10 } });
       if (!activa.current) return;
       const actual = disponibles.datos.find((item) => item.id === tarea.id);
       if (!actual || actual.entrega?.estatus === "CALIFICADA") {
-        Alert.alert("Entrega no disponible", "La tarea cambió. Actualiza la lista antes de seleccionar otro archivo.");
+        Alert.alert(
+          "Entrega no disponible",
+          "La tarea cambió. Actualiza la lista antes de seleccionar otro archivo.",
+        );
         cargar();
         return;
       }
-      if (!vigente()) { avisarDatosVencidos(); return; }
+      if (!vigente()) {
+        avisarDatosVencidos();
+        return;
+      }
       const resultado = await DocumentPicker.getDocumentAsync({
         copyToCacheDirectory: true,
       });
       if (!activa.current || resultado.canceled || !resultado.assets[0]) return;
-      if (!vigente()) { avisarDatosVencidos(); return; }
+      if (!vigente()) {
+        avisarDatosVencidos();
+        return;
+      }
       const archivo = resultado.assets[0];
       const problema = validarArchivoEntrega(archivo);
       if (problema) {
@@ -199,35 +233,48 @@ export default function TareasScreen() {
   };
 
   return (
-    <View style={base.pantalla}>
-      {error !== "" && <ErrorCarga mensaje={error} reintentar={cargar} />}
-      {ultimaActualizacion && (
-        <Text accessibilityRole="text">
-          Última actualización: {ultimaActualizacion}
-        </Text>
-      )}
-      <TouchableOpacity
-        onPress={cargar}
-        disabled={cargando}
-        style={base.botonAccesible}
-        accessibilityLabel="Actualizar tareas"
-        accessibilityRole="button"
-        accessibilityState={{ disabled: cargando, busy: cargando }}
-      >
-        <Text style={base.secundario}>{cargando ? "Actualizando tareas…" : "Actualizar tareas"}</Text>
-      </TouchableOpacity>
-      {tareas.length > 0 && !datosVigentes && (
-        <Text accessibilityRole="alert" style={base.secundario}>
-          Los datos de tus tareas pueden estar desactualizados. Actualiza antes de entregar.
-        </Text>
-      )}
-      {total > 10 && <Paginador pagina={pagina} total={total} ocupado={cargando || entregandoId !== null} cambiar={setPagina} />}
+    <View style={[base.pantalla, diseno.pantalla]}>
       <FlatList
+        contentContainerStyle={base.contenidoLista}
         ListHeaderComponent={
-          <GuiaPantalla
-            titulo="Mis tareas"
-            detalle="Adjunta un PDF, documento de Office, imagen, ZIP o TXT (límite preliminar de 5 MB). La entrega solo queda registrada al recibir confirmación del servidor."
-          />
+          <>
+            <GuiaPantalla
+              titulo="Mis tareas"
+              detalle="Adjunta un PDF, documento de Office, imagen, ZIP o TXT (límite preliminar de 5 MB). La entrega solo queda registrada al recibir confirmación del servidor."
+            />
+            {error !== "" && <ErrorCarga mensaje={error} reintentar={cargar} />}
+            {ultimaActualizacion && (
+              <Text accessibilityRole="text">
+                Última actualización: {ultimaActualizacion}
+              </Text>
+            )}
+            <TouchableOpacity
+              onPress={cargar}
+              disabled={cargando}
+              style={base.botonAccesible}
+              accessibilityLabel="Actualizar tareas"
+              accessibilityRole="button"
+              accessibilityState={{ disabled: cargando, busy: cargando }}
+            >
+              <Text style={base.secundario}>
+                {cargando ? "Actualizando tareas…" : "Actualizar tareas"}
+              </Text>
+            </TouchableOpacity>
+            {tareas.length > 0 && !datosVigentes && (
+              <Text accessibilityRole="alert" style={base.secundario}>
+                Los datos de tus tareas pueden estar desactualizados. Actualiza
+                antes de entregar.
+              </Text>
+            )}
+            {total > 10 && (
+              <Paginador
+                pagina={pagina}
+                total={total}
+                ocupado={cargando || entregandoId !== null}
+                cambiar={setPagina}
+              />
+            )}
+          </>
         }
         keyboardShouldPersistTaps="handled"
         data={tareas}
@@ -288,12 +335,15 @@ export default function TareasScreen() {
               style={[estilos.boton, { backgroundColor: marca.colorPrimario }]}
               onPress={() => solicitarEntrega(item)}
               disabled={
-                entregandoId !== null || !datosVigentes || item.entrega?.estatus === "CALIFICADA"
+                entregandoId !== null ||
+                !datosVigentes ||
+                item.entrega?.estatus === "CALIFICADA"
               }
               accessibilityRole="button"
               accessibilityState={{
                 disabled:
-                  entregandoId !== null || !datosVigentes ||
+                  entregandoId !== null ||
+                  !datosVigentes ||
                   item.entrega?.estatus === "CALIFICADA",
                 busy: entregandoId === item.id,
               }}

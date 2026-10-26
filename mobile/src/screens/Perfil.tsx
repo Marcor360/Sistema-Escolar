@@ -1,3 +1,4 @@
+import { useDisenoAlumno } from "../use-diseno-alumno";
 import { repetirRecorridoAlumno } from '../recorrido-alumno';
 import { activarPush, desactivarPush } from "../push";
 import { habilitarBiometria, borrarPreferenciaBiometrica, preferenciaBiometrica, biometriaDisponible } from "../biometria";
@@ -18,7 +19,7 @@ import { api, mensajeDeError } from "../api/client";
 import { useSesion } from "../sesion";
 import { useMarca } from "../marca";
 import { colores, radio, espacio, tipografia, textoSobreFondo } from "../theme";
-import { base, ErrorCarga, Tarjeta } from "./comunes";
+import { base, ErrorCarga, Tarjeta, GuiaPantalla } from "./comunes";
 import { ocultarCurp } from "../utils/curp-privada";
 
 interface Perfil {
@@ -40,6 +41,7 @@ interface Perfil {
 }
 
 export default function PerfilScreen({ abrirDocumentos }: { abrirDocumentos?: () => void } = {}) {
+  const diseno = useDisenoAlumno();
   const { marca } = useMarca();
   const { sesion, cerrar, finalizarSesionLocal } = useSesion();
   const [perfil, setPerfil] = useState<Perfil | null>(null);
@@ -209,10 +211,12 @@ export default function PerfilScreen({ abrirDocumentos }: { abrirDocumentos?: ()
 
   return (
     <ScrollView
-      style={base.pantalla}
+      contentContainerStyle={base.contenidoLista}
+      style={[base.pantalla, diseno.pantalla]}
       keyboardShouldPersistTaps="handled"
       automaticallyAdjustKeyboardInsets
     >
+      <GuiaPantalla titulo="Mi perfil" detalle="Consulta tus datos y documentos. Administra tu acceso y seguridad desde esta cuenta."/>
       {errorPerfil !== "" && (
         <ErrorCarga mensaje={errorPerfil} reintentar={cargarPerfil} />
       )}

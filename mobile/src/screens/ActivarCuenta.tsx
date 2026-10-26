@@ -1,3 +1,4 @@
+import { useDisenoAlumno } from "../use-diseno-alumno";
 import { useEffect, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -26,6 +27,7 @@ export default function ActivarCuentaScreen({
   correoInicial?: string;
   recuperacion?: boolean;
 }) {
+  const diseno = useDisenoAlumno();
   const { marca } = useMarca();
   const claveReenvio = recuperacion
     ? "escolar_recuperacion_reenvio"
@@ -172,10 +174,10 @@ export default function ActivarCuentaScreen({
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView
-        contentContainerStyle={styles.contenido}
+        contentContainerStyle={[styles.contenido,{paddingHorizontal:diseno.lateral}]}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.tarjeta}>
+        <View style={[styles.tarjeta,{padding:diseno.compacto?16:24}]}>
           <Text style={styles.titulo} accessibilityRole="header">
             {terminado
               ? recuperacion
@@ -410,6 +412,7 @@ const styles = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: colores.pizarra },
   contenido: { flexGrow: 1, justifyContent: "center", padding: espacio.lg },
   tarjeta: {
+    width:"100%", maxWidth:480, alignSelf:"center",
     backgroundColor: colores.papel,
     borderRadius: radio.lg,
     padding: espacio.xl,
