@@ -83,6 +83,7 @@ function ImagenCalendario({ evento }: { evento: Evento }) {
 export function CalendarioCiclo() {
   const { sesion } = useAuth();
   const formulario = useRef<HTMLDetailsElement>(null);
+  const entradaArchivo = useRef<HTMLInputElement>(null);
   const gestionar = !!sesion?.roles.some((r) => ['SUPERADMIN', 'ADMINISTRATIVO', 'FINANZAS'].includes(r));
   const [opciones, setOpciones] = useState<{ ciclos: Ciclo[]; niveles: Nivel[] }>({ ciclos: [], niveles: [] });
   const [cicloId, setCicloId] = useState(''),
@@ -179,6 +180,7 @@ export function CalendarioCiclo() {
       } else await api.post('/calendario', datos);
       setTitulo('');
       setArchivo(null);
+      if (entradaArchivo.current) entradaArchivo.current.value = '';
       setRevision((x) => x + 1);
     } catch (err) {
       setError(mensajeDeError(err));
@@ -258,6 +260,7 @@ export function CalendarioCiclo() {
             <label>
               Imagen opcional del ciclo (PNG, JPG o WebP, máximo 10 MiB)
               <input
+                ref={entradaArchivo}
                 type="file"
                 accept="image/png,image/jpeg,image/webp"
                 onChange={(e) => setArchivo(e.target.files?.[0] ?? null)}

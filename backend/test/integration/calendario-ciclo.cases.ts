@@ -77,11 +77,24 @@ export function registrarCalendarioCiclo(ctx: ContextoIntegracion) {
       expect(r.response.status).toBe(201);
       ids.push(r.data.id);
     }
+    const general = await ctx.api('/calendario', {
+      method: 'POST', token: admin,
+      body: { ...base, titulo: 'Aviso general sin nivel' },
+    });
+    expect(general.response.status).toBe(201);
     const alumno = await ctx.emitirToken(email);
     const query = `?desde=${ciclo.fechaInicio}T00:00:00Z&hasta=${ciclo.fechaFin}T23:59:59Z&cicloId=${ciclo.id}`;
     const propios = await ctx.api('/calendario' + query, { token: alumno });
     expect(propios.data.some((e: { id: number }) => e.id === ids[0])).toBe(true);
     expect(propios.data.some((e: { id: number }) => ids.slice(1).includes(e.id))).toBe(false);
+    for (const ruta of ['/calendario', '/calendario/listado']) {
+      const filtrados = await ctx.api(ruta + query + `&nivelId=${niveles[0].id}`, { token: alumno });
+      expect(filtrados.response.status).toBe(200);
+      const datos = ruta.endsWith('/listado') ? filtrados.data.datos : filtrados.data;
+      expect(datos.some((e: { id: number }) => e.id === general.data.id)).toBe(true);
+      expect(datos.some((e: { id: number }) => e.id === ids[0])).toBe(true);
+      expect(datos.some((e: { id: number }) => ids.slice(1).includes(e.id))).toBe(false);
+    }
     const personal = await ctx.api('/calendario' + query, { token: fin });
     expect(personal.response.status).toBe(200);
     expect(ids.every((id) => personal.data.some((e: { id: number }) => e.id === id))).toBe(true);
@@ -117,7 +130,7 @@ export function registrarCalendarioCiclo(ctx: ContextoIntegracion) {
     expect(lectura.headers.get('cache-control')).toContain('no-store');
     const opciones = await ctx.api('/calendario/opciones', { token: alumno });
     expect(opciones.data.niveles.map((n: { id: number }) => n.id)).toEqual([niveles[0].id]);
-    expect((await ctx.api('/calendario' + query + `&nivelId=${niveles[1].id}`, { token: alumno })).data).toEqual([]);
+    expect((await ctx.api('/calendario' + query + `&nivelId=${niveles[1].id}`, { token: alumno })).data.some((e: { id: number }) => ids.includes(e.id))).toBe(false);
     const invalida = new FormData();
     Object.entries({ ...base, nivelId: niveles[0].id, titulo: 'Firma inválida' }).forEach(([k, v]) =>
       invalida.append(k, String(v)),

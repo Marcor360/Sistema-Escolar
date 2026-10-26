@@ -63,6 +63,9 @@ it('publica una imagen del ciclo con nivel y audiencia financiera', async () => 
   expect(form.get('audiencia')).toBe('FINANCIERA');
   expect(form.get('fechaInicio')).toBe('2026-01-01T00:00:00-06:00');
   expect(form.get('fechaFin')).toBe('2026-12-31T23:59:59-06:00');
+  await vi.waitFor(() => expect((screen.getByLabelText('Título del calendario o evento') as HTMLInputElement).value).toBe(''));
+  expect((screen.getByLabelText(/Imagen opcional/) as HTMLInputElement).value).toBe('');
+  expect(screen.getByLabelText('Fecha')).toBeTruthy();
 });
 it('muestra el fallo al consultar opciones', async () => {
   vi.spyOn(api, 'get').mockRejectedValue(new Error('Sin conexión'));

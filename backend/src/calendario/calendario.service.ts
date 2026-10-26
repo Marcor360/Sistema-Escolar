@@ -96,14 +96,14 @@ export class CalendarioService {
   async listar(user: JwtUser, desde?: string, hasta?: string, plantelId?: number, cicloId?: number, nivelId?: number) {
     const qb = await this.consulta(user,desde,hasta,plantelId);
     if (cicloId) qb.andWhere('(e.ciclo_id = :cicloId OR e.ciclo_id IS NULL)', { cicloId });
-    if (nivelId) qb.andWhere('e.nivel_id = :nivelId', { nivelId });
+    if (nivelId) qb.andWhere('(e.nivel_id = :nivelId OR e.nivel_id IS NULL)', { nivelId });
     const eventos = await qb.getMany();
     return eventos.map(e=>({...e,revision:this.revision(e)}));
   }
   async consultar(q: ConsultarEventosDto, user: JwtUser) {
     const qb = await this.consulta(user,q.desde,q.hasta,q.plantelId);
     if(q.cicloId) qb.andWhere('(e.ciclo_id = :cicloId OR e.ciclo_id IS NULL)', { cicloId:q.cicloId });
-    if(q.nivelId) qb.andWhere('e.nivel_id = :nivelId', { nivelId:q.nivelId });
+    if(q.nivelId) qb.andWhere('(e.nivel_id = :nivelId OR e.nivel_id IS NULL)', { nivelId:q.nivelId });
     if(q.buscar?.trim()) { const termino = '%'+q.buscar.trim().toLowerCase().replace(/[!%_[]/g,c=>'!'+c)+'%'; qb.andWhere("LOWER(e.titulo) LIKE :termino ESCAPE '!'",{termino}); }
     const [eventos,total] = await qb.addOrderBy('e.id','ASC').skip((q.pagina-1)*q.porPagina).take(q.porPagina).getManyAndCount();
     return {datos:eventos.map(e=>({...e,revision:this.revision(e)})),total,pagina:q.pagina,porPagina:q.porPagina};

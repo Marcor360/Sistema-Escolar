@@ -120,3 +120,25 @@ describe('Edición de calendario: regresiones de PR38', () => {
     expect(repo.save).not.toHaveBeenCalled();
   });
 });
+
+
+describe('Consulta de calendario por nivel', () => {
+  it.each(['listar', 'consultar'] as const)('%s conserva avisos generales y el filtro de audiencia', async (metodo) => {
+    const qb = {
+      leftJoinAndSelect: jest.fn().mockReturnThis(), andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(), addOrderBy: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(), take: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue([]), getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
+    };
+    const service = new CalendarioService(
+      { createQueryBuilder: () => qb } as never, {} as never,
+      { find: jest.fn().mockResolvedValue([]) } as never, {} as never, {} as never,
+      { findOne: jest.fn().mockResolvedValue({ id: 5 }) } as never, {} as never,
+    );
+    if (metodo === 'listar') await service.listar(maestro, undefined, undefined, undefined, 1, 2);
+    else await service.consultar({ cicloId: 1, nivelId: 2, pagina: 1, porPagina: 10 }, maestro);
+    expect(qb.andWhere).toHaveBeenCalledWith('(e.nivel_id = :nivelId OR e.nivel_id IS NULL)', { nivelId: 2 });
+    expect(qb.andWhere).toHaveBeenCalledWith('e.audiencia = :audiencia', { audiencia: 'ACADEMICA' });
+    expect(qb.andWhere).toHaveBeenCalledWith('e.nivel_id IS NULL', { niveles: [] });
+  });
+});
