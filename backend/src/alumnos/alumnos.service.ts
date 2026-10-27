@@ -314,7 +314,7 @@ export class AlumnosService {
       if (!alumno) throw new NotFoundException('Alumno no encontrado');
       await this.scope.validarGestion(user, alumno.plantelId);
       if (alumno.estatus !== 'ACTIVO') throw new ConflictException('Solo puede egresar un alumno activo');
-      if (!alumno.curp || !/^[A-ZÑ&]{4}\\d{6}[HM][A-ZÑ]{5}[A-Z0-9]\\d$/.test(alumno.curp)) {
+      if (!alumno.curp || !/^[A-ZÑ&]{4}\d{6}[HM][A-ZÑ]{5}[A-Z0-9]\d$/.test(alumno.curp)) {
         throw new ConflictException('Corrige la CURP antes del egreso para evitar expedientes duplicados');
       }
       const inscripciones = await manager.getRepository(Inscripcion).find({ where: { alumnoId: id } });
