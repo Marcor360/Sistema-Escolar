@@ -211,7 +211,7 @@ it('separa alumnos regulares de egresados al cambiar de sección', async () => {
   await screen.findByText('EGRESADO-01');
   expect(get).toHaveBeenLastCalledWith('/alumnos', { params: { pagina: 1, vista: 'EGRESADOS' } });
   expect(screen.queryByText('ACTIVO-01')).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: 'Alumnos', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: /^Alumnos$/ }));
   await screen.findByText('ACTIVO-01');
   expect(get).toHaveBeenLastCalledWith('/alumnos', { params: { pagina: 1, vista: 'REGULARES' } });
 });
