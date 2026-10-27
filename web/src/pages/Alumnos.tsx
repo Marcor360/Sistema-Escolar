@@ -121,7 +121,7 @@ export default function AlumnosPage() {
     setPlantelAplicado(filtroPlantel);
     filtrosAplicados.current = { buscar: termino, plantelId: filtroPlantel };
     api.get<Resultado>('/alumnos', {
-      params: { pagina, ...(termino ? { buscar: termino } : {}), ...(filtroPlantel ? { plantelId: filtroPlantel } : {}), { vista: filtroEgresados.current ? 'EGRESADOS' : 'REGULARES' } },
+      params: { pagina, ...(termino ? { buscar: termino } : {}), ...(filtroPlantel ? { plantelId: filtroPlantel } : {}), vista: filtroEgresados.current ? 'EGRESADOS' : 'REGULARES' },
     })
       .then((r) => { if (actual === consulta.current) setResultado(r.data); })
       .catch((err) => { if (actual === consulta.current) setError(mensajeDeError(err)); })
