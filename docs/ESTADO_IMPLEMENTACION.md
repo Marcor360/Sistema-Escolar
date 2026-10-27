@@ -1,4 +1,6 @@
-# Estado de implementación — candidata 1.27.58
+# Estado de implementación — candidata 1.27.59
+
+La candidata 1.27.59 añade entregas de hasta 100 MiB o texto de 3000 caracteres, inventario de conservación y conciliación documental de egresos anteriores. No activa eliminación ni PAUSA. [Contrato](ENTREGAS_CONSERVACION_1.27.59.md). Requiere migración espejo, actualización del cliente y validación de IIS.
 
 La candidata 1.27.58 aborda deuda de tipos en pruebas, efectos de React y aislamiento HTTP de Vitest. [Alcance y validaciones](DEUDA_TECNICA_1.27.58.md). Mantiene pendientes institucionales y no acredita despliegue.
 

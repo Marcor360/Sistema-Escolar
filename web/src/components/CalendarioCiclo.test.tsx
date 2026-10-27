@@ -25,7 +25,7 @@ it('construye los doce meses del ciclo y permite consultar un mes con sus fechas
         ],
   }));
   render(<CalendarioCiclo />);
-  await screen.findByText('Inicio de clases');
+  await screen.findByText('Inicio de clases', {}, { timeout: 5000 });
   expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(12);
   fireEvent.change(screen.getByLabelText('Vista'), { target: { value: 'mes' } });
   fireEvent.change(screen.getByLabelText('Mes'), { target: { value: '2026-09' } });

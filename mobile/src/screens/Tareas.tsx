@@ -40,6 +40,7 @@ interface Tarea {
     calificacion: number | null;
     comentarioDocente?: string | null;
     comentarioAlumno?: string | null;
+    respuestaTexto?: string | null;
   } | null;
 }
 
@@ -62,6 +63,8 @@ export default function TareasScreen() {
     null,
   );
   const [comentarios, setComentarios] = useState<Record<number, string>>({});
+  const [modos, setModos] = useState<Record<number, "ARCHIVO" | "TEXTO">>({});
+  const [respuestas, setRespuestas] = useState<Record<number, string>>({});
   const [entregandoId, setEntregandoId] = useState<number | null>(null);
 
   const activa = useRef(true);
@@ -132,6 +135,16 @@ export default function TareasScreen() {
       avisarDatosVencidos();
       return;
     }
+    const modo = modos[tarea.id] ?? "ARCHIVO";
+    const respuesta = (
+      respuestas[tarea.id] ??
+      tarea.entrega?.respuestaTexto ??
+      ""
+    ).trim();
+    if (modo === "TEXTO" && (!respuesta || respuesta.length > 3000)) {
+      Alert.alert("Revisa tu respuesta", "Escribe entre 1 y 3000 caracteres.");
+      return;
+    }
     entregaEnCurso.current = true;
     try {
       setEntregandoId(tarea.id);
@@ -154,32 +167,36 @@ export default function TareasScreen() {
         avisarDatosVencidos();
         return;
       }
-      const resultado = await DocumentPicker.getDocumentAsync({
-        copyToCacheDirectory: true,
-      });
-      if (!activa.current || resultado.canceled || !resultado.assets[0]) return;
-      if (!vigente()) {
-        avisarDatosVencidos();
-        return;
-      }
-      const archivo = resultado.assets[0];
-      const problema = validarArchivoEntrega(archivo);
-      if (problema) {
-        Alert.alert("Archivo no válido", problema);
-        return;
-      }
-
       const form = new FormData();
+      form.append("respuestaTexto", modo === "TEXTO" ? respuesta : "");
       if (comentarios[tarea.id]?.trim())
         form.append("comentario", comentarios[tarea.id].trim());
-      form.append("archivo", {
-        uri: archivo.uri,
-        name: archivo.name,
-        type: archivo.mimeType ?? "application/octet-stream",
-      } as unknown as Blob);
+      if (modo === "ARCHIVO") {
+        const resultado = await DocumentPicker.getDocumentAsync({
+          copyToCacheDirectory: true,
+        });
+        if (!activa.current || resultado.canceled || !resultado.assets[0])
+          return;
+        if (!vigente()) {
+          avisarDatosVencidos();
+          return;
+        }
+        const archivo = resultado.assets[0];
+        const problema = validarArchivoEntrega(archivo);
+        if (problema) {
+          Alert.alert("Archivo no válido", problema);
+          return;
+        }
+        form.append("archivo", {
+          uri: archivo.uri,
+          name: archivo.name,
+          type: archivo.mimeType ?? "application/octet-stream",
+        } as unknown as Blob);
+      }
 
       await api.post(`/actividades/${tarea.id}/entrega`, form, {
         headers: { "Content-Type": "multipart/form-data" },
+        timeout: 300_000,
       });
       if (!activa.current) return;
       Alert.alert("Entrega enviada", `"${tarea.titulo}" quedó registrada.`);
@@ -209,11 +226,16 @@ export default function TareasScreen() {
     if (tarea.entrega) {
       Alert.alert(
         "Reemplazar entrega",
-        `Se sustituirá el archivo anterior de "${tarea.titulo}". La entrega calificada no puede cambiarse.`,
+        modos[tarea.id] === "TEXTO"
+          ? `Se actualizará la respuesta de "${tarea.titulo}". Si ya existe un adjunto, se conservará.`
+          : `Se sustituirá el archivo anterior de "${tarea.titulo}". La entrega calificada no puede cambiarse.`,
         [
           { text: "Cancelar", style: "cancel" },
           {
-            text: "Elegir nuevo archivo",
+            text:
+              modos[tarea.id] === "TEXTO"
+                ? "Enviar respuesta"
+                : "Elegir nuevo archivo",
             onPress: () => {
               void entregar(tarea);
             },
@@ -240,7 +262,7 @@ export default function TareasScreen() {
           <>
             <GuiaPantalla
               titulo="Mis tareas"
-              detalle="Adjunta un PDF, documento de Office, imagen, ZIP o TXT (límite preliminar de 5 MB). La entrega solo queda registrada al recibir confirmación del servidor."
+              detalle="Adjunta un archivo de hasta 100 MB o escribe tu respuesta (máximo 3000 caracteres). Formatos: PDF, Office, OpenDocument, imágenes, RTF, CSV, TXT, MD, ZIP, MP3, WAV, MP4 y M4A. La entrega solo queda registrada al recibir confirmación del servidor."
             />
             {error !== "" && <ErrorCarga mensaje={error} reintentar={cargar} />}
             {ultimaActualizacion && (
@@ -297,6 +319,73 @@ export default function TareasScreen() {
                 Comentarios del profesor: {item.entrega.comentarioDocente}
               </Text>
             )}
+            <View
+              accessibilityRole="radiogroup"
+              accessibilityLabel={`Tipo de entrega: ${item.titulo}`}
+            >
+              {(["ARCHIVO", "TEXTO"] as const).map((modo) => (
+                <TouchableOpacity
+                  key={modo}
+                  accessibilityRole="radio"
+                  accessibilityLabel={`${modo === "ARCHIVO" ? "Adjuntar archivo" : "Escribir respuesta"}: ${item.titulo}`}
+                  accessibilityState={{
+                    checked: (modos[item.id] ?? "ARCHIVO") === modo,
+                    disabled:
+                      entregandoId !== null ||
+                      item.entrega?.estatus === "CALIFICADA",
+                  }}
+                  disabled={
+                    entregandoId !== null ||
+                    item.entrega?.estatus === "CALIFICADA"
+                  }
+                  style={base.botonAccesible}
+                  onPress={() =>
+                    setModos((previos) => ({ ...previos, [item.id]: modo }))
+                  }
+                >
+                  <Text>
+                    {(modos[item.id] ?? "ARCHIVO") === modo ? "● " : "○ "}
+                    {modo === "ARCHIVO"
+                      ? "Adjuntar archivo"
+                      : "Escribir respuesta"}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {modos[item.id] === "TEXTO" && (
+              <>
+                <TextInput
+                  accessibilityLabel={`Respuesta escrita: ${item.titulo}`}
+                  placeholder="Escribe tu respuesta"
+                  multiline
+                  maxLength={3000}
+                  style={estilos.comentario}
+                  editable={
+                    item.entrega?.estatus !== "CALIFICADA" &&
+                    entregandoId === null
+                  }
+                  value={
+                    respuestas[item.id] ?? item.entrega?.respuestaTexto ?? ""
+                  }
+                  onChangeText={(texto) =>
+                    setRespuestas((previos) => ({
+                      ...previos,
+                      [item.id]: texto,
+                    }))
+                  }
+                />
+                <Text>
+                  {
+                    (respuestas[item.id] ?? item.entrega?.respuestaTexto ?? "")
+                      .length
+                  }
+                  /3000 caracteres
+                </Text>
+              </>
+            )}
+            {item.entrega?.respuestaTexto && (
+              <Text>Respuesta enviada: {item.entrega.respuestaTexto}</Text>
+            )}
             <TextInput
               editable={
                 item.entrega?.estatus !== "CALIFICADA" && entregandoId === null
@@ -347,7 +436,7 @@ export default function TareasScreen() {
                   item.entrega?.estatus === "CALIFICADA",
                 busy: entregandoId === item.id,
               }}
-              accessibilityLabel={`${item.entrega ? "Reemplazar entrega" : "Entregar archivo"}: ${item.titulo}`}
+              accessibilityLabel={`${item.entrega ? "Reemplazar entrega" : modos[item.id] === "TEXTO" ? "Enviar respuesta" : "Entregar archivo"}: ${item.titulo}`}
             >
               <Text
                 style={[
@@ -359,7 +448,9 @@ export default function TareasScreen() {
                   ? "Enviando…"
                   : item.entrega
                     ? "Reemplazar entrega"
-                    : "Entregar archivo"}
+                    : modos[item.id] === "TEXTO"
+                      ? "Enviar respuesta"
+                      : "Entregar archivo"}
               </Text>
             </TouchableOpacity>
           </Tarjeta>

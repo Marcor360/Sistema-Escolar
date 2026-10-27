@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.27.58`** · Tipos de pruebas, lint sin advertencias y aislamiento HTTP web, sobre egresos 1.27.57.
+**Versión candidata: `1.27.59`** · Entregas de 100 MiB o texto de 3000 caracteres, revisión de conservación sin borrado y conciliación documental de egresos legados. Base apilada 1.27.58; requiere migración y configuración IIS antes de operar.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -18,6 +18,8 @@ Sistema escolar multiplataforma para operación académica, administrativa y fin
 Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [índice documental](docs/README.md) e [historial de documentos retirados](docs/HISTORIAL.md).
 
 ### Cambios consolidados recientes
+
+- **1.27.59:** [Entregas y conservación académica](docs/ENTREGAS_CONSERVACION_1.27.59.md).
 
 - **1.27.58:** [Tipos, hooks y aislamiento HTTP](docs/DEUDA_TECNICA_1.27.58.md).
 

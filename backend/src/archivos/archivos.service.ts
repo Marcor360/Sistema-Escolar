@@ -50,6 +50,19 @@ const MIME_POR_EXTENSION: Record<string, string> = {
   '.jpeg': 'image/jpeg',
   '.zip': 'application/zip',
   '.txt': 'text/plain',
+  '.csv': 'text/csv',
+  '.md': 'text/plain',
+  '.rtf': 'application/rtf',
+  '.odt': 'application/vnd.oasis.opendocument.text',
+  '.ods': 'application/vnd.oasis.opendocument.spreadsheet',
+  '.odp': 'application/vnd.oasis.opendocument.presentation',
+  '.webp': 'image/webp',
+  '.gif': 'image/gif',
+  '.bmp': 'image/bmp',
+  '.mp3': 'audio/mpeg',
+  '.wav': 'audio/wav',
+  '.mp4': 'video/mp4',
+  '.m4a': 'audio/mp4',
 };
 
 /**
@@ -73,7 +86,9 @@ export class ArchivosService {
 
   async enlaceCalendario(id: number, user: JwtUser) {
     await this.calendario.imagen(id, user);
-    return { url: '/api/archivos/calendario/' + id + '?t=' + this.firmar({ sub: user.sub, rec: 'calendario', id }, user) };
+    return {
+      url: '/api/archivos/calendario/' + id + '?t=' + this.firmar({ sub: user.sub, rec: 'calendario', id }, user),
+    };
   }
   async descargarCalendario(id: number, token: string, res: Response) {
     const payload = this.verificarToken(token, 'calendario', id);
@@ -128,32 +143,60 @@ export class ArchivosService {
   }
 
   async enlaceBiblioteca(id: number, user: JwtUser) {
-    if (!user.roles.some((r) => ['SUPERADMIN', 'ADMINISTRATIVO'].includes(r))) throw new ForbiddenException('La biblioteca corresponde al personal administrativo');
+    if (!user.roles.some((r) => ['SUPERADMIN', 'ADMINISTRATIVO'].includes(r)))
+      throw new ForbiddenException('La biblioteca corresponde al personal administrativo');
     const archivo = await this.usuarios.manager.getRepository(BibliotecaArchivo).findOneBy({ id });
     if (!archivo) throw new NotFoundException('Archivo no encontrado');
     await this.scope.validarGestion(user, archivo.plantelId);
     return { url: `/api/archivos/biblioteca/${id}?t=${this.firmar({ sub: user.sub, rec: 'biblioteca', id }, user)}` };
   }
   async descargarBiblioteca(id: number, token: string, res: Response) {
-    const payload = this.verificarToken(token, 'biblioteca', id), user = await this.usuarioDesdeToken(payload);
-    if (!user.roles.some((r) => ['SUPERADMIN', 'ADMINISTRATIVO'].includes(r))) throw new ForbiddenException('La biblioteca corresponde al personal administrativo');
+    const payload = this.verificarToken(token, 'biblioteca', id),
+      user = await this.usuarioDesdeToken(payload);
+    if (!user.roles.some((r) => ['SUPERADMIN', 'ADMINISTRATIVO'].includes(r)))
+      throw new ForbiddenException('La biblioteca corresponde al personal administrativo');
     const archivo = await this.usuarios.manager.getRepository(BibliotecaArchivo).findOneBy({ id });
     if (!archivo) throw new NotFoundException('Archivo no encontrado');
     await this.scope.validarGestion(user, archivo.plantelId);
-    res.setHeader('Cache-Control', 'private, no-store'); res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
     this.enviarArchivo(res, archivo.archivoRuta, archivo.archivoNombre, archivo.mime, 'attachment');
   }
 
-  enlaceBoleta(alumnoId: number, cicloId: number | undefined, inscripcionId: number | undefined, user: JwtUser, formatoBoleta?: 'informativa-pdf' | 'informativa-excel') {
+  enlaceBoleta(
+    alumnoId: number,
+    cicloId: number | undefined,
+    inscripcionId: number | undefined,
+    user: JwtUser,
+    formatoBoleta?: 'informativa-pdf' | 'informativa-excel',
+  ) {
     if (!user.sid || !Number.isInteger(user.ver)) throw new UnauthorizedException('Sesión no válida');
-    const token = this.jwt.sign({ sub: user.sub, rec: 'boleta', id: alumnoId, cicloId, inscripcionId, formatoBoleta, sid: user.sid, ver: user.ver, kind: 'FILE' }, { expiresIn: '2m' });
+    const token = this.jwt.sign(
+      {
+        sub: user.sub,
+        rec: 'boleta',
+        id: alumnoId,
+        cicloId,
+        inscripcionId,
+        formatoBoleta,
+        sid: user.sid,
+        ver: user.ver,
+        kind: 'FILE',
+      },
+      { expiresIn: '2m' },
+    );
     return { url: `/api/reportes/boleta-descarga/${alumnoId}?t=${token}`, expiraEn: 120 };
   }
   async usuarioBoleta(alumnoId: number, token: string) {
     const payload = this.verificarToken(token, 'boleta', alumnoId);
     const user = await this.usuarioDesdeToken(payload);
     if (!user.roles.includes('ALUMNO')) throw new ForbiddenException('Boleta reservada al alumno');
-    return { user, cicloId: payload.cicloId, inscripcionId: payload.inscripcionId, formatoBoleta: payload.formatoBoleta };
+    return {
+      user,
+      cicloId: payload.cicloId,
+      inscripcionId: payload.inscripcionId,
+      formatoBoleta: payload.formatoBoleta,
+    };
   }
 
   // ---- Carga y validación ----
@@ -182,8 +225,14 @@ export class ArchivosService {
       await this.scope.validarGestion(user, grupo.plantelId);
       return;
     }
-    if (user.roles.includes('MAESTRO') && material.grupoMateria.docente?.usuarioId === user.sub && grupoVigente(grupo)) return;
-    if (user.roles.includes('ALUMNO') && ((await this.alumnoInscritoEnGrupo(grupo.id, user.sub)) || await recursaClase(this.inscripciones.manager, user.sub, material.grupoMateria.id))) return;
+    if (user.roles.includes('MAESTRO') && material.grupoMateria.docente?.usuarioId === user.sub && grupoVigente(grupo))
+      return;
+    if (
+      user.roles.includes('ALUMNO') &&
+      ((await this.alumnoInscritoEnGrupo(grupo.id, user.sub)) ||
+        (await recursaClase(this.inscripciones.manager, user.sub, material.grupoMateria.id)))
+    )
+      return;
     throw new ForbiddenException('No tienes acceso a este material');
   }
 
@@ -194,7 +243,12 @@ export class ArchivosService {
       await this.scope.validarGestion(user, grupo.plantelId);
       return;
     }
-    if (user.roles.includes('MAESTRO') && entrega.actividad.grupoMateria.docente?.usuarioId === user.sub && grupoVigente(grupo)) return;
+    if (
+      user.roles.includes('MAESTRO') &&
+      entrega.actividad.grupoMateria.docente?.usuarioId === user.sub &&
+      grupoVigente(grupo)
+    )
+      return;
     if (user.roles.includes('ALUMNO') && entrega.alumno.usuarioId === user.sub) return;
     throw new ForbiddenException('No tienes acceso a esta entrega');
   }
@@ -216,17 +270,37 @@ export class ArchivosService {
   /** Reconstruye el JwtUser (con roles vigentes) a partir del `sub` del enlace firmado. */
   private async usuarioDesdeToken(payload: EnlacePayload): Promise<JwtUser> {
     const usuario = await this.usuarios.findOne({ where: { id: payload.sub, activo: true } });
-    if (!usuario || usuario.activacionPendiente || usuario.passwordChangeRequired || usuario.sessionVersion !== payload.ver) throw new UnauthorizedException('Enlace inválido o sesión revocada');
-    const sesion = await this.usuarios.manager.getRepository(Sesion).findOne({ where: { id: payload.sid, usuarioId: usuario.id, revocada: false } });
-    if (!sesion || sesion.expiraEn <= new Date() || sesion.version !== payload.ver || sesionInactiva(sesion.ultimaActividadEn, new Date())) throw new UnauthorizedException('La sesión del enlace fue revocada');
+    if (
+      !usuario ||
+      usuario.activacionPendiente ||
+      usuario.passwordChangeRequired ||
+      usuario.sessionVersion !== payload.ver
+    )
+      throw new UnauthorizedException('Enlace inválido o sesión revocada');
+    const sesion = await this.usuarios.manager
+      .getRepository(Sesion)
+      .findOne({ where: { id: payload.sid, usuarioId: usuario.id, revocada: false } });
+    if (
+      !sesion ||
+      sesion.expiraEn <= new Date() ||
+      sesion.version !== payload.ver ||
+      sesionInactiva(sesion.ultimaActividadEn, new Date())
+    )
+      throw new UnauthorizedException('La sesión del enlace fue revocada');
     return {
-      sub: usuario.id, email: usuario.email, nombre: usuario.nombreCompleto,
-      roles: usuario.roles.map((r) => r.clave), ver: payload.ver, sid: payload.sid, kind: 'ACCESS',
+      sub: usuario.id,
+      email: usuario.email,
+      nombre: usuario.nombreCompleto,
+      roles: usuario.roles.map((r) => r.clave),
+      ver: payload.ver,
+      sid: payload.sid,
+      kind: 'ACCESS',
     };
   }
 
   private firmar(payload: Pick<EnlacePayload, 'sub' | 'rec' | 'id'>, user: JwtUser): string {
-    if (!user.sid || !Number.isInteger(user.ver)) throw new UnauthorizedException('La sesión no tiene identificador válido');
+    if (!user.sid || !Number.isInteger(user.ver))
+      throw new UnauthorizedException('La sesión no tiene identificador válido');
     return this.jwt.sign({ ...payload, sid: user.sid, ver: user.ver, kind: 'FILE' }, { expiresIn: '5m' });
   }
 
@@ -240,19 +314,34 @@ export class ArchivosService {
     if (payload.rec !== rec || payload.id !== id) {
       throw new ForbiddenException('El enlace no corresponde a este archivo');
     }
-    if (payload.kind !== 'FILE' || typeof payload.sid !== 'string' || !payload.sid || !Number.isInteger(payload.sub) || !Number.isInteger(payload.ver)) throw new UnauthorizedException('Enlace inválido');
+    if (
+      payload.kind !== 'FILE' ||
+      typeof payload.sid !== 'string' ||
+      !payload.sid ||
+      !Number.isInteger(payload.sub) ||
+      !Number.isInteger(payload.ver)
+    )
+      throw new UnauthorizedException('Enlace inválido');
     return payload;
   }
 
-  private enviarArchivo(res: Response, archivoRuta: string, archivoNombre: string, mime = 'application/octet-stream', disposicion: 'inline' | 'attachment' = 'inline') {
+  private enviarArchivo(
+    res: Response,
+    archivoRuta: string,
+    archivoNombre: string,
+    mime = 'application/octet-stream',
+    disposicion: 'inline' | 'attachment' = 'inline',
+  ) {
     const uploadsDir = uploadsPath(this.config.get<string>('UPLOADS_DIR') || 'uploads');
     const ruta = join(uploadsDir, basename(archivoRuta));
     if (!existsSync(ruta)) throw new NotFoundException('Archivo no encontrado');
     res.setHeader('Content-Type', mime);
     res.setHeader('Content-Disposition', contentDisposition(archivoNombre, disposicion));
-    createReadStream(ruta).on('error', () => {
-      if (!res.headersSent) res.status(404).end();
-      else res.destroy();
-    }).pipe(res);
+    createReadStream(ruta)
+      .on('error', () => {
+        if (!res.headersSent) res.status(404).end();
+        else res.destroy();
+      })
+      .pipe(res);
   }
 }

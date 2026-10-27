@@ -1,9 +1,18 @@
+import { ConservacionAcademicaService } from './conservacion-academica.service';
+import { ConciliarEgresoDto } from './conservacion-academica.dto';
 import { PaginacionDto } from '../common/paginacion.dto';
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AlumnosService } from './alumnos.service';
 import { ActivacionService } from '../auth/activacion.service';
-import { ActualizarAlumnoDto, CrearAlumnoDto, ListarAlumnosDto, TransferirAlumnoDto, ReactivarAlumnoDto, EditarMiPerfilAlumnoDto } from './alumnos.dto';
+import {
+  ActualizarAlumnoDto,
+  CrearAlumnoDto,
+  ListarAlumnosDto,
+  TransferirAlumnoDto,
+  ReactivarAlumnoDto,
+  EditarMiPerfilAlumnoDto,
+} from './alumnos.dto';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { RolesGuard } from '../common/roles.guard';
 import { Roles } from '../common/roles.decorator';
@@ -14,11 +23,34 @@ import { CurrentUser, JwtUser } from '../common/current-user.decorator';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('alumnos')
 export class AlumnosController {
-  constructor(private readonly service: AlumnosService, private readonly activacion: ActivacionService) {}
+  constructor(
+    private readonly service: AlumnosService,
+    private readonly activacion: ActivacionService,
+    private readonly conservacion: ConservacionAcademicaService,
+  ) {}
+
+  @Get(':id/conservacion-adjuntos')
+  @Roles('ADMINISTRATIVO')
+  revisarConservacion(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) {
+    return this.conservacion.revisarAdjuntos(id, user);
+  }
+
+  @Post(':id/egreso/conciliacion')
+  @Roles('ADMINISTRATIVO')
+  conciliarEgreso(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: ConciliarEgresoDto,
+    @CurrentUser() user: JwtUser,
+  ) {
+    return this.conservacion.conciliarEgreso(id, dto, user);
+  }
 
   // --- Portal/app del alumno ---
-  @Get('me/materias/listado') @Roles('ALUMNO')
-  consultarMisMaterias(@Query() q:PaginacionDto,@CurrentUser() user:JwtUser) {return this.service.consultarMisMaterias(user.sub,q);}
+  @Get('me/materias/listado')
+  @Roles('ALUMNO')
+  consultarMisMaterias(@Query() q: PaginacionDto, @CurrentUser() user: JwtUser) {
+    return this.service.consultarMisMaterias(user.sub, q);
+  }
 
   @Get('me/materias')
   @Roles('ALUMNO')
@@ -32,9 +64,13 @@ export class AlumnosController {
     return this.service.perfilPropio(user.sub);
   }
 
-  @ApiOperation({ summary: 'El alumno actualiza exclusivamente su información personal y del tutor; identidad y proveedor son inmutables' })
+  @ApiOperation({
+    summary:
+      'El alumno actualiza exclusivamente su información personal y del tutor; identidad y proveedor son inmutables',
+  })
   @ApiResponse({ status: 403, description: 'Solo alumno activo con sesión propia' })
-  @Patch('me/perfil') @Roles('ALUMNO')
+  @Patch('me/perfil')
+  @Roles('ALUMNO')
   editarMiPerfil(@CurrentUser() user: JwtUser, @Body() dto: EditarMiPerfilAlumnoDto) {
     return this.service.editarMiPerfil(user.sub, dto);
   }
@@ -47,8 +83,13 @@ export class AlumnosController {
   }
 
   @ApiOperation({ summary: 'Historial académico paginado del alumno dentro del alcance de Control Escolar' })
-  @Get(':id/historial/listado') @Roles('ADMINISTRATIVO')
-  historialPaginado(@Param('id', ParseIntPipe) id: number, @Query() query: PaginacionDto, @CurrentUser() user: JwtUser) {
+  @Get(':id/historial/listado')
+  @Roles('ADMINISTRATIVO')
+  historialPaginado(
+    @Param('id', ParseIntPipe) id: number,
+    @Query() query: PaginacionDto,
+    @CurrentUser() user: JwtUser,
+  ) {
     return this.service.historialPaginado(id, user, query);
   }
 
@@ -64,7 +105,10 @@ export class AlumnosController {
     return this.service.obtenerParaApi(id, user);
   }
 
-  @ApiOperation({ summary: 'Registrar alumno con CURP obligatoria; cuenta pendiente de activación por código privado y contraseña elegida por el titular' })
+  @ApiOperation({
+    summary:
+      'Registrar alumno con CURP obligatoria; cuenta pendiente de activación por código privado y contraseña elegida por el titular',
+  })
   @ApiResponse({ status: 400, description: 'Campos obligatorios o CURP inválidos' })
   @ApiResponse({ status: 409, description: 'Correo o matrícula ya registrados' })
   @Post()
@@ -120,8 +164,11 @@ export class AlumnosController {
     return this.service.baja(id, user);
   }
 
-  @Post(':id/reactivacion') @Roles('ADMINISTRATIVO')
-  reactivar(@Param('id', ParseIntPipe) id: number, @Body() dto: ReactivarAlumnoDto, @CurrentUser() user: JwtUser) { return this.service.reactivar(id, dto.motivo, user); }
+  @Post(':id/reactivacion')
+  @Roles('ADMINISTRATIVO')
+  reactivar(@Param('id', ParseIntPipe) id: number, @Body() dto: ReactivarAlumnoDto, @CurrentUser() user: JwtUser) {
+    return this.service.reactivar(id, dto.motivo, user);
+  }
 
   @Delete(':id')
   @Roles('ADMINISTRATIVO')

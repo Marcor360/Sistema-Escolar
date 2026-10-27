@@ -4,7 +4,7 @@ param(
   [Parameter(Mandatory = $true)][string]$ApiHost,
   [Parameter(Mandatory = $true)][string]$CertificateThumbprint,
   [int]$ApiPort = 3000,
-  [int]$MaxUploadMb = 10,
+  [int]$MaxUploadMb = 110,
   [string]$PortalSite = 'SistemaEscolar-Staging-Web',
   [string]$ApiSite = 'SistemaEscolar-Staging-Api'
 )

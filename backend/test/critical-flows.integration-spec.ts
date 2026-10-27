@@ -1,3 +1,4 @@
+import { registrarEntregasConservacion } from './integration/entregas-conservacion.cases';
 import { registrarSeguimiento } from './integration/seguimiento.cases';
 import { registrarCalendarioCiclo } from './integration/calendario-ciclo.cases';
 import { registrarProgramacionesCobro } from './integration/programaciones-cobro.cases';
@@ -458,6 +459,7 @@ get emitirFinanzasB() { return emitirFinanzasB; },
 const casos = { ...casos_baseline, ...casos_identidad, ...casos_academico, ...casos_calificaciones, ...casos_finanzas, ...casos_archivos, ...casos_calendario, ...casos_conducta, ...casos_analitica, ...casos_importaciones, ...casos_roles };
 Object.keys(casos).map(Number).sort((a,b) => a-b).forEach((id) => casos[id](contexto));
 
+  registrarEntregasConservacion(contexto);
   registrarBeta(contexto);
   registrarOutbox(contexto);
   registrarMateriasPaginadas(contexto);
