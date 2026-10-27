@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.27.56`** · Diseño adaptable de la app del alumno: ancho de lectura, márgenes, accesos de Inicio, formularios y paginación. Base main 1.27.55 tras #203/#204; requiere aceptación Android/iOS física.
+**Versión candidata: `1.27.57`** · Diseño adaptable de la app del alumno: ancho de lectura, márgenes, accesos de Inicio, formularios y paginación. Base main 1.27.55 tras #203/#204; requiere aceptación Android/iOS física.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
