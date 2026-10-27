@@ -51,6 +51,8 @@ export default function AlumnosPage() {
   const [transferencia, setTransferencia] = useState<Alumno | null>(null);
   const [destino, setDestino] = useState('');
   const [historial, setHistorial] = useState<HistorialConsulta | null>(null);
+  const [vistaEgresados, setVistaEgresados] = useState(false);
+  const filtroEgresados = useRef(false);
   const [historialCargando, setHistorialCargando] = useState(false);
   const [notas, setNotas] = useState<Nota[] | null>(null);
   const [cargandoNotas, setCargandoNotas] = useState(false);
@@ -72,12 +74,12 @@ export default function AlumnosPage() {
     const solicitud = ++historialSolicitud.current;
     setHistorialCargando(true);
     try {
-      const { data } = await api.get<{ datos: Historial[]; total: number; pagina: number; porPagina: number }>(
+      const { data } = await api.get<{ datos: Historial[]; total: number; pagina: number; porPagina: number; egreso: HistorialConsulta['egreso'] }>(
         `/alumnos/${alumno.id}/historial/listado`, { params: { pagina, porPagina: 10 } },
       );
       if (solicitud !== historialSolicitud.current) return;
       invalidarNotas();
-      setHistorial({ alumno, registros: data.datos, total: data.total, pagina: data.pagina, porPagina: data.porPagina });
+      setHistorial({ alumno, registros: data.datos, total: data.total, pagina: data.pagina, porPagina: data.porPagina, egreso: data.egreso });
       setNotas(null);
     } catch (err) { if (solicitud === historialSolicitud.current) setError(mensajeDeError(err)); }
     finally { if (solicitud === historialSolicitud.current) setHistorialCargando(false); }
@@ -119,7 +121,7 @@ export default function AlumnosPage() {
     setPlantelAplicado(filtroPlantel);
     filtrosAplicados.current = { buscar: termino, plantelId: filtroPlantel };
     api.get<Resultado>('/alumnos', {
-      params: { pagina, ...(termino ? { buscar: termino } : {}), ...(filtroPlantel ? { plantelId: filtroPlantel } : {}) },
+      params: { pagina, ...(termino ? { buscar: termino } : {}), ...(filtroPlantel ? { plantelId: filtroPlantel } : {}), ...(filtroEgresados.current ? { estatus: 'EGRESADO' } : {}) },
     })
       .then((r) => { if (actual === consulta.current) setResultado(r.data); })
       .catch((err) => { if (actual === consulta.current) setError(mensajeDeError(err)); })
@@ -210,6 +212,10 @@ export default function AlumnosPage() {
       {consultaVisible && <>{historial && <HistorialAlumno key={`${historial.alumno.id}-${historial.pagina}`} historial={historial} boleta={boleta} cargandoNotas={cargandoNotas} verNotas={verNotas} notas={notas} setHistorial={(valor) => { historialSolicitud.current++; invalidarNotas(); setHistorialCargando(false); setHistorial(valor); }} cargando={historialCargando} cambiarPagina={(pagina) => void verHistorial(historial.alumno, pagina)} />}
       {transferencia && <TransferirAlumno transferencia={transferencia} transferir={transferir} destino={destino} setDestino={setDestino} planteles={planteles} enviando={enviando} setTransferencia={setTransferencia} />}
 
+      <div className="fila" role="group" aria-label="Sección de expedientes">
+        <button type="button" className="boton secundario" aria-pressed={!vistaEgresados} disabled={cargando} onClick={() => { filtroEgresados.current = false; setVistaEgresados(false); consultar(1, filtrosAplicados.current.buscar, filtrosAplicados.current.plantelId); }}>Alumnos</button>
+        <button type="button" className="boton secundario" aria-pressed={vistaEgresados} disabled={cargando} onClick={() => { filtroEgresados.current = true; setVistaEgresados(true); consultar(1, filtrosAplicados.current.buscar, filtrosAplicados.current.plantelId); }}>Alumnos egresados</button>
+      </div>
       <section className="panel panel-filtros" aria-label="Filtros de alumnos"><div className="fila">
         <div className="campo"><label htmlFor="alumnos-campo-11">Filtrar por plantel</label>
           <select id="alumnos-campo-11" value={plantelId} onChange={(e) => setPlantelId(e.target.value)}>
@@ -232,7 +238,7 @@ export default function AlumnosPage() {
       </div></section>
 
       {mensaje.includes('registrado') && <p>{puedeAbrirCartera ? <Link className="boton secundario" to="/apertura-cartera/nueva">Continuar con apertura de cartera</Link> : 'Control Escolar debe completar la apertura de cartera. Finanzas no asigna grupos desde este módulo.'}</p>}
-      <div className="cabecera-listado"><h2>Expedientes de alumnos</h2><p>{resultado.total} registros encontrados</p></div>
+      <div className="cabecera-listado"><h2>{vistaEgresados ? "Expedientes de egresados" : "Expedientes de alumnos"}</h2><p>{resultado.total} registros encontrados</p></div>
       <div className="tabla-contenedor" role="region" aria-label="Listado de alumnos" tabIndex={0}>
       <table className="tabla tabla-adaptable" aria-busy={cargando}>
         <caption className="solo-lector">Alumnos, plantel, correo y acciones disponibles</caption>
@@ -264,7 +270,7 @@ export default function AlumnosPage() {
             </tr>
           ))}
           {!cargando && resultado.datos.length === 0 && (
-            <tr><td className="vacio" colSpan={6}>{busquedaAplicada || plantelAplicado ? 'No se encontraron alumnos con estos filtros. Prueba con otra matrícula o plantel.' : 'Todavía no hay alumnos registrados. Puedes dar de alta al primero desde el formulario.'}</td></tr>
+            <tr><td className="vacio" colSpan={6}>{busquedaAplicada || plantelAplicado ? 'No se encontraron alumnos con estos filtros. Prueba con otra matrícula o plantel.' : vistaEgresados ? 'Todavía no hay alumnos egresados registrados.' : 'Todavía no hay alumnos registrados. Puedes dar de alta al primero desde el formulario.'}</td></tr>
           )}
           {cargando && <tr><td className="vacio" colSpan={6}>Cargando…</td></tr>}
         </tbody>
