@@ -1,3 +1,11 @@
+import type { JwtUser } from '../common/current-user.decorator';
+import type { Alumno } from '../entities/alumno.entity';
+import type { EntityManager, Repository, DataSource } from 'typeorm';
+import type { AlumnosService } from '../alumnos/alumnos.service';
+import type { CargosService } from './cargos.service';
+import type { ScopeService } from '../planteles/scope.service';
+import type { RegistrarPagoDto } from './finanzas.dto';
+import { stub } from '../test-utils/stub';
 import { Plantel } from '../entities/plantel.entity';
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { BitacoraFinanciera } from '../entities/bitacora-financiera.entity';
@@ -7,14 +15,14 @@ import { OrdenPago } from '../entities/orden-pago.entity';
 import { Pago } from '../entities/pago.entity';
 import { PagosService } from './pagos.service';
 
-const user = { sub: 77, roles: ['FINANZAS'] } as any;
-const alumno = { id: 8, plantelId: 2 } as any;
+const user = stub<JwtUser>({ sub: 77, roles: ['FINANZAS'] });
+const alumno = stub<Alumno>({ id: 8, plantelId: 2 });
 
 function servicioTransaccional(
   options: {
-    cargo?: any;
-    orden?: any;
-    pagoExistente?: any;
+    cargo?: Partial<Cargo>;
+    orden?: Partial<OrdenPago>;
+    pagoExistente?: Partial<Pago>;
     saldo?: number;
   } = {},
 ) {
@@ -30,7 +38,7 @@ function servicioTransaccional(
   };
   const pagosRepo = {
     findOne: jest.fn().mockResolvedValue(options.pagoExistente ?? null),
-    create: jest.fn((datos) => datos),
+    create: jest.fn().mockImplementation((datos: Record<string, unknown>) => datos),
     save: jest.fn(async (datos) => ({ id: 40, ...datos })),
   };
   const cuentaRepo = { findOne: jest.fn().mockResolvedValue({ id: 1 }) };
@@ -51,7 +59,7 @@ function servicioTransaccional(
       throw new Error(`Repositorio inesperado: ${entity.name}`);
     }),
   };
-  const dataSource = { transaction: jest.fn((callback) => callback(manager as any)) };
+  const dataSource = { transaction: jest.fn((callback) => callback(stub<EntityManager>(manager))) };
   const cargos = {
     obtener: jest.fn().mockResolvedValue({ ...cargo, plantelId: 2 }),
     saldoDeCargo: jest.fn().mockResolvedValue(options.saldo ?? 125),
@@ -60,11 +68,11 @@ function servicioTransaccional(
   const alumnos = { obtener: jest.fn().mockResolvedValue(alumno) };
   const pagosGlobal = { findOne: jest.fn().mockResolvedValue(null) };
   const service = new PagosService(
-    pagosGlobal as any,
-    alumnos as any,
-    cargos as any,
-    { validarGestion: jest.fn().mockResolvedValue(undefined) } as any,
-    dataSource as any,
+    stub<Repository<Pago>>(pagosGlobal),
+    stub<AlumnosService>(alumnos),
+    stub<CargosService>(cargos),
+    stub<ScopeService>({ validarGestion: jest.fn().mockResolvedValue(undefined) }),
+    stub<DataSource>(dataSource),
   );
   return {
     service,
@@ -98,13 +106,13 @@ describe('PagosService.registrarManual', () => {
   it('devuelve el mismo pago ante un reintento y rechaza reutilizar la clave con otro importe', async () => {
     const ctx = servicioTransaccional();
     ctx.pagosGlobal.findOne.mockResolvedValue(pagoPrevio);
-    const dto = {
+    const dto: RegistrarPagoDto = {
       alumnoId: 8,
       cargoId: 3,
       monto: 50,
       metodo: 'EFECTIVO',
       claveIdempotencia: ctx.claveIdempotencia,
-    } as any;
+    };
 
     await expect(ctx.service.registrarManual(dto, user)).resolves.toBe(pagoPrevio);
     await expect(ctx.service.registrarManual({ ...dto, monto: 60 }, user)).rejects.toBeInstanceOf(ConflictException);
@@ -120,13 +128,13 @@ describe('PagosService.registrarManual', () => {
 
     await expect(
       ctx.service.registrarManual(
-        {
+        stub<RegistrarPagoDto>({
           alumnoId: 8,
           cargoId: 3,
           monto: 50,
           metodo: 'EFECTIVO',
           claveIdempotencia: ctx.claveIdempotencia,
-        } as any,
+        }),
         user,
       ),
     ).resolves.toBe(pagoPrevio);
@@ -139,13 +147,13 @@ describe('PagosService.registrarManual', () => {
 
     await expect(
       ctx.service.registrarManual(
-        {
+        stub<RegistrarPagoDto>({
           alumnoId: 8,
           cargoId: 3,
           monto: 100.01,
           metodo: 'EFECTIVO',
           claveIdempotencia: ctx.claveIdempotencia,
-        } as any,
+        }),
         user,
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
@@ -164,13 +172,13 @@ describe('PagosService.registrarManual', () => {
 
     await expect(
       ctx.service.registrarManual(
-        {
+        stub<RegistrarPagoDto>({
           alumnoId: 8,
           cargoId: 3,
           monto: 100,
           metodo: 'TRANSFERENCIA',
           claveIdempotencia: ctx.claveIdempotencia,
-        } as any,
+        }),
         user,
       ),
     ).resolves.toMatchObject({ monto: 100, cargoId: 3, estatus: 'CONFIRMADO' });
@@ -185,13 +193,13 @@ describe('PagosService.registrarManual', () => {
 
     await expect(
       ctx.service.registrarManual(
-        {
+        stub<RegistrarPagoDto>({
           alumnoId: 8,
           cargoId: 3,
           monto: 50,
           metodo: 'EFECTIVO',
           claveIdempotencia: ctx.claveIdempotencia,
-        } as any,
+        }),
         user,
       ),
     ).rejects.toBeInstanceOf(ConflictException);
@@ -201,14 +209,14 @@ describe('PagosService.registrarManual', () => {
 });
 
 describe('PagosService.registrarDePasarela', () => {
-  const orden = {
+  const orden = stub<OrdenPago>({
     id: 12,
     alumnoId: 8,
     cargoId: 3,
     monto: 125,
     estatus: 'PENDIENTE',
     alumno,
-  } as any;
+  });
 
   it('reutiliza el pago si Openpay reenvía el webhook', async () => {
     const pago = { id: 40, ordenPagoId: 12, cargoId: 3 };
@@ -258,7 +266,7 @@ describe('PagosService.registrarDePasarela', () => {
 });
 
 describe('folios de fichas BBVA', () => {
-  const dto = {
+  const dto: RegistrarPagoDto = {
     alumnoId: 8,
     cargoId: 3,
     monto: 50,
@@ -275,7 +283,7 @@ describe('folios de fichas BBVA', () => {
     expect(ctx.pagosRepo.save).not.toHaveBeenCalled();
   });
   it('reconoce el mismo pago confirmado durante la espera sin volver a escribir', async () => {
-    const previo = { ...dto, id: 40, registradoPorId: 77, estatus: 'CONFIRMADO' };
+    const previo = { ...dto, id: 40, registradoPorId: 77, estatus: 'CONFIRMADO' as const };
     const ctx = servicioTransaccional({ pagoExistente: previo });
     await expect(ctx.service.registrarManual(dto, user, { verificarFolioFicha: true })).resolves.toBe(previo);
     expect(ctx.pagosRepo.save).not.toHaveBeenCalled();

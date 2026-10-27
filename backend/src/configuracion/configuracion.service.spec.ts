@@ -1,3 +1,6 @@
+import type { Repository } from 'typeorm';
+import type { ConfiguracionMarca } from '../entities/configuracion-marca.entity';
+import { stub } from '../test-utils/stub';
 import { promises as fs } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
@@ -21,9 +24,9 @@ describe('ConfiguracionService', () => {
       }),
     };
     const limpiezas = { existsBy: jest.fn().mockResolvedValue(false), insert: jest.fn().mockResolvedValue(undefined) };
-    const manager = { getRepository: jest.fn((entidad) => entidad.name === 'ConfiguracionMarca' ? repo : limpiezas) };
+    const manager = { getRepository: jest.fn((entidad) => (entidad.name === 'ConfiguracionMarca' ? repo : limpiezas)) };
     Object.assign(repo, { manager: { transaction: jest.fn((fn) => fn(manager)) } });
-    return { limpiezas, service: new ConfiguracionService(repo as any), repo };
+    return { limpiezas, service: new ConfiguracionService(stub<Repository<ConfiguracionMarca>>(repo)), repo };
   };
 
   it('crea la fila por defecto cuando no existe y deriva el color oscuro', async () => {
@@ -38,8 +41,9 @@ describe('ConfiguracionService', () => {
 
   it('actualiza las opciones globales sin alterar la marca anterior', async () => {
     const { service } = crear();
-    await expect(service.actualizarOpciones({ mensajeBienvenida: 'Bienvenido a IUA', tamanoLogo: 'GRANDE' }))
-      .resolves.toMatchObject({ mensajeBienvenida: 'Bienvenido a IUA', tamanoLogo: 'GRANDE', logoUrl: null });
+    await expect(
+      service.actualizarOpciones({ mensajeBienvenida: 'Bienvenido a IUA', tamanoLogo: 'GRANDE' }),
+    ).resolves.toMatchObject({ mensajeBienvenida: 'Bienvenido a IUA', tamanoLogo: 'GRANDE', logoUrl: null });
   });
   it('quitarLogo deja logoUrl en null', async () => {
     const { service, limpiezas } = crear({
@@ -61,7 +65,9 @@ describe('ConfiguracionService', () => {
     const unlink = jest.spyOn(fs, 'unlink').mockResolvedValue(undefined);
     const rename = jest.spyOn(fs, 'rename').mockResolvedValue(undefined);
     jest.spyOn(fs, 'access').mockResolvedValue(undefined);
-    await expect(service.guardarLogo({ path: '/tmp/logo-nuevo.png', filename: 'logo-nuevo.png' } as Express.Multer.File)).rejects.toThrow('DB no disponible');
+    await expect(
+      service.guardarLogo({ path: '/tmp/logo-nuevo.png', filename: 'logo-nuevo.png' } as Express.Multer.File),
+    ).rejects.toThrow('DB no disponible');
     expect(validarContenidoArchivo).toHaveBeenCalled();
     expect(rename).toHaveBeenCalledWith('/tmp/logo-nuevo.png', expect.stringMatching(/marca-logo-[0-9a-f-]+\.webp$/));
     expect(unlink).toHaveBeenCalledWith('/tmp/logo-nuevo.png');
@@ -78,16 +84,24 @@ describe('ConfiguracionService', () => {
   it('rechaza una variante de un logo reemplazado y limpia el temporal', async () => {
     const carpeta = await fs.mkdtemp(join(tmpdir(), 'logo-pdf-'));
     const temporal = join(carpeta, 'prueba.png');
-    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=', 'base64');
+    const png = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=',
+      'base64',
+    );
     await fs.writeFile(temporal, png);
     const { service } = crear({ id: 1, logoUrl: '/uploads/marca-logo-otro.webp' });
     const rename = jest.spyOn(fs, 'rename').mockResolvedValue(undefined);
     try {
-      await expect(service.guardarLogoPdf({ path: temporal, originalname: 'prueba.png' } as Express.Multer.File,
-        '/uploads/marca-logo-a1b2c3d4-1234-4567-89ab-d0123456789a.webp')).rejects.toBeInstanceOf(ConflictException);
+      await expect(
+        service.guardarLogoPdf(
+          { path: temporal, originalname: 'prueba.png' } as Express.Multer.File,
+          '/uploads/marca-logo-a1b2c3d4-1234-4567-89ab-d0123456789a.webp',
+        ),
+      ).rejects.toBeInstanceOf(ConflictException);
       expect(rename).not.toHaveBeenCalled();
       await expect(fs.access(temporal)).rejects.toMatchObject({ code: 'ENOENT' });
-    } finally { await fs.rm(carpeta, { recursive: true, force: true }); }
+    } finally {
+      await fs.rm(carpeta, { recursive: true, force: true });
+    }
   });
-
 });

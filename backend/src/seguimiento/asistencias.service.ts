@@ -9,7 +9,7 @@ import { DataSource, In } from 'typeorm';
 import { createHash } from 'crypto';
 import { Asistencia } from '../entities/asistencia.entity';
 import { AsistenciaHistorial } from '../entities/asistencia-historial.entity';
-import { Alumno, CicloEscolar, Docente, GrupoMateria, Inscripcion } from '../entities';
+import { CicloEscolar, Docente, GrupoMateria, Inscripcion } from '../entities';
 import { JwtUser } from '../common/current-user.decorator';
 import { exigirGrupoVigente } from '../common/contexto-academico';
 import { ScopeService } from '../planteles/scope.service';

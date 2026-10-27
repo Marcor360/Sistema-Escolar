@@ -134,10 +134,11 @@ export default function AlumnosPage() {
     else trabajo.actualizar({ pagina: String(pagina), buscar: termino, plantel });
   };
   const recargarListado = () => consultar(modo === 'legado' ? 1 : paginaConsulta, filtrosAplicados.current.buscar, filtrosAplicados.current.plantelId);
+  const invalidarConsulta = useCallback(() => { consulta.current++; }, []);
   useEffect(() => {
     api.get<Plantel[]>('/planteles/mios').then(r => setPlanteles(r.data)).catch(err => setError(mensajeDeError(err)));
-    return () => { consulta.current++; };
-  }, []);
+    return invalidarConsulta;
+  }, [invalidarConsulta]);
   useEffect(() => {
     if (!consultaVisible) return;
     setBuscar(busquedaConsulta); setPlantelId(plantelConsulta);

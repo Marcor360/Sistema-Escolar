@@ -55,7 +55,8 @@ export default function MateriasPage() {
     } catch (err) { if (actual === consulta.current) setError(mensajeDeError(err)); }
     finally { if (actual === consulta.current) setCargandoCatalogos(false); }
   }, [pagina, buscar, consultaMaterias, consultaCiclos, legado]);
-  useEffect(() => { void cargar(); return () => { consulta.current++; }; }, [cargar]);
+  const invalidarConsulta = useCallback(() => { consulta.current++; }, []);
+  useEffect(() => { void cargar(); return invalidarConsulta; }, [cargar, invalidarConsulta]);
   useEffect(() => {
     if (legado) return;
     if (modo === 'nuevo') { setEditarMateria(null); setFormMateria(MATERIA); }

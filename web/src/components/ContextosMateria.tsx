@@ -18,7 +18,8 @@ export function ContextosMateria({ materiaId }: { materiaId: number }) {
     catch (e) { if (actual === consulta.current) setError(mensajeDeError(e)); }
     finally { if (actual === consulta.current) setCargando(false); }
   }, [materiaId, pagina]);
-  useEffect(() => { void cargar(); return () => { consulta.current++; }; }, [cargar]);
+  const invalidarConsulta = useCallback(() => { consulta.current++; }, []);
+  useEffect(() => { void cargar(); return invalidarConsulta; }, [cargar, invalidarConsulta]);
   useEffect(() => {
     if (!tieneRol('ADMINISTRATIVO')) return;
     let vigente = true;

@@ -1,9 +1,19 @@
+import type { Repository, DataSource } from 'typeorm';
+import type { Docente } from '../entities/docente.entity';
+import type { UsuarioPlantel } from '../entities/usuario-plantel.entity';
+import type { UsuariosService } from '../usuarios/usuarios.service';
+import type { ScopeService } from '../planteles/scope.service';
+import type { ListarDocentesDto } from './docentes.dto';
+import { stub } from '../test-utils/stub';
 import { ForbiddenException } from '@nestjs/common';
 import { DocentesService } from './docentes.service';
 import { JwtUser } from '../common/current-user.decorator';
 
 const admin: JwtUser = {
-  sub: 7, email: 'admin@escuela.mx', nombre: 'Admin', roles: ['ADMINISTRATIVO'],
+  sub: 7,
+  email: 'admin@escuela.mx',
+  nombre: 'Admin',
+  roles: ['ADMINISTRATIVO'],
 };
 
 describe('DocentesService alcance por plantel', () => {
@@ -11,7 +21,13 @@ describe('DocentesService alcance por plantel', () => {
     const docentes = { findOne: jest.fn().mockResolvedValue({ id: 3, usuarioId: 30 }) };
     const asignaciones = { find: jest.fn().mockResolvedValue(plantelesDocente.map((plantelId) => ({ plantelId }))) };
     const scope = { plantelesDe: jest.fn().mockResolvedValue([1]) };
-    const service = new DocentesService(docentes as any, asignaciones as any, {} as any, scope as any, {} as any);
+    const service = new DocentesService(
+      stub<Repository<Docente>>(docentes),
+      stub<Repository<UsuarioPlantel>>(asignaciones),
+      stub<UsuariosService>({}),
+      stub<ScopeService>(scope),
+      stub<DataSource>({}),
+    );
     return { service, docentes, asignaciones };
   };
 
@@ -38,20 +54,28 @@ describe('DocentesService alcance por plantel', () => {
 
   it('en listas muestra solo los nombres de planteles autorizados', async () => {
     const docente = { id: 3, usuarioId: 30 };
-    const qb: any = {};
+    const qb: Record<string, jest.Mock> = {};
     ['innerJoinAndSelect', 'andWhere', 'orderBy', 'skip', 'take'].forEach((metodo) => {
       qb[metodo] = jest.fn().mockReturnValue(qb);
     });
     qb.getManyAndCount = jest.fn().mockResolvedValue([[docente], 1]);
     const docentes = { createQueryBuilder: jest.fn().mockReturnValue(qb) };
-    const asignaciones = { find: jest.fn().mockResolvedValue([
-      { usuarioId: 30, activo: true, plantelId: 1, plantel: { nombre: 'Plantel A' } },
-      { usuarioId: 30, activo: true, plantelId: 2, plantel: { nombre: 'Plantel B' } },
-    ]) };
+    const asignaciones = {
+      find: jest.fn().mockResolvedValue([
+        { usuarioId: 30, activo: true, plantelId: 1, plantel: { nombre: 'Plantel A' } },
+        { usuarioId: 30, activo: true, plantelId: 2, plantel: { nombre: 'Plantel B' } },
+      ]),
+    };
     const scope = { resolverFiltro: jest.fn().mockResolvedValue([1]) };
-    const service = new DocentesService(docentes as any, asignaciones as any, {} as any, scope as any, {} as any);
+    const service = new DocentesService(
+      stub<Repository<Docente>>(docentes),
+      stub<Repository<UsuarioPlantel>>(asignaciones),
+      stub<UsuariosService>({}),
+      stub<ScopeService>(scope),
+      stub<DataSource>({}),
+    );
 
-    const resultado = await service.listar(admin, {} as any);
+    const resultado = await service.listar(admin, stub<ListarDocentesDto>({}));
 
     expect(resultado.datos[0].planteles).toEqual(['Plantel A']);
   });

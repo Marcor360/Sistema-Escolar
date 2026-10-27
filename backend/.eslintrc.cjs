@@ -11,8 +11,4 @@ module.exports = {
     '@typescript-eslint/no-explicit-any': 'error',
     '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
   },
-  overrides: [{
-    files: ['*.spec.ts'],
-    rules: { '@typescript-eslint/no-explicit-any': 'warn' },
-  }],
 };
