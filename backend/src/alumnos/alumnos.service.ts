@@ -42,6 +42,8 @@ export class AlumnosService {
       .leftJoinAndSelect('a.plantel', 'p');
     if (planteles !== null) qb.andWhere('a.plantel_id IN (:...planteles)', { planteles });
     if (query.estatus) qb.andWhere('a.estatus = :estatusAlumno', { estatusAlumno: query.estatus });
+    if (query.vista === 'EGRESADOS') qb.andWhere('a.estatus = :egresado', { egresado: 'EGRESADO' });
+    if (query.vista === 'REGULARES') qb.andWhere('a.estatus <> :egresado', { egresado: 'EGRESADO' });
 
     if (maestroPuro && user) {
       qb.andWhere(
