@@ -238,7 +238,7 @@ export default function AlumnosPage() {
       </div></section>
 
       {mensaje.includes('registrado') && <p>{puedeAbrirCartera ? <Link className="boton secundario" to="/apertura-cartera/nueva">Continuar con apertura de cartera</Link> : 'Control Escolar debe completar la apertura de cartera. Finanzas no asigna grupos desde este módulo.'}</p>}
-      <div className="cabecera-listado"><h2>{vistaEgresados ? "Expedientes de egresados" : "Expedientes de alumnos"}</h2><p>{resultado.total} registros encontrados</p></div>
+      <div className="cabecera-listado"><h2>{vistaEgresados ? 'Expedientes de egresados' : 'Expedientes de alumnos'}</h2><p>{resultado.total} registros encontrados</p></div>
       <div className="tabla-contenedor" role="region" aria-label="Listado de alumnos" tabIndex={0}>
       <table className="tabla tabla-adaptable" aria-busy={cargando}>
         <caption className="solo-lector">Alumnos, plantel, correo y acciones disponibles</caption>
