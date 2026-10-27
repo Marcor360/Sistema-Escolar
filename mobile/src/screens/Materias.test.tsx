@@ -1,3 +1,5 @@
+vi.mock("../components/RecursamientosPropios",()=>({RecursamientosPropios:()=>null}));
+vi.mock("react-native-safe-area-context",()=>({useSafeAreaInsets:()=>({top:0,bottom:0,left:0,right:0})}));
 import React, { useEffect, type ReactNode } from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
@@ -17,13 +19,14 @@ vi.mock('@react-navigation/native', () => ({
 vi.mock('react-native', async () => {
   const { createElement } = await import('react');
   return {
+    useWindowDimensions: () => ({width:390,height:844,fontScale:1,scale:1}),
     View: 'View', Text: 'Text', TouchableOpacity: 'TouchableOpacity', Pressable: 'Pressable',
     ActivityIndicator: 'ActivityIndicator', RefreshControl: 'RefreshControl',
     Linking: { openURL: vi.fn() }, StyleSheet: { create: (styles: unknown) => styles },
-    FlatList: ({ data, renderItem, ListEmptyComponent, refreshControl }: {
+    FlatList: ({ data, renderItem, ListEmptyComponent, ListHeaderComponent, refreshControl }: {
       data: { id: number }[]; renderItem: (args: { item: { id: number } }) => ReactNode;
-      ListEmptyComponent: ReactNode; refreshControl: ReactNode;
-    }) => createElement('FlatList', null, refreshControl, data.length
+      ListEmptyComponent: ReactNode; ListHeaderComponent: ReactNode; refreshControl: ReactNode;
+    }) => createElement('FlatList', null, ListHeaderComponent, refreshControl, data.length
       ? data.map((item) => createElement(React.Fragment, { key: item.id }, renderItem({ item })))
       : ListEmptyComponent),
   };

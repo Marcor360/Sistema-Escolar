@@ -49,3 +49,5 @@ Antes de eliminar otro archivo, comprobar usos y enlaces y conservar requisitos,
 - [Recorridos por área y comparativas 1.27.54](RECORRIDOS_COMPARATIVAS_1.27.54.md).
 
 - [Correos y UX de acceso/Inicio · 1.27.55](CORREOS_UX_1.27.55.md)
+
+- [Diseño adaptable y validación de Expo · 1.27.56](APP_RESPONSIVE_1.27.56.md)

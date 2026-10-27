@@ -1,3 +1,4 @@
+vi.mock("react-native-safe-area-context",()=>({useSafeAreaInsets:()=>({top:0,bottom:0,left:0,right:0})}));
 import React, { useEffect, type ReactNode } from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -20,6 +21,7 @@ vi.mock("../components/Texto", () => ({ Text: "Text" }));
 vi.mock("react-native", async () => {
   const { createElement } = await import("react");
   return {
+    useWindowDimensions: () => ({width:390,height:844,fontScale:1,scale:1}),
   View: "View", Text: "Text", Pressable: "Pressable",
   ScrollView: ({ children }: { children: ReactNode }) => createElement("ScrollView", null, children),
   TouchableOpacity: "TouchableOpacity", ActivityIndicator: "ActivityIndicator",

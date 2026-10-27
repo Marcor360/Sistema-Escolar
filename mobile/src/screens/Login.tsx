@@ -1,3 +1,4 @@
+import { useDisenoAlumno } from "../use-diseno-alumno";
 import { useRef, useEffect, useState } from "react";
 import {
   Image,
@@ -18,6 +19,7 @@ import ActivarCuentaScreen from "./ActivarCuenta";
 
 export default function LoginScreen({ aviso = "" }: { aviso?: string } = {}) {
   const { iniciar } = useSesion();
+  const diseno = useDisenoAlumno();
   const { marca } = useMarca();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -55,10 +57,10 @@ export default function LoginScreen({ aviso = "" }: { aviso?: string } = {}) {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView
-        contentContainerStyle={estilos.desplazamiento}
+        contentContainerStyle={[estilos.desplazamiento,{paddingHorizontal:diseno.lateral}]}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={[estilos.caja, { borderTopColor: marca.colorAcento }]}>
+        <View style={[estilos.caja, { borderTopColor: marca.colorAcento, padding:diseno.compacto?16:24 }]}>
           {marca.logoUrl && !logoFallo ? (
             <Image
               source={{ uri: archivosBase + marca.logoUrl }}
@@ -186,6 +188,7 @@ const estilos = StyleSheet.create({
     marginTop: espacio.lg,
   },
   caja: {
+    width:"100%", maxWidth:480, alignSelf:"center",
     backgroundColor: colores.papel,
     padding: espacio.xl,
     borderTopWidth: 4,

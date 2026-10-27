@@ -1,3 +1,4 @@
+import { useDisenoAlumno } from "../use-diseno-alumno";
 import { crearControlLectura } from "../api/lectura-vigente";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -48,6 +49,7 @@ interface Estado {
 }
 
 export default function EstadoCuentaScreen() {
+  const diseno = useDisenoAlumno();
   const { marca } = useMarca();
   const [estado, setEstado] = useState<Estado | null>(null);
   const [cargando, setCargando] = useState(false);
@@ -172,7 +174,8 @@ export default function EstadoCuentaScreen() {
 
   return (
     <ScrollView
-      style={base.pantalla}
+      contentContainerStyle={base.contenidoLista}
+      style={[base.pantalla, diseno.pantalla]}
       refreshControl={
         <RefreshControl refreshing={cargando} onRefresh={cargar} />
       }

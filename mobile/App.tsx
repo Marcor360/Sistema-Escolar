@@ -1,3 +1,4 @@
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { RecorridoAlumno } from './src/components/RecorridoAlumno';
 import {
   configurarCacheAcademica,
@@ -513,7 +514,7 @@ function AppInterna() {
       <SesionContext.Provider
         value={{ sesion, iniciar, cerrar, finalizarSesionLocal }}
       >
-        <View style={{ flex: 1 }} onTouchStart={registrarInteraccion}>
+        <SafeAreaView style={{ flex: 1, backgroundColor:sesion ? colores.papel : marca.colorPrimario }} edges={sesion ? ["left","right"] : ["left","right","top","bottom"]} onTouchStart={registrarInteraccion}>
         <NavigationContainer
           ref={navegacion}
           theme={tema}
@@ -542,6 +543,7 @@ function AppInterna() {
                 tabBarActiveTintColor: textoSobreFondo(colores.papel),
                 tabBarInactiveTintColor: colores.gris,
                 tabBarHideOnKeyboard: true,
+                tabBarLabelPosition: "below-icon",
                 tabBarLabelStyle: {
                   fontFamily: fuenteLista ? "Onest" : undefined,
                   fontSize: 12,
@@ -577,7 +579,7 @@ function AppInterna() {
           )}
         </NavigationContainer>
         {sesion&&<RecorridoAlumno key={sesion.sub} usuarioId={sesion.sub} navegar={pantalla=>{if(navegacion.isReady())navegacion.navigate(pantalla);}}/>}
-        </View>
+        </SafeAreaView>
       </SesionContext.Provider>
     </MarcaContext.Provider>
   );
@@ -607,7 +609,7 @@ export default function App() {
   }
   return (
     <FuenteContext.Provider value={fuenteLista}>
-      <AppInterna />
+      <SafeAreaProvider><AppInterna /></SafeAreaProvider>
     </FuenteContext.Provider>
   );
 }
