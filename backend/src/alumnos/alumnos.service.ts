@@ -4,6 +4,7 @@ import { clasesRecursadas } from '../recursamientos/acceso-recursamiento';
 import { ParticipacionAsignatura } from '../entities/participacion-asignatura.entity';
 import { EgresoAlumno } from '../entities/egreso-alumno.entity';
 import { cicloParaEgreso, fechaElegibleArchivo } from './egreso-alumno';
+import { esConflictoUnico } from '../academico/conflictos';
 import { randomBytes } from 'crypto';
 import { Usuario } from '../entities/usuario.entity';
 import { esMaestroRestringido } from '../common/politica-acceso';
@@ -325,11 +326,19 @@ export class AlumnosService {
         throw new ConflictException('El alumno ya tiene un egreso registrado');
       }
       const fechaEgreso = new Date();
-      await manager.getRepository(EgresoAlumno).insert({
-        alumnoId: id, cicloId: ciclo.id, curp: alumno.curp, fechaEgreso,
-        archivarDesde: fechaElegibleArchivo(fechaEgreso), estadoArchivo: 'VIGENTE',
-        rutaArchivo: null, sha256Archivo: null, archivadoEn: null,
-      });
+      try {
+        await manager.getRepository(EgresoAlumno).insert({
+          alumnoId: id, cicloId: ciclo.id, curp: alumno.curp, fechaEgreso,
+          archivarDesde: fechaElegibleArchivo(fechaEgreso), estadoArchivo: 'VIGENTE',
+          rutaArchivo: null, sha256Archivo: null, archivadoEn: null,
+        });
+      } catch (error) {
+        const motor = (error as { driverError?: unknown }).driverError ?? error;
+        if (esConflictoUnico(motor)) {
+          throw new ConflictException('La CURP o el alumno ya tiene un egreso registrado; revisa el expediente antes de continuar');
+        }
+        throw error;
+      }
       alumno.estatus = 'EGRESADO';
       await alumnos.save(alumno);
       await manager.getRepository(Inscripcion).update({ alumnoId: id, estatus: 'ACTIVA' }, { estatus: 'BAJA' });
