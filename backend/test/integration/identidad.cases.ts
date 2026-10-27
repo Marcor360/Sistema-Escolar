@@ -209,7 +209,7 @@ it('revoca el JWT al cerrar sesión y permite un nuevo inicio', async () => {
   });
   },
   22: (ctx) => {
-it('bloquea PATCH de estado/plantel, conserva bajas/egresos y completa transferencias', async () => {
+it('bloquea PATCH de estado/plantel, impide egreso sin cierre y completa transferencias', async () => {
     const token = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.superadminId })).email);
     const grupo = await ctx.dataSource.getRepository(Grupo).findOneByOrFail({ nombre: `G${ctx.sufijo}`, plantelId: ctx.plantelId });
     for (const accion of ['baja', 'egreso', 'transferencia']) {
@@ -224,17 +224,21 @@ it('bloquea PATCH de estado/plantel, conserva bajas/egresos y completa transfere
       expect((await ctx.api(`/alumnos/${id}`, { method: 'PATCH', token, body: { plantelId: ctx.otroPlantelId } })).response.status).toBe(400);
       const resultado = await ctx.api(`/alumnos/${id}/${accion}`, { method: 'POST', token,
         ...(accion === 'transferencia' ? { body: { plantelId: ctx.otroPlantelId } } : {}) });
+      if (accion === 'egreso') {
+        expect(resultado.response.status).toBe(409);
+        expect((await ctx.dataSource.getRepository(Alumno).findOneByOrFail({ id })).estatus).toBe('ACTIVO');
+        expect(await ctx.dataSource.getRepository(Inscripcion).countBy({ alumnoId: id, estatus: 'ACTIVA' })).toBe(1);
+        expect((await ctx.api('/auth/me', { token: movil })).response.status).toBe(200);
+        continue;
+      }
       expect(resultado.response.status).toBe(201);
       expect(await ctx.dataSource.getRepository(Inscripcion).countBy({ alumnoId: id, estatus: 'ACTIVA' })).toBe(0);
       const expediente = await ctx.dataSource.getRepository(Alumno).findOneByOrFail({ id });
       const cuenta = await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: usuarioId });
       if (accion === 'transferencia') { expect(expediente.plantelId).toBe(ctx.otroPlantelId); expect(cuenta.activo).toBe(true); }
       else {
-        if (accion === 'egreso') {
-          expect((await ctx.api(`/alumnos/${id}/baja`, { method: 'POST', token })).response.status).toBe(409);
-          expect((await ctx.api(`/alumnos/${id}/reactivacion`, { method: 'POST', token, body: { motivo: 'Intento inválido' } })).response.status).toBe(409);
-        }
-        expect(expediente.estatus).toBe(accion === 'baja' ? 'BAJA' : 'EGRESADO'); expect(cuenta.activo).toBe(false);
+        expect(expediente.estatus).toBe('BAJA');
+        expect(cuenta.activo).toBe(false);
         expect((await ctx.api('/auth/me', { token: movil })).response.status).toBe(401);
       }
     }

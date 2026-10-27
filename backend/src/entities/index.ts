@@ -72,3 +72,5 @@ export * from './preferencia-notificacion.entity';
 export * from './movimiento-bancario.entity';
 
 export * from './calendario-historial.entity';
+
+export * from './egreso-alumno.entity';

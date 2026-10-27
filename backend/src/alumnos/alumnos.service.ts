@@ -2,6 +2,9 @@ import { condicionBusquedaAlumno } from '../common/busqueda-alumno';
 import { PaginacionDto } from '../common/paginacion.dto';
 import { clasesRecursadas } from '../recursamientos/acceso-recursamiento';
 import { ParticipacionAsignatura } from '../entities/participacion-asignatura.entity';
+import { EgresoAlumno } from '../entities/egreso-alumno.entity';
+import { cicloParaEgreso, fechaElegibleArchivo } from './egreso-alumno';
+import { esConflictoUnico } from '../academico/conflictos';
 import { randomBytes } from 'crypto';
 import { Usuario } from '../entities/usuario.entity';
 import { esMaestroRestringido } from '../common/politica-acceso';
@@ -39,6 +42,9 @@ export class AlumnosService {
       .leftJoinAndSelect('a.usuario', 'u')
       .leftJoinAndSelect('a.plantel', 'p');
     if (planteles !== null) qb.andWhere('a.plantel_id IN (:...planteles)', { planteles });
+    if (query.estatus) qb.andWhere('a.estatus = :estatusAlumno', { estatusAlumno: query.estatus });
+    if (query.vista === 'EGRESADOS') qb.andWhere('a.estatus = :egresado', { egresado: 'EGRESADO' });
+    if (query.vista === 'REGULARES') qb.andWhere('a.estatus <> :egresado', { egresado: 'EGRESADO' });
 
     if (maestroPuro && user) {
       qb.andWhere(
@@ -148,7 +154,14 @@ export class AlumnosService {
     if (permitidos !== null) qb.andWhere('g.plantelId IN (:...planteles)', { planteles: permitidos });
     const [inscripciones, total] = await qb.orderBy('i.id', 'DESC')
       .skip((query.pagina - 1) * query.porPagina).take(query.porPagina).getManyAndCount();
-    return { datos: inscripciones.map((i) => this.proyectarHistorial(i)), total, pagina: query.pagina, porPagina: query.porPagina };
+    const egreso = await this.dataSource.getRepository(EgresoAlumno).findOneBy({ alumnoId: id });
+    return {
+      datos: inscripciones.map((i) => this.proyectarHistorial(i)), total, pagina: query.pagina, porPagina: query.porPagina,
+      egreso: egreso ? {
+        cicloId: egreso.cicloId, fechaEgreso: egreso.fechaEgreso,
+        archivarDesde: egreso.archivarDesde, estadoArchivo: egreso.estadoArchivo,
+      } : null,
+    };
   }
 
   private proyectarHistorial(i: Inscripcion) {
@@ -304,6 +317,28 @@ export class AlumnosService {
       if (!alumno) throw new NotFoundException('Alumno no encontrado');
       await this.scope.validarGestion(user, alumno.plantelId);
       if (alumno.estatus !== 'ACTIVO') throw new ConflictException('Solo puede egresar un alumno activo');
+      if (!alumno.curp || !/^[A-ZÑ&]{4}\d{6}[HM][A-ZÑ]{5}[A-Z0-9]\d$/.test(alumno.curp)) {
+        throw new ConflictException('Corrige la CURP antes del egreso para evitar expedientes duplicados');
+      }
+      const inscripciones = await manager.getRepository(Inscripcion).find({ where: { alumnoId: id } });
+      const ciclo = cicloParaEgreso(inscripciones);
+      if (await manager.getRepository(EgresoAlumno).existsBy({ alumnoId: id })) {
+        throw new ConflictException('El alumno ya tiene un egreso registrado');
+      }
+      const fechaEgreso = new Date();
+      try {
+        await manager.getRepository(EgresoAlumno).insert({
+          alumnoId: id, cicloId: ciclo.id, curp: alumno.curp, fechaEgreso,
+          archivarDesde: fechaElegibleArchivo(fechaEgreso), estadoArchivo: 'VIGENTE',
+          rutaArchivo: null, sha256Archivo: null, archivadoEn: null,
+        });
+      } catch (error) {
+        const motor = (error as { driverError?: unknown }).driverError ?? error;
+        if (esConflictoUnico(motor)) {
+          throw new ConflictException('La CURP o el alumno ya tiene un egreso registrado; revisa el expediente antes de continuar');
+        }
+        throw error;
+      }
       alumno.estatus = 'EGRESADO';
       await alumnos.save(alumno);
       await manager.getRepository(Inscripcion).update({ alumnoId: id, estatus: 'ACTIVA' }, { estatus: 'BAJA' });

@@ -1,6 +1,6 @@
 {
-  "version": "1.27.56",
-  "alcance": "Escenarios de aceptación institucional sin resultados fabricados",
+  "version": "1.27.57",
+  "alcance": "Escenarios de aceptación institucional sin resultados fabricados. Egreso único, ciclo cerrado, consulta separada y archivo a cinco años pendientes de UAT; ver docs/EGRESOS_HISTORIAL_RETENCION_1.27.57.md",
   "escenarios": [
     {
       "id": "UAT-01",

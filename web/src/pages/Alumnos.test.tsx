@@ -106,7 +106,7 @@ it('la página siguiente conserva los filtros aplicados aunque haya cambios sin 
   fireEvent.click(screen.getByRole('button', { name: 'Ir a la página siguiente' }));
 
   await waitFor(() => expect(get).toHaveBeenLastCalledWith('/alumnos', {
-    params: { pagina: 2, buscar: 'APLICADO', plantelId: '1' },
+    params: { pagina: 2, buscar: 'APLICADO', plantelId: '1', vista: 'REGULARES' },
   }));
   expect(screen.getByText('APLICADO')).toBeTruthy();
 });
@@ -122,7 +122,7 @@ it('una mutación pendiente refresca los filtros vigentes, sin restaurar la bús
   fireEvent.submit(screen.getByLabelText('Matrícula *').closest('form')!);
   buscar('VIGENTE'); await screen.findByText('VIGENTE');
   await act(async () => { guardado.resolver({ data: resultado('CREADO') }); });
-  await waitFor(() => expect(get).toHaveBeenLastCalledWith('/alumnos', { params: { pagina: 1, buscar: 'VIGENTE' } }));
+  await waitFor(() => expect(get).toHaveBeenLastCalledWith('/alumnos', { params: { pagina: 1, buscar: 'VIGENTE', vista: 'REGULARES' } }));
   expect(screen.getByText('VIGENTE')).toBeTruthy();
 });
 
@@ -134,7 +134,7 @@ it('limpiar descarta el filtro aplicado y los cambios que todavía no se buscaro
   fireEvent.change(screen.getByLabelText('Buscar por matrícula'), { target: { value: 'BORRADOR' } });
   fireEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }));
   await screen.findByText('TODOS');
-  expect(get).toHaveBeenLastCalledWith('/alumnos', { params: { pagina: 1 } });
+  expect(get).toHaveBeenLastCalledWith('/alumnos', { params: { pagina: 1, vista: 'REGULARES' } });
   expect((screen.getByLabelText('Buscar por matrícula') as HTMLInputElement).value).toBe('');
   expect(screen.queryByRole('button', { name: 'Limpiar filtros' })).toBeNull();
 });
@@ -193,4 +193,25 @@ it('no muestra notas de un alumno después de abrir otro expediente', async () =
   await act(async () => { resolver({ data: [{ id: 1, grupoMateria: { grupo: { id: 2 }, materia: { nombre: 'Notas del anterior' } } }] }); });
   expect(screen.queryByText('Notas del anterior')).toBeNull();
   expect(screen.queryByText('Cargando calificaciones…')).toBeNull();
+});
+
+it('separa alumnos regulares de egresados al cambiar de sección', async () => {
+  const get = vi.spyOn(api, 'get').mockImplementation(async (url, config) => {
+    if (url !== '/alumnos') return { data: [] };
+    const params = config?.params as { vista: 'REGULARES' | 'EGRESADOS' };
+    return { data: { ...resultado(params.vista === 'EGRESADOS' ? 'EGRESADO-01' : 'ACTIVO-01'), datos: [{
+      ...resultado('ACTIVO-01').datos[0],
+      matricula: params.vista === 'EGRESADOS' ? 'EGRESADO-01' : 'ACTIVO-01',
+      estatus: params.vista === 'EGRESADOS' ? 'EGRESADO' : 'ACTIVO',
+    }] } };
+  });
+  render(<MemoryRouter><AlumnosPage /></MemoryRouter>);
+  await screen.findByText('ACTIVO-01');
+  fireEvent.click(screen.getByRole('button', { name: 'Alumnos egresados' }));
+  await screen.findByText('EGRESADO-01');
+  expect(get).toHaveBeenLastCalledWith('/alumnos', { params: { pagina: 1, vista: 'EGRESADOS' } });
+  expect(screen.queryByText('ACTIVO-01')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: /^Alumnos$/ }));
+  await screen.findByText('ACTIVO-01');
+  expect(get).toHaveBeenLastCalledWith('/alumnos', { params: { pagina: 1, vista: 'REGULARES' } });
 });

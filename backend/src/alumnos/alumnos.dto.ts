@@ -10,6 +10,8 @@ export class ListarAlumnosDto extends PaginacionDto {
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsOptional() @IsString() @MaxLength(120) buscar?: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) plantelId?: number;
+  @IsOptional() @IsIn(['ACTIVO', 'BAJA', 'EGRESADO']) estatus?: 'ACTIVO' | 'BAJA' | 'EGRESADO';
+  @IsOptional() @IsIn(['REGULARES', 'EGRESADOS']) vista?: 'REGULARES' | 'EGRESADOS';
 }
 
 export class CrearAlumnoDto {

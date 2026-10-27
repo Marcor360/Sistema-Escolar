@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { BoletaEscolar } from '../../components/BoletaEscolar';
-import type { Alumno, Historial, Nota } from './tipos';
+import type { Alumno, EgresoAlumno, Historial, Nota } from './tipos';
 import { Paginador } from '../../components/Paginador';
 import type * as React from 'react';
-export interface HistorialConsulta { alumno: Alumno; registros: Historial[]; total: number; pagina: number; porPagina: number; }
+export interface HistorialConsulta { alumno: Alumno; registros: Historial[]; total: number; pagina: number; porPagina: number; egreso: EgresoAlumno | null; }
 interface Props {
 historial: HistorialConsulta;
 boleta: (alumno: Alumno, cicloId?: number, inscripcionId?: number) => Promise<void>;
@@ -15,6 +15,15 @@ cargando: boolean;
 cambiarPagina: (pagina: number) => void;
 }
 export function HistorialAlumno({ historial, boleta, cargandoNotas, verNotas, notas, setHistorial, cargando, cambiarPagina }: Props) { const [boletaId,setBoletaId]=useState<number|null>(null); return (<section className="panel"><h2>Historial de {historial.alumno.matricula}</h2>
+        {historial.alumno.estatus === 'EGRESADO' && <div className="aviso" role="status">
+          {historial.egreso ? <>
+            Egreso registrado el {new Date(historial.egreso.fechaEgreso).toLocaleDateString('es-MX')},
+            ciclo {historial.registros.find((i) => i.grupo.ciclo.id === historial.egreso?.cicloId)?.grupo.ciclo.nombre ?? ('#' + historial.egreso.cicloId)}.
+            Expediente operativo hasta {new Date(historial.egreso.archivarDesde).toLocaleDateString('es-MX')}.
+            Estado de archivo: {historial.egreso.estadoArchivo === 'ARCHIVADO' ? 'Archivado' : 'Pendiente'}.
+          </> : 'Egreso anterior sin ciclo o fecha verificados. Control Escolar debe conciliarlo antes de archivar.'}
+        </div>}
+        <p className="texto-ayuda">Las notas son registros académicos oficiales. Una nota faltante no equivale automáticamente a materia reprobada.</p>
         {historial.registros.map((i) => <p key={i.id}>{i.grupo.ciclo.nombre} · {i.grupo.nombre} · {i.grupo.plantel.nombre} · {i.estatus}
           <button onClick={() => boleta(historial.alumno, i.grupo.ciclo.id, i.id)}>Boleta de esta inscripción</button>
           <button onClick={()=>setBoletaId(i.id)}>Ver boleta informativa y Excel</button>

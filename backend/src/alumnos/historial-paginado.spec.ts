@@ -28,7 +28,7 @@ it('pagina el historial y conserva el filtro de planteles autorizados', async ()
     {} as Repository<GrupoMateria>,
     {} as UsuariosService,
     scope as unknown as ScopeService,
-    {} as DataSource,
+    { getRepository: jest.fn().mockReturnValue({ findOneBy: jest.fn().mockResolvedValue(null) }) } as unknown as DataSource,
   );
   const actor = { sub: 1, roles: ['ADMINISTRATIVO'] } as JwtUser;
   const resultado = await servicio.historialPaginado(5, actor, { pagina: 2, porPagina: 10 });

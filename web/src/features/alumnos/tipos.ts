@@ -17,3 +17,10 @@ export const FORM_INICIAL = {
   email: '', correoPersonal: '', telefono: '', fechaNacimiento: '', direccion: '', curp: '', tutorNombre: '', tutorTelefono: '', plantelId: '',
   correoProveedor: 'MICROSOFT365' as ProveedorCorreo,
 };
+
+export interface EgresoAlumno {
+  cicloId: number;
+  fechaEgreso: string;
+  archivarDesde: string;
+  estadoArchivo: 'VIGENTE' | 'ARCHIVADO';
+}
