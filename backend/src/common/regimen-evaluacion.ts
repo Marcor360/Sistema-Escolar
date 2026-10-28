@@ -8,7 +8,9 @@ export const escalaDe = (clase: ClaseEvaluacion) => esRegimenNuevo(clase) ? 10 :
 export const parcialesDe = (clase: ClaseEvaluacion) => esRegimenNuevo(clase) ? [1, 2, 3, 4] : [1, 2, 3];
 /** Equivalencia de lectura. Nunca modifica la nota ni la escala originales. */
 export function notaEnEscala(nota: Pick<NotaEvaluacion, 'calificacion' | 'escalaMaxima'>, clase: ClaseEvaluacion): number {
-  return Number(nota.calificacion) * escalaDe(clase) / (nota.escalaMaxima ?? 100);
+  const valor = Number(nota.calificacion), origen = nota.escalaMaxima ?? 100, destino = escalaDe(clase);
+  if (origen === destino) return valor;
+  return Math.round(valor * 1e6) * destino / origen / 1e6;
 }
 export function resultadoEvaluacion(notas: NotaEvaluacion[], clase: ClaseEvaluacion): number | null {
   const mapa = new Map(notas.map(n => [n.parcial, notaEnEscala(n, clase)]));

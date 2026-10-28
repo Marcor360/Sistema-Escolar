@@ -161,7 +161,7 @@ CREATE TABLE grupos (
 CREATE UNIQUE INDEX uq_grupos_legacy ON grupos(legacy_id) WHERE legacy_id IS NOT NULL;
 
 CREATE TABLE grupo_materias (
-  regimen_evaluacion VARCHAR(30) NOT NULL DEFAULT 'CUATRO_PARCIALES_10',
+  regimen_evaluacion NVARCHAR(30) NOT NULL DEFAULT 'CUATRO_PARCIALES_10',
   id INT IDENTITY(1,1) PRIMARY KEY,
   grupo_id INT NOT NULL,
   materia_id INT NOT NULL,
@@ -210,7 +210,7 @@ CREATE TABLE entregas (
   archivo_nombre NVARCHAR(200) NULL,
   archivo_ruta NVARCHAR(300) NULL,
   escala_maxima INT NOT NULL DEFAULT 100,
-  calificacion DECIMAL(5,2) NULL,
+  calificacion DECIMAL(9,6) NULL,
   comentario_docente NVARCHAR(500) NULL,
   estatus NVARCHAR(15) NOT NULL DEFAULT 'ENTREGADA', -- ENTREGADA | CALIFICADA | TARDE
   fecha_entregado DATETIME2 NOT NULL DEFAULT SYSDATETIME(),

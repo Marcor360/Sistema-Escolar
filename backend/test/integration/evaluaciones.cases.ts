@@ -1,7 +1,7 @@
 import { expect, it } from '@jest/globals';
 import * as ExcelJS from 'exceljs';
 import { ContextoIntegracion } from './contexto';
-import { Calificacion, Grupo, GrupoMateria, HistorialCalificacion, Inscripcion, Usuario } from '../../src/entities';
+import { Calificacion, Grupo, GrupoMateria, HistorialCalificacion, Inscripcion, Usuario, Entrega } from '../../src/entities';
 import { REGIMEN_NUEVO } from '../../src/common/regimen-evaluacion';
 
 export function registrarEvaluaciones(ctx:ContextoIntegracion) {
@@ -45,7 +45,13 @@ export function registrarEvaluaciones(ctx:ContextoIntegracion) {
   const entrega=await ctx.api(`/actividades/${actividad.data.id}/entrega`,{method:'POST',token:alumno,body:{respuestaTexto:'Respuesta en régimen nuevo'}});expect(entrega.response.status).toBe(201);
   expect((await ctx.api(`/entregas/${entrega.data.id}/calificar`,{method:'PATCH',token:root,body:{calificacion:11,escalaMaxima:10}})).response.status).toBe(400);
   expect((await ctx.api(`/entregas/${entrega.data.id}/calificar`,{method:'PATCH',token:root,body:{calificacion:7.5,escalaMaxima:10}})).data).toMatchObject({calificacion:7.5,escalaMaxima:10});
-  const tareas=await ctx.api('/alumnos/me/tareas',{token:alumno});expect(tareas.data.find((a:{id:number})=>a.id===actividad.data.id).entrega).toMatchObject({calificacion:7.5,escalaMaxima:10});
+  await ds.getRepository(Entrega).update(entrega.data.id,{calificacion:85.33,escalaMaxima:100});
+  const feedback=await ctx.api(`/entregas/${entrega.data.id}/calificar`,{method:'PATCH',token:root,body:{calificacion:8.533,escalaMaxima:10,comentario:'Solo retroalimentación'}});
+  expect(feedback.response.status).toBe(200);expect(feedback.data).toMatchObject({calificacion:8.533,calificacionOriginal:85.33,escalaOriginal:100});
+  expect(await ds.getRepository(Entrega).findOneByOrFail({id:entrega.data.id})).toMatchObject({calificacion:85.33,escalaMaxima:100});
+  expect((await ctx.api(`/entregas/${entrega.data.id}/calificar`,{method:'PATCH',token:root,body:{calificacion:8.537,escalaMaxima:10}})).response.status).toBe(200);
+  expect(await ds.getRepository(Entrega).findOneByOrFail({id:entrega.data.id})).toMatchObject({calificacion:8.537,escalaMaxima:10});
+  const tareas=await ctx.api('/alumnos/me/tareas',{token:alumno});expect(tareas.data.find((a:{id:number})=>a.id===actividad.data.id).entrega).toMatchObject({calificacion:8.537,escalaMaxima:10});
   const archivoNotas=(escala:boolean)=>{
    const f=new FormData();f.append('grupoMateriaId',String(clase.id));f.append('parcial','4');
    const texto=`grupoMateriaId,parcial,alumnoId,matricula,grado,calificacion${escala?',escalaMaxima':''}\n${clase.id},4,${alumnoId},${alta.data.matricula},,9.5${escala?',10':''}`;
@@ -58,6 +64,10 @@ export function registrarEvaluaciones(ctx:ContextoIntegracion) {
   expect((await capturarFinal()).response.status).toBe(201);
   lectura=await leer();expect(lectura.data.every((n:{promedioOficial:number})=>n.promedioOficial===6.4)).toBe(true);
   const analitica=await ctx.api(`/analitica?cicloId=${base.grupo.cicloId}&grupoId=${grupo.id}`,{token:root});expect(analitica.response.status).toBe(200);expect(analitica.data.academico.clases.find((c:{grupoMateriaId:number})=>c.grupoMateriaId===clase.id)).toMatchObject({promedioOficial:6.4,aprobados:1,escalaMaxima:10});
+  const segundo=await ctx.api('/alumnos',{method:'POST',token:root,body:{email:`eval2_${ctx.sufijo}@example.invalid`,nombre:'Evaluación',apellidoPaterno:'Promedio',curp:'EAVB010101HDFLRN09',matricula:`EW${ctx.sufijo}`,plantelId:ctx.plantelId}});expect(segundo.response.status).toBe(201);
+  await ctx.emitirToken(`eval2_${ctx.sufijo}@example.invalid`);
+  await ds.getRepository(Inscripcion).save({alumnoId:segundo.data.id,grupoId:grupo.id,estatus:'ACTIVA'});
+  for(const [parcial,calificacion] of [[1,5],[2,6],[3,7],[4,8]])expect((await post({...cuerpo,parcial,items:[{alumnoId:segundo.data.id,calificacion}]})).response.status).toBe(201);
   const cerrar=(parcial:number)=>ctx.api(`/calificaciones/periodos/${clase.id}/${parcial}`,{method:'PATCH',token:root,body:{estatus:'CERRADO'}});
   for(const p of [1,2,3,4]) expect((await cerrar(p)).response.status).toBe(200);
   const inscripcion=await ds.getRepository(Inscripcion).findOneByOrFail({alumnoId,grupoId:grupo.id});
@@ -65,6 +75,9 @@ export function registrarEvaluaciones(ctx:ContextoIntegracion) {
   expect((await boleta()).data.disponible).toBe(false);
   expect((await cerrar(0)).response.status).toBe(200);
   expect((await boleta()).data).toMatchObject({disponible:true,escala:'0–10',filas:[{promedioFinal:6.4}],promedioGeneral:6.4});
+  const acta=await ctx.api(`/reportes/formatos/acta/${clase.id}?parcial=0`,{token:root});expect(acta.response.status).toBe(200);expect(acta.data).toMatchObject({estado:'CERRADO',faltantes:0});
+  expect(acta.data.filas.find((f:{alumnoId:number})=>f.alumnoId===segundo.data.id)).toMatchObject({calificacion:6.5});expect(acta.data.filas.find((f:{alumnoId:number})=>f.alumnoId===alumnoId)).toMatchObject({calificacion:6.4});
+  const actaArchivo=await fetch(`${ctx.baseUrl}/reportes/formatos/acta/${clase.id}/excel?parcial=0`,{headers:{authorization:`Bearer ${root}`}});expect(actaArchivo.status).toBe(200);const actaLibro=new ExcelJS.Workbook();await actaLibro.xlsx.load(Buffer.from(await actaArchivo.arrayBuffer()) as never);expect([actaLibro.worksheets[0].getCell('W8').value,actaLibro.worksheets[0].getCell('W9').value]).toEqual(expect.arrayContaining([6.4,6.5]));
   expect((await ponderar(ponderada)).response.status).toBe(409);
   expect((await post({...cuerpo,parcial:0,motivo:'Intento tardío',items:[{alumnoId,calificacion:8}]})).response.status).toBe(409);
   const plantilla=await fetch(`${ctx.baseUrl}/importaciones/calificaciones/plantilla?grupoMateriaId=${clase.id}&parcial=4`,{headers:{authorization:`Bearer ${root}`}});

@@ -81,7 +81,7 @@ export function EntregasClase({
                       type="number"
                       min={0}
                       max={e.escalaMaxima ?? 100}
-                      step={0.1}
+                      step={e.escalaMaxima === 10 ? 'any' : '0.01'}
                       value={notas[e.id] ?? ''}
                       onChange={(ev) => setNotas({ ...notas, [e.id]: ev.target.value })}
                     />

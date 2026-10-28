@@ -50,7 +50,8 @@
         "migracion_egresos_unicos_retencion.sql",
         "migracion_entregas_texto_fecha_documental.sql",
         "migracion_evaluaciones_cuatro_parciales.sql",
-        "migracion_escalas_entregas_recursamiento.sql"
+        "migracion_escalas_entregas_recursamiento.sql",
+        "migracion_precision_entregas.sql"
       ]
     },
     "sqlserver": {
@@ -101,7 +102,8 @@
         "migracion_egresos_unicos_retencion.sql",
         "migracion_entregas_texto_fecha_documental.sql",
         "migracion_evaluaciones_cuatro_parciales.sql",
-        "migracion_escalas_entregas_recursamiento.sql"
+        "migracion_escalas_entregas_recursamiento.sql",
+        "migracion_precision_entregas.sql"
       ]
     }
   }

@@ -45,7 +45,7 @@ export class EntregarDto {
 
 export class CalificarEntregaDto {
   @IsOptional() @IsIn([10,100]) escalaMaxima?: number;
-  @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) @Max(100) calificacion!: number;
+  @IsNumber({ maxDecimalPlaces: 6 }) @Min(0) @Max(100) calificacion!: number;
   @IsOptional() @IsString() @MaxLength(500) comentario?: string | null;
 }
 

@@ -39,3 +39,8 @@ it('el cierre de Final combina alumnos con sustitución y alumnos con promedio c
  expect([...alumnosConFinalDisponible(notas,[])]).toEqual([1]);
  expect([...alumnosConFinalDisponible(notas,[1,2,3,4].map(parcial=>({parcial,estatus:'CERRADO'})))]).toEqual([1,2]);
 });
+
+it('la equivalencia no añade decimales binarios que impidan editar retroalimentación',()=>{
+ expect(notaEnEscala({calificacion:0.29,escalaMaxima:100},nueva)).toBe(0.029);
+ expect(notaEnEscala({calificacion:4.063027,escalaMaxima:10},nueva)).toBe(4.063027);
+});

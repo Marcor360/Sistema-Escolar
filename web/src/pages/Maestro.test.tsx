@@ -120,3 +120,10 @@ it('muestra la respuesta escrita del alumno al calificar como texto literal', as
   expect(await screen.findByText(/Respuesta del alumno/)).toBeTruthy();
   expect(document.querySelector('script')).toBeNull();
 });
+
+it('permite conservar tres decimales al editar solo retroalimentación de una entrega convertida',async()=>{
+ vi.mocked(api.get).mockImplementation(async ruta=>({data:ruta.endsWith('/detalle')?clase:ruta==='/actividades/12'?{id:12,grupoMateriaId:7,titulo:'Actividad'}:ruta==='/entregas/33'?{id:33,actividadId:12,escalaMaxima:10,calificacion:8.533,alumno:{matricula:'QA33',usuario:{nombre:'Alumno'}},comentarioDocente:'Anterior'}:{datos:[],total:0}}));
+ const patch=vi.spyOn(api,'patch').mockResolvedValue({data:{}});montar('vista=calificar-entrega&clase=7&actividad=12&id=33');
+ const nota=await screen.findByLabelText('Calificación de la entrega');expect(nota.getAttribute('step')).toBe('any');expect((nota as HTMLInputElement).value).toBe('8.533');
+ fireEvent.change(screen.getByLabelText('Retroalimentación'),{target:{value:'Solo comentario'}});fireEvent.click(screen.getByRole('button',{name:'Guardar calificación de entrega'}));await waitFor(()=>expect(patch).toHaveBeenCalledWith('/entregas/33/calificar',{calificacion:8.533,escalaMaxima:10,comentario:'Solo comentario'}));
+});

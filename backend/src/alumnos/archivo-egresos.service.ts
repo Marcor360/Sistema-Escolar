@@ -5,6 +5,7 @@ import { mkdir, readFile, rename, rm, writeFile } from 'fs/promises';
 import { join, resolve } from 'path';
 import { gzipSync } from 'zlib';
 import { DataSource, In, LessThanOrEqual } from 'typeorm';
+import { GrupoMateria } from '../entities/grupo-materia.entity';
 import { EgresoAlumno } from '../entities/egreso-alumno.entity';
 import { Inscripcion } from '../entities/inscripcion.entity';
 import { Calificacion } from '../entities/calificacion.entity';
@@ -112,8 +113,12 @@ export class ArchivoEgresosService implements OnModuleInit, OnModuleDestroy {
           })
         : [];
 
+      const claseIds = [...new Set([...calificaciones.map(c=>c.grupoMateriaId),...revisiones.map(r=>r.grupoMateriaId),...participaciones.map(p=>p.grupoMateriaId)])];
+      const clases = claseIds.length ? await manager.getRepository(GrupoMateria).find({where:{id:In(claseIds)},select:{id:true,regimenEvaluacion:true},loadEagerRelations:false}) : [];
+      const regimenes = new Map(clases.map(c=>[c.id,c.regimenEvaluacion]));
+      const clasesRecursadas = new Map(participaciones.map(p=>[p.id,p.grupoMateriaId]));
       const expediente = {
-        esquema: 'expediente-egreso-iua/v1',
+        esquema: 'expediente-egreso-iua/v2',
         exportadoEn: new Date().toISOString(),
         egreso: {
           id: egreso.id,
@@ -140,11 +145,15 @@ export class ArchivoEgresosService implements OnModuleInit, OnModuleDestroy {
           fechaInscripcion: i.fechaInscripcion,
           estatus: i.estatus,
         })),
+        regimenesEvaluacion: clases.map(c=>({grupoMateriaId:c.id,regimenEvaluacion:c.regimenEvaluacion})),
         calificaciones: calificaciones.map((c) => ({
           id: c.id,
           grupoMateriaId: c.grupoMateriaId,
           parcial: c.parcial,
           calificacion: c.calificacion,
+          escalaMaxima: c.escalaMaxima ?? 100,
+          capturadaPorId: c.capturadaPorId,
+          regimenEvaluacion: regimenes.get(c.grupoMateriaId) ?? null,
           observaciones: c.observaciones,
           updatedAt: c.updatedAt,
         })),
@@ -155,6 +164,13 @@ export class ArchivoEgresosService implements OnModuleInit, OnModuleDestroy {
           parcial: r.parcial,
           valorAnterior: r.valorAnterior,
           valorNuevo: r.valorNuevo,
+          escalaAnterior: r.escalaAnterior ?? 100,
+          escalaNueva: r.escalaNueva ?? 100,
+          detalleCalculo: r.detalleCalculo ?? null,
+          usuarioId: r.usuarioId,
+          observacionAnterior: r.observacionAnterior,
+          observacionNueva: r.observacionNueva,
+          regimenEvaluacion: regimenes.get(r.grupoMateriaId) ?? null,
           motivo: r.motivo,
           fecha: r.fecha,
         })),
@@ -162,18 +178,26 @@ export class ArchivoEgresosService implements OnModuleInit, OnModuleDestroy {
           id: p.id,
           grupoMateriaId: p.grupoMateriaId,
           intento: p.intento,
+          regimenEvaluacion: regimenes.get(p.grupoMateriaId) ?? null,
           estado: p.estado,
         })),
         notasRecursamiento: notasRecursamiento.map((n) => ({
           participacionId: n.participacionId,
           parcial: n.parcial,
           calificacion: n.calificacion,
+          escalaMaxima: n.escalaMaxima ?? 100,
+          capturadaPorId: n.capturadaPorId,
+          regimenEvaluacion: regimenes.get(clasesRecursadas.get(n.participacionId)!) ?? null,
         })),
         revisionesRecursamiento: revisionesRecursamiento.map((r) => ({
           participacionId: r.participacionId,
           parcial: r.parcial,
           anterior: r.anterior,
+          usuarioId: r.usuarioId,
           nueva: r.nueva,
+          escalaAnterior: r.escalaAnterior ?? 100,
+          escalaNueva: r.escalaNueva ?? 100,
+          regimenEvaluacion: regimenes.get(clasesRecursadas.get(r.participacionId)!) ?? null,
           motivo: r.motivo,
           fecha: r.createdAt,
         })),

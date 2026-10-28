@@ -36,16 +36,17 @@ export class FormatosEscolaresService {
     if (!Number.isInteger(parcial) || parcial < 0 || parcial > 4) throw new BadRequestException('Selecciona P1–P4 o Final');
     const gm = await this.reportes.validarAccesoAClase(id, user);
     if (parcial === 4 && !esRegimenNuevo(gm)) throw new BadRequestException('La clase histórica tiene tres parciales');
+    const finalCalculada = parcial === 0 && esRegimenNuevo(gm);
     const [inscritos, notas, periodo, marca] = await Promise.all([
       this.ds.getRepository(Inscripcion).find({ where: { grupoId: gm.grupoId, estatus: 'ACTIVA', alumno: { estatus: 'ACTIVO' } } }),
-      this.ds.getRepository(Calificacion).find({ where: { grupoMateriaId: id, parcial } }),
+      this.ds.getRepository(Calificacion).find({ where: { grupoMateriaId: id, ...(finalCalculada ? {} : {parcial}) } }),
       this.ds.getRepository(PeriodoCalificacion).findOneBy({ grupoMateriaId: id, parcial }),
       this.marca.obtener(),
     ]);
-    const porAlumno = new Map(notas.map(n => [n.alumnoId, n]));
+    const porAlumno = new Map(notas.filter(n=>n.parcial===parcial).map(n => [n.alumnoId, n]));
     const filas = inscritos.map(i => ({ alumnoId: i.alumnoId, matricula: i.alumno.matricula,
       nombre: [i.alumno.usuario.apellidoPaterno, i.alumno.usuario.apellidoMaterno, i.alumno.usuario.nombre].filter(Boolean).join(' '),
-      calificacion: porAlumno.has(i.alumnoId) ? notaEnEscala(porAlumno.get(i.alumnoId)!, gm) : null,
+      calificacion: finalCalculada ? resultadoEvaluacion(notas.filter(n=>n.alumnoId===i.alumnoId),gm) : porAlumno.has(i.alumnoId) ? notaEnEscala(porAlumno.get(i.alumnoId)!, gm) : null,
       observaciones: porAlumno.get(i.alumnoId)?.observaciones ?? '',
     })).sort((a,b) => a.nombre.localeCompare(b.nombre, 'es') || a.matricula.localeCompare(b.matricula, 'es'));
     return { institucion: marca.nombreInstitucion, claseId: id, parcial,

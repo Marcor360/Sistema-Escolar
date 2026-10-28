@@ -31,6 +31,7 @@ Aplicar mediante el runner, en ambos motores:
 
 1. `migracion_evaluaciones_cuatro_parciales.sql`: régimen por clase, escala original, precisión e instantáneas de cálculo en historial.
 2. `migracion_escalas_entregas_recursamiento.sql`: escala original de entregas e intentos; precisión e historial de recursamiento.
+3. `migracion_precision_entregas.sql`: amplía entregas a seis decimales; se aplica también si ya se ensayaron las dos migraciones anteriores.
 
 El runner también incorpora `migracion_entregas_texto_fecha_documental.sql` de #208 si aún falta en la base. Para habilitar entregas de 100 MiB, revisar IIS/ARR (multipart 110 MiB y timeout), según su contrato.
 
@@ -55,3 +56,9 @@ Se corrige el hallazgo de revisión de #208: después de una transferencia, el i
 | Alumno | GET `/calificaciones/mias` y `/calificaciones/mias/listado`: resultado compartido, escala y originales; nunca endpoints de gestión en Expo |
 
 Las capturas ordinarias e importaciones usan el mismo servicio transaccional. La captura ponderada permite configurar pesos con cada lote y conserva el detalle exacto utilizado; no guarda ni altera automáticamente notas de otros alumnos o parciales.
+
+## Casos de revisión cubiertos
+
+- Una entrega antigua 85.33/100 se muestra como 8.533/10. Editar solo su retroalimentación conserva 85.33/100; una corrección explícita admite hasta seis decimales en el régimen nuevo. Las entregas del régimen histórico mantienen captura a dos decimales.
+- El acta Final y su Excel resuelven tanto promedios de P1–P4 como sustituciones manuales. No cuentan como faltante a un alumno con resultado calculado disponible.
+- Los nuevos comprimidos académicos usan `expediente-egreso-iua/v2`: valores y escalas originales, régimen por clase, revisiones con autor y escalas e instantáneas de criterios. Los archivos v1 ya archivados se conservan sin sobrescribirlos. Ninguno sustituye SQL completo ni un backup restaurado.

@@ -330,17 +330,20 @@ export class ActividadesService {
     const clase = await this.validarPropiedad(entrega.actividad.grupoMateriaId, user);
     const escala = escalaDe(clase);
     if ((esRegimenNuevo(clase) && dto.escalaMaxima !== 10) || (dto.escalaMaxima !== undefined && dto.escalaMaxima !== escala)) throw new ConflictException(`Actualiza el cliente: esta entrega se califica en escala 0 a ${escala}`);
+    if (!esRegimenNuevo(clase) && Math.abs(dto.calificacion * 100 - Math.round(dto.calificacion * 100)) > 1e-7) throw new BadRequestException('La entrega histórica admite hasta dos decimales');
     if (dto.calificacion < 0 || dto.calificacion > escala) throw new BadRequestException(`Calificación entre 0 y ${escala}`);
     return this.dataSource.transaction(async (manager) => {
       const entregas = manager.getRepository(Entrega);
       const actual = await entregas.findOne({ where: { id: entregaId }, lock: { mode: 'pessimistic_write' } });
       if (!actual) throw new NotFoundException('Entrega no encontrada');
       const anterior = actual.calificacion, escalaAnterior = actual.escalaMaxima ?? 100;
-      actual.calificacion = dto.calificacion; actual.escalaMaxima = escala;
+      if (actual.calificacion === null || notaEnEscala({calificacion:actual.calificacion,escalaMaxima:actual.escalaMaxima},clase) !== dto.calificacion) {
+        actual.calificacion = dto.calificacion; actual.escalaMaxima = escala;
+      }
       actual.comentarioDocente = dto.comentario === undefined ? actual.comentarioDocente : dto.comentario;
       actual.estatus = 'CALIFICADA';
       const guardada = await entregas.save(actual);
-      await manager.getRepository(BitacoraAcademica).insert({usuarioId:user.sub,plantelId:clase.grupo.plantelId,accion:'ENTREGA_CALIFICACION',entidadId:actual.id,detalle:JSON.stringify({anterior,escalaAnterior,nueva:dto.calificacion,escalaNueva:escala}),fecha:new Date()});
+      await manager.getRepository(BitacoraAcademica).insert({usuarioId:user.sub,plantelId:clase.grupo.plantelId,accion:'ENTREGA_CALIFICACION',entidadId:actual.id,detalle:JSON.stringify({anterior,escalaAnterior,nueva:guardada.calificacion,escalaNueva:guardada.escalaMaxima??100}),fecha:new Date()});
       return {...guardada,...this.notaEntrega(guardada, clase)};
     });
   }

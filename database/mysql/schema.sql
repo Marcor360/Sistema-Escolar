@@ -209,7 +209,7 @@ CREATE TABLE entregas (
   archivo_nombre VARCHAR(200) NULL,
   archivo_ruta VARCHAR(300) NULL,
   escala_maxima INT NOT NULL DEFAULT 100,
-  calificacion DECIMAL(5,2) NULL,
+  calificacion DECIMAL(9,6) NULL,
   comentario_docente VARCHAR(500) NULL,
   estatus VARCHAR(15) NOT NULL DEFAULT 'ENTREGADA', -- ENTREGADA | CALIFICADA | TARDE
   fecha_entregado DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

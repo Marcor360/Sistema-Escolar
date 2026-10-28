@@ -500,7 +500,7 @@ export default function MaestroPage() {
                 type="number"
                 min={0}
                 max={entrega.escalaMaxima ?? 100}
-                step="0.01"
+                step={entrega.escalaMaxima === 10 ? 'any' : '0.01'}
                 value={nota}
                 onChange={(e) => setNota(e.target.value)}
               />
