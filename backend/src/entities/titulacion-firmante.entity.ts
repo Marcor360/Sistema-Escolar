@@ -15,7 +15,7 @@ export class TitulacionFirmante {
   @Column({ length: 18 }) curp!: string;
   @Column({ name: 'vigente_desde', type: 'date' }) vigenteDesde!: string;
   @Column({ name: 'vigente_hasta', type: 'date', nullable: true }) vigenteHasta!: string | null;
-  @Column({ name: 'certificado_sha256', length: 64, nullable: true }) certificadoSha256!: string | null;
+  @Column({ name: 'certificado_sha256', type: String, length: 64, nullable: true }) certificadoSha256!: string | null;
   @Column({ length: 25, default: 'PENDIENTE_VALIDACION' }) estado!: EstadoFirmanteTitulacion;
   @Column({ name: 'registrado_por_id', type: 'int' }) registradoPorId!: number;
   @ManyToOne(() => Usuario, { onDelete: 'RESTRICT' })
