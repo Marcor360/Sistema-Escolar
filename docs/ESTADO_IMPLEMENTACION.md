@@ -1,4 +1,6 @@
-# Estado de implementación — candidata 1.29.0
+# Estado de implementación — candidata 1.30.0
+
+Calendario institucional: logo de marca, lámina anual/mensual, leyenda, marcadores configurables por plantel, rangos y PDF por impresión. [Contrato 1.30.0](CALENDARIO_INSTITUCIONAL_1.30.0.md). Candidata sin despliegue ni UAT institucional acreditados. Los párrafos siguientes conservan la evidencia de versiones anteriores.
 
 Reinscripción por periodo con autorización financiera, cuotas congeladas e historial conservado; altas ordinarias solo por cartera. [Contrato](REINSCRIPCIONES_SEGURAS_1.29.0.md). Candidata entregada en [PR #211](https://github.com/Marcor360/Sistema-Escolar/pull/211) para #152/#177. Las regresiones de integración MySQL/SQL Server y navegador del primer SHA publicado pasaron; el PR conserva la evidencia por SHA y la repetición tras ajustar una expectativa de prueba de permisos. No desplegada ni aceptada en UAT. #158 sigue bloqueado por HTTP 403 al aplicar protección de main.
 

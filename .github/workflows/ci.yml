@@ -224,6 +224,9 @@ jobs:
       - name: Navegación, formularios y tablas responsive (API simulada)
         run: npm run test:responsive
         working-directory: web
+      - name: Calendario institucional responsive y PDF (API simulada)
+        run: node test/calendario-institucional.cjs
+        working-directory: web
       - name: Recorridos web con API y base reales
         run: npm run test:integration
         working-directory: backend

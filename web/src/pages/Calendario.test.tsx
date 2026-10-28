@@ -1,3 +1,4 @@
+vi.mock('../marca/MarcaContext', async (original) => ({ ...await original<typeof import('../marca/MarcaContext')>(), useMarca: () => ({ marca: { nombreInstitucion: 'Universidad de prueba', logoUrl: null } }) }));
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import CalendarioPage from './Calendario';

@@ -34,7 +34,7 @@ import { casos_academico } from './integration/academico.cases';
 import { casos_calificaciones, registrarCapturaSinCambios } from './integration/calificaciones.cases';
 import { casos_finanzas, registrarRecorridoFinanciero } from './integration/finanzas.cases';
 import { casos_archivos } from './integration/archivos.cases';
-import { casos_calendario } from './integration/calendario.cases';
+import { casos_calendario, registrarMarcadoresCalendario } from './integration/calendario.cases';
 import { casos_conducta } from './integration/conducta.cases';
 import { casos_analitica } from './integration/analitica.cases';
 import { casos_importaciones } from './integration/importaciones.cases';
@@ -476,6 +476,7 @@ Object.keys(casos).map(Number).sort((a,b) => a-b).forEach((id) => casos[id](cont
   registrarMateriasContexto(contexto);
   registrarProgramasEspeciales(contexto);
   registrarCartera(contexto);
+  registrarMarcadoresCalendario(contexto);
   registrarReinscripcionesPeriodo(contexto);
   registrarAgrupacion(contexto);
   registrarRecursamientos(contexto);

@@ -1,6 +1,6 @@
 {
-  "version": "1.29.0",
-  "alcance": "Candidata 1.29.0: inscripción y reinscripción por periodo con autorización financiera; matriz incluye escenarios históricos y regresiones. Evidencia institucional por versión/SHA pendiente.",
+  "version": "1.30.0",
+  "alcance": "Candidata 1.30.0 sobre main 1.29.0: calendario institucional con logo configurable, lámina anual/mensual imprimible, leyenda, marcadores por plantel y rangos de eventos. Sin despliegue ni aceptación UAT de esta versión acreditados.",
   "escenarios": [
     {
       "id": "UAT-01",
@@ -804,6 +804,48 @@
         "mysql",
         "sqlserver",
         "android"
+      ],
+      "estado": "pendiente",
+      "evidencias": [],
+      "responsable": "Institución/QA (por designar)"
+    },
+    {
+      "id": "UAT-59",
+      "rol": "ADMINISTRATIVO",
+      "escenario": "Configurar los 16 marcadores y añadir otro: nombre, color y flecha/fondo persisten tras recargar; conflicto de edición y aislamiento por plantel.",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver"
+      ],
+      "estado": "pendiente",
+      "evidencias": [],
+      "responsable": "Institución/QA (por designar)"
+    },
+    {
+      "id": "UAT-60",
+      "rol": "ADMINISTRATIVO",
+      "escenario": "Vista anual de ciclo cruzado con logo real, fechas correctas, rangos, eventos superpuestos y lámina PDF/impresión física legible en el tamaño institucional.",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver"
+      ],
+      "estado": "pendiente",
+      "evidencias": [],
+      "responsable": "Institución/QA (por designar)"
+    },
+    {
+      "id": "UAT-61",
+      "rol": "ALUMNO",
+      "escenario": "Consultar calendario y agenda en 360/768/1280 px sin acceso a gestión, eventos de otro plantel ni audiencias privadas; importación/exportación e imágenes anteriores conservadas.",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver"
       ],
       "estado": "pendiente",
       "evidencias": [],
