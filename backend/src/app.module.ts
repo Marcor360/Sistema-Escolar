@@ -17,6 +17,7 @@ import { BitacoraInterceptor } from './common/bitacora.interceptor';
 import { BitacoraActividad } from './entities/bitacora-actividad.entity';
 import { AuthModule } from './auth/auth.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
+import { TitulacionModule } from './titulacion/titulacion.module';
 import { AlumnosModule } from './alumnos/alumnos.module';
 import { DocentesModule } from './docentes/docentes.module';
 import { AcademicoModule } from './academico/academico.module';
@@ -38,7 +39,7 @@ import { HealthModule } from './health/health.module';
     TypeOrmModule.forRootAsync({ inject: [ConfigService], useFactory: typeOrmConfig }),
     TypeOrmModule.forFeature([BitacoraActividad]),
     AuthModule, EliminacionModule, SeguimientoModule,
-    UsuariosModule,
+    UsuariosModule, TitulacionModule,
     AlumnosModule,
     DocentesModule,
     AcademicoModule, RecursamientosModule, CarteraModule,
