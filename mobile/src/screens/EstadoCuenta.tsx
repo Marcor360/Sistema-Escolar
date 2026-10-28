@@ -53,6 +53,9 @@ export default function EstadoCuentaScreen() {
   const diseno = useDisenoAlumno();
   const { sesion } = useSesion();
   const usuarioActual = sesion?.sub ?? null;
+  const identidad = useRef({ usuario: usuarioActual });
+  if (identidad.current.usuario !== usuarioActual) identidad.current = { usuario: usuarioActual };
+  const pagoEnCurso = useRef<typeof identidad.current | null>(null);
   const { marca } = useMarca();
   const [estadoPorUsuario, setEstadoPorUsuario] = useState<{ usuario: number; datos: Estado } | null>(null);
   const estado = estadoPorUsuario?.usuario === usuarioActual ? estadoPorUsuario.datos : null;
@@ -86,6 +89,9 @@ export default function EstadoCuentaScreen() {
     setUltimaActualizacion(null);
     setFechaConsulta(0);
     setError("");
+    pagoEnCurso.current = null;
+    setPagando(false);
+    setCargando(false);
   }, [usuarioActual]);
   const cargar = useCallback(() => {
     if (usuarioActual === null) return;
@@ -115,18 +121,19 @@ export default function EstadoCuentaScreen() {
     }, [cargar]),
   );
 
-  const pagoEnCurso = useRef(false);
   const pagarEnLinea = async (cargo: CargoDetalle) => {
-    if (!activa.current || pagoEnCurso.current) return;
+    const sesionPago = identidad.current;
+    const vigente = () => activa.current && identidad.current === sesionPago;
+    if (!vigente() || sesionPago.usuario !== usuarioActual || pagoEnCurso.current) return;
     if (!datosVigentes || !estado || usuarioActual === null) {
       Alert.alert("Actualiza tu saldo", "Necesitas conexión y un estado de cuenta actualizado antes de iniciar un pago.");
       return;
     }
-    pagoEnCurso.current = true;
+    pagoEnCurso.current = sesionPago;
     setPagando(true);
     try {
       const { data: actualizado } = await api.get<Estado>("/finanzas/me/estado-cuenta");
-      if (!activa.current) return;
+      if (!vigente()) return;
       const cargoVigente = actualizado.cargos.find((item) => item.id === cargo.id);
       setEstadoPorUsuario({ usuario: usuarioActual, datos: actualizado });
       setFechaConsulta(Date.now());
@@ -138,7 +145,7 @@ export default function EstadoCuentaScreen() {
       const { data } = await api.post("/finanzas/ordenes", {
         cargoId: cargo.id,
       });
-      if (!activa.current) return;
+      if (!vigente()) return;
       if (data.estatus === "COMPLETADA") {
         Alert.alert(
           "Pago confirmado",
@@ -166,13 +173,13 @@ export default function EstadoCuentaScreen() {
         );
       }
     } catch (err) {
-      if (activa.current) {
+      if (vigente()) {
         setDatosVigentes(false);
         Alert.alert("No se pudo generar la orden", mensajeDeError(err));
       }
     } finally {
-      pagoEnCurso.current = false;
-      if (activa.current) setPagando(false);
+      if (pagoEnCurso.current === sesionPago) pagoEnCurso.current = null;
+      if (vigente()) setPagando(false);
     }
   };
 

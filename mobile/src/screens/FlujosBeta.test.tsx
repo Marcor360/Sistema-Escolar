@@ -1288,11 +1288,42 @@ it("estado de cuenta no muestra saldo del alumno anterior al cambiar de identida
     },
   }));
   await montar(<EstadoCuenta />);
-  expect(texto()).toContain("Colegiatura anterior");
+  expect(vista.root.findAllByType(Text).map(n => n.children.filter(c => typeof c === "string").join(" ")).join(" ")).toContain("Colegiatura anterior");
   sesion.sub = 2;
   await act(async () => {
     vista.update(<EstadoCuenta />);
   });
-  expect(texto()).not.toContain("Colegiatura anterior");
-  expect(texto()).toContain("Colegiatura nueva");
+  expect(vista.root.findAllByType(Text).map(n => n.children.filter(c => typeof c === "string").join(" ")).join(" ")).not.toContain("Colegiatura anterior");
+  expect(vista.root.findAllByType(Text).map(n => n.children.filter(c => typeof c === "string").join(" ")).join(" ")).toContain("Colegiatura nueva");
+});
+
+it.each(["saldo", "orden"])("ignora la respuesta de %s y no abre pagos tras cambiar de alumno", async (fase) => {
+  const cuenta = (usuario: number) => ({ saldoTotal: 100, cargos: [{ id: usuario, descripcion: `Cargo ${usuario}`, fechaVencimiento: null, estatus: "PENDIENTE", total: 100, pagado: 0, saldo: 100 }], pagos: [] });
+  let resolver!: (r: {data: ReturnType<typeof cuenta>}) => void;
+  let resolverOrden!: (r: {data: {urlPago: string}}) => void;
+  let lecturas = 0;
+  vi.mocked(api.get).mockImplementation(async () => {
+    lecturas++;
+    if (fase === "saldo" && lecturas === 2) return new Promise(r => { resolver = r; });
+    return { data: cuenta(sesion.sub ?? 0) };
+  });
+  vi.mocked(api.post).mockImplementation(() => new Promise(r => { resolverOrden = r; }));
+  await montar(<EstadoCuenta />);
+  const pagar = vista.root.findAllByType(TouchableOpacity).find(n => String(n.props.accessibilityLabel).startsWith('Pagar Cargo 1'))!;
+  await act(async () => pagar.props.onPress());
+  const continuar = vi.mocked(Alert.alert).mock.calls.at(-1)?.[2]?.find(b => b.text === 'Continuar')?.onPress;
+  expect(continuar).toBeTruthy();
+  await act(async () => { continuar?.(); });
+  if (fase === "orden") expect(api.post).toHaveBeenCalledTimes(1);
+  sesion.sub = 2;
+  await act(async () => { vista.update(<EstadoCuenta />); });
+  await act(async () => {
+    if (fase === "saldo") resolver({data:cuenta(1)});
+    else resolverOrden({data:{urlPago:'https://pagos.example.invalid/orden-anterior'}});
+  });
+  if (fase === "saldo") expect(api.post).not.toHaveBeenCalled();
+  expect(Linking.openURL).not.toHaveBeenCalled();
+  const visibles = vista.root.findAllByType(Text).map(n => n.children.filter(c => typeof c === 'string').join(' ')).join(' ');
+  expect(visibles).toContain('Cargo 2');
+  expect(visibles).not.toContain('Cargo 1');
 });
