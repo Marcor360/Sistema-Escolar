@@ -123,6 +123,7 @@ beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.clearAllMocks();
   sesion.sub = 1;
+  configurarCacheAcademica(1);
   vi.mocked(api.get).mockImplementation(async (ruta) => ({
     data:
       ruta === "/calificaciones/mias/listado" ? { datos: [], total: 0 } : [],
@@ -134,6 +135,7 @@ beforeEach(() => {
 });
 afterEach(async () => {
   if (vista) await act(async () => vista.unmount());
+  configurarCacheAcademica(null);
   vi.unstubAllGlobals();
 });
 const montar = async (nodo: ReactElement) => {
