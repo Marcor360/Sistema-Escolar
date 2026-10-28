@@ -143,7 +143,7 @@ export class UsuariosService {
   private async listarAdministrativos(query: ListadoUsuariosDto, user: JwtUser, pagina: number, porPagina: number) {
     const planteles = await this.scope.resolverFiltro(user, query.plantelId);
     const qb = this.usuarios.createQueryBuilder('u')
-      .innerJoin('u.roles', 'rolFiltro', 'rolFiltro.clave IN (:...staff)', { staff: ['ADMINISTRATIVO', 'FINANZAS', 'SUPERADMIN'] })
+      .innerJoin('u.roles', 'rolFiltro', 'rolFiltro.clave IN (:...staff)', { staff: ['ADMINISTRATIVO', 'FINANZAS', 'DIRECTOR', 'SUPERADMIN'] })
       .leftJoinAndSelect('u.roles', 'roles')
       .distinct(true);
     if (planteles !== null) qb.andWhere(
