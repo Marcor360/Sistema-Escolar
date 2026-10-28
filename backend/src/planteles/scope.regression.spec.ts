@@ -37,7 +37,11 @@ describe('Regresión de permisos por plantel', () => {
   it('limita filtros sin plantel a los planteles activos asignados', async () => {
     const { scope, find } = preparar([1, 3]);
     await expect(scope.resolverFiltro(usuario(['MAESTRO']))).resolves.toEqual([1, 3]);
-    expect(find).toHaveBeenCalledWith({ where: { usuarioId: 17, activo: true } });
+    expect(find).toHaveBeenCalledWith({
+      where: { usuarioId: 17, activo: true },
+      select: { plantelId: true },
+      loadEagerRelations: false,
+    });
   });
 
   it('permite gestionar únicamente el plantel autorizado', async () => {
