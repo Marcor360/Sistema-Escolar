@@ -11,6 +11,17 @@ export function EditorMarcadores({
   guardado: () => void;
 }) {
   const [seleccion, setSeleccion] = useState('');
+  const [revision, setRevision] = useState(0);
+  function cargar(clave: string) {
+    const m = marcadores.find((m) => m.clave === clave);
+    setSeleccion(clave);
+    setRevision(m?.revision ?? 0);
+    setNombre(m?.nombre ?? '');
+    setColor(m?.color ?? '#83df8b');
+    setForma(m?.forma ?? 'FONDO');
+    setError('');
+    setMensaje('');
+  }
   const [nombre, setNombre] = useState(''),
     [color, setColor] = useState('#83df8b');
   const [forma, setForma] = useState<MarcadorCalendario['forma']>('FONDO');
@@ -24,13 +35,12 @@ export function EditorMarcadores({
     setError('');
     setMensaje('');
     try {
-      const anterior = marcadores.find((m) => m.clave === seleccion);
       await api.post('/calendario/marcadores', {
         plantelId,
         nombre: nombre.trim(),
         color,
         forma,
-        ...(anterior ? { clave: anterior.clave, revision: anterior.revision } : {}),
+        ...(seleccion ? { clave: seleccion, revision } : {}),
       });
       setMensaje('Marcador guardado para este plantel.');
       guardado();
@@ -49,19 +59,7 @@ export function EditorMarcadores({
       <form className="fila" onSubmit={guardar}>
         <label>
           Marcador para configurar
-          <select
-            disabled={ocupado}
-            value={seleccion}
-            onChange={(e) => {
-              setSeleccion(e.target.value);
-              setError('');
-              setMensaje('');
-              const m = marcadores.find((m) => m.clave === e.target.value);
-              setNombre(m?.nombre ?? '');
-              setColor(m?.color ?? '#83df8b');
-              setForma(m?.forma ?? 'FONDO');
-            }}
-          >
+          <select disabled={ocupado} value={seleccion} onChange={(e) => cargar(e.target.value)}>
             <option value="">Agregar otro marcador</option>
             {marcadores.map((m) => (
               <option key={m.clave} value={m.clave}>
@@ -70,6 +68,11 @@ export function EditorMarcadores({
             ))}
           </select>
         </label>
+        {seleccion && (
+          <button type="button" disabled={ocupado} onClick={() => cargar(seleccion)}>
+            Cargar versión actual del marcador
+          </button>
+        )}
         <label>
           Nombre del marcador
           <input

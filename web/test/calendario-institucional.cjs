@@ -18,6 +18,7 @@ let browser;
   let ciclo = {id:1,nombre:'2027-1 · datos de demostración',fechaInicio:'2026-09-01',fechaFin:'2026-12-31',activo:true};
   const eventos = marcadores.map((m,i)=>({id:i+1,titulo:m.nombre,marcador:m,marcadorClave:m.clave,revision:'x'.repeat(64),imagenNombre:null,audiencia:'ACADEMICA',cicloId:1,nivelId:1,
     fechaInicio:`2026-${String(9+Math.floor(i/4)).padStart(2,'0')}-${String(1+(i%4)*5).padStart(2,'0')}T06:00:00Z`,fechaFin:null}));
+  eventos.push({id:99,titulo:'Evento anterior sin marcador',fechaInicio:'2026-09-03T06:00:00Z',fechaFin:null,imagenNombre:null});
   await page.route('**/uploads/marca-logo-*.png', route => route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><circle cx="60" cy="60" r="54" fill="#fff" stroke="#A33925" stroke-width="4"/><text x="60" y="67" text-anchor="middle" fill="#A33925" font-family="serif" font-size="34">IUA</text><text x="60" y="88" text-anchor="middle" font-size="9">DEMO</text></svg>' }));
   await page.route(url => url.pathname.startsWith('/api/'), async route=>{
     const path=new URL(route.request().url()).pathname; let data=[];
@@ -35,7 +36,7 @@ let browser;
   const bienvenida=page.locator('aside.recorrido-panel'); if(await bienvenida.isVisible()) await bienvenida.getByRole('button',{name:'Omitir recorrido'}).click();
   const lamina=page.locator('.calendario-lamina');
   await expect(lamina.locator('.calendario-mes')).toHaveCount(4);
-  await expect(page.getByLabel('Leyenda de marcadores').locator('li')).toHaveCount(16);
+  await expect(page.getByLabel('Leyenda de marcadores').locator('li')).toHaveCount(17);
   await lamina.screenshot({path:resolve(salida,'calendario-escritorio.png')});
   for(const width of [360,768,1280]){
     await page.setViewportSize({width,height:1000});

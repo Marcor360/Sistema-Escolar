@@ -39,3 +39,36 @@ it('guarda nombre, color y forma con revisión del plantel y no presenta éxito 
     revision: 2,
   });
 });
+it('conserva la revisión editada aunque el padre recargue la lista; recarga explícita actualiza los campos', async () => {
+  const post = vi
+    .spyOn(api, 'post')
+    .mockRejectedValueOnce(new Error('Conflicto de revisión'))
+    .mockResolvedValueOnce({ data: {} });
+  const guardado = vi.fn();
+  const base = { clave: 'apertura', nombre: 'Apertura', color: '#FF0000', forma: 'FONDO' as const, revision: 1 };
+  const { rerender } = render(<EditorMarcadores plantelId={4} marcadores={[base]} guardado={guardado} />);
+  fireEvent.change(screen.getByLabelText('Marcador para configurar'), { target: { value: 'apertura' } });
+  fireEvent.change(screen.getByLabelText('Nombre del marcador'), { target: { value: 'Borrador propio' } });
+  rerender(
+    <EditorMarcadores
+      plantelId={4}
+      marcadores={[{ ...base, revision: 2, nombre: 'Cambio de otro usuario' }]}
+      guardado={guardado}
+    />,
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Guardar marcador' }));
+  await screen.findByRole('alert');
+  expect(post).toHaveBeenLastCalledWith(
+    '/calendario/marcadores',
+    expect.objectContaining({ revision: 1, nombre: 'Borrador propio' }),
+  );
+  expect(guardado).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Cargar versión actual del marcador' }));
+  expect((screen.getByLabelText('Nombre del marcador') as HTMLInputElement).value).toBe('Cambio de otro usuario');
+  fireEvent.click(screen.getByRole('button', { name: 'Guardar marcador' }));
+  await waitFor(() => expect(guardado).toHaveBeenCalledTimes(1));
+  expect(post).toHaveBeenLastCalledWith(
+    '/calendario/marcadores',
+    expect.objectContaining({ revision: 2, nombre: 'Cambio de otro usuario' }),
+  );
+});

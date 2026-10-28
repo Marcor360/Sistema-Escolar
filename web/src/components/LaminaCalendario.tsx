@@ -23,6 +23,13 @@ export const diaCalendario = (v: string) =>
     month: '2-digit',
     day: '2-digit',
   }).format(new Date(v));
+const SIN_MARCADOR: MarcadorCalendario = {
+  clave: 'sin-marcador',
+  nombre: 'Evento sin marcador',
+  color: '#CBD5DC',
+  forma: 'FONDO',
+  revision: 0,
+};
 export function SimboloMarcador({ marcador }: { marcador: MarcadorCalendario }) {
   return (
     <span
@@ -53,6 +60,7 @@ export function LaminaCalendario({
 }) {
   const { marca } = useMarca();
   const leyenda = [...marcadores];
+  if (eventos.some((e) => !e.imagenNombre && !e.marcador)) leyenda.push(SIN_MARCADOR);
   for (const e of eventos)
     if (
       e.marcador &&
@@ -62,7 +70,12 @@ export function LaminaCalendario({
     )
       leyenda.push(e.marcador);
   return (
-    <article className={'calendario-lamina' + (compacto ? ' calendario-compacto' : '') + (meses.length <= 4 ? ' calendario-corto' : '')} aria-label="Calendario institucional para imprimir">
+    <article
+      className={
+        'calendario-lamina' + (compacto ? ' calendario-compacto' : '') + (meses.length <= 4 ? ' calendario-corto' : '')
+      }
+      aria-label="Calendario institucional para imprimir"
+    >
       <header className="calendario-cabecera">
         {marca.logoUrl && <img src={archivosBase + marca.logoUrl} alt={'Logo de ' + marca.nombreInstitucion} />}
         <div>
@@ -134,7 +147,7 @@ export function LaminaCalendario({
                           <ul className="calendario-marcas-dia">
                             {delDia.map((e) => (
                               <li key={e.id} title={(e.marcador ? e.marcador.nombre + ': ' : '') + e.titulo}>
-                                {e.marcador && <SimboloMarcador marcador={e.marcador} />}
+                                <SimboloMarcador marcador={e.marcador ?? SIN_MARCADOR} />
                                 <span>{e.titulo}</span>
                               </li>
                             ))}

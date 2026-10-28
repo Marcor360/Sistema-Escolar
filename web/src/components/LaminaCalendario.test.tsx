@@ -79,3 +79,22 @@ it('calcula el 29 de febrero bisiesto y bloquea días fuera del ciclo sin invent
   expect((screen.getByRole('button', { name: 'Seleccionar 2028-02-01' }) as HTMLButtonElement).disabled).toBe(true);
   expect(screen.queryByRole('button', { name: 'Seleccionar 2028-02-30' })).toBeNull();
 });
+it('mantiene un indicador visible y leyenda para fechas anteriores o importadas sin marcador', () => {
+  render(
+    <LaminaCalendario
+      meses={['2026-09']}
+      eventos={[
+        { id: 8, titulo: 'Fecha histórica', fechaInicio: '2026-09-03T06:00:00Z', fechaFin: null, imagenNombre: null },
+      ]}
+      marcadores={[]}
+      ciclo={ciclo}
+      gestionar={false}
+      seleccionar={vi.fn()}
+    />,
+  );
+  const dia = screen
+    .getByRole('button', { name: 'Seleccionar 2026-09-03: Fecha histórica' })
+    .closest('.calendario-celda');
+  expect(dia?.querySelector('.calendario-simbolo')).toBeTruthy();
+  expect(screen.getByLabelText('Leyenda de marcadores').textContent).toContain('Evento sin marcador');
+});
