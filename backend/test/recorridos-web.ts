@@ -21,7 +21,25 @@ export async function recorridoWeb(d: Datos, tipo: 'academico' | 'financiero' | 
     const ipCliente = tipo === 'academico' ? '203.0.113.1' : tipo === 'financiero' ? '203.0.113.2' : '203.0.113.3';
     const page = await browser.newPage({ extraHTTPHeaders: { 'x-forwarded-for': ipCliente } }); const errores: string[] = [];
     page.on('pageerror', (e: Error) => errores.push(e.message)); page.on('dialog', (dialog: { accept: () => Promise<void> }) => { void dialog.accept(); });
-    await page.addLocatorHandler(page.getByRole('dialog', { name: 'Confirmar operación', exact: true }), async () => { await page.getByRole('dialog', { name: 'Confirmar operación', exact: true }).getByRole('button', { name: 'Confirmar', exact: true }).click(); });
+    const dialogoConfirmacion = page.getByRole('dialog', { name: 'Confirmar operación', exact: true });
+    const confirmarAutomaticamente = async () => { await dialogoConfirmacion.getByRole('button', { name: 'Confirmar', exact: true }).click(); };
+    await page.addLocatorHandler(dialogoConfirmacion, confirmarAutomaticamente);
+    const confirmarPeticion = async (accion: () => Promise<unknown>, metodo: string, ruta: RegExp) => {
+      // Una aserción de conteo no garantiza que se active el manejador de overlays.
+      // Confirma explícitamente y comprueba la respuesta real antes de esperar el roster.
+      await page.removeLocatorHandler(dialogoConfirmacion);
+      try {
+        await accion();
+        await expect(dialogoConfirmacion).toBeVisible();
+        const pendiente = page.waitForResponse((r: { url: () => string; request: () => { method: () => string } }) =>
+          r.request().method() === metodo && ruta.test(new URL(r.url()).pathname));
+        await confirmarAutomaticamente();
+        const respuesta = await pendiente;
+        assert(respuesta.ok(), `Operación ${metodo}: ${respuesta.status()} ${await respuesta.text()}`);
+      } finally {
+        await page.addLocatorHandler(dialogoConfirmacion, confirmarAutomaticamente);
+      }
+    };
     await page.goto('http://127.0.0.1:5181/login'); await page.getByLabel('Correo institucional').fill(d.email); await page.getByLabel('Contraseña', { exact: true }).fill(d.password); const respuestaLogin = page.waitForResponse((r: { url: () => string; request: () => { method: () => string } }) => r.url().endsWith('/auth/login') && r.request().method() === 'POST');
     await page.getByRole('button', { name: 'Entrar' }).click();
     const login = await respuestaLogin;
@@ -61,14 +79,14 @@ export async function recorridoWeb(d: Datos, tipo: 'academico' | 'financiero' | 
       await crear.getByLabel('Plantel', { exact: true }).selectOption(String(d.plantelId)); await crear.getByLabel('Ciclo', { exact: true }).selectOption(String(d.cicloId)); await crear.getByLabel('Nombre', { exact: true }).fill(grupo); await crear.getByRole('button', { name: 'Crear grupo', exact: true }).click();
       await page.locator('tr').filter({ hasText: grupo }).getByRole('button', { name: 'Administrar' }).click();
       const materias = page.locator('section').filter({ has: page.getByRole('heading', { name: new RegExp(`Materias del grupo ${grupo}`) }) });
-      await materias.getByLabel('Materia', { exact: true }).selectOption(String(d.materiaId)); await expect(materias.getByLabel('Docente', { exact: true }).locator(`option[value="${d.docenteId}"]`)).toBeAttached(); await materias.getByLabel('Docente', { exact: true }).selectOption(String(d.docenteId)); await materias.getByRole('button', { name: 'Asignar materia' }).click(); await expect(materias.locator('tbody tr')).toHaveCount(1);
+      await materias.getByLabel('Materia', { exact: true }).selectOption(String(d.materiaId)); await expect(materias.getByLabel('Docente', { exact: true }).locator(`option[value="${d.docenteId}"]`)).toBeAttached(); await materias.getByLabel('Docente', { exact: true }).selectOption(String(d.docenteId)); await materias.getByRole('button', { name: 'Asignar materia' }).click(); await expect(materias.getByRole('button', { name: 'Reasignar docente', exact: true })).toBeVisible(); await expect(page.getByRole('status').filter({ hasText: 'Materia vinculada.' })).toBeVisible();
       const alumnos = page.locator('section').filter({ has: page.getByRole('heading', { name: `Alumnos inscritos en ${grupo}` }) });
       // Expediente histórico de prueba: el navegador prueba una reactivación real, no una alta que eluda cartera.
       await d.prepararReactivacion(grupo,matricula);
       await alumnos.getByLabel('Motivo de reactivación').fill('Reactivación documental desde navegador real');await alumnos.getByLabel('Referencia documental').fill('ACTA-BROWSER-2026');
-      await alumnos.getByLabel('Buscar alumno').fill(matricula); await expect(alumnos.getByLabel('Alumno', { exact: true }).locator('option').filter({ hasText: matricula })).toBeAttached(); await alumnos.getByLabel('Alumno', { exact: true }).selectOption({ label: await alumnos.getByLabel('Alumno', { exact: true }).locator('option').filter({ hasText: matricula }).innerText() }); await alumnos.getByRole('button', { name: 'Reactivar inscripción previa', exact: true }).click(); await expect(alumnos.locator('tbody tr').filter({ hasText: matricula })).toHaveCount(1);
-      await alumnos.getByRole('button', { name: 'Dar de baja inscripción' }).click(); await expect(alumnos.locator('tbody tr').filter({ hasText: matricula })).toHaveCount(0);
-      await alumnos.getByLabel('Alumno', { exact: true }).selectOption({ label: await alumnos.getByLabel('Alumno', { exact: true }).locator('option').filter({ hasText: matricula }).innerText() }); await alumnos.getByRole('button', { name: 'Reactivar inscripción previa', exact: true }).click(); await expect(alumnos.locator('tbody tr').filter({ hasText: matricula })).toHaveCount(1);
+      await alumnos.getByLabel('Buscar alumno').fill(matricula); await expect(alumnos.getByLabel('Alumno', { exact: true }).locator('option').filter({ hasText: matricula })).toBeAttached(); await alumnos.getByLabel('Alumno', { exact: true }).selectOption({ label: await alumnos.getByLabel('Alumno', { exact: true }).locator('option').filter({ hasText: matricula }).innerText() }); await confirmarPeticion(() => alumnos.getByRole('button', { name: 'Reactivar inscripción previa', exact: true }).click(), 'POST', /\/academico\/grupos\/\d+\/alumnos$/); await expect(alumnos.locator('tbody tr').filter({ hasText: matricula })).toHaveCount(1);
+      await confirmarPeticion(() => alumnos.getByRole('button', { name: 'Dar de baja inscripción' }).click(), 'DELETE', /\/academico\/inscripciones\/\d+$/); await expect(alumnos.getByRole('button', { name: 'Reactivar inscripción previa', exact: true })).toBeEnabled(); await expect(alumnos.locator('tbody tr').filter({ hasText: matricula })).toHaveCount(0);
+      await alumnos.getByLabel('Buscar alumno').fill(matricula); await expect(alumnos.getByLabel('Alumno', { exact: true }).locator('option').filter({ hasText: matricula })).toBeAttached(); await alumnos.getByLabel('Alumno', { exact: true }).selectOption({ label: await alumnos.getByLabel('Alumno', { exact: true }).locator('option').filter({ hasText: matricula }).innerText() }); await confirmarPeticion(() => alumnos.getByRole('button', { name: 'Reactivar inscripción previa', exact: true }).click(), 'POST', /\/academico\/grupos\/\d+\/alumnos$/); await expect(alumnos.locator('tbody tr').filter({ hasText: matricula })).toHaveCount(1);
       await page.getByRole('link', { name: 'Calificaciones', exact: true }).click(); await page.getByRole('button',{name:/Capturar calificaciones/}).click(); await page.getByLabel('Buscar clase').fill(grupo);
       const selector = page.getByLabel('Clase', { exact: true }); await expect(selector.locator('option').filter({ hasText: grupo })).toBeAttached(); await selector.selectOption({ label: await selector.locator('option').filter({ hasText: grupo }).innerText() });
       await page.getByRole('button',{ name: 'Cargar lista' }).click(); await page.getByLabel(`Calificación de ${matricula.toUpperCase()}`).fill('8.025'); await page.getByRole('button',{ name: 'Guardar calificaciones' }).click(); await expect(page.getByText('1 calificaciones guardadas',{ exact: true })).toBeVisible();

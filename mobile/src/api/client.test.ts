@@ -160,3 +160,19 @@ it("una respuesta 401 de una sesión anterior no cierra la cuenta nueva", async 
   expect(expirada).not.toHaveBeenCalled();
   expect(mocks.secure.deleteItemAsync).not.toHaveBeenCalled();
 });
+
+it("la renovación de token del mismo alumno no cancela la consulta académica reintentada", async () => {
+  const { configurarCacheAcademica, leerConCache } = await import('./cache-academica');
+  configurarCacheAcademica(7);
+  vi.spyOn(axios, 'post').mockResolvedValue({ data: { accessToken: 'nuevo', refreshToken: 'rotado' } });
+  let intentos = 0;
+  api.defaults.adapter = async (config) => {
+    if (++intentos === 1) throw new AxiosError('No autorizado', 'ERR_BAD_RESPONSE', config, undefined, { status: 401, data: {}, headers: {}, config, statusText: 'Error' });
+    return {data:[8],status:200,statusText:'OK',headers:{},config};
+  };
+  try {
+    const r = await leerConCache('/notas-renovadas', () => api.get<number[]>('/notas-renovadas'));
+    expect(r.data).toEqual([8]);
+    expect(intentos).toBe(2);
+  } finally { configurarCacheAcademica(null); }
+});

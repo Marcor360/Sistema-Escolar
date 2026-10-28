@@ -11,9 +11,13 @@ export function configurarCacheAcademica(usuario: number | null) {
     limpiarCacheAcademica();
   }
 }
+/** Renovar el token de la misma sesión vacía copias sin cancelar su consulta reintentada. */
+export function vaciarCacheAcademica() {
+  registros.clear();
+}
 export function limpiarCacheAcademica() {
   generacion++;
-  registros.clear();
+  vaciarCacheAcademica();
 }
 export async function leerConCache<T>(
   ruta: string,
