@@ -3,6 +3,7 @@ import {
   configurarCacheAcademica,
   leerConCache,
   limpiarCacheAcademica,
+  vaciarCacheAcademica,
 } from "./cache-academica";
 const offline = () => Promise.reject({ code: "ERR_NETWORK" });
 afterEach(() => {
@@ -60,4 +61,15 @@ describe("Caché académica de retención mínima", () => {
     rechazar({ code: "ERR_NETWORK" });
     await expect(consulta).rejects.toMatchObject({ code: "ERR_CANCELED" });
   });
+});
+it("renovar el token borra copias pero conserva la lectura vigente de la misma identidad", async () => {
+  configurarCacheAcademica(1);
+  await leerConCache('/anterior', async () => ({data:[5]}));
+  let resolver!: (r: {data:number[]}) => void;
+  const consulta = leerConCache('/actual', () => new Promise<{data:number[]}>(r=>{resolver=r;}));
+  vaciarCacheAcademica();
+  await expect(leerConCache('/anterior', offline)).rejects.toBeTruthy();
+  resolver({data:[8]});
+  await expect(consulta).resolves.toMatchObject({data:[8],offline:false});
+  await expect(leerConCache('/actual', offline)).resolves.toMatchObject({data:[8],offline:true});
 });

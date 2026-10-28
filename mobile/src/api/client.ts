@@ -1,4 +1,4 @@
-import { limpiarCacheAcademica } from "./cache-academica";
+import { limpiarCacheAcademica, vaciarCacheAcademica } from "./cache-academica";
 import { borrarPreferenciaBiometrica } from "../biometria";
 import axios, { CanceledError } from "axios";
 import * as SecureStore from "expo-secure-store";
@@ -132,7 +132,7 @@ api.interceptors.response.use(
                 throw new CanceledError(
                   "La sesión cambió durante la renovación",
                 );
-              limpiarCacheAcademica();
+              vaciarCacheAcademica();
               await SecureStore.setItemAsync(REFRESH_KEY, data.refreshToken);
               await SecureStore.setItemAsync(TOKEN_KEY, data.accessToken);
             });

@@ -1,6 +1,6 @@
 # Estado de implementación — candidata 1.30.3
 
-1.30.3 corrige la espera de confirmaciones en el E2E académico tras detectar un fallo intermitente en CI de main 9d7ea9e. Sin cambios de lógica de negocio, API ni esquema. Conserva calendario institucional 1.30.0.
+1.30.3 corrige la espera de confirmaciones en el E2E académico tras detectar un fallo intermitente en CI de main 9d7ea9e. También evita que renovar el token de la misma sesión cancele la consulta académica reintentada; un cambio real de sesión conserva la cancelación. Sin cambios de reglas de negocio, API ni esquema. Conserva calendario institucional 1.30.0.
 
 Calendario institucional: logo de marca, lámina anual/mensual, leyenda, marcadores configurables por plantel, rangos y PDF por impresión. [Contrato 1.30.0](CALENDARIO_INSTITUCIONAL_1.30.0.md). Candidata sin despliegue ni UAT institucional acreditados. Los párrafos siguientes conservan la evidencia de versiones anteriores.
 
