@@ -55,7 +55,8 @@
         "migracion_aprobacion_final_precision.sql",
         "migracion_reinscripciones_periodo.sql",
         "migracion_calendario_marcadores.sql",
-        "migracion_rol_director.sql"
+        "migracion_rol_director.sql",
+        "migracion_titulacion_expedientes.sql"
       ]
     },
     "sqlserver": {
@@ -111,7 +112,8 @@
         "migracion_aprobacion_final_precision.sql",
         "migracion_reinscripciones_periodo.sql",
         "migracion_calendario_marcadores.sql",
-        "migracion_rol_director.sql"
+        "migracion_rol_director.sql",
+        "migracion_titulacion_expedientes.sql"
       ]
     }
   }
