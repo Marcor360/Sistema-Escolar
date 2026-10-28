@@ -43,32 +43,6 @@ assert.equal('sha512-' + createHash('sha512').update(archivoDeepmerge).digest('b
 const requireExpoConfig = createRequire(requireMobile.resolve('@expo/config'));
 assert.equal(requireExpoConfig('deepmerge/package.json').version, '4.3.2-escolar.0');
 assert.equal(requireMobile('deepmerge/package.json').version, '4.3.2-escolar.0');
-for (const merge of [requireMobile('deepmerge'), requireMobile('deepmerge/dist/umd.js'), requireExpoConfig('deepmerge')]) {
-  const normal = { ios: { infoPlist: { Nombre: 'Escuela' } }, plugins: ['uno'] };
-  const combinado = merge(normal, { ios: { infoPlist: { Idioma: 'es' } }, plugins: ['dos'] });
-  assert.deepEqual(combinado, { ios: { infoPlist: { Nombre: 'Escuela', Idioma: 'es' } }, plugins: ['uno', 'dos'] });
-  assert.deepEqual(normal.plugins, ['uno']);
-  const simbolo = Symbol('config');
-  assert.deepEqual(merge({ [simbolo]: { a: 1 } }, { [simbolo]: { b: 2 } })[simbolo], { a: 1, b: 2 });
-  for (const clone of [true, false]) {
-    const payload = JSON.parse('{"__proto__":{"escolarPoisoned":true}}');
-    for (const resultado of [merge(payload, {}, { clone }), merge(Object.create(null), payload, { clone })]) {
-      assert.equal(Object.getPrototypeOf(resultado), Object.prototype);
-      assert.equal(resultado.escolarPoisoned, undefined);
-      assert.equal(Object.hasOwn(resultado, '__proto__'), false);
-    }
-  }
-  assert.equal(Object.prototype.escolarPoisoned, undefined);
-  let escrituras = 0;
-  const anterior = Object.getOwnPropertyDescriptor(Object.prototype, 'escolarSetter');
-  try {
-    Object.defineProperty(Object.prototype, 'escolarSetter', { configurable: true, set() { escrituras++; } });
-    const resultado = merge(JSON.parse('{"escolarSetter":7}'), {});
-    assert.equal(escrituras, 0);
-    assert.equal(Object.getOwnPropertyDescriptor(resultado, 'escolarSetter').value, 7);
-  } finally {
-    if (anterior) Object.defineProperty(Object.prototype, 'escolarSetter', anterior);
-    else delete Object.prototype.escolarSetter;
-  }
-}
+const { verificarFusiones } = require('../backend/scripts/verificar-deepmerge.cjs');
+verificarFusiones([requireMobile('deepmerge'), requireMobile('deepmerge/dist/umd.js'), requireExpoConfig('deepmerge')]);
 console.log('Deepmerge: Expo resuelve el parche; configuración, arrays y símbolos conservados; prototipos y setters protegidos.');
