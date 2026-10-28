@@ -1,6 +1,6 @@
 {
-  "version": "1.30.2",
-  "alcance": "Candidata 1.30.2 sobre 1.30.1: protección de estado de cuenta Expo por identidad de alumno y regresión de cambio de cuenta. Apilada sobre PR #213; sin migraciones o nuevas rutas API. CI y UAT pendientes.",
+  "version": "1.30.3",
+  "alcance": "Candidata 1.30.3 sobre 1.30.2 (#214), tras 1.30.1 (#213): corrección de confirmaciones del E2E académico; conserva aislamiento de caché y pagos por sesión y calendario institucional. No acredita despliegue ni UAT.",
   "escenarios": [
     {
       "id": "UAT-01",
