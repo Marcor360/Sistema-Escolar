@@ -1276,3 +1276,22 @@ it.each(["", "   ", "a".repeat(3001)])(
     );
   },
 );
+
+it("estado de cuenta no muestra saldo del alumno anterior al cambiar de identidad", async () => {
+  vi.mocked(api.get).mockResolvedValue({
+    data: {
+      saldoTotal: 1234,
+      cargos: [{ id: 1, descripcion: "Colegiatura anterior", fechaVencimiento: null, estatus: "PENDIENTE", total: 1234, pagado: 0, saldo: 1234 }],
+      pagos: [],
+    },
+  });
+  await montar(<EstadoCuenta />);
+  expect(texto()).toContain("Colegiatura anterior");
+  sesion.sub = 2;
+  let vistaAntesDeEfectos = "";
+  await act(async () => {
+    vista.update(<EstadoCuenta />);
+    vistaAntesDeEfectos = texto();
+  });
+  expect(vistaAntesDeEfectos).not.toContain("Colegiatura anterior");
+});
