@@ -57,7 +57,7 @@ export class CalificacionesService {
   }
 
   /** Comparte validación, bloqueos y auditoría con la importación; el llamador controla la transacción. */
-  async capturarEnTransaccion(dto: CapturaCalificacionesDto, user: JwtUser, manager: EntityManager, soloValidar = false, esperadas?: Map<number, string>, detalles?: Map<number, string>) {
+  async capturarEnTransaccion(dto: CapturaCalificacionesDto, user: JwtUser, manager: EntityManager, soloValidar = false, esperadas?: Map<number, string>, detalles?: Map<number, string>, aprobacion?: string) {
     const gm = await this.validarGrupoMateria(dto.grupoMateriaId, user);
     const ids = [...new Set(dto.items.map((item) => item.alumnoId))];
     {
@@ -75,6 +75,16 @@ export class CalificacionesService {
       }
       this.validarParcial(dto.parcial);
       if (!parcialesDe(grupoMateria).includes(dto.parcial) && dto.parcial !== 0) throw new BadRequestException('Parcial no admitido por el régimen de la clase');
+      if (aprobacion) {
+        if (!esRegimenNuevo(grupoMateria)) throw new BadRequestException('La aprobación corresponde al régimen de cuatro parciales');
+        const alumnoId=dto.items[0].alumnoId;
+        const notas=await manager.getRepository(Calificacion).find({where:{grupoMateriaId:grupoMateria.id,alumnoId},loadEagerRelations:false});
+        if (aprobacion!==this.revisionFinal(notas,grupoMateria)) throw new ConflictException('Las notas cambiaron; vuelve a cargar la propuesta antes de aprobar');
+        const calificacion=propuestaFinal(notas,grupoMateria);
+        if (calificacion===null) throw new ConflictException('Faltan parciales para calcular la propuesta');
+        dto={...dto,items:[{alumnoId,calificacion}]};
+        detalles=new Map([[alumnoId,JSON.stringify({tipo:'APROBACION_FINAL',revision:aprobacion,calificacion,parciales:notas.filter(n=>n.parcial>0).map(n=>({parcial:n.parcial,calificacion:n.calificacion,escalaMaxima:n.escalaMaxima,peso:25}))})]]);
+      }
       const escala = escalaDe(grupoMateria);
       if ((esRegimenNuevo(grupoMateria) && dto.escalaMaxima !== 10) || (dto.escalaMaxima !== undefined && dto.escalaMaxima !== escala)) throw new ConflictException(`Actualiza el cliente o la plantilla: esta clase captura en escala 0 a ${escala}`);
       const factor = dto.parcial === 0 && esRegimenNuevo(grupoMateria) ? 1e8 : 1e6;
@@ -143,19 +153,11 @@ export class CalificacionesService {
   }
 
   async aprobarFinal(dto:AprobarFinalDto, user:JwtUser) {
-    const previa=await this.validarGrupoMateria(dto.grupoMateriaId,user);
-    return this.dataSource.transaction(async manager=>{
-      const ciclo=await manager.getRepository(CicloEscolar).findOne({where:{id:previa.grupo.cicloId},lock:{mode:'pessimistic_write'}});
-      if (!ciclo?.activo) throw new ConflictException('El ciclo ya fue cerrado');
-      const clase=await manager.getRepository(GrupoMateria).findOne({where:{id:previa.id},lock:{mode:'pessimistic_write'}});
-      if (!clase || !esRegimenNuevo(clase)) throw new BadRequestException('La aprobación corresponde al régimen de cuatro parciales');
-      const notas=await manager.getRepository(Calificacion).find({where:{grupoMateriaId:clase.id,alumnoId:dto.alumnoId},loadEagerRelations:false});
-      if (dto.revision!==this.revisionFinal(notas,clase)) throw new ConflictException('Las notas cambiaron; vuelve a cargar la propuesta antes de aprobar');
-      const calificacion=propuestaFinal(notas,clase);
-      if (calificacion===null) throw new ConflictException('Faltan parciales para calcular la propuesta');
-      const detalles=new Map([[dto.alumnoId,JSON.stringify({tipo:'APROBACION_FINAL',revision:dto.revision,calificacion,parciales:notas.filter(n=>n.parcial>0).map(n=>({parcial:n.parcial,calificacion:n.calificacion,escalaMaxima:n.escalaMaxima,peso:25}))})]]);
-      return this.capturarEnTransaccion({grupoMateriaId:clase.id,parcial:0,escalaMaxima:10,motivo:dto.motivo,items:[{alumnoId:dto.alumnoId,calificacion}]},user,manager,false,undefined,detalles);
-    });
+    // Una única ruta transaccional: ninguna lectura externa después de adquirir locks.
+    return this.dataSource.transaction(manager=>this.capturarEnTransaccion({
+      grupoMateriaId:dto.grupoMateriaId,parcial:0,escalaMaxima:10,motivo:dto.motivo,
+      items:[{alumnoId:dto.alumnoId,calificacion:0}],
+    },user,manager,false,undefined,undefined,dto.revision));
   }
 
   async capturarPonderadas(dto: CapturaPonderadaDto, user: JwtUser) {
