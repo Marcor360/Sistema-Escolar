@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.30.0`** · Calendario institucional con logo, marcadores configurables por plantel y lámina imprimible. Base: main 1.29.0 (#211).
+**Versión candidata: `1.30.1`** · Expo alumno: descartar respuestas académicas pendientes tras cambio de sesión. Base: main 1.30.0.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
