@@ -1278,13 +1278,13 @@ it.each(["", "   ", "a".repeat(3001)])(
 );
 
 it("estado de cuenta no muestra saldo del alumno anterior al cambiar de identidad", async () => {
-  vi.mocked(api.get).mockResolvedValue({
+  vi.mocked(api.get).mockImplementation(async () => ({
     data: {
-      saldoTotal: 1234,
-      cargos: [{ id: 1, descripcion: "Colegiatura anterior", fechaVencimiento: null, estatus: "PENDIENTE", total: 1234, pagado: 0, saldo: 1234 }],
+      saldoTotal: sesion.sub === 1 ? 1234 : 700,
+      cargos: [{ id: 1, descripcion: sesion.sub === 1 ? "Colegiatura anterior" : "Colegiatura nueva", fechaVencimiento: null, estatus: "PENDIENTE", total: 1234, pagado: 0, saldo: sesion.sub === 1 ? 1234 : 700 }],
       pagos: [],
     },
-  });
+  }));
   await montar(<EstadoCuenta />);
   expect(texto()).toContain("Colegiatura anterior");
   sesion.sub = 2;
