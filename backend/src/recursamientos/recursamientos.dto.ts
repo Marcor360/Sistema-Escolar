@@ -1,4 +1,4 @@
-import { Equals, IsInt, IsNumber, IsUUID, Max, Min } from 'class-validator';
+import { Equals, IsIn, IsOptional, IsInt, IsNumber, IsUUID, Max, Min } from 'class-validator';
 import { TransicionEspecialDto } from '../programas-especiales/programas.dto';
 export class InscribirRecursamientoDto {
   @IsInt() @Min(1) alumnoId!: number;
@@ -9,6 +9,7 @@ export class InscribirRecursamientoDto {
 }
 export class CupoRecursamientoDto extends TransicionEspecialDto { @IsInt() @Min(1) @Max(10000) cupoTotalManual!: number; }
 export class NotaRecursamientoDto extends TransicionEspecialDto {
-  @IsInt() @Min(0) @Max(3) parcial!: number;
-  @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) @Max(100) calificacion!: number;
+  @IsOptional() @IsIn([10,100]) escalaMaxima?: number;
+  @IsInt() @Min(0) @Max(4) parcial!: number;
+  @IsNumber({ maxDecimalPlaces: 6 }) @Min(0) @Max(100) calificacion!: number;
 }

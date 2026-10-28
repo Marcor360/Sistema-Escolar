@@ -22,7 +22,7 @@ export class CrearActividadDto {
   @OpcionalNoNulo()
   @IsIn(['TAREA', 'EXAMEN', 'PROYECTO', 'PARTICIPACION'])
   tipo?: 'TAREA' | 'EXAMEN' | 'PROYECTO' | 'PARTICIPACION';
-  @OpcionalNoNulo() @IsInt() @Min(0) @Max(3) parcial?: number;
+  @OpcionalNoNulo() @IsInt() @Min(0) @Max(4) parcial?: number;
   @OpcionalNoNulo() @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) @Max(100) ponderacion?: number;
   @IsOptional() @IsDateString({ strict: true }) fechaEntrega?: string | null; // ISO
 }
@@ -33,7 +33,7 @@ export class ActualizarActividadDto {
   @OpcionalNoNulo()
   @IsIn(['TAREA', 'EXAMEN', 'PROYECTO', 'PARTICIPACION'])
   tipo?: 'TAREA' | 'EXAMEN' | 'PROYECTO' | 'PARTICIPACION';
-  @OpcionalNoNulo() @IsInt() @Min(0) @Max(3) parcial?: number;
+  @OpcionalNoNulo() @IsInt() @Min(0) @Max(4) parcial?: number;
   @OpcionalNoNulo() @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) @Max(100) ponderacion?: number;
   @IsOptional() @IsDateString({ strict: true }) fechaEntrega?: string | null;
 }
@@ -44,6 +44,7 @@ export class EntregarDto {
 }
 
 export class CalificarEntregaDto {
+  @IsOptional() @IsIn([10,100]) escalaMaxima?: number;
   @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) @Max(100) calificacion!: number;
   @IsOptional() @IsString() @MaxLength(500) comentario?: string | null;
 }

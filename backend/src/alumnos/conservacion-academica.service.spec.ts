@@ -35,6 +35,7 @@ function entorno() {
     select: jest.fn().mockReturnThis(),
     addSelect: jest.fn().mockReturnThis(),
     where: jest.fn().mockReturnThis(),
+    andWhere: jest.fn().mockReturnThis(),
     groupBy: jest.fn().mockReturnThis(),
     addGroupBy: jest.fn().mockReturnThis(),
     orderBy: jest.fn().mockReturnThis(),
@@ -58,7 +59,7 @@ function entorno() {
     getRepository,
     transaction: jest.fn((fn: (m: typeof manager) => Promise<unknown>) => fn(manager)),
   });
-  const scope = { validarGestion: jest.fn() };
+  const scope = { validarGestion: jest.fn(), plantelesDe: jest.fn().mockResolvedValue([2]) };
   return {
     service: new ConservacionAcademicaService(ds, stub<ScopeService>(scope)),
     alumno,
@@ -137,4 +138,12 @@ it('exige los datos documentales, fecha civil exacta y confirmación, sin defaul
       (e) => e.property === 'fechaEgreso',
     ),
   ).toBe(true);
+});
+
+it('filtra el plantel de las clases históricas tras una transferencia',async()=>{
+ const ctx=entorno();await ctx.service.revisarAdjuntos(1,actor);
+ expect(ctx.qb.andWhere).toHaveBeenCalledWith('g.plantel_id IN (:...planteles)',{planteles:[2]});
+});
+it('SUPERADMIN conserva el inventario global',async()=>{
+ const ctx=entorno();ctx.scope.plantelesDe.mockResolvedValue(null);await ctx.service.revisarAdjuntos(1,{...actor,roles:['SUPERADMIN']});expect(ctx.qb.andWhere).not.toHaveBeenCalled();
 });

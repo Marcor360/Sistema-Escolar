@@ -83,7 +83,7 @@ export default function MateriasPage() {
   }); };
   const transicion = (c: Ciclo, accion: string) => { void operar(async () => {
     const { data } = await api.get<ResumenCierre>(`/academico/ciclos/${c.id}/cierre`); setResumen(data);
-    if (accion === 'cerrar' && !data.puedeCerrar) throw new Error('Completa las notas y cierra P1-P3 antes de cerrar el ciclo.');
+    if (accion === 'cerrar' && !data.puedeCerrar) throw new Error('Completa las evaluaciones requeridas por cada clase y cierra sus periodos antes de cerrar el ciclo.');
     dialogo.abrir({ titulo: `Confirmar ${accion}`, minimo: 1, maximo: 20,
       advertencia: `Grupos: ${data.grupos}; clases: ${data.clases}; inscritos: ${data.inscritos}. Escribe ${c.clave} para confirmar.`,
       ejecutar: async (valor) => {

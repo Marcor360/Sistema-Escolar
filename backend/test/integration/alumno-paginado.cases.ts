@@ -12,7 +12,7 @@ export function registrarAlumnoPaginado(ctx:ContextoIntegracion){
   const clases:GrupoMateria[]=[];
   for(let i=0;i<12;i++){
    const materia=await ctx.dataSource.getRepository(Materia).save({clave:`${ctx.sufijo}PM${i}`,nombre:`Materia propia ${i}`,creditos:0,activo:true});
-   clases.push(await ctx.dataSource.getRepository(GrupoMateria).save({grupoId:grupo.id,materiaId:materia.id,docenteId:null}));
+   clases.push(await ctx.dataSource.getRepository(GrupoMateria).save({ regimenEvaluacion: 'LEGADO_100',grupoId:grupo.id,materiaId:materia.id,docenteId:null}));
   }
   const token=await ctx.emitirToken(`pgal${ctx.sufijo}@example.invalid`);
   const primera=await ctx.api('/alumnos/me/materias/listado',{token}),segunda=await ctx.api('/alumnos/me/materias/listado?pagina=2',{token});

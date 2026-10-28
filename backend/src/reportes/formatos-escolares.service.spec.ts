@@ -40,7 +40,7 @@ describe('Formatos escolares privados',()=>{
  });
  it('oculta las notas de la boleta al alumno antes de cerrar y bloquea Excel y PDF',async()=>{
   const {service}=preparar(false);expect(await service.boleta(1,estudiante,8)).toMatchObject({disponible:false,filas:[],promedioGeneral:null});
-  await expect(service.boletaExcel(1,estudiante,8)).rejects.toThrow('P1–P3');await expect(service.boletaPdf(1,estudiante,8)).rejects.toThrow('P1–P3');
+  await expect(service.boletaExcel(1,estudiante,8)).rejects.toThrow('evaluaciones requeridas');await expect(service.boletaPdf(1,estudiante,8)).rejects.toThrow('evaluaciones requeridas');
  });
  it('no publica ni calcula un promedio general con una nota faltante aunque el periodo diga cerrado',async()=>{
   const {service}=preparar(true,false);expect(await service.boleta(1,administrativo,8)).toMatchObject({disponible:false,promedioGeneral:null});
@@ -61,7 +61,7 @@ describe('Formatos escolares privados',()=>{
   expect(lleno.getWorksheet('Acta')!.pageSetup.fitToWidth).toBe(1);
  });
  it('rechaza periodos inválidos y no devuelve un acta de otra clase',async()=>{
-  const {service,reportes,ds}=preparar();await expect(service.acta(3,4,administrativo)).rejects.toThrow('Selecciona');expect(ds.getRepository).not.toHaveBeenCalled();
+  const {service,reportes,ds}=preparar();await expect(service.acta(3,5,administrativo)).rejects.toThrow('Selecciona');expect(ds.getRepository).not.toHaveBeenCalled();
   reportes.validarAccesoAClase.mockRejectedValue(new Error('Clase ajena'));await expect(service.acta(3,1,administrativo)).rejects.toThrow('Clase ajena');expect(ds.getRepository).not.toHaveBeenCalled();
  });
 });
@@ -77,8 +77,8 @@ it('publica boleta y Excel únicamente al cerrar todos los parciales completos',
 it('no entrega Excel ni PDF al alumno con notas incompletas aunque todos los periodos estén cerrados', async () => {
  const {service}=preparar(true,false);
  expect(await service.boleta(1,estudiante,8)).toMatchObject({disponible:false,filas:[]});
- await expect(service.boletaExcel(1,estudiante,8)).rejects.toThrow('P1–P3');
- await expect(service.boletaPdf(1,estudiante,8)).rejects.toThrow('P1–P3');
+ await expect(service.boletaExcel(1,estudiante,8)).rejects.toThrow('evaluaciones requeridas');
+ await expect(service.boletaPdf(1,estudiante,8)).rejects.toThrow('evaluaciones requeridas');
 });
 it('el acta Final no reutiliza P1 y exporta la nota pendiente vacía', async () => {
  const {service}=preparar();

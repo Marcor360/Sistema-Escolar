@@ -34,7 +34,7 @@ export function registrarRecursamientos(ctx:ContextoIntegracion){
     expect((await ctx.api(`/archivos/materiales/${material.id}/enlace`,{token:propio})).response.status).toBe(200);
     expect((await ctx.api(`/archivos/materiales/${ajeno.id}/enlace`,{token:propio})).response.status).toBe(403);
     const docente=await ctx.emitirToken(actual.docente!.usuario.email);
-    const nota={parcial:1,calificacion:85,confirmado:true,motivo:'Captura del primer intento'};
+    const nota={escalaMaxima:10,parcial:1,calificacion:8.5,confirmado:true,motivo:'Captura del primer intento'};
     expect((await ctx.api(`/recursamientos/${id}/calificaciones`,{method:'POST',token:docente,body:nota})).response.status).toBe(201);
     expect((await ctx.api(`/recursamientos/${id}/calificaciones`,{method:'POST',token:propio,body:nota})).response.status).toBe(403);
     expect((await ctx.dataSource.getRepository(Calificacion).findOneByOrFail({id:notaOriginal.id})).calificacion).toBe(40);

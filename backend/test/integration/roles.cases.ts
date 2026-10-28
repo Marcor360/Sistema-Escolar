@@ -20,7 +20,7 @@ it('aplica capacidades por operación a seis combinaciones de roles sin ampliar 
     }
     const externo = await nuevo('docenteExterno', ['MAESTRO']);
     const docenteExterno = await ctx.dataSource.getRepository(Docente).save({ usuarioId: externo.id, numEmpleado: `MX${ctx.sufijo}`, estatus: 'ACTIVO' });
-    const ajena = await ctx.dataSource.getRepository(GrupoMateria).save({ grupoId: grupos[1].id, materiaId: materia.id, docenteId: docenteExterno.id });
+    const ajena = await ctx.dataSource.getRepository(GrupoMateria).save({ regimenEvaluacion: 'LEGADO_100', grupoId: grupos[1].id, materiaId: materia.id, docenteId: docenteExterno.id });
     const root = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.superadminId })).email);
     const incidencia = await ctx.api('/conducta/incidencias', { method: 'POST', token: root, body: { alumnoId: alumnos[1].id, grupoId: grupos[1].id, tipo: 'Seguimiento', gravedad: 'LEVE', descripcion: 'Solo personal autorizado', fecha: new Date().toISOString() } }); expect(incidencia.response.status).toBe(201);
     const combinaciones = [['MAESTRO'], ['FINANZAS'], ['MAESTRO','FINANZAS'], ['ADMINISTRATIVO','MAESTRO'], ['ADMINISTRATIVO','FINANZAS'], ['SUPERADMIN']];
@@ -29,7 +29,7 @@ it('aplica capacidades por operación a seis combinaciones de roles sin ampliar 
       await ctx.dataSource.getRepository(UsuarioPlantel).save({ usuarioId: u.id, plantelId: ctx.plantelId, activo: true });
       const admin = roles.includes('ADMINISTRATIVO') || roles.includes('SUPERADMIN'), maestro = roles.includes('MAESTRO'), financiero = admin || roles.includes('FINANZAS');
       const docente = maestro ? await ctx.dataSource.getRepository(Docente).save({ usuarioId: u.id, numEmpleado: `MM${i}${ctx.sufijo}`, estatus: 'ACTIVO' }) : null;
-      const propia = await ctx.dataSource.getRepository(GrupoMateria).save({ grupoId: grupos[0].id, materiaId: (await ctx.dataSource.getRepository(Materia).save({ clave: `MM${i}${ctx.sufijo}`, nombre: `Clase ${i}`, activo: true, creditos: 0 })).id, docenteId: docente?.id ?? null });
+      const propia = await ctx.dataSource.getRepository(GrupoMateria).save({ regimenEvaluacion: 'LEGADO_100', grupoId: grupos[0].id, materiaId: (await ctx.dataSource.getRepository(Materia).save({ clave: `MM${i}${ctx.sufijo}`, nombre: `Clase ${i}`, activo: true, creditos: 0 })).id, docenteId: docente?.id ?? null });
       const token = await ctx.emitirToken(u.email);
       const consultar = async (ruta: string, permitido: boolean) => expect((await ctx.api(ruta, { token })).response.status).toBe(permitido ? 200 : 403);
       await consultar(`/alumnos/${alumnos[1].id}`, admin || !maestro);

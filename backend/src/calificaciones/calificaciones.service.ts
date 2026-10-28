@@ -3,7 +3,8 @@ import { esMaestroRestringido, exigirConsultaAcademica } from '../common/politic
 import { CicloEscolar } from '../entities/ciclo-escolar.entity';
 import { PaginacionDto } from '../common/paginacion.dto';
 import { exigirGrupoVigente, inscripcionVigente } from '../common/contexto-academico';
-import { promedioOficial } from '../common/promedio-oficial';
+import { alumnosConFinalDisponible, calcularPonderada, escalaDe, esRegimenNuevo, notaEnEscala, parcialesDe, resultadoEvaluacion } from '../common/regimen-evaluacion';
+import { CapturaPonderadaDto } from './ponderacion.dto';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, In, Repository } from 'typeorm';
@@ -56,7 +57,7 @@ export class CalificacionesService {
   }
 
   /** Comparte validación, bloqueos y auditoría con la importación; el llamador controla la transacción. */
-  async capturarEnTransaccion(dto: CapturaCalificacionesDto, user: JwtUser, manager: EntityManager, soloValidar = false, esperadas?: Map<number, string>) {
+  async capturarEnTransaccion(dto: CapturaCalificacionesDto, user: JwtUser, manager: EntityManager, soloValidar = false, esperadas?: Map<number, string>, detalles?: Map<number, string>) {
     const gm = await this.validarGrupoMateria(dto.grupoMateriaId, user);
     const ids = [...new Set(dto.items.map((item) => item.alumnoId))];
     {
@@ -72,6 +73,11 @@ export class CalificacionesService {
       if (grupoMateria.docenteId !== gm.docenteId && esMaestroRestringido(user)) {
         throw new ForbiddenException('La materia ya no está asignada a este docente');
       }
+      this.validarParcial(dto.parcial);
+      if (!parcialesDe(grupoMateria).includes(dto.parcial) && dto.parcial !== 0) throw new BadRequestException('Parcial no admitido por el régimen de la clase');
+      const escala = escalaDe(grupoMateria);
+      if ((esRegimenNuevo(grupoMateria) && dto.escalaMaxima !== 10) || (dto.escalaMaxima !== undefined && dto.escalaMaxima !== escala)) throw new ConflictException(`Actualiza el cliente o la plantilla: esta clase captura en escala 0 a ${escala}`);
+      if (dto.items.some(i => !Number.isFinite(i.calificacion) || i.calificacion < 0 || i.calificacion > escala || Math.abs(i.calificacion * 1e6 - Math.round(i.calificacion * 1e6)) > 1e-6)) throw new BadRequestException(`La nota debe estar entre 0 y ${escala}, con hasta seis decimales`);
       const periodo = await manager.getRepository(PeriodoCalificacion).findOne({
         where: { grupoMateriaId: gm.id, parcial: dto.parcial },
       });
@@ -92,47 +98,70 @@ export class CalificacionesService {
         order: { alumnoId: 'ASC' }, lock: { mode: 'pessimistic_write' }, loadEagerRelations: false,
       });
       const porAlumno = new Map(existentes.map((c) => [c.alumnoId,c]));
-      const revisiones = ids.map((alumnoId) => { const c = porAlumno.get(alumnoId); return { alumnoId, revision: createHash('sha256').update(JSON.stringify(c ? [c.id, Number(c.calificacion), c.observaciones, c.capturadaPorId, c.updatedAt] : null)).digest('hex') }; });
+      const revisiones = ids.map((alumnoId) => { const c = porAlumno.get(alumnoId); return { alumnoId, revision: createHash('sha256').update(JSON.stringify(c ? [c.id, Number(c.calificacion), c.escalaMaxima ?? 100, c.observaciones, c.capturadaPorId, c.updatedAt] : null)).digest('hex') }; });
       if (esperadas && revisiones.some((r) => esperadas.get(r.alumnoId) !== r.revision)) throw new ConflictException('Las notas cambiaron después del preview; genera otra previsualización');
       const cambios = dto.items.flatMap((item) => {
         const existente = porAlumno.get(item.alumnoId);
         const observaciones = item.observaciones === undefined ? existente?.observaciones ?? null : item.observaciones;
-        if (existente && Number(existente.calificacion) === item.calificacion && observaciones === existente.observaciones) return [];
+        if (existente && notaEnEscala(existente, grupoMateria) === item.calificacion && observaciones === existente.observaciones && !detalles) return [];
         if (existente && !dto.motivo?.trim()) throw new BadRequestException('Debes indicar el motivo para corregir una calificación existente');
-        const valorAnterior = existente?.calificacion ?? null, observacionAnterior = existente?.observaciones ?? null;
+        const valorAnterior = existente?.calificacion ?? null, escalaAnterior = existente?.escalaMaxima ?? 100, observacionAnterior = existente?.observaciones ?? null;
         const registro = existente ?? calificaciones.create({ alumnoId: item.alumnoId, grupoMateriaId: dto.grupoMateriaId, parcial: dto.parcial });
-        registro.calificacion = item.calificacion; registro.observaciones = observaciones; registro.capturadaPorId = user.sub;
-        return [{ registro,valorAnterior,observacionAnterior }];
+        registro.calificacion = item.calificacion; registro.escalaMaxima = escala; registro.observaciones = observaciones; registro.capturadaPorId = user.sub;
+        return [{ registro,valorAnterior,escalaAnterior,observacionAnterior }];
       });
       if (cambios.length && !soloValidar) {
         await calificaciones.save(cambios.map((c) => c.registro),{ chunk: 100 });
-        const entradas = cambios.map(({ registro,valorAnterior,observacionAnterior }) => ({
+        const entradas = cambios.map(({ registro,valorAnterior,escalaAnterior,observacionAnterior }) => ({
           calificacionId: registro.id, alumnoId: registro.alumnoId, grupoMateriaId: dto.grupoMateriaId, parcial: dto.parcial,
-          valorAnterior, valorNuevo: registro.calificacion, observacionAnterior, observacionNueva: registro.observaciones,
+          valorAnterior, valorNuevo: registro.calificacion, escalaAnterior, escalaNueva: escala, detalleCalculo: detalles?.get(registro.alumnoId) ?? null, observacionAnterior, observacionNueva: registro.observaciones,
           usuarioId: user.sub, motivo: dto.motivo?.trim() || null,
         }));
         for (let i = 0; i < entradas.length; i += 100) await historial.insert(entradas.slice(i,i+100));
       }
-      return { capturadas: cambios.length, sinCambios: dto.items.length - cambios.length, revisiones, diferencias: cambios.map((c) => ({ alumnoId: c.registro.alumnoId, anterior: c.valorAnterior, nueva: c.registro.calificacion })) };
+      return { capturadas: cambios.length, sinCambios: dto.items.length - cambios.length, revisiones, diferencias: cambios.map((c) => ({ alumnoId: c.registro.alumnoId, anterior: c.valorAnterior === null ? null : Number(c.valorAnterior) * escala / c.escalaAnterior, nueva: c.registro.calificacion })) };
     }
   }
 
+  async capturarPonderadas(dto: CapturaPonderadaDto, user: JwtUser) {
+    const clase = await this.validarGrupoMateria(dto.grupoMateriaId, user);
+    if (!esRegimenNuevo(clase) || !parcialesDe(clase).includes(dto.parcial)) throw new BadRequestException('La ponderación corresponde a P1–P4 del régimen 0–10');
+    const detalles = new Map<number, string>();
+    let items: CapturaCalificacionesDto['items'];
+    try {
+      items = dto.items.map(item => {
+        const calificacion = calcularPonderada(dto.criterios, item.notas);
+        detalles.set(item.alumnoId, JSON.stringify({ criterios: dto.criterios, notas: item.notas, calificacion }));
+        return { alumnoId: item.alumnoId, calificacion };
+      });
+    } catch (error) { throw new BadRequestException((error as Error).message); }
+    return this.dataSource.transaction(manager => this.capturarEnTransaccion({
+      grupoMateriaId: dto.grupoMateriaId, parcial: dto.parcial, escalaMaxima: 10, motivo: dto.motivo, items,
+    }, user, manager, false, undefined, detalles));
+  }
+
   private validarParcial(parcial: number): void {
-    if (!Number.isInteger(parcial) || parcial < 0 || parcial > 3) {
-      throw new BadRequestException('El parcial debe estar entre 0 y 3');
+    if (!Number.isInteger(parcial) || parcial < 0 || parcial > 4) {
+      throw new BadRequestException('El parcial debe estar entre 0 y 4');
     }
   }
 
   async estadoPeriodo(grupoMateriaId: number, parcial: number, user: JwtUser) {
     this.validarParcial(parcial);
-    await this.validarGrupoMateria(grupoMateriaId, user);
+    const clase = await this.validarGrupoMateria(grupoMateriaId, user);
+    if (parcial === 4 && !esRegimenNuevo(clase)) throw new BadRequestException('La clase histórica tiene tres parciales');
     const periodo = await this.periodos.findOne({ where: { grupoMateriaId, parcial } });
     const gm = await this.grupoMaterias.findOneOrFail({ where: { id: grupoMateriaId } });
     const inscritos = await this.inscripciones.find({ where: { ...inscripcionVigente, grupoId: gm.grupoId } });
     const registros = await this.repo.find({ where: { grupoMateriaId, parcial } });
-    const capturados = new Set(registros.map((c) => c.alumnoId));
+    let capturados = new Set(registros.map((c) => c.alumnoId));
+    if (parcial === 0 && esRegimenNuevo(clase)) {
+      const todas = await this.repo.find({where:{grupoMateriaId},loadEagerRelations:false});
+      const periodos = await this.periodos.find({where:{grupoMateriaId}});
+      capturados = alumnosConFinalDisponible(todas,periodos);
+    }
     const faltantes = inscritos.filter((i) => !capturados.has(i.alumnoId)).length;
-    return { grupoMateriaId, parcial, estatus: periodo?.estatus ?? 'ABIERTO', inscritos: inscritos.length,
+    return { grupoMateriaId, parcial, escalaMaxima: escalaDe(clase), regimenEvaluacion: clase.regimenEvaluacion ?? 'LEGADO_100', parciales: parcialesDe(clase), redondeoAutomatico: false, estatus: periodo?.estatus ?? 'ABIERTO', inscritos: inscritos.length,
       capturados: inscritos.length - faltantes, faltantes };
   }
 
@@ -153,10 +182,16 @@ export class CalificacionesService {
       await this.scope.validarGestion(user, gm.grupo.plantelId);
       gm.grupo.ciclo = cicloActual;
       exigirGrupoVigente(gm.grupo);
+      if (parcial === 4 && !esRegimenNuevo(gm)) throw new BadRequestException('La clase histórica tiene tres parciales');
       if (estatus === 'CERRADO') {
         const inscritos = await manager.getRepository(Inscripcion).find({ where: { ...inscripcionVigente, grupoId: gm.grupoId } });
         const notas = await manager.getRepository(Calificacion).find({ where: { grupoMateriaId, parcial } });
-        const capturados = new Set(notas.map((c) => c.alumnoId));
+        let capturados = new Set(notas.map((c) => c.alumnoId));
+        if (parcial === 0 && esRegimenNuevo(gm)) {
+          const todas = await manager.getRepository(Calificacion).find({where:{grupoMateriaId},loadEagerRelations:false});
+          const periodos = await manager.getRepository(PeriodoCalificacion).find({where:{grupoMateriaId}});
+          capturados = alumnosConFinalDisponible(todas,periodos);
+        }
         if (inscritos.some((i) => !capturados.has(i.alumnoId))) throw new ConflictException('No puedes cerrar el periodo: hay alumnos sin calificación');
       }
       const periodos = manager.getRepository(PeriodoCalificacion);
@@ -164,7 +199,8 @@ export class CalificacionesService {
         periodos.create({ grupoMateriaId, parcial, estatus: 'ABIERTO' });
       if (periodo.estatus !== estatus) {
         periodo.estatus = estatus;
-        if (estatus === 'CERRADO') {
+        if (parcial === 4 && !esRegimenNuevo(gm)) throw new BadRequestException('La clase histórica tiene tres parciales');
+      if (estatus === 'CERRADO') {
           periodo.cerradoPorId = user.sub;
           periodo.cerradoAt = new Date();
         } else {
@@ -189,6 +225,7 @@ export class CalificacionesService {
 
   async porGrupoMateria(grupoMateriaId: number, user: JwtUser, parcial?: number) {
     await this.validarGrupoMateria(grupoMateriaId, user);
+    if (parcial !== undefined) this.validarParcial(parcial);
     const registros = await this.repo.find({
       where: parcial !== undefined ? { grupoMateriaId, parcial } : { grupoMateriaId },
       order: { alumnoId: 'ASC', parcial: 'ASC' },
@@ -248,15 +285,13 @@ export class CalificacionesService {
     const clases=[...new Set(registros.map(r=>r.grupoMateriaId))];
     // Solo recupera las evaluaciones de las materias de la página (máximo 100),
     // para que un límite entre páginas nunca cambie el promedio oficial.
-    const notas=clases.length ? await this.repo.find({where:{alumnoId:alumno.id,grupoMateriaId:In(clases)},select:{grupoMateriaId:true,parcial:true,calificacion:true},loadEagerRelations:false}) : [];
-    const promedios=new Map(clases.map(id=>[id,promedioOficial(new Map(notas.filter(n=>n.grupoMateriaId===id).map(n=>[n.parcial,Number(n.calificacion)])))]));
+    const notas=clases.length ? await this.repo.find({where:{alumnoId:alumno.id,grupoMateriaId:In(clases)},select:{grupoMateriaId:true,parcial:true,calificacion:true,escalaMaxima:true},loadEagerRelations:false}) : [];
+    const promedios=new Map(clases.map(id=>[id,resultadoEvaluacion(notas.filter(n=>n.grupoMateriaId===id), registros.find(r=>r.grupoMateriaId===id)!.grupoMateria)]));
     return {datos:registros.map(r=>({...this.proyectar(r),promedioOficial:promedios.get(r.grupoMateriaId) ?? null})),total,pagina:q.pagina,porPagina:q.porPagina};
   }
 
   private proyectarConPromedio(registros: Calificacion[]) {
-    return registros.map((registro) => ({ ...this.proyectar(registro), promedioOficial: promedioOficial(new Map(
-      registros.filter((c) => c.grupoMateriaId === registro.grupoMateriaId).map((c) => [c.parcial, Number(c.calificacion)]),
-    )) }));
+    return registros.map((registro) => ({ ...this.proyectar(registro), promedioOficial: resultadoEvaluacion(registros.filter((c) => c.grupoMateriaId === registro.grupoMateriaId), registro.grupoMateria) }));
   }
 
   private proyectar(registro: Calificacion) {
@@ -265,7 +300,12 @@ export class CalificacionesService {
       alumnoId: registro.alumnoId,
       grupoMateriaId: registro.grupoMateriaId,
       parcial: registro.parcial,
-      calificacion: registro.calificacion,
+      calificacion: notaEnEscala(registro, registro.grupoMateria),
+      calificacionOriginal: Number(registro.calificacion),
+      escalaOriginal: registro.escalaMaxima ?? 100,
+      escalaMaxima: escalaDe(registro.grupoMateria),
+      regimenEvaluacion: registro.grupoMateria.regimenEvaluacion ?? 'LEGADO_100',
+      origenFinal: registro.parcial === 0 ? 'MANUAL' : null,
       observaciones: registro.observaciones,
       grupoMateria: registro.grupoMateria ? {
         id: registro.grupoMateria.id,

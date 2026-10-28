@@ -2,7 +2,7 @@ import { ConflictException } from '@nestjs/common';
 import { PeriodoCalificacion } from '../entities/periodo-calificacion.entity';
 import { boletaPublicable } from './publicacion-boleta';
 import { contentDisposition } from '../common/content-disposition';
-import { promedioOficial } from '../common/promedio-oficial';
+import { esRegimenNuevo, notaEnEscala, resultadoMapa } from '../common/regimen-evaluacion';
 import { Inscripcion } from '../entities/inscripcion.entity';
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfiguracionService } from '../configuracion/configuracion.service';
@@ -143,7 +143,7 @@ export class ReportesService {
         nombre: r.alumno.usuario.nombreCompleto,
         parciales: new Map<number, number>(),
       };
-      fila.parciales.set(r.parcial, r.calificacion);
+      fila.parciales.set(r.parcial, notaEnEscala(r, gm));
       filas.set(r.alumnoId, fila);
     }
 
@@ -155,20 +155,22 @@ export class ReportesService {
       { header: 'Parcial 1', key: 'p1', width: 11 },
       { header: 'Parcial 2', key: 'p2', width: 11 },
       { header: 'Parcial 3', key: 'p3', width: 11 },
-      { header: 'Final', key: 'final', width: 11 },
+      ...(esRegimenNuevo(gm) ? [{ header: 'Parcial 4', key: 'p4', width: 11 }] : []),
+      { header: 'Final manual', key: 'final', width: 11 },
       { header: 'Promedio', key: 'promedio', width: 11 },
     ];
     ws.getRow(1).font = { bold: true };
 
     for (const fila of filas.values()) {
       const valores = [1, 2, 3].map((p) => fila.parciales.get(p));
-      const promedio = promedioOficial(fila.parciales);
+      const promedio = resultadoMapa(fila.parciales, gm);
       ws.addRow({
         matricula: fila.matricula,
         nombre: fila.nombre,
         p1: valores[0] ?? '',
         p2: valores[1] ?? '',
         p3: valores[2] ?? '',
+        p4: fila.parciales.get(4) ?? '',
         final: fila.parciales.get(0) ?? '',
         promedio: promedio ?? '',
       });
@@ -214,18 +216,18 @@ export class ReportesService {
     const clasesBoleta = await this.grupoMaterias.find({ where: { grupoId: inscripcion.grupoId } });
     if (user.roles.includes('ALUMNO')) {
       const periodos = await this.grupos.manager.getRepository(PeriodoCalificacion).find({ where: { grupoMateria: { grupoId: inscripcion.grupoId } } });
-      if (!boletaPublicable(clasesBoleta,calificaciones,periodos)) throw new ConflictException('La boleta estará disponible cuando Control Escolar cierre P1–P3 completos');
+      if (!boletaPublicable(clasesBoleta,calificaciones,periodos)) throw new ConflictException('La boleta estará disponible cuando Control Escolar cierre las evaluaciones requeridas');
     }
-    const materias = new Map<number, { nombre: string; parciales: Map<number, number> }>();
+    const materias = new Map<number, { nombre: string; parciales: Map<number, number>; regimenEvaluacion?: string }>();
     for (const clase of clasesBoleta) {
-      materias.set(clase.id, { nombre: clase.materia.nombre, parciales: new Map() });
+      materias.set(clase.id, { nombre: clase.materia.nombre, regimenEvaluacion: clase.regimenEvaluacion, parciales: new Map() });
     }
     for (const c of calificaciones) {
       const fila = materias.get(c.grupoMateriaId) ?? {
         nombre: c.grupoMateria?.materia?.nombre ?? `Materia ${c.grupoMateriaId}`,
         parciales: new Map<number, number>(),
       };
-      fila.parciales.set(c.parcial, c.calificacion);
+      fila.parciales.set(c.parcial, notaEnEscala(c, clasesBoleta.find(g=>g.id===c.grupoMateriaId) ?? c.grupoMateria));
       materias.set(c.grupoMateriaId, fila);
     }
 
@@ -249,8 +251,9 @@ export class ReportesService {
 
     const x = 50;
     let y = doc.y;
-    const anchos = [190, 60, 60, 60, 60, 70];
-    const encabezados = ['Materia', 'P1', 'P2', 'P3', 'Final', 'Promedio'];
+    const nuevo = clasesBoleta.some(esRegimenNuevo);
+    const anchos = nuevo ? [170, 45, 45, 45, 45, 70, 70] : [190, 60, 60, 60, 60, 70];
+    const encabezados = ['Materia', 'P1', 'P2', 'P3', ...(nuevo ? ['P4'] : []), 'Final', 'Promedio'];
     doc.font('Helvetica-Bold');
     encabezados.forEach((h, i) => {
       doc.text(h, x + anchos.slice(0, i).reduce((a, b) => a + b, 0), y, { width: anchos[i] });
@@ -261,15 +264,15 @@ export class ReportesService {
 
     const promediosGenerales: number[] = [];
     for (const fila of materias.values()) {
-      const valores = [1, 2, 3].map((p) => fila.parciales.get(p));
-      const promedio = promedioOficial(fila.parciales);
+      const valores = (nuevo ? [1, 2, 3, 4] : [1, 2, 3]).map((p) => fila.parciales.get(p));
+      const promedio = resultadoMapa(fila.parciales, fila);
       if (promedio !== null) promediosGenerales.push(promedio);
 
       const celdas = [
         fila.nombre,
-        ...valores.map((v) => (v === undefined ? '—' : v.toFixed(1))),
-        fila.parciales.has(0) ? Number(fila.parciales.get(0)).toFixed(1) : '—',
-        promedio === null ? '—' : promedio.toFixed(1),
+        ...valores.map((v) => (v === undefined ? '—' : String(v))),
+        fila.parciales.has(0) ? String(fila.parciales.get(0)) : '—',
+        promedio === null ? '—' : String(promedio),
       ];
       celdas.forEach((c, i) => {
         doc.text(String(c), x + anchos.slice(0, i).reduce((a, b) => a + b, 0), y, { width: anchos[i] });
@@ -280,7 +283,7 @@ export class ReportesService {
 
     doc.moveDown(2);
     const promedioGeneral = promediosGenerales.length
-      ? (promediosGenerales.reduce((a, b) => a + b, 0) / promediosGenerales.length).toFixed(1)
+      ? (nuevo ? String(promediosGenerales.reduce((a,b)=>a+b,0)/promediosGenerales.length) : (promediosGenerales.reduce((a, b) => a + b, 0) / promediosGenerales.length).toFixed(1))
       : '—';
     doc.font('Helvetica-Bold').text(`Promedio general: ${promedioGeneral}`, x, y + 10);
     doc.end();

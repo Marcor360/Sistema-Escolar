@@ -25,7 +25,7 @@ it('analítica histórica conserva materia desactivada y participación de alumn
     const ciclo = await ctx.dataSource.getRepository(CicloEscolar).save({ clave: `AH${ctx.sufijo}`, nombre: 'Histórico analítico', fechaInicio: '2023-01-01', fechaFin: '2023-12-31', activo: false, estado: 'CERRADO' });
     const grupo = await ctx.dataSource.getRepository(Grupo).save({ cicloId: ciclo.id, plantelId: ctx.plantelId, nombre: 'Histórico', activo: false });
     const materia = await ctx.dataSource.getRepository(Materia).save({ clave: `AH${ctx.sufijo}`, nombre: 'Materia retirada', activo: false, creditos: 0 });
-    const clase = await ctx.dataSource.getRepository(GrupoMateria).save({ grupoId: grupo.id, materiaId: materia.id, docenteId: null });
+    const clase = await ctx.dataSource.getRepository(GrupoMateria).save({ regimenEvaluacion: 'LEGADO_100', grupoId: grupo.id, materiaId: materia.id, docenteId: null });
     await ctx.dataSource.getRepository(Inscripcion).save({ alumnoId: ctx.alumnoId, grupoId: grupo.id, estatus: 'BAJA' });
     for (const parcial of [1,2,3]) await ctx.dataSource.getRepository(Calificacion).save({ alumnoId: ctx.alumnoId, grupoMateriaId: clase.id, parcial, calificacion: [80.05, 80.15, 80.25][parcial-1], capturadaPorId: ctx.adminId });
     const resultado = await ctx.api(`/analitica?cicloId=${ciclo.id}`, { token: root }); expect(resultado.response.status).toBe(200); expect(resultado.data.modo).toBe('HISTORICO'); expect(resultado.data.academico.clases).toEqual([expect.objectContaining({ materia: 'Materia retirada', inscritos: 1, participantesHistoricos: 1, inscritosVigentes: 0, promedioOficial: 80.2 })]);
@@ -46,7 +46,7 @@ it('carga controlada: 100 alumnos, 900 notas y capturas concurrentes sin alterar
     const clases: number[] = [];
     for (let i = 0; i < 3; i++) {
       const materia = await ctx.dataSource.getRepository(Materia).save({ clave: `L${i}${ctx.sufijo}`, nombre: `Carga ${i}`, creditos: 0, activo: true });
-      clases.push((await ctx.dataSource.getRepository(GrupoMateria).save({ grupoId: grupo.id, materiaId: materia.id, docenteId: null })).id);
+      clases.push((await ctx.dataSource.getRepository(GrupoMateria).save({ regimenEvaluacion: 'LEGADO_100', grupoId: grupo.id, materiaId: materia.id, docenteId: null })).id);
     }
     const tiempos: number[] = [];
     for (const parcial of [1,2,3]) await Promise.all(clases.map(async (id) => {

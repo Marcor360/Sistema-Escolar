@@ -38,6 +38,7 @@ interface Tarea {
   entrega: {
     estatus: string;
     calificacion: number | null;
+    escalaMaxima?: number;
     comentarioDocente?: string | null;
     comentarioAlumno?: string | null;
     respuestaTexto?: string | null;
@@ -415,7 +416,7 @@ export default function TareasScreen() {
             <Sello
               texto={
                 item.entrega
-                  ? `${item.entrega.estatus}${item.entrega.calificacion !== null ? ` · ${item.entrega.calificacion}` : ""}`
+                  ? `${item.entrega.estatus}${item.entrega.calificacion !== null ? ` · ${item.entrega.calificacion} / ${item.entrega.escalaMaxima ?? 100}` : ""}`
                   : "Sin entregar"
               }
               tono={tono(item)}

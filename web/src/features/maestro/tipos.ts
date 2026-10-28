@@ -1,4 +1,6 @@
 export interface GrupoMateria {
+  regimenEvaluacion?: string;
+  escalaMaxima?: number;
   id: number;
   grupo: { nombre: string; ciclo: { id?: number; clave: string } };
   materia: { clave: string; nombre: string };
@@ -21,6 +23,9 @@ export interface Material {
   createdAt: string;
 }
 export interface Entrega {
+  escalaMaxima?: number;
+  escalaOriginal?: number;
+  calificacionOriginal?: number | null;
   id: number;
   estatus: string;
   calificacion: number | null;

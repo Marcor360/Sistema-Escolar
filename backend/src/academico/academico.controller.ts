@@ -69,7 +69,7 @@ export class AcademicoController {
   @ApiCreatedResponse({ type: CicloRespuestaDto })
   @Post('ciclos/:id/iniciar-cierre') @Roles('SUPERADMIN')
   iniciarCierre(@Param('id', ParseIntPipe) id: number, @Body() dto: TransicionCicloDto, @CurrentUser() user: JwtUser) { return this.ciclos.transicion(id, 'iniciar-cierre', dto.confirmado, user); }
-  @ApiOperation({ summary: 'Cerrar ciclo solo con P1-P3 completos y periodos cerrados' })
+  @ApiOperation({ summary: 'Cerrar ciclo con evaluaciones completas y cerradas según el régimen de cada clase' })
   @ApiCreatedResponse({ type: CicloRespuestaDto })
   @Post('ciclos/:id/cerrar') @Roles('SUPERADMIN')
   cerrar(@Param('id', ParseIntPipe) id: number, @Body() dto: TransicionCicloDto, @CurrentUser() user: JwtUser) { return this.ciclos.transicion(id, 'cerrar', dto.confirmado, user); }

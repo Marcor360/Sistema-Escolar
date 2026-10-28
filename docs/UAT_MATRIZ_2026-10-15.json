@@ -1,6 +1,6 @@
 {
-  "version": "1.27.59",
-  "alcance": "Escenarios de aceptación institucional sin resultados fabricados. Egreso único, ciclo cerrado, consulta separada y archivo a cinco años pendientes de UAT; ver docs/EGRESOS_HISTORIAL_RETENCION_1.27.57.md",
+  "version": "1.28.0",
+  "alcance": "Candidata 1.28.0: P1–P4 mensuales, escala 0–10, ponderaciones y Final manual; originales 0–100 conservados. Redondeo automático pendiente de resolver ejemplos contradictorios. Sin despliegue ni UAT de esta versión acreditados.",
   "escenarios": [
     {
       "id": "UAT-01",
@@ -633,6 +633,97 @@
       "estado": "pendiente",
       "responsable": "Responsable institucional por designar",
       "evidencias": []
+    },
+    {
+      "id": "UAT-47",
+      "rol": "MAESTRO",
+      "escenario": "Capturar P1–P4 en escala 0–10, sin redondear parciales; faltas no impiden examen.",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver",
+        "android"
+      ],
+      "estado": "pendiente",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-48",
+      "rol": "MAESTRO",
+      "escenario": "Definir criterios que sumen 100 %, capturar notas y comprobar cálculo exacto e historial de porcentajes.",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver",
+        "android"
+      ],
+      "estado": "pendiente",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-49",
+      "rol": "MAESTRO",
+      "escenario": "Capturar Final manual que sustituye el promedio, conserva cero válido y respeta motivo/cierre/permisos.",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver",
+        "android"
+      ],
+      "estado": "pendiente",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-50",
+      "rol": "ADMINISTRATIVO",
+      "escenario": "Consultar notas originales 0–100 y su equivalencia 0–10 en grupos abiertos; conservar ciclos cerrados sin recálculo.",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver",
+        "android"
+      ],
+      "estado": "pendiente",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-51",
+      "rol": "ALUMNO",
+      "escenario": "Consultar P4, escala y Final coherentes en web/Android y boletas PDF/Excel; bloquear boleta mientras Final manual esté abierta.",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver",
+        "android"
+      ],
+      "estado": "pendiente",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-52",
+      "rol": "MAESTRO",
+      "escenario": "Calificar entregas y recursamientos según escala de la clase; conservar notas e historiales anteriores.",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver",
+        "android"
+      ],
+      "estado": "pendiente",
+      "evidencias": []
     }
-  ]
+  ],
+  "confirmacionesSolicitante": {
+    "fechaRegistro": "2026-10-28",
+    "logo": "Web y app móvil; persiste tras recargar, reiniciar y actualizar. Issue #106 cerrado.",
+    "correo": "Activación y recuperación operativas en Microsoft 365 y GoDaddy/cPanel. Issue #107 cerrado.",
+    "movil": "Aceptación institucional reportada para Android. Issue #141 cerrado; no acredita iOS ni UAT de 1.28.0.",
+    "permisos": "Aceptada la matriz vigente. Issue #140 cerrado."
+  }
 }

@@ -19,6 +19,7 @@ export class Entrega {
   @Column({ type: String, length: 500, nullable: true }) comentarioAlumno!: string | null;
   @Column({ type: String, length: 200, nullable: true }) archivoNombre!: string | null;
   @Column({ type: String, length: 300, nullable: true }) archivoRuta!: string | null;
+  @Column({ default: 100 }) escalaMaxima!: number;
   @Column('decimal', { precision: 5, scale: 2, nullable: true, transformer: decimalTransformer })
   calificacion!: number | null;
   @Column({ type: String, length: 500, nullable: true }) comentarioDocente!: string | null;

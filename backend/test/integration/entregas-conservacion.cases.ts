@@ -46,7 +46,7 @@ export function registrarEntregasConservacion(ctx: ContextoIntegracion) {
         .getRepository(Grupo)
         .save({ plantelId: plantel.id, cicloId: ciclo.id, nombre: 'Entregas QA', activo: true });
       const materia = await ds.getRepository(Materia).save({ clave: `AE${ctx.sufijo}`, nombre: 'Materia de archivos' });
-      const gm = await ds.getRepository(GrupoMateria).save({ grupoId: grupo.id, materiaId: materia.id });
+      const gm = await ds.getRepository(GrupoMateria).save({ regimenEvaluacion: 'LEGADO_100', grupoId: grupo.id, materiaId: materia.id });
       gmId = gm.id;
       const rol = await ds.getRepository(Rol).findOneByOrFail({ clave: 'ALUMNO' });
       const password = 'Integracion_Archivos_42!';
@@ -209,6 +209,15 @@ export function registrarEntregasConservacion(ctx: ContextoIntegracion) {
       expect((await ctx.api(`/alumnos/${alumnoId}/conservacion-adjuntos`, { token: admin })).response.status).toBe(403);
       expect(await ctx.dataSource.getRepository(Entrega).countBy({ alumnoId })).toBe(antes);
       expect(statSync(resolve(process.env.UPLOADS_DIR!, basename(ruta))).size).toBe(MAX_ENTREGA_BYTES);
+    });
+    it('tras una transferencia el plantel destino no ve adjuntos del origen y SUPERADMIN los conserva',async()=>{
+      const traslado=await ctx.api(`/alumnos/${alumnoId}/transferencia`,{method:'POST',token:root,body:{plantelId:ctx.plantelId}});
+      expect(traslado.response.status).toBe(201);
+      const destino=await ctx.api(`/alumnos/${alumnoId}/conservacion-adjuntos`,{token:admin});
+      expect(destino.response.status).toBe(200);expect(destino.data.ciclos).toEqual([]);
+      const global=await ctx.api(`/alumnos/${alumnoId}/conservacion-adjuntos`,{token:root});
+      expect(global.data.ciclos[0].adjuntos).toBe(1);
+      expect(statSync(resolve(process.env.UPLOADS_DIR!,basename(ruta))).size).toBe(MAX_ENTREGA_BYTES);
     });
     it('concilia un egreso legado solo una vez, con datos explícitos y sin alterar originales', async () => {
       const ds = ctx.dataSource;

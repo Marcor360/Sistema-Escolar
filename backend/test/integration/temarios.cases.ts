@@ -10,7 +10,7 @@ export function registrarTemarios(ctx: ContextoIntegracion) {
     const maestro = await token(base.docente!.usuarioId);
     const grupo = await post('/academico/grupos', { nombre: 'XT-' + ctx.sufijo, plantelId: ctx.plantelId, cicloId: base.grupo.cicloId });
     const materia = await ctx.dataSource.getRepository(Materia).save({ clave: ctx.sufijo + 'TEMA', nombre: 'Materia de temario', creditos: 0, activo: true });
-    const clase = await ctx.dataSource.getRepository(GrupoMateria).save({ grupoId: grupo.id, materiaId: materia.id, docenteId: base.docenteId });
+    const clase = await ctx.dataSource.getRepository(GrupoMateria).save({ regimenEvaluacion: 'LEGADO_100', grupoId: grupo.id, materiaId: materia.id, docenteId: base.docenteId });
     const estudiante = await post('/alumnos', { email: 'tema' + ctx.sufijo + '@example.invalid', matricula: 'TX' + ctx.sufijo, nombre: 'Alumno temario', apellidoPaterno: 'Prueba', curp: 'GODE561231HDFRRN09', plantelId: ctx.plantelId });
     await post('/academico/grupos/' + grupo.id + '/alumnos', { alumnoId: estudiante.id });
     const alumno = await ctx.emitirToken('tema' + ctx.sufijo + '@example.invalid');
@@ -37,7 +37,7 @@ export function registrarTemarios(ctx: ContextoIntegracion) {
     const concurrentes = await Promise.all(['Cambio A', 'Cambio B'].map(contenido => ctx.api('/temarios/' + inicial.id, { method: 'PATCH', token: maestro, body: { revision: 2, contenido } })));
     expect(concurrentes.map(r => r.response.status).sort()).toEqual([200, 409]);
     const ajeno = await post('/academico/grupos', { nombre: 'XT-B-' + ctx.sufijo, plantelId: ctx.otroPlantelId, cicloId: base.grupo.cicloId });
-    const otraClase = await ctx.dataSource.getRepository(GrupoMateria).save({ grupoId: ajeno.id, materiaId: materia.id, docenteId: ctx.docenteFueraDeAlcanceId });
+    const otraClase = await ctx.dataSource.getRepository(GrupoMateria).save({ regimenEvaluacion: 'LEGADO_100', grupoId: ajeno.id, materiaId: materia.id, docenteId: ctx.docenteFueraDeAlcanceId });
     expect((await ctx.api('/grupo-materias/' + otraClase.id + '/temario', { token: admin })).response.status).toBe(403);
     expect((await ctx.api('/grupo-materias/' + otraClase.id + '/temario', { token: maestro })).response.status).toBe(403);
     const form = new FormData(); form.append('revision', '3'); form.append('archivo', new Blob(['Tema privado de prueba']), 'tema.txt');
@@ -84,7 +84,7 @@ export function registrarTemarios(ctx: ContextoIntegracion) {
     for (let i = 0; i < 12; i++) {
       const g = await ctx.api('/academico/grupos', { method: 'POST', token: root, body: { nombre: 'FICHA-' + ctx.sufijo + '-' + i, plantelId: i === 11 ? ctx.otroPlantelId : ctx.plantelId, cicloId: base.grupo.cicloId } });
       expect(g.response.status).toBe(201);
-      await ctx.dataSource.getRepository(GrupoMateria).save({ grupoId: g.data.id, materiaId: base.materiaId, docenteId: i === 11 ? ctx.docenteFueraDeAlcanceId : base.docenteId });
+      await ctx.dataSource.getRepository(GrupoMateria).save({ regimenEvaluacion: 'LEGADO_100', grupoId: g.data.id, materiaId: base.materiaId, docenteId: i === 11 ? ctx.docenteFueraDeAlcanceId : base.docenteId });
     }
     const ruta = '/academico/ciclos/' + base.grupo.cicloId + '/ficha?buscar=FICHA-' + ctx.sufijo;
     const global = await ctx.api(ruta, { token: root }); expect(global.response.status).toBe(200); expect(global.data.resumen).toMatchObject({ grupos: 12, planteles: 2, clases: 12, materias: 1, docentes: 2 }); expect(global.data.datos).toHaveLength(10); expect(global.data.clases.datos).toHaveLength(10);

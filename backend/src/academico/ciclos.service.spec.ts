@@ -54,5 +54,5 @@ it('conserva faltantes y cierres en el límite entre lotes sin usar Final como p
     { grupoMateriaId: 501, parcial: 3, sinNota: 1, cerrado: true },
   ] });
   expect(notas.find).toHaveBeenCalledTimes(2);
-  expect(notas.find.mock.calls[0][0].where.parcial.value).toEqual([1,2,3]);
+  expect(notas.find.mock.calls[0][0].where.parcial.value).toEqual([0,1,2,3,4]);
 });

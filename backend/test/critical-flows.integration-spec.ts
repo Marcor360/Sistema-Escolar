@@ -1,3 +1,4 @@
+import { registrarEvaluaciones } from './integration/evaluaciones.cases';
 import { registrarEntregasConservacion } from './integration/entregas-conservacion.cases';
 import { registrarSeguimiento } from './integration/seguimiento.cases';
 import { registrarCalendarioCiclo } from './integration/calendario-ciclo.cases';
@@ -504,5 +505,6 @@ Object.keys(casos).map(Number).sort((a,b) => a-b).forEach((id) => casos[id](cont
   registrarRecorridoInstitucional(contexto);
   registrarCalendarioCiclo(contexto);
   registrarSeguimiento(contexto);
+  registrarEvaluaciones(contexto);
   registrarCicloOperativo(contexto);
 });

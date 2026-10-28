@@ -30,7 +30,7 @@ function crear(filas: unknown[] = []) {
 }
 it('rechaza parcial inválido antes de consultar expedientes', async () => {
   const { service, ds, notas } = crear();
-  await expect(service.plantilla({ grupoMateriaId: 7, parcial: 4 }, user)).rejects.toBeInstanceOf(BadRequestException);
+  await expect(service.plantilla({ grupoMateriaId: 7, parcial: 5 }, user)).rejects.toBeInstanceOf(BadRequestException);
   expect(ds.getRepository).not.toHaveBeenCalled();
   expect(notas.estadoPeriodo).not.toHaveBeenCalled();
 });
@@ -65,7 +65,7 @@ it('genera identificadores, nombre y validación Excel sin rellenar pendientes c
     type: 'pattern',
     fgColor: { argb: 'FFFFF2CB' },
   });
-  expect(String(libro.getWorksheet('Instrucciones')?.getCell('A2').value)).toContain('columna F');
+  expect(String(libro.getWorksheet('Instrucciones')?.getCell('A3').value)).toContain('columna F');
 });
 
 it('no entrega una plantilla sin alumnos inscritos', async () => {

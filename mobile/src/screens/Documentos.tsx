@@ -258,7 +258,7 @@ export default function DocumentosScreen() {
           )}
         </Tarjeta>
       ))}
-      <Text style={estilos.nota}>Los PDF se entregan desde el servidor al navegador o gestor de archivos del teléfono; su destino depende del sistema operativo. No se almacenan en la caché de la app. La boleta informativa exige calificaciones P1–P3 completas y cerradas.</Text>
+      <Text style={estilos.nota}>Los PDF se entregan desde el servidor al navegador o gestor de archivos del teléfono; su destino depende del sistema operativo. No se almacenan en la caché de la app. La boleta informativa requiere que Control Escolar cierre las evaluaciones correspondientes al régimen de cada materia.</Text>
       <View style={{ height: espacio.xl }} />
     </ScrollView>
   );

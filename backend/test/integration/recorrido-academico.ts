@@ -1,6 +1,6 @@
 import { ContextoIntegracion } from './contexto';
 import { expect,it } from '@jest/globals';
-import { CicloEscolar,Inscripcion,Calificacion,Usuario } from '../../src/entities';
+import { CicloEscolar,Inscripcion,Calificacion,Usuario,GrupoMateria } from '../../src/entities';
 import * as ExcelJS from 'exceljs';
 /** Se registra después de los navegadores: el único ciclo global se aísla con fixtures sintéticos. */
 export function registrarCicloOperativo(ctx: ContextoIntegracion) {
@@ -18,6 +18,8 @@ export function registrarCicloOperativo(ctx: ContextoIntegracion) {
       const materia = await post('/academico/materias',{ clave: `OC${ctx.sufijo}`,nombre: 'Materia operativa',creditos: 0 }); expect(materia.response.status).toBe(201);
       const grupoA = await post('/academico/grupos',{ cicloId: ciclo.data.id,plantelId: ctx.plantelId,nombre: 'Operativo A' }); const grupoB = await post('/academico/grupos',{ cicloId: ciclo.data.id,plantelId: ctx.otroPlantelId,nombre: 'Operativo B' }); expect(grupoA.response.status).toBe(201); expect(grupoB.response.status).toBe(201);
       const claseA = await post(`/academico/grupos/${grupoA.data.id}/materias`,{ materiaId: materia.data.id,docenteId: docente.data.id }); const claseB = await post(`/academico/grupos/${grupoB.data.id}/materias`,{ materiaId: materia.data.id,docenteId: docente.data.id }); expect(claseA.response.status).toBe(201); expect(claseB.response.status).toBe(201);
+      // Recorrido histórico 0–100; el régimen nuevo tiene un recorrido independiente.
+      await ctx.dataSource.getRepository(GrupoMateria).update(claseB.data.id,{regimenEvaluacion:'LEGADO_100'});
       expect((await post(`/academico/ciclos/${ciclo.data.id}/activar`,{ confirmado: true })).response.status).toBe(201);
       const inscripcionA = await post(`/academico/grupos/${grupoA.data.id}/alumnos`,{ alumnoId: alumno.data.id }); expect(inscripcionA.response.status).toBe(201);
       expect((await ctx.api(`/alumnos/${alumno.data.id}`,{ method: 'PATCH',token,body: { plantelId: ctx.otroPlantelId } })).response.status).toBe(400);

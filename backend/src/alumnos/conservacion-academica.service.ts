@@ -25,7 +25,8 @@ export class ConservacionAcademicaService {
     if (!alumno) throw new NotFoundException('Alumno no encontrado');
     await this.scope.validarGestion(user, alumno.plantelId);
     const egreso = await this.ds.getRepository(EgresoAlumno).findOne({ where: { alumnoId: id } });
-    const ciclos = await this.ds
+    const planteles = await this.scope.plantelesDe(user);
+    const consulta = this.ds
       .getRepository(Entrega)
       .createQueryBuilder('e')
       .innerJoin('e.actividad', 'a')
@@ -36,8 +37,12 @@ export class ConservacionAcademicaService {
       .addSelect('c.nombre', 'nombre')
       .addSelect('c.estado', 'estado')
       .addSelect('COUNT(e.id)', 'adjuntos')
-      .where('e.alumno_id = :id AND e.archivo_ruta IS NOT NULL', { id })
-      .groupBy('c.id')
+      .where('e.alumno_id = :id AND e.archivo_ruta IS NOT NULL', { id });
+    if (planteles !== null) {
+      if (planteles.length) consulta.andWhere('g.plantel_id IN (:...planteles)', { planteles });
+      else consulta.andWhere('1=0');
+    }
+    const ciclos = await consulta.groupBy('c.id')
       .addGroupBy('c.nombre')
       .addGroupBy('c.estado')
       .orderBy('c.id', 'DESC')

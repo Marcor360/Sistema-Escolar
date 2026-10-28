@@ -161,6 +161,7 @@ CREATE TABLE grupos (
 CREATE UNIQUE INDEX uq_grupos_legacy ON grupos(legacy_id) WHERE legacy_id IS NOT NULL;
 
 CREATE TABLE grupo_materias (
+  regimen_evaluacion VARCHAR(30) NOT NULL DEFAULT 'CUATRO_PARCIALES_10',
   id INT IDENTITY(1,1) PRIMARY KEY,
   grupo_id INT NOT NULL,
   materia_id INT NOT NULL,
@@ -208,6 +209,7 @@ CREATE TABLE entregas (
   comentario_alumno NVARCHAR(500) NULL,
   archivo_nombre NVARCHAR(200) NULL,
   archivo_ruta NVARCHAR(300) NULL,
+  escala_maxima INT NOT NULL DEFAULT 100,
   calificacion DECIMAL(5,2) NULL,
   comentario_docente NVARCHAR(500) NULL,
   estatus NVARCHAR(15) NOT NULL DEFAULT 'ENTREGADA', -- ENTREGADA | CALIFICADA | TARDE
@@ -234,7 +236,8 @@ CREATE TABLE calificaciones (
   alumno_id INT NOT NULL,
   grupo_materia_id INT NOT NULL,
   parcial INT NOT NULL,                              -- 1..3, 0 = final
-  calificacion DECIMAL(5,2) NOT NULL,
+  escala_maxima INT NOT NULL DEFAULT 100,
+  calificacion DECIMAL(9,6) NOT NULL,
   observaciones NVARCHAR(300) NULL,
   capturada_por_id INT NULL,
   created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
@@ -400,8 +403,11 @@ CREATE TABLE historial_calificaciones (
   alumno_id INT NOT NULL,
   grupo_materia_id INT NOT NULL,
   parcial INT NOT NULL,
-  valor_anterior DECIMAL(5,2) NULL,
-  valor_nuevo DECIMAL(5,2) NOT NULL,
+  escala_anterior INT NOT NULL DEFAULT 100,
+  escala_nueva INT NOT NULL DEFAULT 100,
+  detalle_calculo NVARCHAR(MAX) NULL,
+  valor_anterior DECIMAL(9,6) NULL,
+  valor_nuevo DECIMAL(9,6) NOT NULL,
   observacion_anterior NVARCHAR(300) NULL,
   observacion_nueva NVARCHAR(300) NULL,
   usuario_id INT NOT NULL,
@@ -792,8 +798,8 @@ CREATE TABLE historial_recursamiento (
  id INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
  participacion_id INT NOT NULL,
  parcial INT NOT NULL,
- anterior DECIMAL(5,2) NULL,
- nueva DECIMAL(5,2) NOT NULL,
+ anterior DECIMAL(9,6) NULL,
+ nueva DECIMAL(9,6) NOT NULL,
  usuario_id INT NOT NULL,
  motivo NVARCHAR(400) NOT NULL,
  created_at DATETIME2 NOT NULL DEFAULT CURRENT_TIMESTAMP,

@@ -24,7 +24,7 @@ export function BoletaInformativa({inscripcionId}:{inscripcionId:number}) {
  return <View style={base.tarjeta}><Text accessibilityRole="header" style={base.tituloTarjeta}>Boleta informativa</Text>
   {error?<><Text accessibilityRole="alert">{error}</Text><TouchableOpacity accessibilityRole="button" style={{minHeight:44,justifyContent:'center'}} onPress={()=>setIntento(i=>i+1)}><Text>Actualizar boleta</Text></TouchableOpacity></>:null}
   {!datos&&!error?<ActivityIndicator accessibilityLabel="Cargando boleta informativa"/>:null}
-  {datos&&!datos.disponible?<Text>Tu boleta estará disponible cuando estén completas y cerradas las calificaciones P1–P3 de todas tus materias.</Text>:null}
+  {datos&&!datos.disponible?<Text>Tu boleta estará disponible cuando Control Escolar cierre las evaluaciones requeridas de todas tus materias.</Text>:null}
   {datos?.disponible?<><Text>{datos.institucion} · {datos.plantel}</Text><Text>{datos.alumno} · {datos.matricula}</Text><Text>Plan: {datos.plan||'Sin registro'} · Periodo: {datos.periodo||'Sin registro'} · Ciclo: {datos.ciclo}</Text><Text>Escala: {datos.escala}</Text>
    <View style={{backgroundColor:colores.papel,borderWidth:1,borderColor:colores.linea,borderRadius:16,padding:18,marginVertical:14,gap:4}}>
     <Text style={{color:colores.gris}}>Promedio general del periodo</Text>

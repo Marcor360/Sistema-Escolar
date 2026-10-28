@@ -1,3 +1,4 @@
+import { parcialesDe } from '../common/regimen-evaluacion';
 import { ListarMateriasDto } from './listar-materias.dto';
 import { exigirCambios } from '../common/exigir-cambios';
 import { ActualizarCicloDto, CicloDto } from './academico.dto';
@@ -24,7 +25,7 @@ export class CiclosService {
   private async resumenCon(manager: import('typeorm').EntityManager, id: number) {
     const ciclo = await manager.getRepository(CicloEscolar).findOneBy({ id });
     if (!ciclo) throw new NotFoundException('Ciclo no encontrado');
-    const clases = await manager.getRepository(GrupoMateria).find({ where: { grupo: { cicloId: id, activo: true } }, select: { id: true, grupoId: true }, loadEagerRelations: false });
+    const clases = await manager.getRepository(GrupoMateria).find({ where: { grupo: { cicloId: id, activo: true } }, select: { id: true, grupoId: true, regimenEvaluacion: true }, loadEagerRelations: false });
     const grupos = await manager.getRepository(Grupo).find({ where: { cicloId: id, activo: true }, select: { id: true }, loadEagerRelations: false });
     const grupoIds = grupos.map((g) => g.id);
     // Los parámetros de IN son limitados en SQL Server; los lotes son compatibles con ambos motores.
@@ -53,15 +54,20 @@ export class CiclosService {
         select: { grupoMateriaId: true, parcial: true, estatus: true }, loadEagerRelations: false,
       });
       const notas = await manager.getRepository(Calificacion).find({
-        where: { grupoMateriaId: In(idsLote), parcial: In([1, 2, 3]) },
+        where: { grupoMateriaId: In(idsLote), parcial: In([0, 1, 2, 3, 4]) },
         select: { grupoMateriaId: true, parcial: true, alumnoId: true }, loadEagerRelations: false,
       });
       const notasExistentes = new Set(notas.map((n) => `${n.grupoMateriaId}:${n.parcial}:${n.alumnoId}`));
       const cerrados = new Set(periodos.filter((p) => p.estatus === 'CERRADO').map((p) => `${p.grupoMateriaId}:${p.parcial}`));
-      for (const clase of lote) for (const parcial of [1, 2, 3]) {
+      for (const clase of lote) {
+        const inscritos=inscritosPorGrupo.get(clase.grupoId) ?? [];
+        if (clase.regimenEvaluacion === 'CUATRO_PARCIALES_10' && inscritos.some(id=>notasExistentes.has(`${clase.id}:0:${id}`)) && !cerrados.has(`${clase.id}:0`)) faltantes.push({grupoMateriaId:clase.id,parcial:0,inscritos:inscritos.length,sinNota:0,cerrado:false});
+      }
+      for (const clase of lote) for (const parcial of parcialesDe(clase)) {
         const inscritos = inscritosPorGrupo.get(clase.grupoId) ?? [];
-        const sinNota = inscritos.filter((alumnoId) => !notasExistentes.has(`${clase.id}:${parcial}:${alumnoId}`)).length;
-        const cerrado = cerrados.has(`${clase.id}:${parcial}`);
+        const conFinalPublicada = (alumnoId:number) => clase.regimenEvaluacion === 'CUATRO_PARCIALES_10' && notasExistentes.has(`${clase.id}:0:${alumnoId}`) && cerrados.has(`${clase.id}:0`);
+        const sinNota = inscritos.filter((alumnoId) => !conFinalPublicada(alumnoId) && !notasExistentes.has(`${clase.id}:${parcial}:${alumnoId}`)).length;
+        const cerrado = cerrados.has(`${clase.id}:${parcial}`) || inscritos.every(conFinalPublicada);
         if (inscritos.length && (sinNota || !cerrado)) faltantes.push({ grupoMateriaId: clase.id, parcial, inscritos: inscritos.length, sinNota, cerrado });
       }
     }
@@ -80,7 +86,7 @@ export class CiclosService {
         ciclo.estado = 'ACTIVO'; ciclo.activo = true;
       } else if (accion === 'iniciar-cierre') {
         if (!ciclo.activo || ciclo.estado !== 'ACTIVO') throw new ConflictException('El ciclo no está activo');
-        if ((await this.resumenCon(manager, id)).faltantes.some((f) => f.parcial === 0)) throw new ConflictException('Asigna las materias a los grupos inscritos antes de iniciar el cierre');
+        if ((await this.resumenCon(manager, id)).faltantes.some((f) => f.parcial === 0 && f.grupoMateriaId === 0)) throw new ConflictException('Asigna las materias a los grupos inscritos antes de iniciar el cierre');
         ciclo.estado = 'EN_CIERRE';
       } else {
         if (!ciclo.activo || ciclo.estado !== 'EN_CIERRE') throw new ConflictException('Inicia el cierre antes de cerrar el ciclo');

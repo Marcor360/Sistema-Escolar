@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.27.59`** · Entregas de 100 MiB o texto de 3000 caracteres, revisión de conservación sin borrado y conciliación documental de egresos legados. Base apilada 1.27.58; requiere migración y configuración IIS antes de operar.
+**Versión candidata: `1.28.0`** · Cuatro parciales, escala 0–10, criterios y Final manual; originales conservados y redondeo automático pendiente. Incluye entregas/conservación de #208, todavía fuera de main.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -18,6 +18,8 @@ Sistema escolar multiplataforma para operación académica, administrativa y fin
 Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [índice documental](docs/README.md) e [historial de documentos retirados](docs/HISTORIAL.md).
 
 ### Cambios consolidados recientes
+
+- **1.28.0 (candidata):** [Cuatro parciales, criterios y Final manual](docs/EVALUACIONES_1.28.0.md). Escala 0–10 en clases nuevas y ciclos abiertos; originales e históricos conservados. Redondeo automático pendiente.
 
 - **1.27.59:** [Entregas y conservación académica](docs/ENTREGAS_CONSERVACION_1.27.59.md).
 
@@ -157,12 +159,11 @@ Antes de marcar un PR como listo:
 
 ## Pendientes reales conocidos
 
-- Carga y persistencia de logo en staging [#106](https://github.com/Marcor360/Sistema-Escolar/issues/106).
-- Entrega SMTP efectiva a Microsoft 365 y cPanel [#107](https://github.com/Marcor360/Sistema-Escolar/issues/107).
-- Aceptación UX/accesibilidad web y Expo [#141](https://github.com/Marcor360/Sistema-Escolar/issues/141).
-- Matriz definitiva de permisos de Usuarios y Finanzas [#140](https://github.com/Marcor360/Sistema-Escolar/issues/140).
-- Reglamento de evaluación, redondeo, asistencias y formatos de actas [#139](https://github.com/Marcor360/Sistema-Escolar/issues/139).
-- Restore aislado, dispositivos físicos y conciliación del ETL legado.
+- Evaluaciones: validar la candidata 1.28.0 y resolver el redondeo contradictorio antes de activarlo [#139](https://github.com/Marcor360/Sistema-Escolar/issues/139). [Contrato](docs/EVALUACIONES_1.28.0.md).
+- Inscripción por cartera/reinscripción, protección de main y notificaciones de WhatsApp/llamadas mantienen su seguimiento en GitHub.
+- Restore aislado, antivirus real, pruebas de esta candidata en dispositivos y conciliación del ETL legado.
+
+El solicitante confirmó logo persistente en web/app, correos operativos en ambos proveedores, aceptación de Android y permisos vigentes: #106, #107, #140 y #141 cerrados. Estas confirmaciones no acreditan despliegue o UAT de esta nueva versión ni aceptación de iOS.
 
 ## Documentación útil
 
@@ -175,6 +176,6 @@ Antes de marcar un PR como listo:
 
 ## Políticas y formatos pendientes de aceptación
 
-Los formatos escolares son informativos, con escala 0–100 y promedio vigente P1–P3; [alcance y permisos](docs/FORMATOS_ESCOLARES.md). Reglamento, asistencia, ponderaciones y firmas siguen sujetos a [aprobación institucional](docs/PLAN_CALIFICACIONES_ACTAS_1.28.0.md).
+Los formatos escolares son informativos y respetan el régimen de cada clase; [alcance y permisos](docs/FORMATOS_ESCOLARES.md). El reglamento fue confirmado por el solicitante; el redondeo completo y los formatos oficiales firmados siguen pendientes. Ver [contrato actual](docs/EVALUACIONES_1.28.0.md).
 
 `INSCRIPCION_ORDINARIA_SOLO_CARTERA` permanece apagado por defecto. Con `true`, las altas ordinarias nuevas pasan por cartera y la vía académica solo reactiva bajas previas del mismo grupo. Requiere activación institucional y UAT; no genera cobros retroactivos.

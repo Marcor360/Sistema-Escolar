@@ -1,3 +1,4 @@
+import { ClaseEvaluacion, escalaDe, esRegimenNuevo, notaEnEscala, parcialesDe } from '../common/regimen-evaluacion';
 import { clasesRecursadas, recursaClase } from '../recursamientos/acceso-recursamiento';
 import { programarLimpieza } from '../archivos/archivo-limpieza.service';
 import { basename } from 'path';
@@ -91,6 +92,7 @@ export class ActividadesService {
     const gm = await this.validarPropiedad(id, user);
     return {
       id: gm.id,
+      regimenEvaluacion: gm.regimenEvaluacion, escalaMaxima: escalaDe(gm),
       grupo: { id: gm.grupo.id, nombre: gm.grupo.nombre, ciclo: { id: gm.grupo.cicloId, clave: gm.grupo.ciclo.clave } },
       materia: { id: gm.materiaId, clave: gm.materia.clave, nombre: gm.materia.nombre },
     };
@@ -101,6 +103,7 @@ export class ActividadesService {
     return {
       id: actividad.id,
       grupoMateriaId: actividad.grupoMateriaId,
+      escalaMaxima: escalaDe(actividad.grupoMateria),
       titulo: actividad.titulo,
       descripcion: actividad.descripcion,
       tipo: actividad.tipo,
@@ -120,14 +123,18 @@ export class ActividadesService {
     const entrega = await this.entregas.findOne({ where: { id }, relations: { actividad: true } });
     if (!entrega) throw new NotFoundException('Entrega no encontrada');
     await this.validarPropiedad(entrega.actividad.grupoMateriaId, user);
-    return this.proyectarEntrega(entrega);
+    return this.proyectarEntrega(entrega, entrega.actividad.grupoMateria);
   }
-  private proyectarEntrega(e: Entrega) {
+  private notaEntrega(e: Entrega, clase: ClaseEvaluacion) {
+    return { calificacion: e.calificacion === null ? null : notaEnEscala({ calificacion: e.calificacion, escalaMaxima: e.escalaMaxima }, clase),
+      escalaMaxima: escalaDe(clase), calificacionOriginal: e.calificacion, escalaOriginal: e.escalaMaxima ?? 100 };
+  }
+  private proyectarEntrega(e: Entrega, clase: ClaseEvaluacion = {}) {
     return {
       id: e.id,
       actividadId: e.actividadId,
       estatus: e.estatus,
-      calificacion: e.calificacion,
+      ...this.notaEntrega(e, clase),
       comentarioAlumno: e.comentarioAlumno,
       respuestaTexto: e.respuestaTexto ?? null,
       comentarioDocente: e.comentarioDocente,
@@ -185,7 +192,7 @@ export class ActividadesService {
       skip: (q.pagina - 1) * q.porPagina,
       take: q.porPagina,
     });
-    return { datos: datos.map((e) => this.proyectarEntrega(e)), total, pagina: q.pagina, porPagina: q.porPagina };
+    return { datos: datos.map((e) => this.proyectarEntrega(e, actividad.grupoMateria)), total, pagina: q.pagina, porPagina: q.porPagina };
   }
 
   async listarPorGrupoMateria(grupoMateriaId: number, user: JwtUser) {
@@ -198,7 +205,8 @@ export class ActividadesService {
   }
 
   async crear(dto: CrearActividadDto, user: JwtUser) {
-    await this.validarPropiedad(dto.grupoMateriaId, user);
+    const clase = await this.validarPropiedad(dto.grupoMateriaId, user);
+    if (dto.parcial !== undefined && ![0,...parcialesDe(clase)].includes(dto.parcial)) throw new BadRequestException('Parcial no válido para la clase');
     return this.actividades.save(
       this.actividades.create({
         grupoMateriaId: dto.grupoMateriaId,
@@ -214,7 +222,8 @@ export class ActividadesService {
 
   async actualizar(id: number, dto: ActualizarActividadDto, user: JwtUser) {
     const referencia = await this.obtener(id);
-    await this.validarPropiedad(referencia.grupoMateriaId, user);
+    const clase = await this.validarPropiedad(referencia.grupoMateriaId, user);
+    if (dto.parcial !== undefined && ![0,...parcialesDe(clase)].includes(dto.parcial)) throw new BadRequestException('Parcial no válido para la clase');
     return this.dataSource.transaction(async (manager) => {
       const actividades = manager.getRepository(Actividad);
       const actividad = await actividades.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
@@ -311,21 +320,28 @@ export class ActividadesService {
   async entregasDeActividad(actividadId: number, user: JwtUser) {
     const actividad = await this.obtener(actividadId);
     await this.validarPropiedad(actividad.grupoMateriaId, user);
-    return this.entregas.find({ where: { actividadId }, order: { fechaEntregado: 'ASC' } });
+    const filas = await this.entregas.find({ where: { actividadId }, order: { fechaEntregado: 'ASC' } });
+    return filas.map(e=>({...e,...this.notaEntrega(e, actividad.grupoMateria)}));
   }
 
   async calificarEntrega(entregaId: number, dto: CalificarEntregaDto, user: JwtUser) {
     const entrega = await this.entregas.findOne({ where: { id: entregaId }, relations: { actividad: true } });
     if (!entrega) throw new NotFoundException('Entrega no encontrada');
-    await this.validarPropiedad(entrega.actividad.grupoMateriaId, user);
+    const clase = await this.validarPropiedad(entrega.actividad.grupoMateriaId, user);
+    const escala = escalaDe(clase);
+    if ((esRegimenNuevo(clase) && dto.escalaMaxima !== 10) || (dto.escalaMaxima !== undefined && dto.escalaMaxima !== escala)) throw new ConflictException(`Actualiza el cliente: esta entrega se califica en escala 0 a ${escala}`);
+    if (dto.calificacion < 0 || dto.calificacion > escala) throw new BadRequestException(`Calificación entre 0 y ${escala}`);
     return this.dataSource.transaction(async (manager) => {
       const entregas = manager.getRepository(Entrega);
       const actual = await entregas.findOne({ where: { id: entregaId }, lock: { mode: 'pessimistic_write' } });
       if (!actual) throw new NotFoundException('Entrega no encontrada');
-      actual.calificacion = dto.calificacion;
+      const anterior = actual.calificacion, escalaAnterior = actual.escalaMaxima ?? 100;
+      actual.calificacion = dto.calificacion; actual.escalaMaxima = escala;
       actual.comentarioDocente = dto.comentario === undefined ? actual.comentarioDocente : dto.comentario;
       actual.estatus = 'CALIFICADA';
-      return entregas.save(actual);
+      const guardada = await entregas.save(actual);
+      await manager.getRepository(BitacoraAcademica).insert({usuarioId:user.sub,plantelId:clase.grupo.plantelId,accion:'ENTREGA_CALIFICACION',entidadId:actual.id,detalle:JSON.stringify({anterior,escalaAnterior,nueva:dto.calificacion,escalaNueva:escala}),fecha:new Date()});
+      return {...guardada,...this.notaEntrega(guardada, clase)};
     });
   }
 
@@ -354,7 +370,7 @@ export class ActividadesService {
       : [];
     const porActividad = new Map(entregas.map((e) => [e.actividadId, e]));
     return {
-      datos: datos.map((a) => ({ ...a, entrega: porActividad.get(a.id) ?? null })),
+      datos: datos.map((a) => ({ ...a, entrega: porActividad.has(a.id) ? {...porActividad.get(a.id)!,...this.notaEntrega(porActividad.get(a.id)!, a.grupoMateria)} : null })),
       total,
       pagina: q.pagina,
       porPagina: q.porPagina,
@@ -388,7 +404,7 @@ export class ActividadesService {
       where: { alumnoId: alumno.id, actividadId: In(actividades.map((a) => a.id)) },
     });
     const porActividad = new Map(entregas.map((e) => [e.actividadId, e]));
-    return actividades.map((a) => ({ ...a, entrega: porActividad.get(a.id) ?? null }));
+    return actividades.map((a) => ({ ...a, entrega: porActividad.has(a.id) ? {...porActividad.get(a.id)!,...this.notaEntrega(porActividad.get(a.id)!, a.grupoMateria)} : null }));
   }
 
   // ---- Materiales ----

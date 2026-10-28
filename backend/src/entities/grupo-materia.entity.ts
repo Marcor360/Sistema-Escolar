@@ -8,6 +8,7 @@ import { Docente } from './docente.entity';
 @Unique('uq_gm', ['grupoId', 'materiaId'])
 export class GrupoMateria {
   @PrimaryGeneratedColumn() id!: number;
+  @Column({ length: 30, default: 'CUATRO_PARCIALES_10' }) regimenEvaluacion!: string;
   @Column() grupoId!: number;
   @ManyToOne(() => Grupo, { eager: true, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'grupo_id' })

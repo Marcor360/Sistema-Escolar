@@ -1,5 +1,7 @@
 # Contexto de evaluación — entrega parcial de #102
 
+> Actualización 28/oct/2026: este documento conserva el diseño/corte histórico. La institución confirmó reglas nuevas y la candidata 1.28.0 las implementa según [contrato vigente](EVALUACIONES_1.28.0.md). Asistencias ya implementadas desde 1.27.53. No usar los antiguos bloqueos de aprobación general como estado actual; el redondeo y formatos oficiales siguen pendientes.
+
 El selector de clases devuelve, dentro del alcance vigente de plantel/clases propias, las relaciones opcionales de nivel, carrera/plan y periodo del grupo. Los LEFT JOIN conservan las clases históricas que no tienen contexto configurado.
 
 La pantalla de calificaciones muestra ID de clase, clave/asignatura, grupo, plantel, ciclo, nivel, carrera, versión del plan, periodo y turno. Cuando falta un dato histórico se indica que no está registrado; no se reclasifica ni se inventa información.

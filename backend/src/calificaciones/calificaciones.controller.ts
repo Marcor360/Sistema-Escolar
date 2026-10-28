@@ -1,3 +1,4 @@
+import { CapturaPonderadaDto } from './ponderacion.dto';
 import { PaginacionDto } from '../common/paginacion.dto';
 import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
@@ -39,6 +40,9 @@ export class CalificacionesController {
   capturar(@Body() dto: CapturaCalificacionesDto, @CurrentUser() user: JwtUser) {
     return this.service.capturar(dto, user);
   }
+
+  @Post('captura-ponderada') @Roles('MAESTRO', 'ADMINISTRATIVO')
+  capturarPonderadas(@Body() dto: CapturaPonderadaDto, @CurrentUser() user: JwtUser) { return this.service.capturarPonderadas(dto, user); }
 
   @Get('periodos/:grupoMateriaId/:parcial')
   @Roles('MAESTRO', 'ADMINISTRATIVO')

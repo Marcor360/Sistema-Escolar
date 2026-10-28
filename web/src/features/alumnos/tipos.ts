@@ -13,6 +13,9 @@ export interface Historial {
   grupo: { id: number; nombre: string; ciclo: { id: number; nombre: string }; plantel: { nombre: string } };
 }
 export interface Nota {
+  escalaMaxima?: number;
+  escalaOriginal?: number;
+  calificacionOriginal?: number;
   id: number;
   parcial: number;
   calificacion: number;

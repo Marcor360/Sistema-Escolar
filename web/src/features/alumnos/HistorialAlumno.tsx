@@ -99,7 +99,7 @@ export function HistorialAlumno({
                 <th>Materia</th>
                 <th>Parcial</th>
                 <th>Nota</th>
-                <th>Promedio oficial P1-P3</th>
+                <th>Escala</th><th>Resultado oficial</th>
               </tr>
             </thead>
             <tbody>
@@ -107,7 +107,7 @@ export function HistorialAlumno({
                 <tr key={n.id}>
                   <td>{n.grupoMateria.materia.nombre}</td>
                   <td>{n.parcial === 0 ? 'Final' : `P${n.parcial}`}</td>
-                  <td>{n.calificacion}</td>
+                  <td><span>{n.calificacion}</span>{n.escalaOriginal && n.escalaOriginal !== n.escalaMaxima && <small> · Original: {n.calificacionOriginal} / {n.escalaOriginal}</small>}</td><td>0–{n.escalaMaxima ?? 100}</td>
                   <td>{n.promedioOficial ?? 'Pendiente'}</td>
                 </tr>
               ))}

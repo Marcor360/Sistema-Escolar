@@ -9,7 +9,8 @@ export class CalificacionRecursamiento {
   @Column() participacionId!: number;
   @ManyToOne(() => ParticipacionAsignatura) @JoinColumn({ name: 'participacion_id' }) participacion!: ParticipacionAsignatura;
   @Column() parcial!: number;
-  @Column('decimal', { precision: 5, scale: 2, transformer: decimalTransformer }) calificacion!: number;
+  @Column({ default: 100 }) escalaMaxima!: number;
+  @Column('decimal', { precision: 9, scale: 6, transformer: decimalTransformer }) calificacion!: number;
   @Column() capturadaPorId!: number;
   @ManyToOne(() => Usuario) @JoinColumn({ name: 'capturada_por_id' }) capturadaPor!: Usuario;
   @UpdateDateColumn() updatedAt!: Date;
@@ -20,8 +21,10 @@ export class HistorialRecursamiento {
   @Column() participacionId!: number;
   @ManyToOne(() => ParticipacionAsignatura) @JoinColumn({ name: 'participacion_id' }) participacion!: ParticipacionAsignatura;
   @Column() parcial!: number;
-  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true, transformer: decimalTransformer }) anterior!: number | null;
-  @Column('decimal', { precision: 5, scale: 2, transformer: decimalTransformer }) nueva!: number;
+  @Column({ type: 'decimal', precision: 9, scale: 6, nullable: true, transformer: decimalTransformer }) anterior!: number | null;
+  @Column('decimal', { precision: 9, scale: 6, transformer: decimalTransformer }) nueva!: number;
+  @Column({ default: 100 }) escalaAnterior!: number;
+  @Column({ default: 100 }) escalaNueva!: number;
   @Column() usuarioId!: number;
   @ManyToOne(() => Usuario) @JoinColumn({ name: 'usuario_id' }) usuario!: Usuario;
   @Column({ length: 400 }) motivo!: string;

@@ -32,6 +32,8 @@ interface Calificacion {
   parcial: number;
   calificacion: number;
   promedioOficial: number | null;
+  escalaMaxima?: number;
+  regimenEvaluacion?: string;
   grupoMateriaId: number;
   grupoMateria: {
     grupo: { nombre: string; ciclo: { id: number; nombre: string } };
@@ -199,7 +201,7 @@ export default function CalificacionesScreen() {
           <>
             <GuiaPantalla
               titulo="Mis calificaciones"
-              detalle="El promedio oficial usa los parciales 1, 2 y 3. La evaluación Final se muestra por separado; un parcial pendiente no equivale a cero."
+              detalle="Consulta la escala de cada materia. En el esquema 0–10, P1–P4 aportan 25 % cada uno y Final manual sustituye el promedio. Un parcial pendiente no equivale a cero."
             />
 
             {error !== "" && <ErrorCarga mensaje={error} reintentar={cargar} />}
@@ -279,15 +281,15 @@ export default function CalificacionesScreen() {
               {ordenarPeriodos(materia.parciales).map((p) => (
                 <Text key={p.id} style={base.secundario}>
                   {p.parcial === 0 ? "Final" : `Parcial ${p.parcial}`}:{" "}
-                  <Text style={base.monto}>{p.calificacion.toFixed(1)}</Text>
+                  <Text style={base.monto}>{String(p.calificacion)}</Text>
                 </Text>
               ))}
               <Text style={[base.secundario, { marginTop: 4 }]}>
-                Promedio oficial (P1–P3):{" "}
+                Resultado oficial · escala 0–{materia.parciales[0]?.escalaMaxima ?? 100}:{" "}
                 <Text style={base.monto}>
                   {promedio == null
-                    ? "Pendiente de P1-P3"
-                    : promedio.toFixed(1)}
+                    ? "Pendiente de evaluación"
+                    : String(promedio)}
                 </Text>
               </Text>
             </Tarjeta>

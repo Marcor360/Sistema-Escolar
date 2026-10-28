@@ -401,7 +401,7 @@ export default function MaestroPage() {
                   value={form.parcial}
                   onChange={(e) => setForm({ ...form, parcial: e.target.value })}
                 >
-                  {[0, 1, 2, 3].map((p) => (
+                  {(clase?.regimenEvaluacion === 'CUATRO_PARCIALES_10' ? [0, 1, 2, 3, 4] : [0, 1, 2, 3]).map((p) => (
                     <option key={p} value={p}>
                       {p === 0 ? 'Final' : 'Parcial ' + p}
                     </option>
@@ -479,7 +479,7 @@ export default function MaestroPage() {
               onSubmit={(e) => {
                 e.preventDefault();
                 void ejecutar(async () => {
-                  await api.patch(`/entregas/${id}/calificar`, { calificacion: Number(nota), comentario });
+                  await api.patch(`/entregas/${id}/calificar`, { calificacion: Number(nota), ...(entrega.escalaMaxima === 10 ? {escalaMaxima:10} : {}), comentario });
                 }, 'entregas');
               }}
             >
@@ -493,13 +493,13 @@ export default function MaestroPage() {
                   <p style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{entrega.respuestaTexto}</p>
                 </div>
               )}
-              <label htmlFor="entrega-nota">Calificación de la entrega</label>
+              <label htmlFor="entrega-nota">Calificación de la entrega</label><p>Escala 0–{entrega.escalaMaxima ?? 100}</p>
               <input
                 id="entrega-nota"
                 required
                 type="number"
                 min={0}
-                max={100}
+                max={entrega.escalaMaxima ?? 100}
                 step="0.01"
                 value={nota}
                 onChange={(e) => setNota(e.target.value)}

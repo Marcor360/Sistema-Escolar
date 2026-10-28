@@ -4,7 +4,7 @@ export class CicloAnaliticaDto {
   @ApiProperty() nombre!: string;
 }
 export class ParcialAnaliticaDto {
-  @ApiProperty({ enum: [1,2,3] }) parcial!: number;
+  @ApiProperty({ enum: [1,2,3,4] }) parcial!: number;
   @ApiProperty() capturados!: number;
   @ApiProperty() faltantes!: number;
   @ApiProperty({ type: Number, nullable: true }) promedio!: number | null;
