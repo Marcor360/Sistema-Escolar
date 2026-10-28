@@ -32,7 +32,7 @@ function escenario(actorRoles: string[], destinoRoles: string[], plantelesDestin
     throw new Error('Repositorio inesperado');
   }) };
   const service = new UsuariosService(
-    stub<Repository<Usuario>>({ manager: stub({ transaction: async (fn: (manager: typeof manager) => Promise<unknown>) => fn(manager) }) }),
+    stub<Repository<Usuario>>({ manager: stub({ transaction: jest.fn(async (fn: (m: unknown) => Promise<unknown>) => fn(manager)) }) }),
     stub<Repository<Rol>>({}),
     stub<Repository<Alumno>>({}),
     stub<Repository<Docente>>({}),
