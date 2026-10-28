@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.30.1`** · Expo alumno: descartar respuestas académicas pendientes tras cambio de sesión. Base: main 1.30.0.
+**Versión candidata: `1.30.2`** · Expo alumno: aislar datos de estado de cuenta al cambiar de identidad. Base: candidata 1.30.1 (PR #213).
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
