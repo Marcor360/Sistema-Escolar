@@ -11,7 +11,7 @@ import { Type } from 'class-transformer';
 import { IsInt } from 'class-validator';
 import { PaginacionDto } from '../common/paginacion.dto';
 
-const ROLES: RolClave[] = ['ALUMNO', 'MAESTRO', 'ADMINISTRATIVO', 'FINANZAS', 'SUPERADMIN'];
+const ROLES: RolClave[] = ['ALUMNO', 'MAESTRO', 'ADMINISTRATIVO', 'FINANZAS', 'DIRECTOR', 'SUPERADMIN'];
 
 export class CrearUsuarioDto {
   @OpcionalNoNulo() @IsArray() @ArrayNotEmpty() @Type(() => Number) @IsInt({ each: true }) plantelIds?: number[];
