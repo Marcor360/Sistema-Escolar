@@ -1,4 +1,5 @@
 import { useDisenoAlumno } from "../use-diseno-alumno";
+import { useSesion } from "../sesion";
 import { crearControlLectura } from "../api/lectura-vigente";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -50,8 +51,11 @@ interface Estado {
 
 export default function EstadoCuentaScreen() {
   const diseno = useDisenoAlumno();
+  const { sesion } = useSesion();
+  const usuarioActual = sesion?.sub ?? null;
   const { marca } = useMarca();
-  const [estado, setEstado] = useState<Estado | null>(null);
+  const [estadoPorUsuario, setEstadoPorUsuario] = useState<{ usuario: number; datos: Estado } | null>(null);
+  const estado = estadoPorUsuario?.usuario === usuarioActual ? estadoPorUsuario.datos : null;
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
   const [ultimaActualizacion, setUltimaActualizacion] = useState<string | null>(
@@ -75,14 +79,23 @@ export default function EstadoCuentaScreen() {
   }, []);
 
   const lectura = useRef(crearControlLectura());
+  useEffect(() => {
+    lectura.current.invalidar();
+    setEstadoPorUsuario(null);
+    setDatosVigentes(false);
+    setUltimaActualizacion(null);
+    setFechaConsulta(0);
+    setError("");
+  }, [usuarioActual]);
   const cargar = useCallback(() => {
+    if (usuarioActual === null) return;
     setError("");
     setDatosVigentes(false);
     setCargando(true);
     void lectura.current.cargar(
       () => api.get<Estado>("/finanzas/me/estado-cuenta"),
       (r) => {
-        setEstado(r.data);
+        setEstadoPorUsuario({ usuario: usuarioActual, datos: r.data });
         setFechaConsulta(Date.now());
         setDatosVigentes(true);
         setUltimaActualizacion(new Date().toLocaleString());
@@ -93,7 +106,7 @@ export default function EstadoCuentaScreen() {
       },
       () => setCargando(false),
     );
-  }, []);
+  }, [usuarioActual]);
 
   useFocusEffect(
     useCallback(() => {
@@ -105,7 +118,7 @@ export default function EstadoCuentaScreen() {
   const pagoEnCurso = useRef(false);
   const pagarEnLinea = async (cargo: CargoDetalle) => {
     if (!activa.current || pagoEnCurso.current) return;
-    if (!datosVigentes) {
+    if (!datosVigentes || !estado || usuarioActual === null) {
       Alert.alert("Actualiza tu saldo", "Necesitas conexión y un estado de cuenta actualizado antes de iniciar un pago.");
       return;
     }
@@ -115,7 +128,7 @@ export default function EstadoCuentaScreen() {
       const { data: actualizado } = await api.get<Estado>("/finanzas/me/estado-cuenta");
       if (!activa.current) return;
       const cargoVigente = actualizado.cargos.find((item) => item.id === cargo.id);
-      setEstado(actualizado);
+      setEstadoPorUsuario({ usuario: usuarioActual, datos: actualizado });
       setFechaConsulta(Date.now());
       if (!cargoVigente || cargoVigente.saldo <= 0 || cargoVigente.saldo !== cargo.saldo) {
         setDatosVigentes(false);
@@ -163,6 +176,7 @@ export default function EstadoCuentaScreen() {
     }
   };
 
+  const saldosVigentes = datosVigentes && estado !== null;
   const tono = (estatus: string) =>
     estatus === "PAGADO"
       ? "ok"
@@ -235,8 +249,8 @@ export default function EstadoCuentaScreen() {
               <Sello texto={c.estatus} tono={tono(c.estatus)} />
               {c.saldo > 0 && (
                 <TouchableOpacity
-                  disabled={pagando || !datosVigentes}
-                  accessibilityState={{ disabled: pagando || !datosVigentes, busy: pagando }}
+                  disabled={pagando || !saldosVigentes}
+                  accessibilityState={{ disabled: pagando || !saldosVigentes, busy: pagando }}
                   style={[estilos.boton, { backgroundColor: marca.colorAcento }]}
                   onPress={() =>
                     Alert.alert(
