@@ -1,3 +1,4 @@
+import { crearInscripcionFixture } from './fixtures-inscripcion';
 import { CorreoAccesoOutboxService } from '../../src/auth/correo-acceso-outbox.service';
 import { AuthCorreoOutbox } from '../../src/entities/auth-correo-outbox.entity';
 import { ActivacionService } from '../../src/auth/activacion.service';
@@ -138,15 +139,7 @@ export function registrarBeta(ctx: ContextoIntegracion) {
       });
       expect(alta.response.status).toBe(201);
       alumnos.push(await ctx.dataSource.getRepository(Alumno).findOneByOrFail({ id: alta.data.id }));
-      expect(
-        (
-          await ctx.api(`/academico/grupos/${grupo.id}/alumnos`, {
-            method: 'POST',
-            token: root,
-            body: { alumnoId: alta.data.id },
-          })
-        ).response.status,
-      ).toBe(201);
+      await crearInscripcionFixture(ctx,grupo.id,alta.data.id);
     }
     const params = `grupoMateriaId=${gm.id}&parcial=1`;
     const archivo = await fetch(`${ctx.baseUrl}/importaciones/calificaciones/plantilla?${params}`, {

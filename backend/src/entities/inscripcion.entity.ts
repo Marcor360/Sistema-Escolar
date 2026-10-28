@@ -15,7 +15,7 @@ export class Inscripcion {
   @JoinColumn({ name: 'grupo_id' })
   grupo!: Grupo;
   @CreateDateColumn({ name: 'fecha_inscripcion' }) fechaInscripcion!: Date;
-  @Column({ length: 15, default: 'ACTIVA' }) estatus!: 'ACTIVA' | 'BAJA';
+  @Column({ length: 15, default: 'ACTIVA' }) estatus!: 'ACTIVA' | 'BAJA' | 'HISTORICA';
   /** Vínculo con la base certweb para la migración inicial (ETL); no se expone en la API pública. */
   @Column({ type: 'bigint', nullable: true }) legacyId!: string | null;
 }

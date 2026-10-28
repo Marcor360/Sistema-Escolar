@@ -2,7 +2,7 @@ import { EntityManager } from 'typeorm';
 import { ParticipacionAsignatura } from '../entities/participacion-asignatura.entity';
 function vigentes(m: EntityManager) {
   return m.getRepository(ParticipacionAsignatura).createQueryBuilder('r').innerJoin('r.inscripcionPrincipal','ip').innerJoin('r.alumno','a').innerJoin('a.usuario','u').innerJoin('r.grupoMateria','gm').innerJoin('gm.grupo','g').innerJoin('g.ciclo','c').innerJoin('g.plantel','p')
-    .where('r.estado = :estado AND ip.estatus = :estado AND u.activo = :activo AND g.activo = :activo AND c.activo = :activo AND p.activo = :activo AND a.plantel_id = g.plantel_id', { estado: 'ACTIVA', activo: true })
+    .where('r.estado = :estado AND ip.estatus IN (:...estadosPrincipales) AND u.activo = :activo AND g.activo = :activo AND c.activo = :activo AND p.activo = :activo AND a.plantel_id = g.plantel_id', { estado: 'ACTIVA', estadosPrincipales: ['ACTIVA','HISTORICA'], activo: true })
     .andWhere('a.estatus = :alumnoActivo', { alumnoActivo: 'ACTIVO' });
 }
 export async function clasesRecursadas(m: EntityManager, alumnoId: number): Promise<number[]> {

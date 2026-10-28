@@ -74,3 +74,5 @@ export * from './movimiento-bancario.entity';
 export * from './calendario-historial.entity';
 
 export * from './egreso-alumno.entity';
+
+export * from './reinscripcion-periodo.entity';

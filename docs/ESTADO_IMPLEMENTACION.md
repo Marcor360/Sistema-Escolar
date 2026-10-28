@@ -1,4 +1,8 @@
-# Estado de implementación — candidata 1.28.0
+# Estado de implementación — candidata 1.29.0
+
+Reinscripción por periodo con autorización financiera, cuotas congeladas e historial conservado; altas ordinarias solo por cartera. [Contrato](REINSCRIPCIONES_SEGURAS_1.29.0.md). Implementación y pruebas en curso para #152/#177; no desplegada ni aceptada en UAT. #158 sigue bloqueado por HTTP 403 al aplicar protección de main.
+
+## Base 1.28.0 integrada en #209
 
 La candidata 1.28.0 adapta evaluaciones a cuatro parciales, escala 0–10, criterios ponderados, propuesta automática con aprobación explícita y Final manual. Conserva notas originales e históricos. Asistencias informativas ya existentes; no bloquean examen. [Contrato vigente](EVALUACIONES_1.28.0.md). Las confirmaciones del solicitante de logo, correo, Android y permisos cerraron #106/#107/#140/#141; no acreditan UAT de esta candidata. Los párrafos de versiones anteriores conservan su corte histórico.
 

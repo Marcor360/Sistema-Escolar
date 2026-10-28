@@ -149,12 +149,12 @@ export class AcademicoController {
 
   // ---- Inscripciones ----
   @Get('grupos/:id/alumnos') @Roles('ADMINISTRATIVO', 'MAESTRO')
-  alumnosDeGrupo(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) {
-    return this.service.alumnosDeGrupo(id, user);
+  alumnosDeGrupo(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser, @Query('incluirHistoricas') incluirHistoricas?:string) {
+    return this.service.alumnosDeGrupo(id, user, incluirHistoricas==='true');
   }
   @Post('grupos/:id/alumnos') @Roles('ADMINISTRATIVO')
   inscribir(@Param('id', ParseIntPipe) id: number, @Body() dto: InscribirAlumnoDto, @CurrentUser() user: JwtUser) {
-    return this.service.inscribirAlumno(id, dto.alumnoId, user);
+    return this.service.inscribirAlumno(id, dto.alumnoId, user, dto);
   }
   @Delete('inscripciones/:id') @Roles('ADMINISTRATIVO')
   bajaInscripcion(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) {

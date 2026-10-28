@@ -15,6 +15,7 @@ export class ScopeService {
     if (user.roles.includes('SUPERADMIN')) return null;
     const asignaciones = await this.usuarioPlanteles.find({
       where: { usuarioId: user.sub, activo: true },
+      select: { plantelId: true }, loadEagerRelations: false,
     });
     return asignaciones.map((a) => a.plantelId);
   }

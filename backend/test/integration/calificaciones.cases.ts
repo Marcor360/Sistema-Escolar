@@ -1,3 +1,4 @@
+import { crearInscripcionFixture } from './fixtures-inscripcion';
 import { ContextoIntegracion } from './contexto';
 import { expect, it } from '@jest/globals';
 import * as ExcelJS from 'exceljs';
@@ -53,10 +54,8 @@ it('inscribe a un alumno, captura una calificaci??n y la muestra en su portal', 
     await ctx.dataSource.getRepository(GrupoMateria).update(grupoMateriaId, { regimenEvaluacion: 'LEGADO_100' });
     ctx.grupoMateriaIdMaestro = grupoMateriaId;
 
-    const inscripcion = await ctx.api(`/academico/grupos/${grupoId}/alumnos`, {
-      method: 'POST', token: tokenAdmin, body: { alumnoId: ctx.alumnoId },
-    });
-    expect(inscripcion.response.status).toBe(201);
+    const inscripcion = await crearInscripcionFixture(ctx,grupoId,ctx.alumnoId);
+
     const captura = await ctx.api('/calificaciones/captura', {
       method: 'POST', token: tokenAdmin,
       body: { grupoMateriaId, parcial: 1, items: [{ alumnoId: ctx.alumnoId, calificacion: 92 }] },
@@ -133,7 +132,7 @@ it('exige motivo, muestra faltantes y bloquea cierre/modificación del periodo',
     const faltante = await ctx.api('/alumnos', { method: 'POST', token, body: { nombre: 'Sin nota', apellidoPaterno: 'Periodo',
       matricula: `FAL${ctx.sufijo}`, email: `faltante_${ctx.sufijo}@example.invalid`, curp: 'GODE561231HDFRRN09', plantelId: ctx.plantelId } });
     expect(faltante.response.status).toBe(201);
-    expect((await ctx.api(`/academico/grupos/${contexto.grupoId}/alumnos`, { method: 'POST', token, body: { alumnoId: faltante.data.id } })).response.status).toBe(201);
+    await crearInscripcionFixture(ctx,contexto.grupoId,faltante.data.id);
     const ruta = `/calificaciones/periodos/${ctx.grupoMateriaIdMaestro}/1`;
     expect((await ctx.api('/calificaciones/captura', { method: 'POST', token,
       body: { grupoMateriaId: ctx.grupoMateriaIdMaestro, parcial: 1, items: [{ alumnoId: ctx.alumnoId, calificacion: 91 }] } })).response.status).toBe(400);
@@ -169,7 +168,7 @@ it('separa notas de ciclos, calcula P1-P3 sin Final y exporta inscritos sin nota
     expect(historicas.data.map((c: { grupoMateriaId: number }) => c.grupoMateriaId)).toEqual([gmPasado.id]);
     const sinNota = await ctx.api('/alumnos', { method: 'POST', token, body: { nombre: 'Sin', apellidoPaterno: 'Nota', matricula: `SN${ctx.sufijo}`,
       email: `sinnota_${ctx.sufijo}@example.invalid`, curp: 'GODE561231HDFRRN09', plantelId: ctx.plantelId } });
-    expect((await ctx.api(`/academico/grupos/${actual.grupoId}/alumnos`, { method: 'POST', token, body: { alumnoId: sinNota.data.id } })).response.status).toBe(201);
+    await crearInscripcionFixture(ctx,actual.grupoId,sinNota.data.id);
     const response = await fetch(`${ctx.baseUrl}/reportes/grupo-materias/${actual.id}/calificaciones.xlsx`, { headers: { authorization: `Bearer ${token}` } });
     expect(response.status).toBe(200);
     const workbook = new ExcelJS.Workbook(); await workbook.xlsx.load(Buffer.from(await response.arrayBuffer()) as unknown as Parameters<typeof workbook.xlsx.load>[0]);
@@ -225,7 +224,7 @@ it('promueve alumnos seleccionados a preparación sin copiar notas ni habilitar 
       const grupo = await ctx.dataSource.getRepository(Grupo).save({ nombre: `CC-${ctx.sufijo}`,cicloId: base.grupo.cicloId,plantelId: ctx.plantelId,activo: true });
       const gm = await ctx.dataSource.getRepository(GrupoMateria).save({ regimenEvaluacion: 'LEGADO_100', grupoId: grupo.id,materiaId: base.materiaId,docenteId: null });
       const alta = await ctx.api('/alumnos',{ method: 'POST',token,body: { email: `cc_${ctx.sufijo}@example.invalid`,nombre: 'Carrera',apellidoPaterno: 'Calificaciones',curp: 'GODE561231HDFRRN09',matricula: `CC${ctx.sufijo}`,plantelId: ctx.plantelId } }); expect(alta.response.status).toBe(201);
-      expect((await ctx.api(`/academico/grupos/${grupo.id}/alumnos`,{ method: 'POST',token,body: { alumnoId: alta.data.id } })).response.status).toBe(201);
+      await crearInscripcionFixture(ctx,grupo.id,alta.data.id);
       const body = { grupoMateriaId: gm.id,parcial: 1,items: [{ alumnoId: alta.data.id,calificacion: 80 }] };
       expect((await ctx.api('/calificaciones/captura',{ method: 'POST',token,body })).response.status).toBe(201);
       const respuestas = await Promise.all([ctx.api(`/calificaciones/periodos/${gm.id}/1`,{ method: 'PATCH',token,body: { estatus: 'CERRADO' } }),ctx.api('/calificaciones/captura',{ method: 'POST',token,body: { ...body,motivo: 'Corrección concurrente autorizada',items: [{ alumnoId: alta.data.id,calificacion: 90 }] } })]);
@@ -245,7 +244,7 @@ export function registrarCapturaSinCambios(ctx: ContextoIntegracion) {
     const grupo = await ctx.dataSource.getRepository(Grupo).save({ nombre: `NO-${ctx.sufijo}`,cicloId: base.grupo.cicloId,plantelId: ctx.plantelId,activo: true });
     const clase = await ctx.dataSource.getRepository(GrupoMateria).save({ regimenEvaluacion: 'LEGADO_100', grupoId: grupo.id,materiaId: base.materiaId,docenteId: null });
     const alta = await ctx.api('/alumnos',{ method: 'POST',token: root,body: { email: `no_${ctx.sufijo}@example.invalid`,nombre: 'Nota',apellidoPaterno: 'Operativa',matricula: `NO${ctx.sufijo}`,curp: 'GODE561231HDFRRN09',plantelId: ctx.plantelId } }); expect(alta.response.status).toBe(201);
-    expect((await ctx.api(`/academico/grupos/${grupo.id}/alumnos`,{ method: 'POST',token: root,body: { alumnoId: alta.data.id } })).response.status).toBe(201);
+    await crearInscripcionFixture(ctx,grupo.id,alta.data.id);
     const body = { grupoMateriaId: clase.id,parcial: 1,items: [{ alumnoId: alta.data.id,calificacion: 80.25,observaciones: 'Primera captura' }] };
     expect((await ctx.api('/calificaciones/captura',{ method: 'POST',token: root,body })).data).toEqual({ capturadas: 1,sinCambios: 0 });
     const repo = ctx.dataSource.getRepository(Calificacion), antes = await repo.findOneByOrFail({ alumnoId: alta.data.id,grupoMateriaId: clase.id,parcial: 1 });

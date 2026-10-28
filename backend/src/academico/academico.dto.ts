@@ -1,6 +1,6 @@
 import { OpcionalNoNulo } from '../common/opcional-no-nulo';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Matches, IsDateString, MaxLength, Min, MinLength as LongitudMinima } from 'class-validator';
+import { Matches, IsDateString, MaxLength, MinLength, Min, MinLength as LongitudMinima } from 'class-validator';
 import { Transform as Normalizar } from 'class-transformer';
 import { Transform, Type } from 'class-transformer';
 import { IsBoolean, IsIn, IsInt, IsOptional, IsString } from 'class-validator';
@@ -132,6 +132,8 @@ export class AsignarMateriaDto {
 export class InscribirAlumnoDto {
   @ApiProperty({ type: Number, minimum: 1 })
   @IsInt() @Min(1) alumnoId!: number;
+  @IsOptional() @IsString() @MinLength(10) @MaxLength(300) motivo?: string;
+  @IsOptional() @IsString() @MinLength(5) @MaxLength(200) documentoRef?: string;
 }
 
 export class TransicionCicloDto {

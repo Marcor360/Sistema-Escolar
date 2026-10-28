@@ -20,7 +20,7 @@ export class InscripcionesService {
 private readonly scope: ScopeService,
 private readonly dataSource: DataSource,
 private readonly gruposService: GruposService) {}
-async inscribirAlumno(grupoId: number, alumnoId: number, user: JwtUser) {
+async inscribirAlumno(grupoId: number, alumnoId: number, user: JwtUser, correccion?: {motivo?:string;documentoRef?:string}) {
     try {
       return await this.dataSource.transaction(async (manager) => {
         const grupo = await manager.getRepository(Grupo).findOne({
@@ -47,19 +47,15 @@ async inscribirAlumno(grupoId: number, alumnoId: number, user: JwtUser) {
           throw new ConflictException('El grupo alcanzó el cupo de inscripción directa; revisa la apertura de cartera y las reservas por recursamiento');
         }
         const duplicada = await inscripciones.findOne({ where: { grupoId, alumnoId } });
-        // Política opt-in mientras se acuerdan las excepciones históricas y los tests institucionales.
-        if (process.env.INSCRIPCION_ORDINARIA_SOLO_CARTERA === 'true' && (!duplicada || duplicada.estatus !== 'BAJA')) {
-          throw new ConflictException('Las altas ordinarias requieren Apertura de cartera; aquí solo se reactiva una inscripción previa en baja del mismo grupo');
-        }
+        if (!duplicada || duplicada.estatus !== 'BAJA') throw new ConflictException('Las altas ordinarias requieren Apertura de cartera; usa Reinscribir alumno para cambiar de periodo. Esta ruta solo reactiva una inscripción previa en baja del mismo grupo');
+        if (!correccion?.motivo?.trim() || correccion.motivo.trim().length<10 || !correccion.documentoRef?.trim() || correccion.documentoRef.trim().length<5) throw new ConflictException('La reactivación exige motivo detallado y referencia documental; no genera cargos retroactivos');
         if (duplicada) {
           duplicada.estatus = 'ACTIVA';
           const guardada = await inscripciones.save(duplicada);
-          await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId: grupo.plantelId, accion: 'INSCRIPCION_REACTIVADA', entidadId: guardada.id, detalle: `alumnoId=${alumnoId}; grupoId=${grupoId}`, fecha: new Date() });
+          await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId: grupo.plantelId, accion: 'INSCRIPCION_REACTIVADA', entidadId: guardada.id, detalle: `alumnoId=${alumnoId}; grupoId=${grupoId}; motivo=${correccion.motivo}; documento=${correccion.documentoRef}`.slice(0,500), fecha: new Date() });
           return guardada;
         }
-        const guardada = await inscripciones.save(inscripciones.create({ grupoId, alumnoId }));
-        await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId: grupo.plantelId, accion: 'INSCRIPCION_CREADA', entidadId: guardada.id, detalle: `alumnoId=${alumnoId}; grupoId=${grupoId}`, fecha: new Date() });
-        return guardada;
+        throw new ConflictException('La inscripción requiere apertura de cartera');
       });
     } catch (error) {
       if (esConflictoUnico(error) || esConflictoTransaccional(error)) throw new ConflictException('La inscripción cambió al mismo tiempo; vuelve a consultar');
@@ -67,9 +63,9 @@ async inscribirAlumno(grupoId: number, alumnoId: number, user: JwtUser) {
     }
   }
 
-async alumnosDeGrupo(grupoId: number, user: JwtUser) {
+async alumnosDeGrupo(grupoId: number, user: JwtUser, incluirHistoricas=false) {
     await this.gruposService.validarAccesoGrupo(grupoId, user);
-    const inscripciones = await this.inscripciones.find({ where: { grupoId, estatus: 'ACTIVA' } });
+    const inscripciones = await this.inscripciones.find({ where: { grupoId, estatus: incluirHistoricas ? In(['ACTIVA','HISTORICA']) : 'ACTIVA' } });
     return inscripciones.map((inscripcion) => ({
       id: inscripcion.id,
       alumnoId: inscripcion.alumnoId,
@@ -98,6 +94,7 @@ async bajaInscripcion(id: number, user: JwtUser) {
       const actual = await repo.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!actual) throw new NotFoundException('Inscripción no encontrada');
       await this.scope.validarGestion(user, actual.grupo.plantelId);
+      if(actual.estatus==='HISTORICA')throw new ConflictException('La inscripción pertenece al historial de otro periodo; no se convierte en baja ni se elimina');
       await repo.update(id, { estatus: 'BAJA' });
       await manager.getRepository(ParticipacionAsignatura).update({ inscripcionPrincipalId: id, estado: 'ACTIVA' }, { estado: 'BAJA', activoClave: null });
       await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId: actual.grupo.plantelId, accion: 'INSCRIPCION_BAJA', entidadId: id, detalle: `alumnoId=${actual.alumnoId}; grupoId=${actual.grupoId}`, fecha: new Date() });

@@ -1,3 +1,4 @@
+import { crearInscripcionFixture } from './fixtures-inscripcion';
 import { EventoCalendario, BibliotecaCarpeta } from '../../src/entities';
 import { extraerStreamsPdf } from './pdf-streams';
 import { ArchivoLimpieza, Inscripcion } from '../../src/entities';
@@ -171,7 +172,7 @@ export function registrarBarrido(ctx: ContextoIntegracion) {
       const alumno = await post('/alumnos',{ email: `barridoconal${pos}_${ctx.sufijo}@example.invalid`,nombre: 'Alumno',apellidoPaterno: 'Conducta',matricula: `BC${pos}${ctx.sufijo}`,curp: 'GODE561231HDFRRN09',plantelId }); expect(alumno.response.status).toBe(201);
       const grupo = await post('/academico/grupos',{ nombre: `Conducta${pos}-${ctx.sufijo}`,cicloId: clase.grupo.cicloId,plantelId }); expect(grupo.response.status).toBe(201);
       expect((await post(`/academico/grupos/${grupo.data.id}/materias`,{ materiaId: clase.materiaId,docenteId: docente.data.id })).response.status).toBe(201);
-      expect((await post(`/academico/grupos/${grupo.data.id}/alumnos`,{ alumnoId: alumno.data.id })).response.status).toBe(201);
+      await crearInscripcionFixture(ctx,grupo.data.id,alumno.data.id);
       const incidencia = await post('/conducta/incidencias',{ alumnoId: alumno.data.id,grupoId: grupo.data.id,tipo: 'CONVIVENCIA',gravedad: 'LEVE',descripcion: 'Seguimiento interno de barrido',fecha: new Date().toISOString() },maestro); expect(incidencia.response.status).toBe(201); ids.push(incidencia.data.id);
     }
     const a = await ctx.api(`/conducta/incidencias?plantelId=${ctx.plantelId}`,{ token: maestro }); expect(a.response.status).toBe(200); expect(a.data.datos.map((i: { id: number }) => i.id)).toEqual([ids[0]]);

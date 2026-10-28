@@ -33,7 +33,7 @@ export class CiclosService {
     const inscripciones: Inscripcion[] = [];
     for (let inicio = 0; inicio < grupoIds.length; inicio += TAMANO_LOTE) {
       inscripciones.push(...await manager.getRepository(Inscripcion).find({
-        where: { grupoId: In(grupoIds.slice(inicio, inicio + TAMANO_LOTE)), estatus: 'ACTIVA', alumno: { estatus: 'ACTIVO', usuario: { activo: true } } },
+        where: { grupoId: In(grupoIds.slice(inicio, inicio + TAMANO_LOTE)), estatus: In(['ACTIVA','HISTORICA']), alumno: { estatus: 'ACTIVO', usuario: { activo: true } } },
         select: { grupoId: true, alumnoId: true }, loadEagerRelations: false,
       }));
     }

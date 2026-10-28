@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.28.0`** · Cuatro parciales, escala 0–10, criterios y Final manual; originales conservados y redondeo automático pendiente. Incluye entregas/conservación de #208, todavía fuera de main.
+**Versión candidata: `1.29.0`** · Reinscripción por periodo con autorización financiera, historial conservado e inscripción ordinaria exclusivamente por cartera. Base: main 1.28.0 (#209).
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -18,6 +18,8 @@ Sistema escolar multiplataforma para operación académica, administrativa y fin
 Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [índice documental](docs/README.md) e [historial de documentos retirados](docs/HISTORIAL.md).
 
 ### Cambios consolidados recientes
+
+- **1.29.0 (candidata):** [Inscripción y reinscripción segura por periodo](docs/REINSCRIPCIONES_SEGURAS_1.29.0.md): autorización financiera, calendario de cuotas, conservación de historial y cierre del bypass de cartera.
 
 - **1.28.0 (candidata):** [Cuatro parciales, criterios y aprobación de Final](docs/EVALUACIONES_1.28.0.md). Escala 0–10 en clases nuevas y ciclos abiertos; originales e históricos conservados. Redondeo automático pendiente.
 

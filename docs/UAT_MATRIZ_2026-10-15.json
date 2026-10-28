@@ -1,6 +1,6 @@
 {
-  "version": "1.28.0",
-  "alcance": "Candidata 1.28.0: P1–P4 mensuales, escala 0–10, ponderaciones y Final manual; originales 0–100 conservados. Redondeo automático pendiente de resolver ejemplos contradictorios. Sin despliegue ni UAT de esta versión acreditados.",
+  "version": "1.29.0",
+  "alcance": "Candidata 1.29.0: inscripción y reinscripción por periodo con autorización financiera; matriz incluye escenarios históricos y regresiones. Evidencia institucional por versión/SHA pendiente.",
   "escenarios": [
     {
       "id": "UAT-01",
@@ -713,6 +713,91 @@
       "id": "UAT-52",
       "rol": "MAESTRO",
       "escenario": "Calificar entregas y recursamientos según escala de la clase; conservar notas e historiales anteriores.",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver",
+        "android"
+      ],
+      "estado": "pendiente",
+      "evidencias": [],
+      "responsable": "Institución/QA (por designar)"
+    },
+    {
+      "id": "UAT-53",
+      "rol": "ADMINISTRATIVO",
+      "escenario": "Alta ordinaria solo por cartera; reactivación BAJA documentada, no HISTORICA, sin cargos retroactivos ni bypass de bandera.",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver"
+      ],
+      "estado": "pendiente",
+      "evidencias": [],
+      "responsable": "Institución/QA (por designar)"
+    },
+    {
+      "id": "UAT-54",
+      "rol": "ADMINISTRATIVO",
+      "escenario": "Reinscripción ANUAL/SEMESTRAL/CUATRIMESTRAL según plan, mismo ciclo o posterior; fechas reales, nuevo grupo e historial conservado.",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver"
+      ],
+      "estado": "pendiente",
+      "evidencias": [],
+      "responsable": "Institución/QA (por designar)"
+    },
+    {
+      "id": "UAT-55",
+      "rol": "FINANZAS",
+      "escenario": "Autorizar total contractual, cuotas que suman total y beca/descuento una sola vez; confirmar solo por Control Escolar/SUPERADMIN e idempotencia.",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver"
+      ],
+      "estado": "pendiente",
+      "evidencias": [],
+      "responsable": "Institución/QA (por designar)"
+    },
+    {
+      "id": "UAT-56",
+      "rol": "ADMINISTRATIVO",
+      "escenario": "Retroceso, repetición, salto y condicional con motivo/referencia; pendientes no se convierten en cero ni se duplican recursamientos.",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver"
+      ],
+      "estado": "pendiente",
+      "evidencias": [],
+      "responsable": "Institución/QA (por designar)"
+    },
+    {
+      "id": "UAT-57",
+      "rol": "ADMINISTRATIVO",
+      "escenario": "Cohorte nueva/reinscrita compartida, 1–4 pendientes, quinto asigna y cargo fallido revierte; límites 50/54/55 y reservas.",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver"
+      ],
+      "estado": "pendiente",
+      "evidencias": [],
+      "responsable": "Institución/QA (por designar)"
+    },
+    {
+      "id": "UAT-58",
+      "rol": "ALUMNO",
+      "escenario": "Notas/actas/boletas y pagos anteriores intactos tras avance, recursamiento activo e historial privado; ninguna purga ni bloqueo por adeudos.",
       "canales": [
         "web",
         "api",

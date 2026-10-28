@@ -1,6 +1,6 @@
 # Reinscripción por periodo y cargos adicionales — contrato de implementación
 
-**Estado:** diseño de la operación transaccional **pendiente de aprobación académica y financiera**. La versión 1.27.31 **no habilita reinscripciones automáticas**. Sí habilita búsqueda por nombre completo/matrícula y mejoras de cargos adicionales con idempotencia opcional.
+**Estado histórico:** diseño previo. La candidata 1.29.0 implementa el flujo por autorización expresa del solicitante; contrato vigente en [REINSCRIPCIONES_SEGURAS_1.29.0.md](REINSCRIPCIONES_SEGURAS_1.29.0.md). Los apartados siguientes conservan la propuesta anterior y no son instrucciones actuales de bloqueo. La versión 1.27.31 **no habilita reinscripciones automáticas**. Sí habilita búsqueda por nombre completo/matrícula y mejoras de cargos adicionales con idempotencia opcional.
 
 ## 1. Diagnóstico comprobado en `main` 1.27.30
 

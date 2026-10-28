@@ -9,7 +9,7 @@ const tipos = ['niveles', 'carreras', 'periodos'] as const;
 type Tipo = typeof tipos[number];
 const etiquetas = { niveles: 'Niveles académicos', carreras: 'Carreras y planes', periodos: 'Periodos académicos' };
 interface Registro { id: number; nombre: string; clave: string; activo: boolean; plantelId: number; versionPlan?: string; tipo?: string; numero?: number }
-const vacio = { clave: '', nombre: '', plantelId: '', nivelId: '', carreraId: '', cicloId: '', versionPlan: '', tipo: 'SEMESTRAL', numero: '1', activo: true };
+const vacio = { clave: '', nombre: '', plantelId: '', nivelId: '', carreraId: '', cicloId: '', versionPlan: '', tipo: 'SEMESTRAL', numero: '1', fechaInicio: '', fechaFin: '', activo: true };
 export default function CatalogosAcademicosPage() {
   const params = useParams();
   if (params.tipo && tipos.includes(params.tipo as Tipo) && params.id) return <Formulario tipo={params.tipo as Tipo} id={params.id} />;
@@ -75,8 +75,8 @@ function Formulario({ tipo, id }: { tipo: Tipo; id: string }) {
     try {
       if (nuevo) await api.post(`/academico/catalogos/${tipo}`, { clave: form.clave, nombre: form.nombre, plantelId: Number(form.plantelId),
         ...(tipo === 'carreras' ? { nivelId: Number(form.nivelId), versionPlan: form.versionPlan } : {}),
-        ...(tipo === 'periodos' ? { carreraId: Number(form.carreraId), cicloId: Number(form.cicloId), tipo: form.tipo, numero: Number(form.numero) } : {}) });
-      else await api.patch(`/academico/catalogos/${tipo}/${id}`, { clave: form.clave, nombre: form.nombre, activo: form.activo });
+        ...(tipo === 'periodos' ? { carreraId: Number(form.carreraId), cicloId: Number(form.cicloId), tipo: form.tipo, numero: Number(form.numero), ...(form.fechaInicio ? {fechaInicio:form.fechaInicio,fechaFin:form.fechaFin} : {}) } : {}) });
+      else await api.patch(`/academico/catalogos/${tipo}/${id}`, { clave: form.clave, nombre: form.nombre, activo: form.activo, ...(tipo==='periodos' && form.fechaInicio ? {fechaInicio:form.fechaInicio,fechaFin:form.fechaFin} : {}) });
       guardado.current = true; navigate(`/catalogos-academicos?tipo=${tipo}`, { replace: true, state: { mensaje: 'Catálogo guardado.' } });
     } catch (err) { setError(mensajeDeError(err)); } finally { ocupado.current = false; setGuardando(false); }
   };
@@ -96,6 +96,7 @@ function Formulario({ tipo, id }: { tipo: Tipo; id: string }) {
           <label htmlFor="cat-numero">Número de periodo</label><input id="cat-numero" type="number" required min={1} max={1000} value={form.numero} onChange={(e) => setForm({ ...form, numero: e.target.value })} />
         </>}
       </> : <><p>El plantel y las relaciones del catálogo son inmutables. Crea otro registro para otro contexto.</p><label><input type="checkbox" checked={form.activo} onChange={(e) => setForm({ ...form, activo: e.target.checked })} />Activo</label></>}
+      {tipo==='periodos' && <><label htmlFor="cat-fecha-inicio">Inicio real del periodo (necesario para reinscripción dentro del ciclo)</label><input type="date" id="cat-fecha-inicio" value={form.fechaInicio??''} onChange={e=>setForm({...form,fechaInicio:e.target.value})}/><label htmlFor="cat-fecha-fin">Fin real del periodo</label><input type="date" id="cat-fecha-fin" required={!!form.fechaInicio} value={form.fechaFin??''} onChange={e=>setForm({...form,fechaFin:e.target.value})}/></>}
       <button className="boton" disabled={guardando || (nuevo && tipo !== 'niveles' && !form.nivelId) || (nuevo && tipo === 'periodos' && !form.carreraId)}>{guardando ? 'Guardando…' : 'Guardar catálogo'}</button>
     </fieldset></form>}
   </main>;

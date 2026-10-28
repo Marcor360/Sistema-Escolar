@@ -53,7 +53,7 @@ export function registrarCartera(ctx: ContextoIntegracion) {
     expect(directa.response.status).toBe(409);expect(directa.data.message).toContain('requieren Apertura de cartera');
     const inscripcionPrevia=await ctx.dataSource.getRepository(Inscripcion).findOneByOrFail({grupoId:grupoAsignado.id,alumnoId:alumnos[0].id});
     expect((await ctx.api(`/academico/inscripciones/${inscripcionPrevia.id}`,{method:'DELETE',token})).response.status).toBe(200);
-    expect((await ctx.api(`/academico/grupos/${grupoAsignado.id}/alumnos`,{method:'POST',token,body:{alumnoId:alumnos[0].id}})).response.status).toBe(201);
+    expect((await ctx.api(`/academico/grupos/${grupoAsignado.id}/alumnos`,{method:'POST',token,body:{alumnoId:alumnos[0].id,motivo:'Reactivar inscripción documentada sin alterar cargos',documentoRef:'ACTA-REACT-2026'}})).response.status).toBe(201);
     expect(await ctx.dataSource.getRepository(Inscripcion).countBy({grupoId:grupoAsignado.id,alumnoId:alumnos[0].id,estatus:'ACTIVA'})).toBe(1);
     expect(await ctx.dataSource.getRepository(Cargo).countBy({cicloId:ciclo.id})).toBe(5);
     const retry = await ctx.api('/cartera/confirmar', { method: 'POST', token, body: quinta }); expect(retry.data.id).toBe(abierta.data.id);

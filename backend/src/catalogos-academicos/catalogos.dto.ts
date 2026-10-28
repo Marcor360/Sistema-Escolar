@@ -1,5 +1,5 @@
 import { Type, Transform } from 'class-transformer';
-import { IsBoolean, IsIn, IsInt, IsString, Max, MaxLength, Min, MinLength, IsOptional } from 'class-validator';
+import { IsBoolean, IsDateString, IsIn, IsInt, IsString, Max, MaxLength, Min, MinLength, IsOptional } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { OpcionalNoNulo } from '../common/opcional-no-nulo';
 import { PaginacionDto } from '../common/paginacion.dto';
@@ -24,6 +24,8 @@ export class CrearPeriodoDto extends CrearNivelDto {
   @ApiProperty({ enum: ['ANUAL', 'SEMESTRAL', 'CUATRIMESTRAL'] })
   @IsIn(['ANUAL', 'SEMESTRAL', 'CUATRIMESTRAL']) tipo!: 'ANUAL' | 'SEMESTRAL' | 'CUATRIMESTRAL';
   @ApiProperty() @Type(() => Number) @IsInt() @Min(1) @Max(1000) numero!: number;
+  @IsOptional() @IsDateString({strict:true}) fechaInicio?:string;
+  @IsOptional() @IsDateString({strict:true}) fechaFin?:string;
 }
 export class EditarCatalogoDto {
   @ApiPropertyOptional() @OpcionalNoNulo() @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim().toUpperCase() : value)
@@ -31,6 +33,10 @@ export class EditarCatalogoDto {
   @ApiPropertyOptional() @OpcionalNoNulo() @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsString() @MinLength(1) @MaxLength(120) nombre?: string;
   @ApiPropertyOptional() @OpcionalNoNulo() @IsBoolean() activo?: boolean;
+}
+export class EditarPeriodoDto extends EditarCatalogoDto {
+  @OpcionalNoNulo() @IsDateString({strict:true}) fechaInicio?:string;
+  @OpcionalNoNulo() @IsDateString({strict:true}) fechaFin?:string;
 }
 export class ListarCatalogosDto extends PaginacionDto {
   @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() @Min(1) plantelId?: number;

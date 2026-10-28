@@ -49,7 +49,7 @@ describe('CalificacionesService.porAlumno', () => {
     });
 
     expect(inscripciones.find).toHaveBeenCalledWith({
-      where: { alumnoId: 15, grupoId: In([3]), estatus: 'ACTIVA' },
+      where: { alumnoId: 15, grupoId: In([3]), estatus: In(['ACTIVA','HISTORICA']) },
     });
     expect(repo.find).toHaveBeenCalledWith(
       expect.objectContaining({
