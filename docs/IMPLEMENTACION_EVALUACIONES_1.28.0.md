@@ -1,5 +1,7 @@
 # Evaluaciones académicas — propuesta de transición para la versión objetivo 1.28.0
 
+> Actualización 28/oct/2026: este documento conserva el diseño/corte histórico. La institución confirmó reglas nuevas y la candidata 1.28.0 las implementa según [contrato vigente](EVALUACIONES_1.28.0.md). Asistencias ya implementadas desde 1.27.53. No usar los antiguos bloqueos de aprobación general como estado actual; el redondeo y formatos oficiales siguen pendientes.
+
 **Estado:** propuesta técnica para revisión, entrega 1.27.20 sobre `main` 1.27.19 (`9a09ed6`). 1.28.0 es una versión objetivo futura. Este PR no implementa cuatro parciales, NP, asistencia ni cambios de escala.
 
 Este anexo desarrolla el [plan condicionado y sus aprobaciones](PLAN_CALIFICACIONES_ACTAS_1.28.0.md). Las reglas siguientes son propuestas recogidas en [#165](https://github.com/Marcor360/Sistema-Escolar/pull/165); [#139](https://github.com/Marcor360/Sistema-Escolar/issues/139) continúa abierto sin reglamento aprobado adjunto. Incorporarlas a Git no acredita autorización institucional.

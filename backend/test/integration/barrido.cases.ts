@@ -51,7 +51,7 @@ export function registrarBarrido(ctx: ContextoIntegracion) {
     const clase = await ctx.dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: ctx.grupoMateriaIdMaestro });
     const grupo = await ctx.dataSource.getRepository(Grupo).save({ cicloId: clase.grupo.cicloId,
       plantelId: ctx.plantelId, nombre: `PM${ctx.sufijo}`, activo: false });
-    const historica = await ctx.dataSource.getRepository(GrupoMateria).save({ grupoId: grupo.id, materiaId: id, docenteId: null });
+    const historica = await ctx.dataSource.getRepository(GrupoMateria).save({ regimenEvaluacion: 'LEGADO_100', grupoId: grupo.id, materiaId: id, docenteId: null });
     expect((await ctx.api(ruta, { method: 'DELETE', token: root })).response.status).toBe(200);
     expect(await ctx.dataSource.getRepository(Materia).findOneByOrFail({ id })).toMatchObject({ activo: false, nombre: 'Materia editada' });
     expect(await ctx.dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: historica.id })).toMatchObject({ materiaId: id });

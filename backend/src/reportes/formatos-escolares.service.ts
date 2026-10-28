@@ -16,7 +16,7 @@ import { AlumnosService } from '../alumnos/alumnos.service';
 import { ScopeService } from '../planteles/scope.service';
 import { ConfiguracionService } from '../configuracion/configuracion.service';
 import { JwtUser } from '../common/current-user.decorator';
-import { promedioOficial } from '../common/promedio-oficial';
+import { escalaDe, esRegimenNuevo, notaEnEscala, resultadoEvaluacion } from '../common/regimen-evaluacion';
 import { crearActaExcel, crearBoletaExcel } from './formatos-escolares.xlsx';
 
 @Injectable()
@@ -33,28 +33,30 @@ export class FormatosEscolaresService {
   }
 
   async acta(id: number, parcial: number, user: JwtUser) {
-    if (!Number.isInteger(parcial) || parcial < 0 || parcial > 3) throw new BadRequestException('Selecciona P1, P2, P3 o Final');
+    if (!Number.isInteger(parcial) || parcial < 0 || parcial > 4) throw new BadRequestException('Selecciona P1–P4 o Final');
     const gm = await this.reportes.validarAccesoAClase(id, user);
+    if (parcial === 4 && !esRegimenNuevo(gm)) throw new BadRequestException('La clase histórica tiene tres parciales');
+    const finalCalculada = parcial === 0 && esRegimenNuevo(gm);
     const [inscritos, notas, periodo, marca] = await Promise.all([
       this.ds.getRepository(Inscripcion).find({ where: { grupoId: gm.grupoId, estatus: 'ACTIVA', alumno: { estatus: 'ACTIVO' } } }),
-      this.ds.getRepository(Calificacion).find({ where: { grupoMateriaId: id, parcial } }),
+      this.ds.getRepository(Calificacion).find({ where: { grupoMateriaId: id, ...(finalCalculada ? {} : {parcial}) } }),
       this.ds.getRepository(PeriodoCalificacion).findOneBy({ grupoMateriaId: id, parcial }),
       this.marca.obtener(),
     ]);
-    const porAlumno = new Map(notas.map(n => [n.alumnoId, n]));
+    const porAlumno = new Map(notas.filter(n=>n.parcial===parcial).map(n => [n.alumnoId, n]));
     const filas = inscritos.map(i => ({ alumnoId: i.alumnoId, matricula: i.alumno.matricula,
       nombre: [i.alumno.usuario.apellidoPaterno, i.alumno.usuario.apellidoMaterno, i.alumno.usuario.nombre].filter(Boolean).join(' '),
-      calificacion: porAlumno.has(i.alumnoId) ? Number(porAlumno.get(i.alumnoId)!.calificacion) : null,
+      calificacion: finalCalculada ? resultadoEvaluacion(notas.filter(n=>n.alumnoId===i.alumnoId),gm) : porAlumno.has(i.alumnoId) ? notaEnEscala(porAlumno.get(i.alumnoId)!, gm) : null,
       observaciones: porAlumno.get(i.alumnoId)?.observaciones ?? '',
     })).sort((a,b) => a.nombre.localeCompare(b.nombre, 'es') || a.matricula.localeCompare(b.matricula, 'es'));
     return { institucion: marca.nombreInstitucion, claseId: id, parcial,
-      evaluacion: parcial === 0 ? 'Final' : `Parcial ${parcial}`, escala: '0–100 (sin conversión)',
+      evaluacion: parcial === 0 ? 'Final' : `Parcial ${parcial}`, escala: `0–${escalaDe(gm)}`, escalaMaxima: escalaDe(gm),
       plantel: gm.grupo.plantel.nombre, plan: gm.grupo.carrera?.nombre ?? '',
       periodo: gm.grupo.periodoAcademico?.nombre ?? gm.grupo.grado ?? '',
       ciclo: gm.grupo.ciclo.clave, grupo: gm.grupo.nombre, asignatura: gm.materia.nombre,
       docente: gm.docente?.usuario.nombreCompleto ?? '', estado: periodo?.estatus ?? 'ABIERTO',
       faltantes: filas.filter(f => f.calificacion === null).length,
-      aviso: 'La asistencia diaria, faltas, evaluación continua y examen desglosado no se registran actualmente; sus casillas se dejan vacías. La calificación parcial se captura directamente, sin fórmula nueva.', filas };
+      aviso: 'Las asistencias se consultan en su módulo y no condicionan el examen. Las casillas de este formato no se rellenan por inferencia. La nota puede capturarse directamente o mediante criterios ponderados; sin redondeo automático.', filas };
   }
 
   async actaExcel(id: number, parcial: number, user: JwtUser, plantilla: boolean) {
@@ -88,18 +90,19 @@ export class FormatosEscolaresService {
     const filas = clases.map(gm => {
       const registros = notas.filter(n => n.grupoMateriaId === gm.id);
       return { clave: gm.materia.clave, asignatura: gm.materia.nombre, creditos: Number(gm.materia.creditos),
-        seriacion: '', ciclo: grupo.ciclo.clave, promedioFinal: promedioOficial(new Map(registros.map(n=>[n.parcial,Number(n.calificacion)]))),
-        observaciones: registros.find(n=>n.parcial === 3)?.observaciones ?? '' };
+        seriacion: '', ciclo: grupo.ciclo.clave, promedioFinal: resultadoEvaluacion(registros, gm),
+        observaciones: (registros.find(n=>n.parcial === 0) ?? registros.find(n=>n.parcial === (esRegimenNuevo(gm) ? 4 : 3)))?.observaciones ?? '' };
     });
     // No se publica una boleta parcial ni se promedian solo las materias disponibles.
     const disponible = boletaPublicable(clases,notas,periodos);
-    const promedioGeneral = disponible ? Math.round(filas.reduce((s,f)=>s + Number(f.promedioFinal),0) / filas.length * 10) / 10 : null;
+    const media = filas.reduce((s,f)=>s + Number(f.promedioFinal),0) / filas.length;
+    const promedioGeneral = disponible ? (clases.some(esRegimenNuevo) ? media : Math.round(media * 10) / 10) : null;
     const ocultar = user.roles.includes('ALUMNO') && !disponible;
     return { institucion: marca.nombreInstitucion, alumno: alumno.usuario.nombreCompleto, matricula: alumno.matricula,
       alumnoId, inscripcionId: inscripcion.id, plantel: grupo.plantel.nombre, plan: grupo.carrera?.nombre ?? '',
       periodo: grupo.periodoAcademico?.nombre ?? grupo.grado ?? '', ciclo: grupo.ciclo.clave, grupo: grupo.nombre,
-      disponible, estado: disponible ? 'DISPONIBLE' : 'PENDIENTE', escala: '0–100 (sin conversión)',
-      aviso: 'Formato informativo. Promedio vigente de P1–P3; Final permanece independiente. Seriación sin registro: casilla vacía. Sin firma ni sello digital.',
+      disponible, estado: disponible ? 'DISPONIBLE' : 'PENDIENTE', escala: clases.every(c=>esRegimenNuevo(c)) ? '0–10' : clases.every(c=>!esRegimenNuevo(c)) ? '0–100 (histórica)' : 'Según régimen de cada asignatura',
+      aviso: clases.some(c=>esRegimenNuevo(c)) ? 'Formato informativo. P1–P4: 25% cada uno; Final manual sustituye el promedio. Sin redondeo automático. Sin firma ni sello digital.' : 'Formato informativo histórico. Promedio P1–P3; Final independiente. Sin firma ni sello digital.',
       filas: ocultar ? [] : filas, promedioGeneral: ocultar ? null : promedioGeneral };
   }
 
@@ -110,13 +113,13 @@ export class FormatosEscolaresService {
 
   async boletaExcel(alumnoId: number, user: JwtUser, inscripcionId?: number, cicloId?: number) {
     const datos = await this.boleta(alumnoId,user,inscripcionId,cicloId);
-    if (user.roles.includes('ALUMNO') && !datos.disponible) throw new ConflictException('La boleta estará disponible cuando Control Escolar cierre P1–P3 completos');
+    if (user.roles.includes('ALUMNO') && !datos.disponible) throw new ConflictException('La boleta estará disponible cuando Control Escolar cierre las evaluaciones requeridas');
     return crearBoletaExcel(datos,await this.logo());
   }
 
   async boletaPdf(alumnoId: number, user: JwtUser, inscripcionId?: number, cicloId?: number): Promise<Buffer> {
     const datos = await this.boleta(alumnoId,user,inscripcionId,cicloId);
-    if (user.roles.includes('ALUMNO') && !datos.disponible) throw new ConflictException('La boleta estará disponible cuando Control Escolar cierre P1–P3 completos');
+    if (user.roles.includes('ALUMNO') && !datos.disponible) throw new ConflictException('La boleta estará disponible cuando Control Escolar cierre las evaluaciones requeridas');
     const doc = new PDFDocument({ margin: 36, size: 'LETTER' }), partes: Buffer[] = [];
     const resultado = new Promise<Buffer>((resolve,reject) => { doc.on('data',(b: Buffer)=>partes.push(b)); doc.on('end',()=>resolve(Buffer.concat(partes))); doc.on('error',reject); });
     doc.registerFont('Escolar',join(__dirname,'assets','OnestVariable.ttf'));

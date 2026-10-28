@@ -12,5 +12,13 @@
     "patchedVersion": "1.4.1-escolar.0",
     "archive": "node-forge-1.4.1-escolar.0.tgz",
     "patchedIntegrity": "sha512-8Ke7A2jQTaMYvcIW1qQpVkPWhuqf2xE4JTbTB2UitVG0OO0PiK7XDPhC+kIHrnlYI0H9XUz79N6lU64htX9y5g=="
+  },
+  "deepmerge": {
+    "upstreamVersion": "4.3.1",
+    "upstreamIntegrity": "sha512-3sUqbMEc77XqpdNO7FRyRog+eW3ph+GYCbj+rK+uYyRMuwsVy0rMiVtPn+QJlKFvWP/1PYpapqYn0Me2knFn+A==",
+    "patchedVersion": "4.3.2-escolar.0",
+    "archive": "deepmerge-4.3.2-escolar.0.tgz",
+    "patchedIntegrity": "sha512-+YDjarWpWsziZxPNnEpbXGERxhFV5Gx+80DMx/dS8RBnjnkjUMoPgEZU0e4csxXSKTYfyHiALdcl5FQf14R4RQ==",
+    "advisory": "https://github.com/advisories/GHSA-gcqx-w48m-w2h4"
   }
 }

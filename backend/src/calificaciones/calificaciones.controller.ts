@@ -1,8 +1,9 @@
+import { CapturaPonderadaDto } from './ponderacion.dto';
 import { PaginacionDto } from '../common/paginacion.dto';
 import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CalificacionesService } from './calificaciones.service';
-import { CambiarEstadoPeriodoDto, CapturaCalificacionesDto } from './calificaciones.dto';
+import { AprobarFinalDto, CambiarEstadoPeriodoDto, CapturaCalificacionesDto } from './calificaciones.dto';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { RolesGuard } from '../common/roles.guard';
 import { Roles } from '../common/roles.decorator';
@@ -39,6 +40,19 @@ export class CalificacionesController {
   capturar(@Body() dto: CapturaCalificacionesDto, @CurrentUser() user: JwtUser) {
     return this.service.capturar(dto, user);
   }
+
+  @Get('final/propuestas/:grupoMateriaId') @Roles('MAESTRO', 'ADMINISTRATIVO')
+  propuestasFinal(@Param('grupoMateriaId', ParseIntPipe) grupoMateriaId:number, @CurrentUser() user:JwtUser) {
+    return this.service.propuestasFinal(grupoMateriaId,user);
+  }
+
+  @Post('final/aprobar') @Roles('MAESTRO', 'ADMINISTRATIVO')
+  aprobarFinal(@Body() dto:AprobarFinalDto, @CurrentUser() user:JwtUser) {
+    return this.service.aprobarFinal(dto,user);
+  }
+
+  @Post('captura-ponderada') @Roles('MAESTRO', 'ADMINISTRATIVO')
+  capturarPonderadas(@Body() dto: CapturaPonderadaDto, @CurrentUser() user: JwtUser) { return this.service.capturarPonderadas(dto, user); }
 
   @Get('periodos/:grupoMateriaId/:parcial')
   @Roles('MAESTRO', 'ADMINISTRATIVO')

@@ -1,6 +1,6 @@
 {
   "name": "escolar-backend",
-  "version": "1.27.58",
+  "version": "1.28.0",
   "description": "API del Sistema Escolar Multiplataforma (MVP) — NestJS + TypeORM (MySQL / SQL Server)",
   "private": true,
   "scripts": {
@@ -15,7 +15,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p test/tsconfig.json --noEmit",
     "lint": "eslint \"src/**/*.ts\" --max-warnings=0",
     "format": "prettier --write \"src/**/*.ts\"",
-    "pretest": "node scripts/verificar-sprintf.cjs",
+    "pretest": "node scripts/verificar-sprintf.cjs && node scripts/verificar-deepmerge.cjs",
     "test": "jest",
     "test:integration": "jest --config jest.integration.config.cjs --runInBand"
   },
@@ -67,7 +67,8 @@
     "ts-jest": "^29.4.14",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "deepmerge": "file:vendor/deepmerge-4.3.2-escolar.0.tgz"
   },
   "overrides": {
     "@nestjs/swagger": {
@@ -81,6 +82,7 @@
     "multer": "$multer",
     "@azure/identity": {
       "@azure/msal-node": "7.1.1"
-    }
+    },
+    "deepmerge": "$deepmerge"
   }
 }

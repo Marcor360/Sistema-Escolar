@@ -1,3 +1,4 @@
+import { escalaDe, esRegimenNuevo } from '../common/regimen-evaluacion';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DataSource, LessThan } from 'typeorm';
@@ -13,7 +14,7 @@ import { GrupoMateria, ImportacionPreview, ImportacionFila, Inscripcion, Usuario
 import { inscripcionVigente } from '../common/contexto-academico';
 import { leerArchivo } from '../importaciones/lectura';
 import { PreviewCifrado } from '../importaciones/preview-cifrado';
-const CABECERAS = ['grupoMateriaId', 'parcial', 'alumnoId', 'matricula', 'grado', 'calificacion', 'observaciones', 'alumno'];
+const CABECERAS = ['grupoMateriaId', 'parcial', 'alumnoId', 'matricula', 'grado', 'calificacion', 'observaciones', 'alumno', 'escalaMaxima'];
 @Injectable()
 export class ImportacionCalificacionesService {
   private readonly cifrado: PreviewCifrado;
@@ -25,7 +26,7 @@ export class ImportacionCalificacionesService {
     this.cifrado = new PreviewCifrado(config.getOrThrow<string>('JWT_SECRET'));
   }
   async plantilla(dto: ContextoNotasDto, user: JwtUser) {
-    if (!Number.isInteger(dto.parcial) || dto.parcial < 0 || dto.parcial > 3) throw new BadRequestException('Selecciona un parcial del 1 al 3 o Final');
+    if (!Number.isInteger(dto.parcial) || dto.parcial < 0 || dto.parcial > 4) throw new BadRequestException('Selecciona un parcial del 1 al 4 o Final');
     await this.notas.estadoPeriodo(dto.grupoMateriaId, dto.parcial, user);
     const gm = await this.ds.getRepository(GrupoMateria).findOneByOrFail({ id: dto.grupoMateriaId });
     const inscripciones = await this.ds
@@ -38,7 +39,7 @@ export class ImportacionCalificacionesService {
       views: [{ state: 'frozen', ySplit: 1, activeCell: 'F2' }],
     });
     hoja.addRow(CABECERAS);
-    hoja.autoFilter = { from: 'A1', to: 'H1' };
+    hoja.autoFilter = { from: 'A1', to: 'I1' };
     hoja.getRow(1).height = 30;
     hoja.getRow(1).eachCell((celda, indice) => {
       celda.font = { bold: true, color: { argb: 'FFFFFFFF' } };
@@ -49,11 +50,11 @@ export class ImportacionCalificacionesService {
       };
       celda.alignment = { vertical: 'middle', wrapText: true };
     });
-    [19, 12, 15, 22, 15, 19, 40, 38].forEach((ancho, indice) => {
+    [19, 12, 15, 22, 15, 19, 40, 38, 18].forEach((ancho, indice) => {
       hoja.getColumn(indice + 1).width = ancho;
     });
     for (const columna of [4, 5, 7, 8]) hoja.getColumn(columna).numFmt = '@';
-    hoja.getColumn(6).numFmt = '0.00';
+    hoja.getColumn(6).numFmt = '0.######';
     for (const i of inscripciones) {
       hoja.addRow([
         gm.id,
@@ -64,6 +65,7 @@ export class ImportacionCalificacionesService {
         '',
         '',
         i.alumno.usuario.nombreCompleto,
+        escalaDe(gm),
       ]);
     }
     for (let fila = 2; fila <= Math.max(inscripciones.length + 1, 2); fila++) {
@@ -72,21 +74,22 @@ export class ImportacionCalificacionesService {
       celda.dataValidation = {
         type: 'decimal',
         operator: 'between',
-        formulae: [0, 100],
+        formulae: [0, escalaDe(gm)],
         allowBlank: true,
         showErrorMessage: true,
         errorTitle: 'Calificación inválida',
-        error: 'Usa un número entre 0 y 100.',
+        error: `Usa un número entre 0 y ${escalaDe(gm)}.`,
       };
     }
     const ayuda = libro.addWorksheet('Instrucciones');
     ayuda.getColumn(1).width = 110;
     ayuda.addRows([
       [`Plantel: ${gm.grupo.plantel.nombre}; ciclo: ${gm.grupo.ciclo.clave}; grupo: ${gm.grupo.nombre}; materia: ${gm.materia.clave}`],
+      ['Conserva escalaMaxima (columna I): 10 para el régimen nuevo. Una plantilla anterior no se interpreta silenciosamente en otra escala.'],
       ['Edita únicamente la columna F (calificacion), marcada en amarillo. No cambies IDs, matrícula, grado ni parcial.'],
-      ['Parcial 0 = Final; 1, 2 y 3 forman el promedio oficial.'],
+      [esRegimenNuevo(gm) ? 'P1–P4: 25% cada uno; Final (0) sustituye el promedio. Sin redondeo automático.' : 'Parcial 0 = Final; 1, 2 y 3 forman el promedio oficial.'],
       ['Elimina las filas sin calificación antes de importar. Una nota vacía no equivale a cero.'],
-      ['Captura 0–100 con hasta dos decimales. Para corregir notas existentes, indica motivo en la pantalla.'],
+      [`Captura 0–${escalaDe(gm)} con hasta ${dto.parcial === 0 && esRegimenNuevo(gm) ? 8 : 6} decimales. Para corregir notas existentes, indica motivo en la pantalla.`],
       ['Después de guardar el archivo, previsualiza los cambios y confirma en el portal.'],
     ]);
     ayuda.eachRow((fila, indice) => {
@@ -122,9 +125,10 @@ export class ImportacionCalificacionesService {
         (gm.grupo.grado ?? '') !== (f.grado ?? '')
       )
         mensaje = 'Identificador, matrícula o grado no corresponden a una inscripción activa.';
+      else if ((esRegimenNuevo(gm) && f.escalaMaxima !== '10') || (f.escalaMaxima !== undefined && Number(f.escalaMaxima) !== escalaDe(gm))) mensaje = `Usa la plantilla actual con escalaMaxima=${escalaDe(gm)}; no se convierte la escala del archivo por inferencia.`;
       else if (vistos.has(id)) mensaje = 'Alumno duplicado en el archivo.';
-      else if (!/^(?:\d+|\d*\.\d{1,2})$/.test(f.calificacion) || Number(f.calificacion) > 100)
-        mensaje = 'Calificación requerida entre 0 y 100, hasta dos decimales.';
+      else if (!new RegExp(`^(?:\\d+|\\d*\\.\\d{1,${dto.parcial === 0 && esRegimenNuevo(gm) ? 8 : 6}})$`).test(f.calificacion) || Number(f.calificacion) > escalaDe(gm))
+        mensaje = `Calificación requerida entre 0 y ${escalaDe(gm)}, hasta ${dto.parcial === 0 && esRegimenNuevo(gm) ? 8 : 6} decimales.`;
       else if ((f.observaciones ?? '').length > 300) mensaje = 'Observaciones: máximo 300 caracteres.';
       vistos.add(id);
       if (mensaje) errores.push({ fila: i + 2, mensaje });
@@ -138,6 +142,7 @@ export class ImportacionCalificacionesService {
     if (errores.length) return { previewId: null, registros: filas.length, errores, diferencias: [] };
     const captura = plainToInstance(CapturaCalificacionesDto, {
       grupoMateriaId: dto.grupoMateriaId,
+      escalaMaxima: escalaDe(gm),
       parcial: dto.parcial,
       motivo: dto.motivo,
       items,
@@ -167,6 +172,7 @@ export class ImportacionCalificacionesService {
           {
             grupoMateriaId: String(captura.grupoMateriaId),
             parcial: String(captura.parcial),
+            escalaMaxima: String(captura.escalaMaxima),
             motivo: captura.motivo ?? '',
             alumnoId: String(item.alumnoId),
             calificacion: String(item.calificacion),
@@ -206,6 +212,7 @@ export class ImportacionCalificacionesService {
       const dto = plainToInstance(CapturaCalificacionesDto, {
         grupoMateriaId: Number(primero.grupoMateriaId),
         parcial: Number(primero.parcial),
+        escalaMaxima: Number(primero.escalaMaxima ?? 100),
         motivo: primero.motivo,
         items: datos.map((f) => ({
           alumnoId: Number(f.alumnoId),
@@ -217,7 +224,7 @@ export class ImportacionCalificacionesService {
         (await validate(dto)).length ||
         datos.some(
           (f) =>
-            f.grupoMateriaId !== primero.grupoMateriaId || f.parcial !== primero.parcial || f.motivo !== primero.motivo,
+            f.grupoMateriaId !== primero.grupoMateriaId || f.parcial !== primero.parcial || f.escalaMaxima !== primero.escalaMaxima || f.motivo !== primero.motivo,
         )
       )
         throw new ConflictException('Preview inválido.');

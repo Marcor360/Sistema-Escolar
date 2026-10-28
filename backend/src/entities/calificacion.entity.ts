@@ -6,7 +6,7 @@ import { decimalTransformer } from '../common/decimal.transformer';
 import { Alumno } from './alumno.entity';
 import { GrupoMateria } from './grupo-materia.entity';
 
-/** Calificación por parcial (1-3); parcial 0 = final. */
+/** Nota original y escala de captura; parcial 0 = sustitución Final manual. */
 @Entity('calificaciones')
 @Unique('uq_calif', ['alumnoId', 'grupoMateriaId', 'parcial'])
 export class Calificacion {
@@ -20,7 +20,8 @@ export class Calificacion {
   @JoinColumn({ name: 'grupo_materia_id' })
   grupoMateria!: GrupoMateria;
   @Column() parcial!: number;
-  @Column('decimal', { precision: 5, scale: 2, transformer: decimalTransformer })
+  @Column({ default: 100 }) escalaMaxima!: number;
+  @Column('decimal', { precision: 11, scale: 8, transformer: decimalTransformer })
   calificacion!: number;
   @Column({ type: String, length: 300, nullable: true }) observaciones!: string | null;
   @Column({ type: 'int', nullable: true }) capturadaPorId!: number | null;

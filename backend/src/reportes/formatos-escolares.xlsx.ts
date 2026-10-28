@@ -25,7 +25,7 @@ export async function crearActaExcel(d:DatosActa,plantilla:boolean,logo?:LogoDoc
  d.filas.forEach((f,i)=>{const r=i+8;tabla(ws,r,[i+1,f.matricula,f.nombre,...Array<string>(16).fill(''),'','','',plantilla?'':f.calificacion??'',plantilla?'':f.observaciones]);
  for(let col=4;col<=24;col++)if(plantilla||col<23)ws.getCell(r,col).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFF2CC'}};
  for(let col=4;col<=19;col++)ws.getCell(r,col).dataValidation={type:'list',allowBlank:true,formulae:['".,F"']};
- ws.getCell(r,23).dataValidation={type:'decimal',operator:'between',formulae:[0,100],allowBlank:true,showErrorMessage:true,error:'Escala vigente: 0 a 100.'};});
+ ws.getCell(r,23).dataValidation={type:'decimal',operator:'between',formulae:[0,d.escalaMaxima],allowBlank:true,showErrorMessage:true,error:`Escala: 0 a ${d.escalaMaxima}.`};});
  const pie=d.filas.length+10;
  ['FIRMA PROFESOR(A)','FIRMA DEL COORDINADOR(A)','FIRMA DE CONTROL ESCOLAR'].forEach((v,i)=>{texto(ws,pie,1+i*8,8+i*8,'____________________________');texto(ws,pie+1,1+i*8,8+i*8,v);});
  const ayuda=wb.addWorksheet('Instrucciones');ayuda.getColumn(1).width=120;
@@ -41,8 +41,8 @@ export async function crearBoletaExcel(d:DatosBoleta,logo?:LogoDocumento):Promis
  texto(ws,4,1,8,`NOMBRE DEL ALUMNO: ${d.alumno}`);texto(ws,5,1,4,`MATRÍCULA: ${d.matricula}`);texto(ws,5,5,8,`PERIODO: ${d.periodo} · GRUPO: ${d.grupo}`);
  texto(ws,6,1,8,`${d.disponible?'DATOS COMPLETOS':'BORRADOR — CAPTURA O CIERRE PENDIENTE'} · ESCALA: ${d.escala}`);
  tabla(ws,7,['N°','Clave','Asignatura','Créditos','Seriación','Ciclo escolar','Prom. final','Observaciones'],true);
- d.filas.forEach((f,i)=>{tabla(ws,i+8,[i+1,f.clave,f.asignatura,f.creditos,f.seriacion,f.ciclo,f.promedioFinal??'',f.observaciones]);ws.getCell(i+8,4).numFmt='0.00';ws.getCell(i+8,7).numFmt='0.0';});
- const pie=d.filas.length+9;texto(ws,pie,1,6,'PROMEDIO GENERAL');ws.getCell(pie,7).value=d.promedioGeneral??'';ws.getCell(pie,7).numFmt='0.0';
+ d.filas.forEach((f,i)=>{tabla(ws,i+8,[i+1,f.clave,f.asignatura,f.creditos,f.seriacion,f.ciclo,f.promedioFinal??'',f.observaciones]);ws.getCell(i+8,4).numFmt='0.00';ws.getCell(i+8,7).numFmt='0.########';});
+ const pie=d.filas.length+9;texto(ws,pie,1,6,'PROMEDIO GENERAL');ws.getCell(pie,7).value=d.promedioGeneral??'';ws.getCell(pie,7).numFmt='0.########';
  texto(ws,pie+2,1,8,d.aviso);ws.getRow(pie+2).height=48;texto(ws,pie+4,2,8,'____________________________________________________________');texto(ws,pie+5,2,8,'SELLO Y FIRMA DEL COORDINADOR DE SERVICIOS ESCOLARES');
  ws.pageSetup.printTitlesRow='1:7';ws.pageSetup.printArea=`A1:H${pie+5}`;return Buffer.from(await wb.xlsx.writeBuffer());
 }

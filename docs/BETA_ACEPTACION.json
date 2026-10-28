@@ -1,6 +1,6 @@
 {
-  "version": "1.27.58",
-  "alcance": "Puertas de aceptación institucional; egresos únicos y compresión opcional requieren pruebas MySQL/SQL Server, conciliación de legados y política formal de retención. No se habilita borrado de documentos.",
+  "version": "1.28.0",
+  "alcance": "Candidata 1.28.0: P1–P4 mensuales, escala 0–10, ponderaciones y Final manual; originales 0–100 conservados. Redondeo automático pendiente de resolver ejemplos contradictorios. Sin despliegue ni UAT de esta versión acreditados.",
   "puertas": [
     {
       "id": "ci_ultimo_sha",
@@ -50,5 +50,12 @@
       "responsable": "Responsables de planteles",
       "evidencias": []
     }
-  ]
+  ],
+  "confirmacionesSolicitante": {
+    "fechaRegistro": "2026-10-28",
+    "logo": "Web y app móvil; persiste tras recargar, reiniciar y actualizar. Issue #106 cerrado.",
+    "correo": "Activación y recuperación operativas en Microsoft 365 y GoDaddy/cPanel. Issue #107 cerrado.",
+    "movil": "Aceptación institucional reportada para Android. Issue #141 cerrado; no acredita iOS ni UAT de 1.28.0.",
+    "permisos": "Aceptada la matriz vigente. Issue #140 cerrado."
+  }
 }

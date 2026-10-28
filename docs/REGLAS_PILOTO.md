@@ -1,5 +1,7 @@
 # Reglas de operación
 
+> Actualización 28/oct/2026: este documento conserva el diseño/corte histórico. La institución confirmó reglas nuevas y la candidata 1.28.0 las implementa según [contrato vigente](EVALUACIONES_1.28.0.md). Asistencias ya implementadas desde 1.27.53. No usar los antiguos bloqueos de aprobación general como estado actual; el redondeo y formatos oficiales siguen pendientes.
+
 Referencia para la candidata 1.27.19, revisión del 21/oct/2026.
 
 Estas reglas son el comportamiento del código y requieren aceptación institucional antes del piloto.

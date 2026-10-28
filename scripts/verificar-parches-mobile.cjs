@@ -33,3 +33,16 @@ assert.equal(keys.publicKey.verify(digest, firmar([], algoritmo.slice(0, 1))), t
 assert.throws(() => keys.publicKey.verify(digest, firmar([a.create(u, t.OCTETSTRING, false, 'garbage')])), /valid RSASSA/);
 assert.throws(() => keys.publicKey.verify(digest, firmar([a.create(u, t.NULL, false, '')])), /valid RSASSA/);
 console.log('Parches móvil: patrones normales y firmas válidas aceptados; anidación excesiva y DigestAlgorithm adulterado rechazados.');
+
+// GHSA-gcqx-w48m-w2h4: proteger ambas entradas y la copia del target.
+const { readFileSync } = require('node:fs');
+const { createHash } = require('node:crypto');
+const manifiesto = JSON.parse(readFileSync(resolve(__dirname, '../mobile/vendor/upstream.json'), 'utf8'));
+const archivoDeepmerge = readFileSync(resolve(__dirname, '../mobile/vendor', manifiesto.deepmerge.archive));
+assert.equal('sha512-' + createHash('sha512').update(archivoDeepmerge).digest('base64'), manifiesto.deepmerge.patchedIntegrity);
+const requireExpoConfig = createRequire(requireMobile.resolve('@expo/config'));
+assert.equal(requireExpoConfig('deepmerge/package.json').version, '4.3.2-escolar.0');
+assert.equal(requireMobile('deepmerge/package.json').version, '4.3.2-escolar.0');
+const { verificarFusiones } = require('../backend/scripts/verificar-deepmerge.cjs');
+verificarFusiones([requireMobile('deepmerge'), requireMobile('deepmerge/dist/umd.js'), requireExpoConfig('deepmerge')]);
+console.log('Deepmerge: Expo resuelve el parche; configuración, arrays y símbolos conservados; prototipos y setters protegidos.');

@@ -197,7 +197,7 @@ const catalogo: (AreaRecorrido & { roles: string[] })[] = [
       paso(
         '5. Capturar y revisar notas',
         '/calificaciones?vista=consulta',
-        'Revisa parciales, participantes y motivo de corrección. Se conserva la regla oficial vigente de P1–P3 y Final independiente.',
+        'Revisa el régimen y la escala de la clase, los participantes y el motivo de corrección. En el esquema 0–10, P1–P4 aportan 25 % cada uno y Final manual sustituye el promedio.',
         'No inventes ponderaciones ni cambies una escala institucional.',
       ),
       paso(

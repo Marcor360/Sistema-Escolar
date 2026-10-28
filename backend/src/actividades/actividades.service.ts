@@ -1,9 +1,16 @@
+import { ClaseEvaluacion, escalaDe, esRegimenNuevo, notaEnEscala, parcialesDe } from '../common/regimen-evaluacion';
 import { clasesRecursadas, recursaClase } from '../recursamientos/acceso-recursamiento';
 import { programarLimpieza } from '../archivos/archivo-limpieza.service';
 import { basename } from 'path';
 import { BitacoraAcademica } from '../entities/bitacora-academica.entity';
 import { exigirGrupoVigente, inscripcionVigente } from '../common/contexto-academico';
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Repository } from 'typeorm';
 import { validarContenidoArchivo } from '../common/validar-archivo';
@@ -17,7 +24,13 @@ import { Inscripcion } from '../entities/inscripcion.entity';
 import { AlumnosService } from '../alumnos/alumnos.service';
 import { DocentesService } from '../docentes/docentes.service';
 import { JwtUser } from '../common/current-user.decorator';
-import { ActualizarActividadDto, CalificarEntregaDto, ConsultarClaseDto, CrearActividadDto, EntregarDto } from './actividades.dto';
+import {
+  ActualizarActividadDto,
+  CalificarEntregaDto,
+  ConsultarClaseDto,
+  CrearActividadDto,
+  EntregarDto,
+} from './actividades.dto';
 import { ScopeService } from '../planteles/scope.service';
 import { uploadsPath } from '../common/uploads-path';
 
@@ -70,48 +83,116 @@ export class ActividadesService {
     const inscripcion = await this.inscripciones.findOne({
       where: { ...inscripcionVigente, alumnoId: alumno.id, grupoId: gm.grupoId },
     });
-    if (!inscripcion && !await recursaClase(this.dataSource.manager, user.sub, gm.id)) throw new ForbiddenException('El alumno no está inscrito en esta clase');
+    if (!inscripcion && !(await recursaClase(this.dataSource.manager, user.sub, gm.id)))
+      throw new ForbiddenException('El alumno no está inscrito en esta clase');
     return { alumno, gm };
   }
 
   async detalleClase(id: number, user: JwtUser) {
     const gm = await this.validarPropiedad(id, user);
-    return { id: gm.id, grupo: { id: gm.grupo.id, nombre: gm.grupo.nombre, ciclo: { id: gm.grupo.cicloId, clave: gm.grupo.ciclo.clave } }, materia: { id: gm.materiaId, clave: gm.materia.clave, nombre: gm.materia.nombre } };
+    return {
+      id: gm.id,
+      regimenEvaluacion: gm.regimenEvaluacion, escalaMaxima: escalaDe(gm),
+      grupo: { id: gm.grupo.id, nombre: gm.grupo.nombre, ciclo: { id: gm.grupo.cicloId, clave: gm.grupo.ciclo.clave } },
+      materia: { id: gm.materiaId, clave: gm.materia.clave, nombre: gm.materia.nombre },
+    };
   }
   async detalleActividad(id: number, user: JwtUser) {
-    const actividad = await this.obtener(id); await this.validarPropiedad(actividad.grupoMateriaId, user);
-    return { id: actividad.id, grupoMateriaId: actividad.grupoMateriaId, titulo: actividad.titulo, descripcion: actividad.descripcion, tipo: actividad.tipo, parcial: actividad.parcial, ponderacion: actividad.ponderacion, fechaEntrega: actividad.fechaEntrega, activo: actividad.activo };
+    const actividad = await this.obtener(id);
+    await this.validarPropiedad(actividad.grupoMateriaId, user);
+    return {
+      id: actividad.id,
+      grupoMateriaId: actividad.grupoMateriaId,
+      escalaMaxima: escalaDe(actividad.grupoMateria),
+      titulo: actividad.titulo,
+      descripcion: actividad.descripcion,
+      tipo: actividad.tipo,
+      parcial: actividad.parcial,
+      ponderacion: actividad.ponderacion,
+      fechaEntrega: actividad.fechaEntrega,
+      activo: actividad.activo,
+    };
   }
   async detalleMaterial(id: number, user: JwtUser) {
-    const material = await this.materiales.findOneBy({ id }); if (!material) throw new NotFoundException('Material no encontrado');
-    await this.validarPropiedad(material.grupoMateriaId, user); return material;
+    const material = await this.materiales.findOneBy({ id });
+    if (!material) throw new NotFoundException('Material no encontrado');
+    await this.validarPropiedad(material.grupoMateriaId, user);
+    return material;
   }
   async detalleEntrega(id: number, user: JwtUser) {
     const entrega = await this.entregas.findOne({ where: { id }, relations: { actividad: true } });
     if (!entrega) throw new NotFoundException('Entrega no encontrada');
-    await this.validarPropiedad(entrega.actividad.grupoMateriaId, user); return this.proyectarEntrega(entrega);
+    await this.validarPropiedad(entrega.actividad.grupoMateriaId, user);
+    return this.proyectarEntrega(entrega, entrega.actividad.grupoMateria);
   }
-  private proyectarEntrega(e: Entrega) {
-    return { id: e.id, actividadId: e.actividadId, estatus: e.estatus, calificacion: e.calificacion, comentarioAlumno: e.comentarioAlumno, comentarioDocente: e.comentarioDocente, fechaEntregado: e.fechaEntregado, archivoRuta: e.archivoRuta ? 'privado' : null, alumno: { id: e.alumno.id, matricula: e.alumno.matricula, usuario: { nombre: e.alumno.usuario.nombre, apellidoPaterno: e.alumno.usuario.apellidoPaterno } } };
+  private notaEntrega(e: Entrega, clase: ClaseEvaluacion) {
+    return { calificacion: e.calificacion === null ? null : notaEnEscala({ calificacion: e.calificacion, escalaMaxima: e.escalaMaxima }, clase),
+      escalaMaxima: escalaDe(clase), calificacionOriginal: e.calificacion, escalaOriginal: e.escalaMaxima ?? 100 };
+  }
+  private proyectarEntrega(e: Entrega, clase: ClaseEvaluacion = {}) {
+    return {
+      id: e.id,
+      actividadId: e.actividadId,
+      estatus: e.estatus,
+      ...this.notaEntrega(e, clase),
+      comentarioAlumno: e.comentarioAlumno,
+      respuestaTexto: e.respuestaTexto ?? null,
+      comentarioDocente: e.comentarioDocente,
+      fechaEntregado: e.fechaEntregado,
+      archivoRuta: e.archivoRuta ? 'privado' : null,
+      alumno: {
+        id: e.alumno.id,
+        matricula: e.alumno.matricula,
+        usuario: { nombre: e.alumno.usuario.nombre, apellidoPaterno: e.alumno.usuario.apellidoPaterno },
+      },
+    };
   }
   async consultarActividades(id: number, q: ConsultarClaseDto, user: JwtUser) {
     await this.validarPropiedad(id, user);
-    const qb = this.actividades.createQueryBuilder('a').where('a.grupoMateriaId = :id', { id }).andWhere('a.activo = :activo', { activo: true });
-    if (q.buscar?.trim()) qb.andWhere("a.titulo LIKE :buscar ESCAPE '!'", { buscar: '%' + q.buscar.trim().replace(/[!%_[]/g, '!$&') + '%' });
-    const [datos, total] = await qb.orderBy('a.id', 'DESC').skip((q.pagina - 1) * q.porPagina).take(q.porPagina).getManyAndCount(); return { datos, total, pagina: q.pagina, porPagina: q.porPagina };
+    const qb = this.actividades
+      .createQueryBuilder('a')
+      .where('a.grupoMateriaId = :id', { id })
+      .andWhere('a.activo = :activo', { activo: true });
+    if (q.buscar?.trim())
+      qb.andWhere("a.titulo LIKE :buscar ESCAPE '!'", {
+        buscar: '%' + q.buscar.trim().replace(/[!%_[]/g, '!$&') + '%',
+      });
+    const [datos, total] = await qb
+      .orderBy('a.id', 'DESC')
+      .skip((q.pagina - 1) * q.porPagina)
+      .take(q.porPagina)
+      .getManyAndCount();
+    return { datos, total, pagina: q.pagina, porPagina: q.porPagina };
   }
   async consultarMateriales(id: number, q: ConsultarClaseDto, user: JwtUser) {
     const gm = await this.grupoMaterias.findOneBy({ id });
-    const gestiona = user.roles.some(r => ['SUPERADMIN', 'ADMINISTRATIVO'].includes(r)) || (user.roles.includes('MAESTRO') && gm?.docente?.usuarioId === user.sub);
-    if (!gestiona && user.roles.includes('ALUMNO')) await this.validarAlumnoEnGrupoMateria(id, user); else await this.validarPropiedad(id, user);
+    const gestiona =
+      user.roles.some((r) => ['SUPERADMIN', 'ADMINISTRATIVO'].includes(r)) ||
+      (user.roles.includes('MAESTRO') && gm?.docente?.usuarioId === user.sub);
+    if (!gestiona && user.roles.includes('ALUMNO')) await this.validarAlumnoEnGrupoMateria(id, user);
+    else await this.validarPropiedad(id, user);
     const qb = this.materiales.createQueryBuilder('m').where('m.grupoMateriaId = :id', { id });
-    if (q.buscar?.trim()) qb.andWhere("m.titulo LIKE :buscar ESCAPE '!'", { buscar: '%' + q.buscar.trim().replace(/[!%_[]/g, '!$&') + '%' });
-    const [datos, total] = await qb.orderBy('m.id', 'DESC').skip((q.pagina - 1) * q.porPagina).take(q.porPagina).getManyAndCount(); return { datos, total, pagina: q.pagina, porPagina: q.porPagina };
+    if (q.buscar?.trim())
+      qb.andWhere("m.titulo LIKE :buscar ESCAPE '!'", {
+        buscar: '%' + q.buscar.trim().replace(/[!%_[]/g, '!$&') + '%',
+      });
+    const [datos, total] = await qb
+      .orderBy('m.id', 'DESC')
+      .skip((q.pagina - 1) * q.porPagina)
+      .take(q.porPagina)
+      .getManyAndCount();
+    return { datos, total, pagina: q.pagina, porPagina: q.porPagina };
   }
   async consultarEntregas(id: number, q: ConsultarClaseDto, user: JwtUser) {
-    const actividad = await this.obtener(id); await this.validarPropiedad(actividad.grupoMateriaId, user);
-    const [datos, total] = await this.entregas.findAndCount({ where: { actividadId: id }, order: { id: 'ASC' }, skip: (q.pagina - 1) * q.porPagina, take: q.porPagina });
-    return { datos: datos.map(e => this.proyectarEntrega(e)), total, pagina: q.pagina, porPagina: q.porPagina };
+    const actividad = await this.obtener(id);
+    await this.validarPropiedad(actividad.grupoMateriaId, user);
+    const [datos, total] = await this.entregas.findAndCount({
+      where: { actividadId: id },
+      order: { id: 'ASC' },
+      skip: (q.pagina - 1) * q.porPagina,
+      take: q.porPagina,
+    });
+    return { datos: datos.map((e) => this.proyectarEntrega(e, actividad.grupoMateria)), total, pagina: q.pagina, porPagina: q.porPagina };
   }
 
   async listarPorGrupoMateria(grupoMateriaId: number, user: JwtUser) {
@@ -124,7 +205,8 @@ export class ActividadesService {
   }
 
   async crear(dto: CrearActividadDto, user: JwtUser) {
-    await this.validarPropiedad(dto.grupoMateriaId, user);
+    const clase = await this.validarPropiedad(dto.grupoMateriaId, user);
+    if (dto.parcial !== undefined && ![0,...parcialesDe(clase)].includes(dto.parcial)) throw new BadRequestException('Parcial no válido para la clase');
     return this.actividades.save(
       this.actividades.create({
         grupoMateriaId: dto.grupoMateriaId,
@@ -140,7 +222,8 @@ export class ActividadesService {
 
   async actualizar(id: number, dto: ActualizarActividadDto, user: JwtUser) {
     const referencia = await this.obtener(id);
-    await this.validarPropiedad(referencia.grupoMateriaId, user);
+    const clase = await this.validarPropiedad(referencia.grupoMateriaId, user);
+    if (dto.parcial !== undefined && ![0,...parcialesDe(clase)].includes(dto.parcial)) throw new BadRequestException('Parcial no válido para la clase');
     return this.dataSource.transaction(async (manager) => {
       const actividades = manager.getRepository(Actividad);
       const actividad = await actividades.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
@@ -151,7 +234,12 @@ export class ActividadesService {
         tipo: dto.tipo ?? actividad.tipo,
         parcial: dto.parcial ?? actividad.parcial,
         ponderacion: dto.ponderacion ?? actividad.ponderacion,
-        fechaEntrega: dto.fechaEntrega === undefined ? actividad.fechaEntrega : dto.fechaEntrega ? new Date(dto.fechaEntrega) : null,
+        fechaEntrega:
+          dto.fechaEntrega === undefined
+            ? actividad.fechaEntrega
+            : dto.fechaEntrega
+              ? new Date(dto.fechaEntrega)
+              : null,
       });
       return actividades.save(actividad);
     });
@@ -182,18 +270,30 @@ export class ActividadesService {
       if (archivo) await validarContenidoArchivo(archivo);
       const resultado = await this.dataSource.transaction(async (manager) => {
         const actividad = await manager.getRepository(Actividad).findOne({
-          where: { id: actividadId }, lock: { mode: 'pessimistic_write' },
+          where: { id: actividadId },
+          lock: { mode: 'pessimistic_write' },
         });
         if (!actividad) throw new NotFoundException('Actividad no encontrada');
         if (!actividad.activo) throw new ConflictException('La actividad ya no admite entregas');
         const { alumno } = await this.validarAlumnoEnGrupoMateria(actividad.grupoMateriaId, user);
         const entregas = manager.getRepository(Entrega);
         const previa = await entregas.findOne({
-          where: { actividadId, alumnoId: alumno.id }, lock: { mode: 'pessimistic_write' },
+          where: { actividadId, alumnoId: alumno.id },
+          lock: { mode: 'pessimistic_write' },
         });
         const entrega = previa ?? entregas.create({ actividadId, alumnoId: alumno.id });
         if (previa?.estatus === 'CALIFICADA') throw new ConflictException('Una entrega calificada no admite reentrega');
-        entrega.comentarioAlumno = dto.comentario === undefined ? entrega.comentarioAlumno ?? null : dto.comentario;
+        if (dto.respuestaTexto !== undefined) {
+          if (dto.respuestaTexto !== null && typeof dto.respuestaTexto !== 'string')
+            throw new BadRequestException('La respuesta debe ser texto');
+          const texto = dto.respuestaTexto?.trim() ?? '';
+          if (texto.length > 3000) throw new BadRequestException('La respuesta admite hasta 3000 caracteres');
+          entrega.respuestaTexto = texto || null;
+        }
+        if (!archivo && !entrega.archivoRuta && !entrega.respuestaTexto?.trim()) {
+          throw new BadRequestException('Adjunta un archivo o escribe una respuesta de hasta 3000 caracteres');
+        }
+        entrega.comentarioAlumno = dto.comentario === undefined ? (entrega.comentarioAlumno ?? null) : dto.comentario;
         if (archivo) {
           reemplazo.anterior = previa?.archivoRuta ?? null;
           if (reemplazo.anterior) await programarLimpieza(manager, reemplazo.anterior);
@@ -207,7 +307,8 @@ export class ActividadesService {
       });
       if (reemplazo.anterior && archivo) {
         const nombre = reemplazo.anterior.replace(/^\/uploads\//, '');
-        if (nombre && !nombre.includes('/') && !nombre.includes('\\')) await unlink(resolve(uploadsPath(), nombre)).catch((): undefined => undefined);
+        if (nombre && !nombre.includes('/') && !nombre.includes('\\'))
+          await unlink(resolve(uploadsPath(), nombre)).catch((): undefined => undefined);
       }
       return resultado;
     } catch (error) {
@@ -219,21 +320,31 @@ export class ActividadesService {
   async entregasDeActividad(actividadId: number, user: JwtUser) {
     const actividad = await this.obtener(actividadId);
     await this.validarPropiedad(actividad.grupoMateriaId, user);
-    return this.entregas.find({ where: { actividadId }, order: { fechaEntregado: 'ASC' } });
+    const filas = await this.entregas.find({ where: { actividadId }, order: { fechaEntregado: 'ASC' } });
+    return filas.map(e=>({...e,...this.notaEntrega(e, actividad.grupoMateria)}));
   }
 
   async calificarEntrega(entregaId: number, dto: CalificarEntregaDto, user: JwtUser) {
     const entrega = await this.entregas.findOne({ where: { id: entregaId }, relations: { actividad: true } });
     if (!entrega) throw new NotFoundException('Entrega no encontrada');
-    await this.validarPropiedad(entrega.actividad.grupoMateriaId, user);
+    const clase = await this.validarPropiedad(entrega.actividad.grupoMateriaId, user);
+    const escala = escalaDe(clase);
+    if ((esRegimenNuevo(clase) && dto.escalaMaxima !== 10) || (dto.escalaMaxima !== undefined && dto.escalaMaxima !== escala)) throw new ConflictException(`Actualiza el cliente: esta entrega se califica en escala 0 a ${escala}`);
+    if (!esRegimenNuevo(clase) && Math.abs(dto.calificacion * 100 - Math.round(dto.calificacion * 100)) > 1e-7) throw new BadRequestException('La entrega histórica admite hasta dos decimales');
+    if (dto.calificacion < 0 || dto.calificacion > escala) throw new BadRequestException(`Calificación entre 0 y ${escala}`);
     return this.dataSource.transaction(async (manager) => {
       const entregas = manager.getRepository(Entrega);
       const actual = await entregas.findOne({ where: { id: entregaId }, lock: { mode: 'pessimistic_write' } });
       if (!actual) throw new NotFoundException('Entrega no encontrada');
-      actual.calificacion = dto.calificacion;
+      const anterior = actual.calificacion, escalaAnterior = actual.escalaMaxima ?? 100;
+      if (actual.calificacion === null || notaEnEscala({calificacion:actual.calificacion,escalaMaxima:actual.escalaMaxima},clase) !== dto.calificacion) {
+        actual.calificacion = dto.calificacion; actual.escalaMaxima = escala;
+      }
       actual.comentarioDocente = dto.comentario === undefined ? actual.comentarioDocente : dto.comentario;
       actual.estatus = 'CALIFICADA';
-      return entregas.save(actual);
+      const guardada = await entregas.save(actual);
+      await manager.getRepository(BitacoraAcademica).insert({usuarioId:user.sub,plantelId:clase.grupo.plantelId,accion:'ENTREGA_CALIFICACION',entidadId:actual.id,detalle:JSON.stringify({anterior,escalaAnterior,nueva:guardada.calificacion,escalaNueva:guardada.escalaMaxima??100}),fecha:new Date()});
+      return {...guardada,...this.notaEntrega(guardada, clase)};
     });
   }
 
@@ -241,14 +352,32 @@ export class ActividadesService {
     const alumno = await this.alumnos.obtenerPorUsuario(user.sub);
     const inscripciones = await this.inscripciones.find({ where: { ...inscripcionVigente, alumnoId: alumno.id } });
     const recursadas = await clasesRecursadas(this.dataSource.manager, alumno.id);
-    if (!inscripciones.length && !recursadas.length) return { datos: [], total: 0, pagina: q.pagina, porPagina: q.porPagina };
-    const gms = await this.grupoMaterias.find({ where: [...(inscripciones.length ? [{ grupoId: In(inscripciones.map(i => i.grupoId)) }] : []), ...(recursadas.length ? [{ id: In(recursadas) }] : [])] });
-    const ids = gms.filter(g => g.grupo.activo).map(g => g.id);
+    if (!inscripciones.length && !recursadas.length)
+      return { datos: [], total: 0, pagina: q.pagina, porPagina: q.porPagina };
+    const gms = await this.grupoMaterias.find({
+      where: [
+        ...(inscripciones.length ? [{ grupoId: In(inscripciones.map((i) => i.grupoId)) }] : []),
+        ...(recursadas.length ? [{ id: In(recursadas) }] : []),
+      ],
+    });
+    const ids = gms.filter((g) => g.grupo.activo).map((g) => g.id);
     if (!ids.length) return { datos: [], total: 0, pagina: q.pagina, porPagina: q.porPagina };
-    const [datos, total] = await this.actividades.findAndCount({ where: { grupoMateriaId: In(ids), activo: true }, order: { fechaEntrega: 'ASC', id: 'ASC' }, skip: (q.pagina - 1) * q.porPagina, take: q.porPagina });
-    const entregas = datos.length ? await this.entregas.find({ where: { alumnoId: alumno.id, actividadId: In(datos.map(a => a.id)) } }) : [];
-    const porActividad = new Map(entregas.map(e => [e.actividadId, e]));
-    return { datos: datos.map(a => ({ ...a, entrega: porActividad.get(a.id) ?? null })), total, pagina: q.pagina, porPagina: q.porPagina };
+    const [datos, total] = await this.actividades.findAndCount({
+      where: { grupoMateriaId: In(ids), activo: true },
+      order: { fechaEntrega: 'ASC', id: 'ASC' },
+      skip: (q.pagina - 1) * q.porPagina,
+      take: q.porPagina,
+    });
+    const entregas = datos.length
+      ? await this.entregas.find({ where: { alumnoId: alumno.id, actividadId: In(datos.map((a) => a.id)) } })
+      : [];
+    const porActividad = new Map(entregas.map((e) => [e.actividadId, e]));
+    return {
+      datos: datos.map((a) => ({ ...a, entrega: porActividad.has(a.id) ? {...porActividad.get(a.id)!,...this.notaEntrega(porActividad.get(a.id)!, a.grupoMateria)} : null })),
+      total,
+      pagina: q.pagina,
+      porPagina: q.porPagina,
+    };
   }
 
   /** Tareas del alumno autenticado con el estado de su entrega. */
@@ -259,10 +388,12 @@ export class ActividadesService {
     });
     const recursadas = await clasesRecursadas(this.dataSource.manager, alumno.id);
     if (!inscripciones.length && !recursadas.length) return [];
-    const gms = await this.grupoMaterias.find({ where: [
-      ...(inscripciones.length ? [{ grupoId: In(inscripciones.map(i=>i.grupoId)) }] : []),
-      ...(recursadas.length ? [{ id: In(recursadas) }] : []),
-    ] });
+    const gms = await this.grupoMaterias.find({
+      where: [
+        ...(inscripciones.length ? [{ grupoId: In(inscripciones.map((i) => i.grupoId)) }] : []),
+        ...(recursadas.length ? [{ id: In(recursadas) }] : []),
+      ],
+    });
     const gruposActivos = gms.filter((gm) => gm.grupo.activo);
     if (gruposActivos.length === 0) return [];
 
@@ -276,7 +407,7 @@ export class ActividadesService {
       where: { alumnoId: alumno.id, actividadId: In(actividades.map((a) => a.id)) },
     });
     const porActividad = new Map(entregas.map((e) => [e.actividadId, e]));
-    return actividades.map((a) => ({ ...a, entrega: porActividad.get(a.id) ?? null }));
+    return actividades.map((a) => ({ ...a, entrega: porActividad.has(a.id) ? {...porActividad.get(a.id)!,...this.notaEntrega(porActividad.get(a.id)!, a.grupoMateria)} : null }));
   }
 
   // ---- Materiales ----
@@ -315,13 +446,25 @@ export class ActividadesService {
     if (!material) throw new NotFoundException('Material no encontrado');
     const gm = await this.validarPropiedad(material.grupoMateriaId, user);
     await this.dataSource.transaction(async (manager) => {
-      const actual = await manager.getRepository(Material).findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
+      const actual = await manager
+        .getRepository(Material)
+        .findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!actual) throw new NotFoundException('Material ya retirado');
       await programarLimpieza(manager, actual.archivoRuta);
       await manager.getRepository(Material).delete(id);
-      await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId: gm.grupo.plantelId, accion: 'MATERIAL_RETIRADO', entidadId: id, detalle: `grupoMateriaId=${gm.id}`, fecha: new Date() });
+      await manager
+        .getRepository(BitacoraAcademica)
+        .insert({
+          usuarioId: user.sub,
+          plantelId: gm.grupo.plantelId,
+          accion: 'MATERIAL_RETIRADO',
+          entidadId: id,
+          detalle: `grupoMateriaId=${gm.id}`,
+          fecha: new Date(),
+        });
     });
-    if (/^\/uploads\/[^/\\]+$/.test(material.archivoRuta)) await unlink(resolve(uploadsPath(), basename(material.archivoRuta))).catch(() => undefined);
+    if (/^\/uploads\/[^/\\]+$/.test(material.archivoRuta))
+      await unlink(resolve(uploadsPath(), basename(material.archivoRuta))).catch(() => undefined);
     return { ok: true };
   }
 

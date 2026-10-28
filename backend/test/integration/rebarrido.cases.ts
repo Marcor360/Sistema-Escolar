@@ -51,7 +51,7 @@ export function registrarRebarrido(ctx: ContextoIntegracion) {
     const actividad = await ctx.api('/actividades',{ method: 'POST',token,body: { grupoMateriaId: gm.id,titulo: 'Actividad nullable',descripcion: 'Texto previo' } }); expect(actividad.response.status).toBe(201);
     expect((await ctx.api(`/actividades/${actividad.data.id}`,{ method: 'PATCH',token,body: { descripcion: null } })).data.descripcion).toBeNull();
     const estudiantil = await ctx.emitirToken(`rnota_${ctx.sufijo}@example.invalid`);
-    const entrega = await ctx.api(`/actividades/${actividad.data.id}/entrega`,{ method: 'POST',token: estudiantil,body: { comentario: 'Anterior' } }); expect(entrega.response.status).toBe(201);
+    const entrega = await ctx.api(`/actividades/${actividad.data.id}/entrega`,{ method: 'POST',token: estudiantil,body: { comentario: 'Anterior', respuestaTexto: 'Respuesta académica de prueba' } }); expect(entrega.response.status).toBe(201);
     expect((await ctx.api(`/actividades/${actividad.data.id}/entrega`,{ method: 'POST',token: estudiantil,body: { comentario: null } })).data.comentarioAlumno).toBeNull();
     const calificar = `/entregas/${entrega.data.id}/calificar`;
     expect((await ctx.api(calificar,{ method: 'PATCH',token,body: { calificacion: 9.999 } })).response.status).toBe(400);

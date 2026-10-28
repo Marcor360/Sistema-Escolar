@@ -1,5 +1,7 @@
 # Contrato condicionado de calificaciones y actas — versión objetivo 1.28.0
 
+> Actualización 28/oct/2026: este documento conserva el diseño/corte histórico. La institución confirmó reglas nuevas y la candidata 1.28.0 las implementa según [contrato vigente](EVALUACIONES_1.28.0.md). Asistencias ya implementadas desde 1.27.53. No usar los antiguos bloqueos de aprobación general como estado actual; el redondeo y formatos oficiales siguen pendientes.
+
 **Estado:** propuesta de especificación, sin reglamento institucional aprobado. **No liberar ni activar cambios funcionales.** El issue #139 mantiene pendientes fórmula, escala, periodos, asistencias, cierres, firmas y actas. Esta entrega documental se versiona como 1.27.12. La versión objetivo 1.28.0 corresponde a una implementación futura aprobada; no representa una norma vigente.
 
 El [anexo técnico de transición](IMPLEMENTACION_EVALUACIONES_1.28.0.md), incorporado en la entrega documental 1.27.20, desarrolla una propuesta de cuatro parciales, NP y asistencia informativa. Sigue pendiente de aprobación institucional; no sustituye la escala 0–100, P1–P3 ni Final vigentes.

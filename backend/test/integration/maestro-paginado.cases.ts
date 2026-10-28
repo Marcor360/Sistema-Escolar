@@ -7,7 +7,7 @@ export function registrarMaestroPaginado(ctx: ContextoIntegracion) {
     const root = await token(ctx.superadminId), admin = await token(ctx.adminId), finanzas = await token(ctx.finanzasId);
     const base = await ctx.dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: ctx.grupoMateriaIdMaestro }), maestro = await token(base.docente!.usuarioId);
     const grupo = await ctx.api('/academico/grupos', { method: 'POST', token: root, body: { nombre: 'UXCL-' + ctx.sufijo, plantelId: ctx.plantelId, cicloId: base.grupo.cicloId } }); expect(grupo.response.status).toBe(201);
-    const clase = await ctx.dataSource.getRepository(GrupoMateria).save({ grupoId: grupo.data.id, materiaId: base.materiaId, docenteId: base.docenteId });
+    const clase = await ctx.dataSource.getRepository(GrupoMateria).save({ regimenEvaluacion: 'LEGADO_100', grupoId: grupo.data.id, materiaId: base.materiaId, docenteId: base.docenteId });
     const actividades = await ctx.dataSource.getRepository(Actividad).save(Array.from({ length: 115 }, (_, i) => ({ grupoMateriaId: clase.id, titulo: 'Actividad UX ' + i, tipo: 'TAREA' as const, parcial: 1, ponderacion: 0, fechaEntrega: null, activo: true })));
     await ctx.dataSource.getRepository(Material).save(Array.from({ length: 12 }, (_, i) => ({ grupoMateriaId: clase.id, titulo: 'Material UX ' + i, archivoNombre: 'fixture.txt', archivoRuta: '/uploads/fixture-ux-' + ctx.sufijo + '-' + i + '.txt', mime: 'text/plain', tamanoKb: 1 })));
     let alumnoPropio = 0, usuarioPropio = 0;
@@ -39,7 +39,7 @@ export function registrarMaestroPaginado(ctx: ContextoIntegracion) {
     expect((await ctx.api(ruta + '/actividades', { token: maestro })).data).toHaveLength(115);
     expect((await ctx.api(ruta + '/materiales', { token: alumno })).data).toHaveLength(12);
     const ajeno = await ctx.api('/academico/grupos', { method: 'POST', token: root, body: { nombre: 'UXCL-B-' + ctx.sufijo, plantelId: ctx.otroPlantelId, cicloId: base.grupo.cicloId } });
-    const otra = await ctx.dataSource.getRepository(GrupoMateria).save({ grupoId: ajeno.data.id, materiaId: base.materiaId, docenteId: ctx.docenteFueraDeAlcanceId });
+    const otra = await ctx.dataSource.getRepository(GrupoMateria).save({ regimenEvaluacion: 'LEGADO_100', grupoId: ajeno.data.id, materiaId: base.materiaId, docenteId: ctx.docenteFueraDeAlcanceId });
     for (const t of [admin, maestro, alumno]) expect((await ctx.api('/grupo-materias/' + otra.id + '/materiales/listado', { token: t })).response.status).toBe(403);
     expect(await ctx.dataSource.getRepository(Alumno).countBy({ id: alumnoPropio })).toBe(1);
   });

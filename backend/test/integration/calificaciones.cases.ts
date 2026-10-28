@@ -49,6 +49,8 @@ it('inscribe a un alumno, captura una calificaci??n y la muestra en su portal', 
     });
     expect(asignacion.response.status).toBe(201);
     const grupoMateriaId = asignacion.data.id;
+    // Fixture de compatibilidad histórica; las nuevas clases se prueban en evaluaciones.cases.
+    await ctx.dataSource.getRepository(GrupoMateria).update(grupoMateriaId, { regimenEvaluacion: 'LEGADO_100' });
     ctx.grupoMateriaIdMaestro = grupoMateriaId;
 
     const inscripcion = await ctx.api(`/academico/grupos/${grupoId}/alumnos`, {
@@ -90,7 +92,7 @@ it('conserva notas de entregas calificadas y bloquea envíos a actividades desac
     expect(actividad.response.status).toBe(201);
 
     const primera = await ctx.api(`/actividades/${actividad.data.id}/entrega`, {
-      method: 'POST', token: tokenAlumno, body: { comentario: 'Primera versión' },
+      method: 'POST', token: tokenAlumno, body: { comentario: 'Primera versión', respuestaTexto: 'Respuesta académica de prueba' },
     });
     expect(primera.response.status).toBe(201);
     const calificada = await ctx.api(`/entregas/${primera.data.id}/calificar`, {
@@ -155,7 +157,7 @@ it('separa notas de ciclos, calcula P1-P3 sin Final y exporta inscritos sin nota
     const actual = await ctx.dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: ctx.grupoMateriaIdMaestro });
     const pasado = await ctx.dataSource.getRepository(CicloEscolar).findOneOrFail({ where: { activo: false } });
     const grupoPasado = await ctx.dataSource.getRepository(Grupo).save(ctx.dataSource.getRepository(Grupo).create({ cicloId: pasado.id, plantelId: ctx.plantelId, nombre: `H${ctx.sufijo}`, activo: false }));
-    const gmPasado = await ctx.dataSource.getRepository(GrupoMateria).save(ctx.dataSource.getRepository(GrupoMateria).create({ grupoId: grupoPasado.id, materiaId: actual.materiaId }));
+    const gmPasado = await ctx.dataSource.getRepository(GrupoMateria).save(ctx.dataSource.getRepository(GrupoMateria).create({ regimenEvaluacion: 'LEGADO_100', grupoId: grupoPasado.id, materiaId: actual.materiaId }));
     await ctx.dataSource.getRepository(Inscripcion).save(ctx.dataSource.getRepository(Inscripcion).create({ alumnoId: ctx.alumnoId, grupoId: grupoPasado.id, estatus: 'BAJA' }));
     await ctx.dataSource.getRepository(Calificacion).save(ctx.dataSource.getRepository(Calificacion).create({ alumnoId: ctx.alumnoId, grupoMateriaId: gmPasado.id, parcial: 1, calificacion: 17, capturadaPorId: ctx.adminId }));
     for (const [parcial, calificacion] of [[1, 60], [2, 90], [3, 90], [0, 100]]) expect((await ctx.api('/calificaciones/captura', { method: 'POST', token,
@@ -194,7 +196,7 @@ it('separa notas de ciclos, calcula P1-P3 sin Final y exporta inscritos sin nota
     expect(descarga.headers.get('content-type')).toContain('application/json');
     expect(descarga.headers.get('cache-control')).toContain('no-store');
     const pendiente = await descarga.json();
-    expect(pendiente.message).toContain('P1–P3');
+    expect(pendiente.message).toContain('evaluaciones requeridas');
     // Ni una boleta solicitada con ID explícito permite cambiar de expediente.
     expect((await ctx.api(`/reportes/boleta/${sinNota.data.id}`, { token: movil })).response.status).toBe(403);
   });
@@ -221,7 +223,7 @@ it('promueve alumnos seleccionados a preparación sin copiar notas ni habilitar 
       const token = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.adminId })).email);
       const base = await ctx.dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: ctx.grupoMateriaIdMaestro });
       const grupo = await ctx.dataSource.getRepository(Grupo).save({ nombre: `CC-${ctx.sufijo}`,cicloId: base.grupo.cicloId,plantelId: ctx.plantelId,activo: true });
-      const gm = await ctx.dataSource.getRepository(GrupoMateria).save({ grupoId: grupo.id,materiaId: base.materiaId,docenteId: null });
+      const gm = await ctx.dataSource.getRepository(GrupoMateria).save({ regimenEvaluacion: 'LEGADO_100', grupoId: grupo.id,materiaId: base.materiaId,docenteId: null });
       const alta = await ctx.api('/alumnos',{ method: 'POST',token,body: { email: `cc_${ctx.sufijo}@example.invalid`,nombre: 'Carrera',apellidoPaterno: 'Calificaciones',curp: 'GODE561231HDFRRN09',matricula: `CC${ctx.sufijo}`,plantelId: ctx.plantelId } }); expect(alta.response.status).toBe(201);
       expect((await ctx.api(`/academico/grupos/${grupo.id}/alumnos`,{ method: 'POST',token,body: { alumnoId: alta.data.id } })).response.status).toBe(201);
       const body = { grupoMateriaId: gm.id,parcial: 1,items: [{ alumnoId: alta.data.id,calificacion: 80 }] };
@@ -241,7 +243,7 @@ export function registrarCapturaSinCambios(ctx: ContextoIntegracion) {
     const admin = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.adminId })).email);
     const base = await ctx.dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: ctx.grupoMateriaIdMaestro });
     const grupo = await ctx.dataSource.getRepository(Grupo).save({ nombre: `NO-${ctx.sufijo}`,cicloId: base.grupo.cicloId,plantelId: ctx.plantelId,activo: true });
-    const clase = await ctx.dataSource.getRepository(GrupoMateria).save({ grupoId: grupo.id,materiaId: base.materiaId,docenteId: null });
+    const clase = await ctx.dataSource.getRepository(GrupoMateria).save({ regimenEvaluacion: 'LEGADO_100', grupoId: grupo.id,materiaId: base.materiaId,docenteId: null });
     const alta = await ctx.api('/alumnos',{ method: 'POST',token: root,body: { email: `no_${ctx.sufijo}@example.invalid`,nombre: 'Nota',apellidoPaterno: 'Operativa',matricula: `NO${ctx.sufijo}`,curp: 'GODE561231HDFRRN09',plantelId: ctx.plantelId } }); expect(alta.response.status).toBe(201);
     expect((await ctx.api(`/academico/grupos/${grupo.id}/alumnos`,{ method: 'POST',token: root,body: { alumnoId: alta.data.id } })).response.status).toBe(201);
     const body = { grupoMateriaId: clase.id,parcial: 1,items: [{ alumnoId: alta.data.id,calificacion: 80.25,observaciones: 'Primera captura' }] };
@@ -268,7 +270,7 @@ export function registrarCapturaSinCambios(ctx: ContextoIntegracion) {
     const carrera=await post('/academico/catalogos/carreras',{plantelId:ctx.plantelId,nivelId:nivel.id,clave:`${ctx.sufijo}EVAL2`,nombre:'Carrera de evaluación',versionPlan:'Plan vigente configurado'});
     const periodo=await post('/academico/catalogos/periodos',{plantelId:ctx.plantelId,carreraId:carrera.id,cicloId:base.grupo.cicloId,clave:'S1',nombre:'Primer semestre',tipo:'SEMESTRAL',numero:1});
     const contextual=await post('/academico/grupos',{plantelId:ctx.plantelId,cicloId:base.grupo.cicloId,nombre:`EC-${ctx.sufijo}`,nivelId:nivel.id,carreraId:carrera.id,periodoAcademicoId:periodo.id,turno:'VESPERTINO'});
-    const contextualClase=await ctx.dataSource.getRepository(GrupoMateria).save({grupoId:contextual.id,materiaId:base.materiaId,docenteId:null});
+    const contextualClase=await ctx.dataSource.getRepository(GrupoMateria).save({ regimenEvaluacion: 'LEGADO_100',grupoId:contextual.id,materiaId:base.materiaId,docenteId:null});
     const seleccion=await ctx.api('/academico/clases-seleccion?buscar=EC-'+ctx.sufijo,{token:admin});expect(seleccion.response.status).toBe(200);expect(seleccion.data.total).toBe(1);expect(seleccion.data.datos[0]).toMatchObject({id:contextualClase.id,grupo:{turno:'VESPERTINO',nivel:{id:nivel.id,nombre:'Nivel de evaluación'},carrera:{id:carrera.id,versionPlan:'Plan vigente configurado'},periodoAcademico:{id:periodo.id,nombre:'Primer semestre'}}});
 
 

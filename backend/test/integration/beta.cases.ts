@@ -121,7 +121,7 @@ export function registrarBeta(ctx: ContextoIntegracion) {
     });
     const gm = await ctx.dataSource
       .getRepository(GrupoMateria)
-      .save({ grupoId: grupo.id, materiaId: base.materiaId, docenteId: base.docenteId });
+      .save({ regimenEvaluacion:'LEGADO_100', grupoId: grupo.id, materiaId: base.materiaId, docenteId: base.docenteId });
     const alumnos: Alumno[] = [];
     for (let i = 0; i < 2; i++) {
       const alta = await ctx.api('/alumnos', {

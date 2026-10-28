@@ -1,6 +1,6 @@
 # Política de versiones por pull request
 
-**Corte: 26/oct/2026.** Esta entrega propone **1.27.56** sobre main **1.27.55** tras la integración de #203 y #204. Comprobar siempre la base remota antes de integrar. La versión objetivo 1.28.0 del reglamento sigue pendiente de aprobación y desarrollo.
+**Corte 28/oct/2026:** candidata 1.28.0 dirigida a main 1.27.58 (#207). Incluye 1.27.59 (#208), fusionada en una rama intermedia pero todavía fuera de main; el PR integra ambos alcances y el filtro de conservación por plantel. El reglamento fue confirmado por el solicitante; el redondeo automático sigue pendiente de aclarar.
 
 ## Numeración
 

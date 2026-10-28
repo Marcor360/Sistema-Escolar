@@ -10,7 +10,13 @@ import { Usuario } from '../entities/usuario.entity';
 import { esMaestroRestringido } from '../common/politica-acceso';
 import { BitacoraAcademica } from '../entities/bitacora-academica.entity';
 import { inscripcionVigente } from '../common/contexto-academico';
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Repository } from 'typeorm';
 import { Alumno } from '../entities/alumno.entity';
@@ -38,7 +44,8 @@ export class AlumnosService {
     const porPagina = query.porPagina || 10;
     const maestroPuro = user ? esMaestroRestringido(user) : false;
     const planteles = user && !maestroPuro ? await this.scope.resolverFiltro(user, query.plantelId) : null;
-    const qb = this.alumnos.createQueryBuilder('a')
+    const qb = this.alumnos
+      .createQueryBuilder('a')
       .leftJoinAndSelect('a.usuario', 'u')
       .leftJoinAndSelect('a.plantel', 'p');
     if (planteles !== null) qb.andWhere('a.plantel_id IN (:...planteles)', { planteles });
@@ -57,7 +64,8 @@ export class AlumnosService {
         buscar: `%${query.buscar.trim()}%`,
       });
     }
-    const [datos, total] = await qb.orderBy('a.id', 'DESC')
+    const [datos, total] = await qb
+      .orderBy('a.id', 'DESC')
       .skip((pagina - 1) * porPagina)
       .take(porPagina)
       .getManyAndCount();
@@ -75,7 +83,9 @@ export class AlumnosService {
         },
         plantel: a.plantel ? { id: a.plantel.id, nombre: a.plantel.nombre } : null,
       })),
-      total, pagina, porPagina,
+      total,
+      pagina,
+      porPagina,
     };
   }
 
@@ -85,7 +95,8 @@ export class AlumnosService {
     if (user) {
       const maestroPuro = esMaestroRestringido(user);
       if (maestroPuro) {
-        const permitido = await this.inscripciones.createQueryBuilder('i')
+        const permitido = await this.inscripciones
+          .createQueryBuilder('i')
           .where('i.alumno_id = :alumnoId', { alumnoId: id })
           .andWhere('i.estatus = :estatus', { estatus: 'ACTIVA' })
           .andWhere(
@@ -123,7 +134,13 @@ export class AlumnosService {
       tutorNombre: alumno.tutorNombre,
       tutorTelefono: alumno.tutorTelefono,
       direccion: alumno.direccion,
-      usuario: { ...publico.usuario, email: alumno.usuario.email, correoPersonal: alumno.usuario.correoPersonal, telefono: alumno.usuario.telefono, correoProveedor: alumno.usuario.correoProveedor },
+      usuario: {
+        ...publico.usuario,
+        email: alumno.usuario.email,
+        correoPersonal: alumno.usuario.correoPersonal,
+        telefono: alumno.usuario.telefono,
+        correoProveedor: alumno.usuario.correoProveedor,
+      },
     };
   }
 
@@ -137,7 +154,9 @@ export class AlumnosService {
     const alumno = await this.obtener(id, user);
     const inscripciones = await this.inscripciones.find({ where: { alumnoId: alumno.id }, order: { id: 'DESC' } });
     const permitidos = await this.scope.plantelesDe(user);
-    return inscripciones.filter((i) => permitidos === null || permitidos.includes(i.grupo.plantelId)).map((i) => this.proyectarHistorial(i));
+    return inscripciones
+      .filter((i) => permitidos === null || permitidos.includes(i.grupo.plantelId))
+      .map((i) => this.proyectarHistorial(i));
   }
 
   async historialPaginado(id: number, user: JwtUser, query: PaginacionDto) {
@@ -146,29 +165,48 @@ export class AlumnosService {
     if (permitidos !== null && permitidos.length === 0) {
       return { datos: [], total: 0, pagina: query.pagina, porPagina: query.porPagina };
     }
-    const qb = this.inscripciones.createQueryBuilder('i')
+    const qb = this.inscripciones
+      .createQueryBuilder('i')
       .innerJoinAndSelect('i.grupo', 'g')
       .innerJoinAndSelect('g.ciclo', 'c')
       .innerJoinAndSelect('g.plantel', 'p')
       .where('i.alumnoId = :alumnoId', { alumnoId: id });
     if (permitidos !== null) qb.andWhere('g.plantelId IN (:...planteles)', { planteles: permitidos });
-    const [inscripciones, total] = await qb.orderBy('i.id', 'DESC')
-      .skip((query.pagina - 1) * query.porPagina).take(query.porPagina).getManyAndCount();
+    const [inscripciones, total] = await qb
+      .orderBy('i.id', 'DESC')
+      .skip((query.pagina - 1) * query.porPagina)
+      .take(query.porPagina)
+      .getManyAndCount();
     const egreso = await this.dataSource.getRepository(EgresoAlumno).findOneBy({ alumnoId: id });
     return {
-      datos: inscripciones.map((i) => this.proyectarHistorial(i)), total, pagina: query.pagina, porPagina: query.porPagina,
-      egreso: egreso ? {
-        cicloId: egreso.cicloId, fechaEgreso: egreso.fechaEgreso,
-        archivarDesde: egreso.archivarDesde, estadoArchivo: egreso.estadoArchivo,
-      } : null,
+      datos: inscripciones.map((i) => this.proyectarHistorial(i)),
+      total,
+      pagina: query.pagina,
+      porPagina: query.porPagina,
+      egreso: egreso
+        ? {
+            cicloId: egreso.cicloId,
+            fechaEgreso: egreso.fechaEgreso,
+            fechaDocumental: egreso.fechaDocumental ?? null,
+            archivarDesde: egreso.archivarDesde,
+            estadoArchivo: egreso.estadoArchivo,
+          }
+        : null,
     };
   }
 
   private proyectarHistorial(i: Inscripcion) {
     return {
-      id: i.id, grupoId: i.grupoId, estatus: i.estatus, fechaInscripcion: i.fechaInscripcion,
-      grupo: { id: i.grupo.id, nombre: i.grupo.nombre, ciclo: i.grupo.ciclo,
-        plantel: { id: i.grupo.plantelId, nombre: i.grupo.plantel.nombre } },
+      id: i.id,
+      grupoId: i.grupoId,
+      estatus: i.estatus,
+      fechaInscripcion: i.fechaInscripcion,
+      grupo: {
+        id: i.grupo.id,
+        nombre: i.grupo.nombre,
+        ciclo: i.grupo.ciclo,
+        plantel: { id: i.grupo.plantelId, nombre: i.grupo.plantel.nombre },
+      },
     };
   }
 
@@ -197,7 +235,8 @@ export class AlumnosService {
   async editarMiPerfil(usuarioId: number, dto: EditarMiPerfilAlumnoDto) {
     await this.dataSource.transaction(async (manager) => {
       const alumno = await manager.getRepository(Alumno).findOne({
-        where: { usuarioId }, lock: { mode: 'pessimistic_write' },
+        where: { usuarioId },
+        lock: { mode: 'pessimistic_write' },
       });
       if (!alumno) throw new NotFoundException('El usuario no tiene expediente de alumno');
       if (alumno.estatus !== 'ACTIVO') throw new ForbiddenException('Tu expediente no permite cambios');
@@ -211,8 +250,11 @@ export class AlumnosService {
       if (dto.direccion !== undefined) alumno.direccion = dto.direccion;
       await manager.getRepository(Alumno).save(alumno);
       await manager.getRepository(BitacoraAcademica).insert({
-        usuarioId, plantelId: alumno.plantelId, accion: 'ALUMNO_ACTUALIZA_CONTACTO',
-        entidadId: alumno.id, detalle: 'Autogestión de información personal; sin datos sensibles en bitácora',
+        usuarioId,
+        plantelId: alumno.plantelId,
+        accion: 'ALUMNO_ACTUALIZA_CONTACTO',
+        entidadId: alumno.id,
+        detalle: 'Autogestión de información personal; sin datos sensibles en bitácora',
         fecha: new Date(),
       });
     });
@@ -227,34 +269,40 @@ export class AlumnosService {
     return this.dataSource.transaction(async (manager) => {
       const plantel = await manager.getRepository(Plantel).findOne({ where: { id: dto.plantelId, activo: true } });
       if (!plantel) throw new ConflictException('El plantel no está activo');
-      const usuario = await this.usuarios.crear({
-        email: dto.email,
-        password: randomBytes(32).toString('base64url'),
-        nombre: dto.nombre,
-        apellidoPaterno: dto.apellidoPaterno,
-        apellidoMaterno: dto.apellidoMaterno,
-        telefono: dto.telefono,
-        roles: ['ALUMNO'],
-        correoProveedor: dto.correoProveedor,
-      }, manager);
+      const usuario = await this.usuarios.crear(
+        {
+          email: dto.email,
+          password: randomBytes(32).toString('base64url'),
+          nombre: dto.nombre,
+          apellidoPaterno: dto.apellidoPaterno,
+          apellidoMaterno: dto.apellidoMaterno,
+          telefono: dto.telefono,
+          roles: ['ALUMNO'],
+          correoProveedor: dto.correoProveedor,
+        },
+        manager,
+      );
       await manager.getRepository(Usuario).update({ id: usuario.id }, { correoPersonal: dto.correoPersonal ?? null });
       await manager.getRepository(Usuario).update({ id: usuario.id }, { activacionPendiente: true });
       const alumnos = manager.getRepository(Alumno);
-      return alumnos.save(alumnos.create({
-        usuarioId: usuario.id,
-        plantelId: dto.plantelId,
-        matricula: dto.matricula,
-        curp: dto.curp,
-        fechaNacimiento: dto.fechaNacimiento ?? null,
-        tutorNombre: dto.tutorNombre ?? null,
-        tutorTelefono: dto.tutorTelefono ?? null,
-        direccion: dto.direccion ?? null,
-      }));
+      return alumnos.save(
+        alumnos.create({
+          usuarioId: usuario.id,
+          plantelId: dto.plantelId,
+          matricula: dto.matricula,
+          curp: dto.curp,
+          fechaNacimiento: dto.fechaNacimiento ?? null,
+          tutorNombre: dto.tutorNombre ?? null,
+          tutorTelefono: dto.tutorTelefono ?? null,
+          direccion: dto.direccion ?? null,
+        }),
+      );
     });
   }
 
   async actualizar(id: number, dto: ActualizarAlumnoDto, user?: JwtUser) {
-    if (dto.estatus !== undefined) throw new BadRequestException('Usa las acciones de baja o egreso para cambiar el estado');
+    if (dto.estatus !== undefined)
+      throw new BadRequestException('Usa las acciones de baja o egreso para cambiar el estado');
     if (dto.plantelId !== undefined) throw new BadRequestException('Usa la transferencia para cambiar de plantel');
     return this.dataSource.transaction(async (manager) => {
       const alumnos = manager.getRepository(Alumno);
@@ -264,14 +312,27 @@ export class AlumnosService {
         await this.scope.validarGestion(user, alumno.plantelId);
         if (dto.plantelId) await this.scope.validarGestion(user, dto.plantelId);
       }
-      if ([dto.nombre, dto.apellidoPaterno, dto.apellidoMaterno, dto.telefono, dto.correoProveedor, dto.correoPersonal].some((v) => v !== undefined)) {
-        await this.usuarios.actualizar(alumno.usuarioId, {
-          nombre: dto.nombre,
-          apellidoPaterno: dto.apellidoPaterno,
-          apellidoMaterno: dto.apellidoMaterno,
-          telefono: dto.telefono,
-          correoProveedor: dto.correoProveedor,
-        }, manager);
+      if (
+        [
+          dto.nombre,
+          dto.apellidoPaterno,
+          dto.apellidoMaterno,
+          dto.telefono,
+          dto.correoProveedor,
+          dto.correoPersonal,
+        ].some((v) => v !== undefined)
+      ) {
+        await this.usuarios.actualizar(
+          alumno.usuarioId,
+          {
+            nombre: dto.nombre,
+            apellidoPaterno: dto.apellidoPaterno,
+            apellidoMaterno: dto.apellidoMaterno,
+            telefono: dto.telefono,
+            correoProveedor: dto.correoProveedor,
+          },
+          manager,
+        );
         if (dto.correoPersonal !== undefined) {
           await manager.getRepository(Usuario).update({ id: alumno.usuarioId }, { correoPersonal: dto.correoPersonal });
         }
@@ -282,7 +343,6 @@ export class AlumnosService {
         tutorNombre: dto.tutorNombre === undefined ? alumno.tutorNombre : dto.tutorNombre,
         tutorTelefono: dto.tutorTelefono === undefined ? alumno.tutorTelefono : dto.tutorTelefono,
         direccion: dto.direccion === undefined ? alumno.direccion : dto.direccion,
-
       });
       await alumnos.save(alumno);
       return alumnos.findOneOrFail({ where: { id } });
@@ -295,16 +355,29 @@ export class AlumnosService {
       const alumno = await alumnos.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!alumno) throw new NotFoundException('Alumno no encontrado');
       if (user) await this.scope.validarGestion(user, alumno.plantelId);
-      if (alumno.estatus !== 'ACTIVO') throw new ConflictException('Solo puede darse de baja un alumno activo; un egresado conserva su estado histórico');
+      if (alumno.estatus !== 'ACTIVO')
+        throw new ConflictException(
+          'Solo puede darse de baja un alumno activo; un egresado conserva su estado histórico',
+        );
       alumno.estatus = 'BAJA';
       await alumnos.save(alumno);
 
-      await manager.getRepository(Inscripcion).update(
-        { alumnoId: id, estatus: 'ACTIVA' }, { estatus: 'BAJA' },
-      );
-      await manager.getRepository(ParticipacionAsignatura).update({ alumnoId: id, estado: 'ACTIVA' }, { estado: 'BAJA', activoClave: null });
+      await manager.getRepository(Inscripcion).update({ alumnoId: id, estatus: 'ACTIVA' }, { estatus: 'BAJA' });
+      await manager
+        .getRepository(ParticipacionAsignatura)
+        .update({ alumnoId: id, estado: 'ACTIVA' }, { estado: 'BAJA', activoClave: null });
       await this.usuarios.actualizar(alumno.usuarioId, { activo: false }, manager);
-      if (user) await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId: alumno.plantelId, accion: 'ALUMNO_BAJA', entidadId: id, detalle: 'Transición explícita: cuenta e inscripciones desactivadas', fecha: new Date() });
+      if (user)
+        await manager
+          .getRepository(BitacoraAcademica)
+          .insert({
+            usuarioId: user.sub,
+            plantelId: alumno.plantelId,
+            accion: 'ALUMNO_BAJA',
+            entidadId: id,
+            detalle: 'Transición explícita: cuenta e inscripciones desactivadas',
+            fecha: new Date(),
+          });
       return { ok: true };
     });
   }
@@ -328,23 +401,43 @@ export class AlumnosService {
       const fechaEgreso = new Date();
       try {
         await manager.getRepository(EgresoAlumno).insert({
-          alumnoId: id, cicloId: ciclo.id, curp: alumno.curp, fechaEgreso,
-          archivarDesde: fechaElegibleArchivo(fechaEgreso), estadoArchivo: 'VIGENTE',
-          rutaArchivo: null, sha256Archivo: null, archivadoEn: null,
+          alumnoId: id,
+          cicloId: ciclo.id,
+          curp: alumno.curp,
+          fechaEgreso,
+          archivarDesde: fechaElegibleArchivo(fechaEgreso),
+          estadoArchivo: 'VIGENTE',
+          rutaArchivo: null,
+          sha256Archivo: null,
+          archivadoEn: null,
         });
       } catch (error) {
         const motor = (error as { driverError?: unknown }).driverError ?? error;
         if (esConflictoUnico(motor)) {
-          throw new ConflictException('La CURP o el alumno ya tiene un egreso registrado; revisa el expediente antes de continuar');
+          throw new ConflictException(
+            'La CURP o el alumno ya tiene un egreso registrado; revisa el expediente antes de continuar',
+          );
         }
         throw error;
       }
       alumno.estatus = 'EGRESADO';
       await alumnos.save(alumno);
       await manager.getRepository(Inscripcion).update({ alumnoId: id, estatus: 'ACTIVA' }, { estatus: 'BAJA' });
-      await manager.getRepository(ParticipacionAsignatura).update({ alumnoId: id, estado: 'ACTIVA' }, { estado: 'BAJA', activoClave: null });
+      await manager
+        .getRepository(ParticipacionAsignatura)
+        .update({ alumnoId: id, estado: 'ACTIVA' }, { estado: 'BAJA', activoClave: null });
       await this.usuarios.actualizar(alumno.usuarioId, { activo: false }, manager);
-      if (user) await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId: alumno.plantelId, accion: alumno.estatus === 'EGRESADO' ? 'ALUMNO_EGRESADO' : 'ALUMNO_BAJA', entidadId: id, detalle: 'Transición explícita: cuenta e inscripciones desactivadas', fecha: new Date() });
+      if (user)
+        await manager
+          .getRepository(BitacoraAcademica)
+          .insert({
+            usuarioId: user.sub,
+            plantelId: alumno.plantelId,
+            accion: alumno.estatus === 'EGRESADO' ? 'ALUMNO_EGRESADO' : 'ALUMNO_BAJA',
+            entidadId: id,
+            detalle: 'Transición explícita: cuenta e inscripciones desactivadas',
+            fecha: new Date(),
+          });
       return { ok: true };
     });
   }
@@ -362,8 +455,19 @@ export class AlumnosService {
       const destino = await manager.getRepository(Plantel).findOne({ where: { id: plantelId, activo: true } });
       if (!destino) throw new NotFoundException('Plantel de destino activo no encontrado');
       await manager.getRepository(Inscripcion).update({ alumnoId: id, estatus: 'ACTIVA' }, { estatus: 'BAJA' });
-      await manager.getRepository(ParticipacionAsignatura).update({ alumnoId: id, estado: 'ACTIVA' }, { estado: 'BAJA', activoClave: null });
-      await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId: alumno.plantelId, accion: 'ALUMNO_TRANSFERIDO', entidadId: id, detalle: `origen=${alumno.plantelId}; destino=${plantelId}; inscripciones anteriores desactivadas`, fecha: new Date() });
+      await manager
+        .getRepository(ParticipacionAsignatura)
+        .update({ alumnoId: id, estado: 'ACTIVA' }, { estado: 'BAJA', activoClave: null });
+      await manager
+        .getRepository(BitacoraAcademica)
+        .insert({
+          usuarioId: user.sub,
+          plantelId: alumno.plantelId,
+          accion: 'ALUMNO_TRANSFERIDO',
+          entidadId: id,
+          detalle: `origen=${alumno.plantelId}; destino=${plantelId}; inscripciones anteriores desactivadas`,
+          fecha: new Date(),
+        });
       alumno.plantelId = plantelId;
       alumno.plantel = destino;
       await alumnos.save(alumno);
@@ -377,23 +481,46 @@ export class AlumnosService {
       const alumno = await repo.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!alumno) throw new NotFoundException('Alumno no encontrado');
       await this.scope.validarGestion(user, alumno.plantelId);
-      if (alumno.estatus !== 'BAJA') throw new ConflictException('Solo se reactiva una baja; un egresado requiere otro proceso institucional');
-      if (!await manager.getRepository(Plantel).findOneBy({ id: alumno.plantelId, activo: true })) throw new ConflictException('El plantel no está activo');
+      if (alumno.estatus !== 'BAJA')
+        throw new ConflictException('Solo se reactiva una baja; un egresado requiere otro proceso institucional');
+      if (!(await manager.getRepository(Plantel).findOneBy({ id: alumno.plantelId, activo: true })))
+        throw new ConflictException('El plantel no está activo');
       await repo.update(id, { estatus: 'ACTIVO' });
       await this.usuarios.actualizar(alumno.usuarioId, { activo: true }, manager);
-      await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId: alumno.plantelId, accion: 'ALUMNO_REACTIVADO', entidadId: id, detalle: motivo, fecha: new Date() });
-      return { ok: true, mensaje: 'Expediente reactivado; inscribe explícitamente al alumno. No se restauran inscripciones.' };
+      await manager
+        .getRepository(BitacoraAcademica)
+        .insert({
+          usuarioId: user.sub,
+          plantelId: alumno.plantelId,
+          accion: 'ALUMNO_REACTIVADO',
+          entidadId: id,
+          detalle: motivo,
+          fecha: new Date(),
+        });
+      return {
+        ok: true,
+        mensaje: 'Expediente reactivado; inscribe explícitamente al alumno. No se restauran inscripciones.',
+      };
     });
   }
 
-  async consultarMisMaterias(usuarioId:number,q:PaginacionDto) {
-    const alumno=await this.obtenerPorUsuario(usuarioId);
-    const inscripciones=await this.inscripciones.find({where:{...inscripcionVigente,alumnoId:alumno.id}});
-    const recursadas=await clasesRecursadas(this.dataSource.manager,alumno.id);
-    const grupoIds=[...new Set(inscripciones.map(i=>i.grupoId))];
-    if(!grupoIds.length && !recursadas.length) return {datos:[],total:0,pagina:q.pagina,porPagina:q.porPagina};
-    const [datos,total]=await this.grupoMaterias.findAndCount({where:[...(grupoIds.length?[{grupoId:In(grupoIds)}]:[]),...(recursadas.length?[{id:In(recursadas)}]:[])],order:{grupoId:'ASC',materiaId:'ASC',id:'ASC'},skip:(q.pagina-1)*q.porPagina,take:q.porPagina});
-    return {datos,total,pagina:q.pagina,porPagina:q.porPagina};
+  async consultarMisMaterias(usuarioId: number, q: PaginacionDto) {
+    const alumno = await this.obtenerPorUsuario(usuarioId);
+    const inscripciones = await this.inscripciones.find({ where: { ...inscripcionVigente, alumnoId: alumno.id } });
+    const recursadas = await clasesRecursadas(this.dataSource.manager, alumno.id);
+    const grupoIds = [...new Set(inscripciones.map((i) => i.grupoId))];
+    if (!grupoIds.length && !recursadas.length)
+      return { datos: [], total: 0, pagina: q.pagina, porPagina: q.porPagina };
+    const [datos, total] = await this.grupoMaterias.findAndCount({
+      where: [
+        ...(grupoIds.length ? [{ grupoId: In(grupoIds) }] : []),
+        ...(recursadas.length ? [{ id: In(recursadas) }] : []),
+      ],
+      order: { grupoId: 'ASC', materiaId: 'ASC', id: 'ASC' },
+      skip: (q.pagina - 1) * q.porPagina,
+      take: q.porPagina,
+    });
+    return { datos, total, pagina: q.pagina, porPagina: q.porPagina };
   }
 
   /** Materias del alumno en sus grupos con inscripción activa. */
@@ -405,6 +532,12 @@ export class AlumnosService {
     const recursadas = await clasesRecursadas(this.dataSource.manager, alumno.id);
     if (!inscripciones.length && !recursadas.length) return [];
     const grupoIds = [...new Set(inscripciones.map((insc) => insc.grupoId))];
-    return this.grupoMaterias.find({ where: [...(grupoIds.length ? [{ grupoId: In(grupoIds) }] : []), ...(recursadas.length ? [{ id: In(recursadas) }] : [])], order: { grupoId: 'ASC', materiaId: 'ASC' } });
+    return this.grupoMaterias.find({
+      where: [
+        ...(grupoIds.length ? [{ grupoId: In(grupoIds) }] : []),
+        ...(recursadas.length ? [{ id: In(recursadas) }] : []),
+      ],
+      order: { grupoId: 'ASC', materiaId: 'ASC' },
+    });
   }
 }

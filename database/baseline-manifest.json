@@ -47,7 +47,12 @@
         "migracion_calendario_ciclo_nivel.sql",
         "migracion_seguimiento_asistencias.sql",
         "migracion_dispositivo_sesion.sql",
-        "migracion_egresos_unicos_retencion.sql"
+        "migracion_egresos_unicos_retencion.sql",
+        "migracion_entregas_texto_fecha_documental.sql",
+        "migracion_evaluaciones_cuatro_parciales.sql",
+        "migracion_escalas_entregas_recursamiento.sql",
+        "migracion_precision_entregas.sql",
+        "migracion_aprobacion_final_precision.sql"
       ]
     },
     "sqlserver": {
@@ -95,7 +100,12 @@
         "migracion_calendario_ciclo_nivel.sql",
         "migracion_seguimiento_asistencias.sql",
         "migracion_dispositivo_sesion.sql",
-        "migracion_egresos_unicos_retencion.sql"
+        "migracion_egresos_unicos_retencion.sql",
+        "migracion_entregas_texto_fecha_documental.sql",
+        "migracion_evaluaciones_cuatro_parciales.sql",
+        "migracion_escalas_entregas_recursamiento.sql",
+        "migracion_precision_entregas.sql",
+        "migracion_aprobacion_final_precision.sql"
       ]
     }
   }
