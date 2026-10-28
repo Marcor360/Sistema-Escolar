@@ -201,7 +201,7 @@ export default function CalificacionesScreen() {
           <>
             <GuiaPantalla
               titulo="Mis calificaciones"
-              detalle="Consulta la escala de cada materia. En el esquema 0–10, P1–P4 aportan 25 % cada uno y Final manual sustituye el promedio. Un parcial pendiente no equivale a cero."
+              detalle="Consulta la escala de cada materia. En el esquema 0–10, P1–P4 aportan 25 % cada uno y la propuesta requiere aprobación o captura manual de Final. Un parcial pendiente no equivale a cero."
             />
 
             {error !== "" && <ErrorCarga mensaje={error} reintentar={cargar} />}

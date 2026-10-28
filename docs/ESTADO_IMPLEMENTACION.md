@@ -1,6 +1,6 @@
 # Estado de implementación — candidata 1.28.0
 
-La candidata 1.28.0 adapta evaluaciones a cuatro parciales, escala 0–10, criterios ponderados y Final manual. Conserva notas originales e históricos. Asistencias informativas ya existentes; no bloquean examen. [Contrato vigente](EVALUACIONES_1.28.0.md). Las confirmaciones del solicitante de logo, correo, Android y permisos cerraron #106/#107/#140/#141; no acreditan UAT de esta candidata. Los párrafos de versiones anteriores conservan su corte histórico.
+La candidata 1.28.0 adapta evaluaciones a cuatro parciales, escala 0–10, criterios ponderados, propuesta automática con aprobación explícita y Final manual. Conserva notas originales e históricos. Asistencias informativas ya existentes; no bloquean examen. [Contrato vigente](EVALUACIONES_1.28.0.md). Las confirmaciones del solicitante de logo, correo, Android y permisos cerraron #106/#107/#140/#141; no acreditan UAT de esta candidata. Los párrafos de versiones anteriores conservan su corte histórico.
 
 
 La candidata 1.27.59 añade entregas de hasta 100 MiB o texto de 3000 caracteres, inventario de conservación y conciliación documental de egresos anteriores. No activa eliminación ni PAUSA. [Contrato](ENTREGAS_CONSERVACION_1.27.59.md). Requiere migración espejo, actualización del cliente y validación de IIS.
@@ -50,7 +50,7 @@ Marca en #163: entrada web PNG/JPEG/WebP ≤20 MiB, salida/API WebP ≤10 MiB, m
 
 ## Pendientes actuales
 
-- #139: completar redondeo, revisión técnica/UAT de cuatro parciales y formatos oficiales; no es falta de aprobación general del reglamento.
+- #210: completar redondeo, UAT de la candidata y formatos oficiales; implementación y aprobación explícita de #139 en PR #209; no es falta de aprobación general del reglamento.
 - #152/#177: políticas de inscripción por cartera y reinscripción/cobros por periodo.
 - #158: protección de main. #179: proveedor y consentimiento para WhatsApp/llamadas.
 - Operación: comprobar versión desplegada, restore aislado, antivirus y conciliación de datos históricos.

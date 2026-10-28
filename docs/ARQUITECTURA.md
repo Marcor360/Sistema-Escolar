@@ -28,7 +28,7 @@ grupo-materia que tiene asignados (validación de propiedad en servicios).
 **Modelo académico.** `grupo_materias` es el eje: une grupo+materia+docente y
 de él cuelgan actividades, materiales y calificaciones. Las calificaciones
 tienen unicidad (alumno, grupo_materia, parcial) con parcial 0 = final, lo que
-permite captura masiva con upsert. El promedio oficial usa P1-P3 completos, redondeado a un decimal; Final es independiente. Las actividades no calculan esa nota. Véase [REGLAS_PILOTO.md](REGLAS_PILOTO.md).
+permite captura masiva con upsert. En el régimen histórico, el promedio oficial usa P1–P3 y Final es independiente. La candidata 1.28.0 usa P1–P4/0–10, propuesta al 25 % por parcial y Final definitiva solo tras aprobarla o capturarla expresamente; conserva el régimen y los valores originales del historial. Las actividades no calculan esa nota. Véase [REGLAS_PILOTO.md](REGLAS_PILOTO.md).
 
 **Finanzas (SOLID/SRP).** El dominio financiero está dividido en servicios de
 responsabilidad única, cada uno sustituible sin tocar a los demás:

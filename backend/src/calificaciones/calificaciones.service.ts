@@ -3,7 +3,7 @@ import { esMaestroRestringido, exigirConsultaAcademica } from '../common/politic
 import { CicloEscolar } from '../entities/ciclo-escolar.entity';
 import { PaginacionDto } from '../common/paginacion.dto';
 import { exigirGrupoVigente, inscripcionVigente } from '../common/contexto-academico';
-import { alumnosConFinalDisponible, alumnosConParcialDisponible, calcularPonderada, escalaDe, esRegimenNuevo, notaEnEscala, parcialesDe, resultadoEvaluacion } from '../common/regimen-evaluacion';
+import { alumnosConFinalDisponible, alumnosConParcialDisponible, calcularPonderada, escalaDe, esRegimenNuevo, notaEnEscala, parcialesDe, propuestaFinal, resultadoEvaluacion } from '../common/regimen-evaluacion';
 import { CapturaPonderadaDto } from './ponderacion.dto';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -15,7 +15,7 @@ import { GrupoMateria } from '../entities/grupo-materia.entity';
 import { DocentesService } from '../docentes/docentes.service';
 import { AlumnosService } from '../alumnos/alumnos.service';
 import { JwtUser } from '../common/current-user.decorator';
-import { CapturaCalificacionesDto } from './calificaciones.dto';
+import { AprobarFinalDto, CapturaCalificacionesDto } from './calificaciones.dto';
 import { Inscripcion } from '../entities/inscripcion.entity';
 import { ScopeService } from '../planteles/scope.service';
 
@@ -77,7 +77,8 @@ export class CalificacionesService {
       if (!parcialesDe(grupoMateria).includes(dto.parcial) && dto.parcial !== 0) throw new BadRequestException('Parcial no admitido por el régimen de la clase');
       const escala = escalaDe(grupoMateria);
       if ((esRegimenNuevo(grupoMateria) && dto.escalaMaxima !== 10) || (dto.escalaMaxima !== undefined && dto.escalaMaxima !== escala)) throw new ConflictException(`Actualiza el cliente o la plantilla: esta clase captura en escala 0 a ${escala}`);
-      if (dto.items.some(i => !Number.isFinite(i.calificacion) || i.calificacion < 0 || i.calificacion > escala || Math.abs(i.calificacion * 1e6 - Math.round(i.calificacion * 1e6)) > 1e-6)) throw new BadRequestException(`La nota debe estar entre 0 y ${escala}, con hasta seis decimales`);
+      const factor = dto.parcial === 0 && esRegimenNuevo(grupoMateria) ? 1e8 : 1e6;
+      if (dto.items.some(i => !Number.isFinite(i.calificacion) || i.calificacion < 0 || i.calificacion > escala || Math.abs(i.calificacion * factor - Math.round(i.calificacion * factor)) > 1e-6)) throw new BadRequestException(`La nota debe estar entre 0 y ${escala}, con hasta ${factor === 1e8 ? 'ocho' : 'seis'} decimales`);
       const periodo = await manager.getRepository(PeriodoCalificacion).findOne({
         where: { grupoMateriaId: gm.id, parcial: dto.parcial },
       });
@@ -123,6 +124,40 @@ export class CalificacionesService {
     }
   }
 
+  private revisionFinal(notas:Calificacion[], clase:GrupoMateria):string {
+    return createHash('sha256').update(JSON.stringify([clase.regimenEvaluacion,clase.docenteId,
+      [...notas].sort((a,b)=>a.parcial-b.parcial).map(n=>[n.id,n.parcial,Number(n.calificacion),n.escalaMaxima,n.updatedAt])])).digest('hex');
+  }
+
+  async propuestasFinal(grupoMateriaId:number, user:JwtUser) {
+    const clase=await this.validarGrupoMateria(grupoMateriaId,user);
+    if (!esRegimenNuevo(clase)) throw new BadRequestException('La aprobación corresponde al régimen de cuatro parciales');
+    const [inscritos,notas]=await Promise.all([
+      this.inscripciones.find({where:{...inscripcionVigente,grupoId:clase.grupoId}}),
+      this.repo.find({where:{grupoMateriaId},loadEagerRelations:false}),
+    ]);
+    return inscritos.map(i=>{
+      const propias=notas.filter(n=>n.alumnoId===i.alumnoId);
+      return {alumnoId:i.alumnoId,propuesta:propuestaFinal(propias,clase),definitiva:resultadoEvaluacion(propias,clase),revision:this.revisionFinal(propias,clase)};
+    });
+  }
+
+  async aprobarFinal(dto:AprobarFinalDto, user:JwtUser) {
+    const previa=await this.validarGrupoMateria(dto.grupoMateriaId,user);
+    return this.dataSource.transaction(async manager=>{
+      const ciclo=await manager.getRepository(CicloEscolar).findOne({where:{id:previa.grupo.cicloId},lock:{mode:'pessimistic_write'}});
+      if (!ciclo?.activo) throw new ConflictException('El ciclo ya fue cerrado');
+      const clase=await manager.getRepository(GrupoMateria).findOne({where:{id:previa.id},lock:{mode:'pessimistic_write'}});
+      if (!clase || !esRegimenNuevo(clase)) throw new BadRequestException('La aprobación corresponde al régimen de cuatro parciales');
+      const notas=await manager.getRepository(Calificacion).find({where:{grupoMateriaId:clase.id,alumnoId:dto.alumnoId},loadEagerRelations:false});
+      if (dto.revision!==this.revisionFinal(notas,clase)) throw new ConflictException('Las notas cambiaron; vuelve a cargar la propuesta antes de aprobar');
+      const calificacion=propuestaFinal(notas,clase);
+      if (calificacion===null) throw new ConflictException('Faltan parciales para calcular la propuesta');
+      const detalles=new Map([[dto.alumnoId,JSON.stringify({tipo:'APROBACION_FINAL',revision:dto.revision,calificacion,parciales:notas.filter(n=>n.parcial>0).map(n=>({parcial:n.parcial,calificacion:n.calificacion,escalaMaxima:n.escalaMaxima,peso:25}))})]]);
+      return this.capturarEnTransaccion({grupoMateriaId:clase.id,parcial:0,escalaMaxima:10,motivo:dto.motivo,items:[{alumnoId:dto.alumnoId,calificacion}]},user,manager,false,undefined,detalles);
+    });
+  }
+
   async capturarPonderadas(dto: CapturaPonderadaDto, user: JwtUser) {
     const clase = await this.validarGrupoMateria(dto.grupoMateriaId, user);
     if (!esRegimenNuevo(clase) || !parcialesDe(clase).includes(dto.parcial)) throw new BadRequestException('La ponderación corresponde a P1–P4 del régimen 0–10');
@@ -157,8 +192,7 @@ export class CalificacionesService {
     let capturados = new Set(registros.map((c) => c.alumnoId));
     if (esRegimenNuevo(clase)) {
       const todas = await this.repo.find({where:{grupoMateriaId},loadEagerRelations:false});
-      const periodos = await this.periodos.find({where:{grupoMateriaId}});
-      capturados = parcial === 0 ? alumnosConFinalDisponible(todas,periodos) : alumnosConParcialDisponible(todas,parcial);
+      capturados = parcial === 0 ? alumnosConFinalDisponible(todas) : alumnosConParcialDisponible(todas,parcial);
     }
     const faltantes = inscritos.filter((i) => !capturados.has(i.alumnoId)).length;
     return { grupoMateriaId, parcial, escalaMaxima: escalaDe(clase), regimenEvaluacion: clase.regimenEvaluacion ?? 'LEGADO_100', parciales: parcialesDe(clase), redondeoAutomatico: false, estatus: periodo?.estatus ?? 'ABIERTO', inscritos: inscritos.length,
@@ -189,8 +223,7 @@ export class CalificacionesService {
         let capturados = new Set(notas.map((c) => c.alumnoId));
         if (esRegimenNuevo(gm)) {
           const todas = await manager.getRepository(Calificacion).find({where:{grupoMateriaId},loadEagerRelations:false});
-          const periodos = await manager.getRepository(PeriodoCalificacion).find({where:{grupoMateriaId}});
-          capturados = parcial === 0 ? alumnosConFinalDisponible(todas,periodos) : alumnosConParcialDisponible(todas,parcial);
+          capturados = parcial === 0 ? alumnosConFinalDisponible(todas) : alumnosConParcialDisponible(todas,parcial);
         }
         if (inscritos.some((i) => !capturados.has(i.alumnoId))) throw new ConflictException('No puedes cerrar el periodo: hay alumnos sin calificación');
       }
@@ -305,7 +338,7 @@ export class CalificacionesService {
       escalaOriginal: registro.escalaMaxima ?? 100,
       escalaMaxima: escalaDe(registro.grupoMateria),
       regimenEvaluacion: registro.grupoMateria.regimenEvaluacion ?? 'LEGADO_100',
-      origenFinal: registro.parcial === 0 ? 'MANUAL' : null,
+      origenFinal: registro.parcial === 0 ? 'REGISTRADA' : null,
       observaciones: registro.observaciones,
       grupoMateria: registro.grupoMateria ? {
         id: registro.grupoMateria.id,

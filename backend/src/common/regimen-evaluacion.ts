@@ -15,12 +15,16 @@ export function notaEnEscala(nota: Pick<NotaEvaluacion, 'calificacion' | 'escala
 export function resultadoEvaluacion(notas: NotaEvaluacion[], clase: ClaseEvaluacion): number | null {
   const mapa = new Map(notas.map(n => [n.parcial, notaEnEscala(n, clase)]));
   if (!esRegimenNuevo(clase)) return promedioOficial(mapa);
-  // Cero es una sustitución válida. La captura manual no exige cuatro notas previas.
-  if (mapa.has(0)) return mapa.get(0)!;
-  if (parcialesDe(clase).some(p => !mapa.has(p))) return null;
-  // Notas almacenadas en millonésimas; sin redondear parciales ni inferir redondeo final.
-  return parcialesDe(clase).reduce((s, p) => s + Math.round(mapa.get(p)! * 1e6), 0) / 4e6;
+  // Solo una Final capturada/aprobada es definitiva; el promedio es una propuesta.
+  return mapa.get(0) ?? null;
 }
+export function propuestaFinal(notas: NotaEvaluacion[], clase: ClaseEvaluacion): number | null {
+  if (!esRegimenNuevo(clase)) return null;
+  const mapa = new Map(notas.map(n => [n.parcial, notaEnEscala(n, clase)]));
+  if (parcialesDe(clase).some(p => !mapa.has(p))) return null;
+  return parcialesDe(clase).reduce((s,p) => s + Math.round(mapa.get(p)! * 1e6),0) / 4e6;
+}
+
 export interface CriterioNota { nombre: string; porcentaje: number }
 /** Ponderaciones y notas a dos decimales: aritmética entera exacta, resultado a seis decimales. */
 export function calcularPonderada(criterios: CriterioNota[], notas: number[]): number {
@@ -35,13 +39,9 @@ export function resultadoMapa(mapa: Map<number, number>, clase: ClaseEvaluacion)
   return resultadoEvaluacion([...mapa].map(([parcial, calificacion]) => ({ parcial, calificacion, escalaMaxima: escalaDe(clase) })), clase);
 }
 
-/** Cerrar Final permite combinar sustituciones manuales y promedios ya completos/cerrados. */
-export function alumnosConFinalDisponible(notas:{alumnoId:number;parcial:number}[], periodos:{parcial:number;estatus:string}[]):Set<number> {
-  const manuales=new Set(notas.filter(n=>n.parcial===0).map(n=>n.alumnoId));
-  if (![1,2,3,4].every(p=>periodos.some(v=>v.parcial===p && v.estatus==='CERRADO'))) return manuales;
-  const ids=new Set(notas.map(n=>n.alumnoId));
-  for(const id of ids) if([1,2,3,4].every(p=>notas.some(n=>n.alumnoId===id && n.parcial===p)))manuales.add(id);
-  return manuales;
+/** Solo las Finales expresamente aprobadas o capturadas permiten cerrar Final. */
+export function alumnosConFinalDisponible(notas:{alumnoId:number;parcial:number}[]):Set<number> {
+  return new Set(notas.filter(n=>n.parcial===0).map(n=>n.alumnoId));
 }
 
 /** Una Final manual sustituye los parciales; no crea notas parciales ficticias. */

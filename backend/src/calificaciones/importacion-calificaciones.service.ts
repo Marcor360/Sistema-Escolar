@@ -89,7 +89,7 @@ export class ImportacionCalificacionesService {
       ['Edita únicamente la columna F (calificacion), marcada en amarillo. No cambies IDs, matrícula, grado ni parcial.'],
       [esRegimenNuevo(gm) ? 'P1–P4: 25% cada uno; Final (0) sustituye el promedio. Sin redondeo automático.' : 'Parcial 0 = Final; 1, 2 y 3 forman el promedio oficial.'],
       ['Elimina las filas sin calificación antes de importar. Una nota vacía no equivale a cero.'],
-      [`Captura 0–${escalaDe(gm)} con hasta seis decimales. Para corregir notas existentes, indica motivo en la pantalla.`],
+      [`Captura 0–${escalaDe(gm)} con hasta ${dto.parcial === 0 && esRegimenNuevo(gm) ? 8 : 6} decimales. Para corregir notas existentes, indica motivo en la pantalla.`],
       ['Después de guardar el archivo, previsualiza los cambios y confirma en el portal.'],
     ]);
     ayuda.eachRow((fila, indice) => {
@@ -127,8 +127,8 @@ export class ImportacionCalificacionesService {
         mensaje = 'Identificador, matrícula o grado no corresponden a una inscripción activa.';
       else if ((esRegimenNuevo(gm) && f.escalaMaxima !== '10') || (f.escalaMaxima !== undefined && Number(f.escalaMaxima) !== escalaDe(gm))) mensaje = `Usa la plantilla actual con escalaMaxima=${escalaDe(gm)}; no se convierte la escala del archivo por inferencia.`;
       else if (vistos.has(id)) mensaje = 'Alumno duplicado en el archivo.';
-      else if (!/^(?:\d+|\d*\.\d{1,6})$/.test(f.calificacion) || Number(f.calificacion) > escalaDe(gm))
-        mensaje = `Calificación requerida entre 0 y ${escalaDe(gm)}, hasta seis decimales.`;
+      else if (!new RegExp(`^(?:\\d+|\\d*\\.\\d{1,${dto.parcial === 0 && esRegimenNuevo(gm) ? 8 : 6}})$`).test(f.calificacion) || Number(f.calificacion) > escalaDe(gm))
+        mensaje = `Calificación requerida entre 0 y ${escalaDe(gm)}, hasta ${dto.parcial === 0 && esRegimenNuevo(gm) ? 8 : 6} decimales.`;
       else if ((f.observaciones ?? '').length > 300) mensaje = 'Observaciones: máximo 300 caracteres.';
       vistos.add(id);
       if (mensaje) errores.push({ fila: i + 2, mensaje });

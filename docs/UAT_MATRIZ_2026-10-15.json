@@ -667,7 +667,7 @@
     {
       "id": "UAT-49",
       "rol": "MAESTRO",
-      "escenario": "Capturar Final manual que sustituye el promedio, conserva cero válido y respeta motivo/cierre/permisos.",
+      "escenario": "Propuesta automática separada, aprobación explícita por profesor/administración/SUPERADMIN, Final manual y cero válido; motivo, cierres, permisos e historial. Revisión obsoleta rechazada; cambiar parciales no sobrescribe la Final.",
       "canales": [
         "web",
         "api",
@@ -697,7 +697,7 @@
     {
       "id": "UAT-51",
       "rol": "ALUMNO",
-      "escenario": "Consultar P4, escala y Final coherentes en web/Android y boletas PDF/Excel; bloquear boleta mientras Final manual esté abierta.",
+      "escenario": "Consultar P4, escala y Final definitivas en web/Android y PDF/Excel; propuesta sin aprobación no publica boleta ni permite cierre Final/ciclo.",
       "canales": [
         "web",
         "api",

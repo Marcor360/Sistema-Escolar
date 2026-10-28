@@ -1,3 +1,4 @@
+import { PropuestasFinal, type PropuestaFinal } from '../components/PropuestasFinal';
 import { DetallePonderacion } from '../components/DetallePonderacion';
 import { PonderacionCalificaciones } from '../components/PonderacionCalificaciones';
 import { ActaEscolar } from '../components/ActaEscolar';
@@ -18,11 +19,13 @@ interface EstadoPeriodo { estatus: 'ABIERTO' | 'CERRADO'; inscritos: number; cap
 interface Cambio { id: number; alumnoId: number; valorAnterior: number | null; valorNuevo: number; usuarioId: number; fecha: string; motivo: string | null; observacionAnterior: string | null; observacionNueva: string | null; escalaAnterior?: number; escalaNueva?: number; detalleCalculo?: string | null }
 interface Historial { datos: Cambio[]; total: number; pagina: number; porPagina: number }
 const HISTORIAL_VACIO: Historial = { datos: [], total: 0, pagina: 1, porPagina: 10 };
-const valida = (v: string, maximo: number) => /^(?:\d+|\d*\.\d{1,6})$/.test(v) && Number(v) >= 0 && Number(v) <= maximo;
+const valida = (v: string, maximo: number, decimales = 6) => new RegExp(`^(?:\\d+|\\d*\\.\\d{1,${decimales}})$`).test(v) && Number(v) >= 0 && Number(v) <= maximo;
 export default function CalificacionesPage() {
   const { tieneRol } = useAuth(), confirmacion = useConfirmacion();
   const [claseId,setClaseId] = useState(''), [clase,setClase] = useState<Clase | null>(null), [parcial,setParcial] = useState('1');
   const nuevo = clase?.regimenEvaluacion === 'CUATRO_PARCIALES_10', maximo = nuevo ? 10 : 100;
+  const decimales = nuevo && parcial === '0' ? 8 : 6;
+  const [propuestas,setPropuestas] = useState<PropuestaFinal[]>([]);
   const [ponderando,setPonderando] = useState(false);
   const [borradorPonderacion,setBorradorPonderacion] = useState(false);
   const [alumnos,setAlumnos] = useState<Inscripcion[]>([]), [valores,setValores] = useState<Record<number,string>>({}), [originales,setOriginales] = useState<Record<number,string>>({});
@@ -32,13 +35,13 @@ export default function CalificacionesPage() {
   const trabajo=useModuloTrabajo(cargando || enviando || descargando || ponderando),legado=trabajo.modo==='legado',soloConsulta=!legado && trabajo.modo==='consulta',importando=!legado && trabajo.modo==='importar';
   const [borradorImportacion,setBorradorImportacion]=useState(false);
   const contexto = useRef(0);
-  const invalidos = alumnos.filter((i) => valores[i.alumno.id] && !valida(valores[i.alumno.id], maximo));
+  const invalidos = alumnos.filter((i) => valores[i.alumno.id] && !valida(valores[i.alumno.id], maximo, decimales));
   const cambios = alumnos.filter((i) => valores[i.alumno.id] && (originales[i.alumno.id] === undefined || Number(valores[i.alumno.id]) !== Number(originales[i.alumno.id])));
   const corrige = cambios.some((i) => originales[i.alumno.id] !== undefined), ocupado = cargando || enviando || ponderando;
   const confirmarContexto=async()=>!(cambios.length || borradorImportacion || borradorPonderacion) || await confirmacion.solicitar('¿Descartar las calificaciones sin guardar antes de cambiar de clase o parcial?');
   useEffect(()=>{if(soloConsulta || importando){setValores(originales);setMotivo('');}},[soloConsulta,importando,originales]);
   useEffect(()=>{if(!importando)setBorradorImportacion(false);},[importando]);
-  const limpiar = () => { setBorradorPonderacion(false); setBorradorImportacion(false);contexto.current++; setAlumnos([]); setValores({}); setOriginales({}); setPeriodo(null); setHistorial(HISTORIAL_VACIO); setMotivo(''); setError(''); setMensaje(''); setCargando(false); setCargandoHistorial(false); };
+  const limpiar = () => { setBorradorPonderacion(false); setBorradorImportacion(false);contexto.current++; setAlumnos([]); setPropuestas([]); setValores({}); setOriginales({}); setPeriodo(null); setHistorial(HISTORIAL_VACIO); setMotivo(''); setError(''); setMensaje(''); setCargando(false); setCargandoHistorial(false); };
   const cargarHistorial = async (pagina: number) => {
     const actual = contexto.current; setCargandoHistorial(true);
     try { const { data } = await api.get<Historial>(`/calificaciones/periodos/${claseId}/${parcial}/historial`,{ params: { pagina } }); if (actual === contexto.current) setHistorial(data); }
@@ -49,22 +52,23 @@ export default function CalificacionesPage() {
     if (!clase || ocupado) return;
     limpiar(); const actual = contexto.current; setCargando(true);
     try {
-      const [insc,notas,estado,auditoria] = await Promise.all([
+      const [insc,notas,estado,auditoria,propuestasFinal] = await Promise.all([
         api.get<Inscripcion[]>(`/academico/grupos/${clase.grupo.id}/alumnos`),
         api.get<Registro[]>(`/calificaciones/grupo-materia/${clase.id}`,{ params: { parcial } }),
         api.get<EstadoPeriodo>(`/calificaciones/periodos/${clase.id}/${parcial}`),
         api.get<Historial>(`/calificaciones/periodos/${clase.id}/${parcial}/historial`),
+        nuevo && parcial === '0' ? api.get<PropuestaFinal[]>(`/calificaciones/final/propuestas/${clase.id}`) : Promise.resolve({data:[] as PropuestaFinal[]}),
       ]);
       if (actual !== contexto.current) return;
       const mapa = Object.fromEntries(notas.data.map((n) => [n.alumnoId,String(n.calificacion)]));
-      setAlumnos(insc.data); setValores(mapa); setOriginales(mapa); setPeriodo(estado.data); setHistorial(auditoria.data);
+      setAlumnos(insc.data); setPropuestas(propuestasFinal.data); setValores(mapa); setOriginales(mapa); setPeriodo(estado.data); setHistorial(auditoria.data);
     } catch (err) { if (actual === contexto.current) setError(mensajeDeError(err)); }
     finally { if (actual === contexto.current) setCargando(false); }
   };
   const guardar = async (e: FormEvent) => {
     e.preventDefault(); if (soloConsulta || importando || ocupado || !periodo || periodo.estatus === 'CERRADO') return;
     setError(''); setMensaje('');
-    if (invalidos.length) { setError(`Revisa las calificaciones marcadas: usa de 0 a ${maximo} y hasta seis decimales.`); document.getElementById(`nota-${invalidos[0].alumno.id}`)?.focus(); return; }
+    if (invalidos.length) { setError(`Revisa las calificaciones marcadas: usa de 0 a ${maximo} y hasta ${decimales} decimales.`); document.getElementById(`nota-${invalidos[0].alumno.id}`)?.focus(); return; }
     if (!cambios.length) { setMensaje('No hay cambios que guardar.'); return; }
     if (corrige && !motivo.trim()) { setError('Escribe el motivo para corregir las calificaciones existentes.'); document.getElementById('motivo-calificacion')?.focus(); return; }
     setEnviando(true);
@@ -108,7 +112,7 @@ export default function CalificacionesPage() {
       <div><dt>Grupo</dt><dd>{clase.grupo.nombre}</dd></div><div><dt>Plantel</dt><dd>{clase.grupo.plantel.nombre}</dd></div><div><dt>Ciclo</dt><dd>{clase.grupo.ciclo.nombre}</dd></div>
       <div><dt>Nivel académico</dt><dd>{clase.grupo.nivel?.nombre ?? 'Sin nivel registrado'}</dd></div><div><dt>Carrera</dt><dd>{clase.grupo.carrera?.nombre ?? 'Sin carrera registrada'}</dd></div><div><dt>Plan de estudios</dt><dd>{clase.grupo.carrera?.versionPlan ?? 'Sin plan registrado'}</dd></div>
       <div><dt>Periodo académico</dt><dd>{clase.grupo.periodoAcademico?.nombre ?? 'Sin periodo registrado'}</dd></div><div><dt>Turno</dt><dd>{clase.grupo.turno ?? 'Sin turno registrado'}</dd></div>
-    </dl><p>Evaluación seleccionada: {parcial === '0' ? (nuevo ? 'Final manual que sustituye el promedio' : 'Final independiente') : `Parcial ${parcial}`}. {nuevo ? 'Escala 0 a 10; mínima aprobatoria 6. Cuatro parciales mensuales. Sin redondeo automático.' : 'Se conserva la escala actual de 0 a 100.'}</p></section>}
+    </dl><p>Evaluación seleccionada: {parcial === '0' ? (nuevo ? 'Final propuesta y aprobación' : 'Final independiente') : `Parcial ${parcial}`}. {nuevo ? 'Escala 0 a 10; mínima aprobatoria 6. Cuatro parciales mensuales. Sin redondeo automático.' : 'Se conserva la escala actual de 0 a 100.'}</p></section>}
     {!legado && clase && <div className="fila">{trabajo.modo!=='nuevo' && <button type="button" disabled={ocupado} onClick={()=>trabajo.ir('nuevo')}>Capturar esta evaluación</button>}{trabajo.modo!=='importar' && <button type="button" disabled={ocupado} onClick={()=>trabajo.ir('importar')}>Importar esta evaluación</button>}</div>}
     {claseId && <ActaEscolar key={`${claseId}-${parcial}`} claseId={claseId} parcial={parcial} />}
     {claseId && (legado || importando) && <div onChangeCapture={()=>setBorradorImportacion(true)}><ImportarCalificaciones claseId={claseId} parcial={parcial} deshabilitado={ocupado || periodo?.estatus === 'CERRADO'} alConfirmar={() => { setBorradorImportacion(false);trabajo.guardado(); void cargarAlumnos(); }} /></div>}
@@ -116,12 +120,13 @@ export default function CalificacionesPage() {
       {tieneRol('ADMINISTRATIVO') && <button className="boton secundario" disabled={ocupado} onClick={cambiarEstado}>{periodo.estatus === 'ABIERTO' ? 'Cerrar periodo' : 'Reabrir periodo'}</button>}
       {!alumnos.length && <p>Sin inscripciones activas en esta clase.</p>}
     </section>}
+    {nuevo && parcial === '0' && periodo && <PropuestasFinal claseId={Number(claseId)} propuestas={propuestas} alumnos={alumnos.map(i=>({id:i.alumno.id,matricula:i.alumno.matricula}))} motivo={motivo} deshabilitado={soloConsulta || importando || ocupado || cambios.length > 0 || periodo.estatus === 'CERRADO'} alOcupado={setPonderando} alGuardar={()=>{trabajo.guardado();void cargarAlumnos();}} />}
     {nuevo && parcial !== '0' && periodo && alumnos.length > 0 && !soloConsulta && !importando && <PonderacionCalificaciones key={`${claseId}-${parcial}`} detalleAnterior={historial.datos.find(c=>c.detalleCalculo)?.detalleCalculo} claseId={Number(claseId)} parcial={Number(parcial)} alumnos={alumnos.map(i=>({id:i.alumno.id,matricula:i.alumno.matricula}))} deshabilitado={ocupado || periodo.estatus === 'CERRADO' || cambios.length > 0} alCambiar={setBorradorPonderacion} alOcupado={setPonderando} alGuardar={()=>void cargarAlumnos()} />}
     {!!alumnos.length && !importando && <form onSubmit={guardar} noValidate aria-busy={enviando}><fieldset disabled={soloConsulta || ocupado || periodo?.estatus === 'CERRADO'} style={{ border: 0,padding: 0 }}><legend>Calificaciones oficiales del parcial seleccionado</legend>
-      <p>{nuevo ? 'P1–P4 aportan 25 % cada uno; Final manual sustituye el promedio. Los parciales conservan sus decimales.' : 'Final se muestra por separado; el promedio oficial utiliza P1–P3.'} Deja vacía una nota pendiente. Solo se guardan cambios; los valores vacíos no eliminan notas ya capturadas.</p>
+      <p>{nuevo ? 'P1–P4 aportan 25 % cada uno. La propuesta requiere aprobación para ser definitiva; guardar una Final manual también la hace definitiva. Los parciales conservan sus decimales.' : 'Final se muestra por separado; el promedio oficial utiliza P1–P3.'} Deja vacía una nota pendiente. Solo se guardan cambios; los valores vacíos no eliminan notas ya capturadas.</p>
       <div className="tabla-contenedor" role="region" aria-label="Captura de notas por alumno" tabIndex={0}><table className="tabla tabla-adaptable"><caption className="solo-lector">Matrícula, nombre y calificación editable para el periodo seleccionado</caption><thead><tr><th scope="col">Matrícula</th><th scope="col">Alumno</th><th scope="col">Calificación</th></tr></thead><tbody>{alumnos.map(({ alumno: a }) => {
-        const invalida = !!valores[a.id] && !valida(valores[a.id], maximo);
-        return <tr key={a.id}><td data-etiqueta="Matrícula">{a.matricula}</td><td data-etiqueta="Alumno">{a.usuario.nombre} {a.usuario.apellidoPaterno}</td><td data-etiqueta="Calificación"><label className="solo-lector" htmlFor={`nota-${a.id}`}>Calificación de {a.matricula}</label><input id={`nota-${a.id}`} type="number" min={0} max={maximo} step="any" value={valores[a.id] ?? ''} aria-invalid={invalida} aria-describedby={invalida ? `error-nota-${a.id}` : undefined} onChange={(e) => setValores({ ...valores,[a.id]: e.target.value })} />{invalida && <span id={`error-nota-${a.id}`} className="mensaje-error">De 0 a {maximo}, hasta seis decimales.</span>}</td></tr>;
+        const invalida = !!valores[a.id] && !valida(valores[a.id], maximo, decimales);
+        return <tr key={a.id}><td data-etiqueta="Matrícula">{a.matricula}</td><td data-etiqueta="Alumno">{a.usuario.nombre} {a.usuario.apellidoPaterno}</td><td data-etiqueta="Calificación"><label className="solo-lector" htmlFor={`nota-${a.id}`}>Calificación de {a.matricula}</label><input id={`nota-${a.id}`} type="number" min={0} max={maximo} step="any" value={valores[a.id] ?? ''} aria-invalid={invalida} aria-describedby={invalida ? `error-nota-${a.id}` : undefined} onChange={(e) => setValores({ ...valores,[a.id]: e.target.value })} />{invalida && <span id={`error-nota-${a.id}`} className="mensaje-error">De 0 a {maximo}, hasta {decimales} decimales.</span>}</td></tr>;
       })}</tbody></table></div>
       {!soloConsulta && <><div className="campo"><label htmlFor="motivo-calificacion">Motivo obligatorio al corregir una nota existente</label><input id="motivo-calificacion" required={corrige} maxLength={300} aria-invalid={corrige && !motivo.trim()} value={motivo} onChange={(e) => setMotivo(e.target.value)} /></div>
       <p role="status">{cambios.length} calificaciones con cambios</p><button className="boton">{enviando ? 'Guardando…' : 'Guardar calificaciones'}</button></>}

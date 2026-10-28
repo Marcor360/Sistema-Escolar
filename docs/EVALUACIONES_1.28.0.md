@@ -5,8 +5,8 @@ Requisitos confirmados por el solicitante en #139 el 28/oct/2026. Incluye #208 (
 ## Comportamiento
 
 - Cuatro parciales mensuales, escala 0–10 y aprobación desde 6. Mismo régimen para niveles, planteles y grupos personalizados; se aplican los permisos existentes por clase y plantel.
-- Cada parcial aporta 25 % al promedio. La nota Final manual (`parcial=0`) sustituye el resultado calculado, incluso si vale cero o faltan parciales. Solo el profesor asignado o personal autorizado puede capturarla; corregir una nota existente exige motivo y queda en historial. No permite editar periodos o ciclos cerrados sin reapertura autorizada.
-- Captura por criterios: profesor define 1–20 nombres y porcentajes positivos con hasta dos decimales, suma exactamente 100 %. Cada alumno debe tener una nota 0–10 por criterio; vacío no significa cero. Cálculo en NestJS mediante enteros, sin redondear parciales; hasta seis decimales persistidos. Criterios y notas usados quedan como instantánea en el historial de cada captura. No se recalculan notas anteriores al cambiar los criterios de una captura nueva.
+- Cada parcial aporta 25 % a una propuesta automática. No es una Final definitiva hasta una aprobación explícita. La nota Final manual (`parcial=0`) sustituye el resultado calculado, incluso si vale cero o faltan parciales. Solo el profesor asignado o personal autorizado puede capturarla; corregir una nota existente exige motivo y queda en historial. No permite editar periodos o ciclos cerrados sin reapertura autorizada.
+- Captura por criterios: profesor define 1–20 nombres y porcentajes positivos con hasta dos decimales, suma exactamente 100 %. Cada alumno debe tener una nota 0–10 por criterio; vacío no significa cero. Cálculo en NestJS mediante enteros, sin redondear parciales; hasta seis decimales persistidos en parciales. La Final admite hasta ocho decimales para conservar exactamente su media, sin activar una regla de redondeo. Criterios y notas usados quedan como instantánea en el historial de cada captura. No se recalculan notas anteriores al cambiar los criterios de una captura nueva.
 - La UI permite volver a usar los criterios del último cálculo visible en el historial. No es un catálogo institucional de rúbricas ni un cálculo automático a partir de entregas: `Actividad.ponderacion` sigue siendo seguimiento, y las notas de cada criterio se capturan expresamente.
 - Asistencias PRESENTE/FALTA/RETARDO/JUSTIFICADA ya existen en Seguimiento: no intervienen en el cálculo ni impiden examen. NP no se implementa ni se transforma en cero por inferencia.
 - Boletas, concentrados, actas informativas, importación CSV/XLSX, analítica y Expo consultan el mismo régimen. P4 se ordena antes de Final. Una Final manual abierta impide publicar la boleta y cerrar el ciclo aunque estén cerrados los parciales; una Final manual cerrada puede sustituirlos para el resultado.
@@ -60,7 +60,21 @@ Las capturas ordinarias e importaciones usan el mismo servicio transaccional. La
 ## Casos de revisión cubiertos
 
 - Una entrega antigua 85.33/100 se muestra como 8.533/10. Editar solo su retroalimentación conserva 85.33/100; una corrección explícita admite hasta seis decimales en el régimen nuevo. Las entregas del régimen histórico mantienen captura a dos decimales.
-- El acta Final y su Excel resuelven tanto promedios de P1–P4 como sustituciones manuales. No cuentan como faltante a un alumno con resultado calculado disponible.
+- El acta Final y su Excel usan únicamente Finales aprobadas o capturadas manualmente. Un promedio completo sin aprobación permanece pendiente.
 - Los nuevos comprimidos académicos usan `expediente-egreso-iua/v2`: valores y escalas originales, régimen por clase, revisiones con autor y escalas e instantáneas de criterios. Los archivos v1 ya archivados se conservan sin sobrescribirlos. Ninguno sustituye SQL completo ni un backup restaurado.
 
-- El cierre parcial admite alumnos con Final manual sustituta aunque no tengan parciales. El resto sí requiere la nota del parcial; el cierre Final exige parciales completos y cerrados para quienes usan promedio. No se crean notas ficticias.
+- El cierre parcial admite alumnos con Final manual sustituta aunque no tengan parciales. El resto sí requiere la nota del parcial; el cierre Final exige que todos tengan una Final aprobada o capturada. No se crean notas ficticias.
+
+## Aprobación explícita de Final — corrección confirmada el 28/oct/2026
+
+El sistema propone el promedio exacto de P1–P4 (25 % cada uno). El profesor puede aprobarlo o capturar una nota manual 0–10. Administración de su plantel y SUPERADMIN también pueden aprobar/corregir; FINANZAS y ALUMNO no. Guardar una Final manual es una decisión explícita y no necesita cuatro parciales previos. Las Finales ya registradas se conservan.
+
+- GET `/calificaciones/final/propuestas/:grupoMateriaId`: alumnos con inscripción vigente, propuesta, definitiva separada y revisión opaca. Validación por docente/plantel en servidor.
+- POST `/calificaciones/final/aprobar`: `grupoMateriaId`, `alumnoId`, `revision` y motivo al sustituir. El cliente no envía una nota para aprobar. El servidor vuelve a calcular bajo los mismos bloqueos ciclo/clase usados por la captura; una revisión desactualizada da 409.
+- La aprobación escribe `parcial=0`, autor e historial con `detalleCalculo.tipo=APROBACION_FINAL`, parciales originales/escala y pesos. Una corrección manual posterior conserva esa evidencia y exige motivo. Cambiar parciales actualiza la propuesta, sin sobrescribir una Final ya decidida.
+- La propuesta no alimenta resultados oficiales, analítica, boleta ni acta como si fuera definitiva. Cerrar Final y ciclo exige Final registrada para todos los alumnos y su cierre autorizado. La aprobación no cierra automáticamente el periodo.
+- Migración incremental adicional `migracion_aprobacion_final_precision.sql` en ambos motores: amplía notas oficiales e historial de DECIMAL(9,6) a DECIMAL(11,8). Sin backfill ni redondeo de valores existentes. Parciales siguen limitados a seis decimales; Final nueva, a ocho. Desplegar API/web/app coordinadas después de las migraciones pendientes del manifiesto.
+
+Redondeo automático continúa desactivado: esta corrección define aprobación, no resuelve los ejemplos contradictorios. Los formatos continúan informativos y UAT de la candidata sigue pendiente; no se atribuye aceptación institucional a pruebas automatizadas.
+
+Seguimiento de decisiones y aceptación aún pendientes: [#210](https://github.com/Marcor360/Sistema-Escolar/issues/210). El cierre de #139 corresponde a implementación candidata en #209, sin afirmar merge ni despliegue.

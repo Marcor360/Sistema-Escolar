@@ -51,7 +51,8 @@
         "migracion_entregas_texto_fecha_documental.sql",
         "migracion_evaluaciones_cuatro_parciales.sql",
         "migracion_escalas_entregas_recursamiento.sql",
-        "migracion_precision_entregas.sql"
+        "migracion_precision_entregas.sql",
+        "migracion_aprobacion_final_precision.sql"
       ]
     },
     "sqlserver": {
@@ -103,7 +104,8 @@
         "migracion_entregas_texto_fecha_documental.sql",
         "migracion_evaluaciones_cuatro_parciales.sql",
         "migracion_escalas_entregas_recursamiento.sql",
-        "migracion_precision_entregas.sql"
+        "migracion_precision_entregas.sql",
+        "migracion_aprobacion_final_precision.sql"
       ]
     }
   }

@@ -67,3 +67,12 @@ it('recarga la lista y libera los controles después de guardar por porcentajes'
  await waitFor(()=>expect((screen.getByText('Capturar por porcentajes') as HTMLButtonElement).disabled).toBe(false));
  expect((screen.getByRole('button',{name:'Cargar lista'}) as HTMLButtonElement).disabled).toBe(false);
 });
+
+it('aprueba una propuesta, recarga la Final definitiva y libera los controles',async()=>{
+ const post=vi.spyOn(api,'post').mockResolvedValue({data:{capturadas:1}});await preparar(true);
+ const get=vi.mocked(api.get),anterior=get.getMockImplementation()!;
+ get.mockImplementation(async(url,config)=>String(url).includes('/final/propuestas/')?{data:[{alumnoId:2,propuesta:8.29584175,definitiva:post.mock.calls.length?8.29584175:null,revision:'a'.repeat(64)}]}:anterior(url,config));
+ fireEvent.change(screen.getByLabelText('Parcial'),{target:{value:'0'}});fireEvent.click(screen.getByRole('button',{name:'Cargar lista'}));await screen.findByText('Pendiente de aprobación');
+ fireEvent.click(screen.getByRole('button',{name:'Aprobar propuesta de AL2'}));await waitFor(()=>expect(post).toHaveBeenCalledWith('/calificaciones/final/aprobar',expect.objectContaining({alumnoId:2,revision:'a'.repeat(64)})));
+ await waitFor(()=>expect(screen.queryByText('Pendiente de aprobación')).toBeNull());expect((screen.getByRole('button',{name:'Cargar lista'}) as HTMLButtonElement).disabled).toBe(false);
+});

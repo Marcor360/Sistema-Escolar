@@ -19,7 +19,7 @@ Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [ín
 
 ### Cambios consolidados recientes
 
-- **1.28.0 (candidata):** [Cuatro parciales, criterios y Final manual](docs/EVALUACIONES_1.28.0.md). Escala 0–10 en clases nuevas y ciclos abiertos; originales e históricos conservados. Redondeo automático pendiente.
+- **1.28.0 (candidata):** [Cuatro parciales, criterios y aprobación de Final](docs/EVALUACIONES_1.28.0.md). Escala 0–10 en clases nuevas y ciclos abiertos; originales e históricos conservados. Redondeo automático pendiente.
 
 - **1.27.59:** [Entregas y conservación académica](docs/ENTREGAS_CONSERVACION_1.27.59.md).
 
@@ -159,7 +159,7 @@ Antes de marcar un PR como listo:
 
 ## Pendientes reales conocidos
 
-- Evaluaciones: validar la candidata 1.28.0 y resolver el redondeo contradictorio antes de activarlo [#139](https://github.com/Marcor360/Sistema-Escolar/issues/139). [Contrato](docs/EVALUACIONES_1.28.0.md).
+- Evaluaciones: validar la candidata 1.28.0 y resolver el redondeo contradictorio antes de activarlo [#210](https://github.com/Marcor360/Sistema-Escolar/issues/210). [Contrato](docs/EVALUACIONES_1.28.0.md).
 - Inscripción por cartera/reinscripción, protección de main y notificaciones de WhatsApp/llamadas mantienen su seguimiento en GitHub.
 - Restore aislado, antivirus real, pruebas de esta candidata en dispositivos y conciliación del ETL legado.
 

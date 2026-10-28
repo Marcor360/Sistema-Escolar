@@ -21,7 +21,7 @@ export class Calificacion {
   grupoMateria!: GrupoMateria;
   @Column() parcial!: number;
   @Column({ default: 100 }) escalaMaxima!: number;
-  @Column('decimal', { precision: 9, scale: 6, transformer: decimalTransformer })
+  @Column('decimal', { precision: 11, scale: 8, transformer: decimalTransformer })
   calificacion!: number;
   @Column({ type: String, length: 300, nullable: true }) observaciones!: string | null;
   @Column({ type: 'int', nullable: true }) capturadaPorId!: number | null;

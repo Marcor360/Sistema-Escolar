@@ -61,7 +61,10 @@ export class CiclosService {
       const cerrados = new Set(periodos.filter((p) => p.estatus === 'CERRADO').map((p) => `${p.grupoMateriaId}:${p.parcial}`));
       for (const clase of lote) {
         const inscritos=inscritosPorGrupo.get(clase.grupoId) ?? [];
-        if (clase.regimenEvaluacion === 'CUATRO_PARCIALES_10' && inscritos.some(id=>notasExistentes.has(`${clase.id}:0:${id}`)) && !cerrados.has(`${clase.id}:0`)) faltantes.push({grupoMateriaId:clase.id,parcial:0,inscritos:inscritos.length,sinNota:0,cerrado:false});
+        if (clase.regimenEvaluacion === 'CUATRO_PARCIALES_10' && inscritos.length) {
+          const sinNota=inscritos.filter(id=>!notasExistentes.has(`${clase.id}:0:${id}`)).length, cerrado=cerrados.has(`${clase.id}:0`);
+          if (sinNota || !cerrado) faltantes.push({grupoMateriaId:clase.id,parcial:0,inscritos:inscritos.length,sinNota,cerrado});
+        }
       }
       for (const clase of lote) for (const parcial of parcialesDe(clase)) {
         const inscritos = inscritosPorGrupo.get(clase.grupoId) ?? [];

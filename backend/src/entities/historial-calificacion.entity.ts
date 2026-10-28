@@ -10,9 +10,9 @@ export class HistorialCalificacion {
   @Column() alumnoId!: number;
   @Column() grupoMateriaId!: number;
   @Column() parcial!: number;
-  @Column('decimal', { precision: 9, scale: 6, nullable: true, transformer: decimalTransformer })
+  @Column('decimal', { precision: 11, scale: 8, nullable: true, transformer: decimalTransformer })
   valorAnterior!: number | null;
-  @Column('decimal', { precision: 9, scale: 6, transformer: decimalTransformer }) valorNuevo!: number;
+  @Column('decimal', { precision: 11, scale: 8, transformer: decimalTransformer }) valorNuevo!: number;
   @Column({ type: String, length: 300, nullable: true }) observacionAnterior!: string | null;
   @Column({ type: String, length: 300, nullable: true }) observacionNueva!: string | null;
   @Column({ default: 100 }) escalaAnterior!: number;
