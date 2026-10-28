@@ -379,7 +379,9 @@ export class ReinscripcionPeriodoService {
           'Las parcialidades deben sumar exactamente la tarifa total del concepto; no se cobra el total además de sus cuotas',
         );
     }
-    if ((cuotas.some((q) => q.descuento > 0) || ajustes.length) && (!d.motivo?.trim() || d.motivo.trim().length < 10))
+    const motivoFinanciero = [d.motivo, ...ajustes.map((a) => a.motivo)]
+      .some((motivo) => (motivo?.trim().length ?? 0) >= 10);
+    if ((cuotas.some((q) => q.descuento > 0) || ajustes.length) && !motivoFinanciero)
       throw new BadRequestException('La tarifa personalizada o beca/descuento necesita motivo documentado');
     cuotas.sort((a, b) => a.conceptoId - b.conceptoId || a.periodo.localeCompare(b.periodo));
     const peticion: ReinscripcionPeriodoDto = {

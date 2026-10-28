@@ -1,7 +1,7 @@
 import { escalaDe, esRegimenNuevo } from '../common/regimen-evaluacion';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { DataSource, LessThan } from 'typeorm';
+import { DataSource, In, LessThan } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
@@ -31,7 +31,7 @@ export class ImportacionCalificacionesService {
     const gm = await this.ds.getRepository(GrupoMateria).findOneByOrFail({ id: dto.grupoMateriaId });
     const inscripciones = await this.ds
       .getRepository(Inscripcion)
-      .find({ where: { ...inscripcionVigente, grupoId: gm.grupoId }, order: { alumnoId: 'ASC' } });
+      .find({ where: { ...inscripcionVigente, estatus: In(['ACTIVA', 'HISTORICA']), grupoId: gm.grupoId }, order: { alumnoId: 'ASC' } });
     if (inscripciones.length > 500) throw new BadRequestException('La plantilla supera 500 inscritos; solicita una exportación por lotes');
     if (!inscripciones.length) throw new BadRequestException('La clase no tiene alumnos inscritos; realiza la inscripción antes de descargar la plantilla');
     const libro = new ExcelJS.Workbook();
@@ -107,7 +107,7 @@ export class ImportacionCalificacionesService {
     const gm = await this.ds.getRepository(GrupoMateria).findOneByOrFail({ id: dto.grupoMateriaId });
     const inscritos = await this.ds
       .getRepository(Inscripcion)
-      .find({ where: { ...inscripcionVigente, grupoId: gm.grupoId } });
+      .find({ where: { ...inscripcionVigente, estatus: In(['ACTIVA', 'HISTORICA']), grupoId: gm.grupoId } });
     const alumnos = new Map(inscritos.map((i) => [i.alumnoId, i.alumno.matricula]));
     const vistos = new Set<number>();
     const items: CapturaCalificacionesDto['items'] = [];
@@ -124,7 +124,7 @@ export class ImportacionCalificacionesService {
         alumnos.get(id) !== f.matricula ||
         (gm.grupo.grado ?? '') !== (f.grado ?? '')
       )
-        mensaje = 'Identificador, matrícula o grado no corresponden a una inscripción activa.';
+        mensaje = 'Identificador, matrícula o grado no corresponden a una inscripción vigente o histórica habilitada.';
       else if ((esRegimenNuevo(gm) && f.escalaMaxima !== '10') || (f.escalaMaxima !== undefined && Number(f.escalaMaxima) !== escalaDe(gm))) mensaje = `Usa la plantilla actual con escalaMaxima=${escalaDe(gm)}; no se convierte la escala del archivo por inferencia.`;
       else if (vistos.has(id)) mensaje = 'Alumno duplicado en el archivo.';
       else if (!new RegExp(`^(?:\\d+|\\d*\\.\\d{1,${dto.parcial === 0 && esRegimenNuevo(gm) ? 8 : 6}})$`).test(f.calificacion) || Number(f.calificacion) > escalaDe(gm))

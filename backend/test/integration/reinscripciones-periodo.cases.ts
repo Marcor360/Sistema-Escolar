@@ -340,6 +340,29 @@ export function registrarReinscripcionesPeriodo(ctx: ContextoIntegracion) {
     expect(
       (await ctx.api(`/academico/grupos/${f.origenGrupo.id}/alumnos?incluirHistoricas=true`, { token: f.root })).data,
     ).toHaveLength(1);
+    // La captura masiva también debe completar evaluaciones del grupo anterior.
+    const plantilla = await ctx.api(
+      `/importaciones/calificaciones/plantilla?grupoMateriaId=${f.clase.id}&parcial=4`,
+      { token: f.root },
+    );
+    expect(plantilla.response.status).toBe(200);
+    const archivo = new FormData();
+    archivo.append('grupoMateriaId', String(f.clase.id));
+    archivo.append('parcial', '4');
+    archivo.append('archivo', new Blob([
+      `grupoMateriaId,parcial,alumnoId,matricula,grado,calificacion,observaciones,escalaMaxima\n${f.clase.id},4,${a.a.id},${a.a.matricula},,8,,10`,
+    ]), 'notas-historicas.csv');
+    const importacion = await f.post('/importaciones/calificaciones/preview', archivo, f.root);
+    expect(importacion.response.status).toBe(201);
+    expect(importacion.data.errores).toEqual([]);
+    expect(importacion.data.previewId).toBeTruthy();
+    const captura = await f.post('/importaciones/calificaciones/confirmar', {
+      previewId: importacion.data.previewId, confirmado: true,
+    }, f.root);
+    expect(captura.response.status).toBe(201);
+    expect(await f.ds.getRepository(Calificacion).findOneByOrFail({
+      alumnoId: a.a.id, grupoMateriaId: f.clase.id, parcial: 4,
+    })).toMatchObject({ calificacion: 8, escalaMaxima: 10 });
     expect(
       (await f.post('/cartera/reinscripciones/confirmar', { ...confirmacion, idempotencia: randomUUID() }, f.admin))
         .response.status,
@@ -422,10 +445,14 @@ export function registrarReinscripcionesPeriodo(ctx: ContextoIntegracion) {
     async (tipo, origen, destino) => {
       const f = await preparar(tipo, origen, destino),
         a = await f.alumno(),
-        c = await f.autorizar(a.payload);
+        c = await f.autorizar({
+          ...a.payload,
+          ajustes: [{ conceptoId: f.concepto.id, monto: 900, motivo: 'Tarifa del periodo autorizada por contrato' }],
+        });
       const r = await f.post('/cartera/reinscripciones/confirmar', c, f.admin);
       expect(r.response.status).toBe(201);
       expect(r.data.estado).toBe('CONFIRMADA');
+      expect(r.data.total).toBe(900);
     },
   );
   it('reinscripción por periodo: no convierte pendientes en cero; condicional documentada y cancelación sin cargos', async () => {
