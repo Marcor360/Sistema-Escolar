@@ -38,7 +38,7 @@ describe('titulación: borradores con RVOE pendiente', () => {
   it('rechaza el portal móvil', async () => {
     const { service } = escenario();
     await expect(service.crearBorrador({ egresoId: 7, carreraPlanId: 4 },
-      { ...director, portal: 'MOVIL' })).rejects.toThrow('portal web');
+      { ...director, portal: 'MOVIL' })).rejects.toThrow('requiere el rol DIRECTOR desde web');
   });
   it('rechaza programas de un plantel diferente', async () => {
     const { service, expedientes } = escenario(1, 3);
