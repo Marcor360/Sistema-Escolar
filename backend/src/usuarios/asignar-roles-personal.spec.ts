@@ -19,10 +19,8 @@ function escenario(actorRoles: string[], destinoRoles: string[], plantelesDestin
     find: jest.fn(async ({ where }: { where: { usuarioId: number } }) =>
       (where.usuarioId === 1 ? [3] : plantelesDestino).map((plantelId) => ({ plantelId }))),
   };
-  const roles = { find: jest.fn(async ({ where }: { where: { clave: { _value?: string[] } } }) => {
-    void where;
-    return [{ clave: 'FINANZAS' }, { clave: 'MAESTRO' }];
-  }) };
+  const roles = { find: jest.fn(async ({ where }: { where: { clave: { value: string[] } } }) =>
+    where.clave.value.map((clave) => ({ clave }))) };
   const docente = { findOne: jest.fn().mockResolvedValue({ id: 22, estatus: 'ACTIVO' }) };
   const bitacora = { insert: jest.fn().mockResolvedValue(undefined) };
   const manager = { getRepository: jest.fn((entidad: { name: string }) => {
@@ -65,7 +63,7 @@ describe('asignación jerárquica de roles', () => {
   });
   it('revoca sesiones y audita cuando actualiza roles de personal válido', async () => {
     const { service, usuarios, bitacora } = escenario(['ADMINISTRATIVO'], ['FINANZAS']);
-    const resultado = await service.asignarRolesPersonal(7, ['FINANZAS', 'MAESTRO'].filter((x) => x !== 'MAESTRO') as ['FINANZAS'], { sub: 1, roles: ['ADMINISTRATIVO'], email: '', nombre: '' });
+    const resultado = await service.asignarRolesPersonal(7, ['FINANZAS'], { sub: 1, roles: ['ADMINISTRATIVO'], email: '', nombre: '' });
     expect(resultado.sesionesRevocadas).toBe(true);
     expect(usuarios.save).toHaveBeenCalledWith(expect.objectContaining({ sessionVersion: 2 }));
     expect(bitacora.insert).toHaveBeenCalled();
