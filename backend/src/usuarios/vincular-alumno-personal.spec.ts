@@ -51,7 +51,7 @@ function escenario() {
   }) };
   const scope = { validarGestion: jest.fn().mockResolvedValue(undefined) };
   const servicio = new UsuariosService(
-    stub<Repository<Usuario>>({ manager: stub({ transaction: async (fn: (m: typeof manager) => Promise<unknown>) => fn(manager) }) }),
+    stub<Repository<Usuario>>({ manager: stub({ transaction: jest.fn(async (fn: (m: unknown) => Promise<unknown>) => fn(manager)) }) }),
     stub<Repository<Rol>>({}), stub<Repository<Alumno>>({}), stub<Repository<Docente>>({}),
     stub<Repository<UsuarioPlantel>>({}), stub<ScopeService>(scope),
   );
