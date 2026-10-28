@@ -62,3 +62,5 @@ Las capturas ordinarias e importaciones usan el mismo servicio transaccional. La
 - Una entrega antigua 85.33/100 se muestra como 8.533/10. Editar solo su retroalimentación conserva 85.33/100; una corrección explícita admite hasta seis decimales en el régimen nuevo. Las entregas del régimen histórico mantienen captura a dos decimales.
 - El acta Final y su Excel resuelven tanto promedios de P1–P4 como sustituciones manuales. No cuentan como faltante a un alumno con resultado calculado disponible.
 - Los nuevos comprimidos académicos usan `expediente-egreso-iua/v2`: valores y escalas originales, régimen por clase, revisiones con autor y escalas e instantáneas de criterios. Los archivos v1 ya archivados se conservan sin sobrescribirlos. Ninguno sustituye SQL completo ni un backup restaurado.
+
+- El cierre parcial admite alumnos con Final manual sustituta aunque no tengan parciales. El resto sí requiere la nota del parcial; el cierre Final exige parciales completos y cerrados para quienes usan promedio. No se crean notas ficticias.

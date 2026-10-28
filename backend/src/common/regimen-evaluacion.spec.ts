@@ -1,4 +1,4 @@
-import { alumnosConFinalDisponible, calcularPonderada, notaEnEscala, parcialesDe, REGIMEN_NUEVO, resultadoEvaluacion } from './regimen-evaluacion';
+import { alumnosConFinalDisponible, alumnosConParcialDisponible, calcularPonderada, notaEnEscala, parcialesDe, REGIMEN_NUEVO, resultadoEvaluacion } from './regimen-evaluacion';
 import { boletaPublicable } from '../reportes/publicacion-boleta';
 const nueva = { id: 1, regimenEvaluacion: REGIMEN_NUEVO };
 const notas = (valores:number[]) => valores.map((calificacion,i)=>({grupoMateriaId:1,parcial:i+1,calificacion,escalaMaxima:10}));
@@ -43,4 +43,10 @@ it('el cierre de Final combina alumnos con sustitución y alumnos con promedio c
 it('la equivalencia no añade decimales binarios que impidan editar retroalimentación',()=>{
  expect(notaEnEscala({calificacion:0.29,escalaMaxima:100},nueva)).toBe(0.029);
  expect(notaEnEscala({calificacion:4.063027,escalaMaxima:10},nueva)).toBe(4.063027);
+});
+
+it('el cierre parcial admite Final manual sin inventar parciales y sigue exigiendo al resto',()=>{
+ const notas=[{alumnoId:1,parcial:0},{alumnoId:2,parcial:1},{alumnoId:3,parcial:2}];
+ expect([...alumnosConParcialDisponible(notas,1)]).toEqual([1,2]);
+ expect([...alumnosConParcialDisponible(notas,2)]).toEqual([1,3]);
 });

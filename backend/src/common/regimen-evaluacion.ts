@@ -43,3 +43,8 @@ export function alumnosConFinalDisponible(notas:{alumnoId:number;parcial:number}
   for(const id of ids) if([1,2,3,4].every(p=>notas.some(n=>n.alumnoId===id && n.parcial===p)))manuales.add(id);
   return manuales;
 }
+
+/** Una Final manual sustituye los parciales; no crea notas parciales ficticias. */
+export function alumnosConParcialDisponible(notas:{alumnoId:number;parcial:number}[], parcial:number):Set<number> {
+  return new Set(notas.filter(n=>n.parcial===parcial || n.parcial===0).map(n=>n.alumnoId));
+}

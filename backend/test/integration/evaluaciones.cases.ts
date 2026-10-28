@@ -68,6 +68,13 @@ export function registrarEvaluaciones(ctx:ContextoIntegracion) {
   await ctx.emitirToken(`eval2_${ctx.sufijo}@example.invalid`);
   await ds.getRepository(Inscripcion).save({alumnoId:segundo.data.id,grupoId:grupo.id,estatus:'ACTIVA'});
   for(const [parcial,calificacion] of [[1,5],[2,6],[3,7],[4,8]])expect((await post({...cuerpo,parcial,items:[{alumnoId:segundo.data.id,calificacion}]})).response.status).toBe(201);
+  const manual=await ctx.api('/alumnos',{method:'POST',token:root,body:{email:`eval3_${ctx.sufijo}@example.invalid`,nombre:'Evaluación',apellidoPaterno:'SoloFinal',curp:'EAVC010101HDFLRN09',matricula:`EX${ctx.sufijo}`,plantelId:ctx.plantelId}});expect(manual.response.status).toBe(201);
+  await ds.getRepository(Inscripcion).save({alumnoId:manual.data.id,grupoId:grupo.id,estatus:'ACTIVA'});
+  expect((await ctx.api(`/calificaciones/periodos/${clase.id}/1`,{method:'PATCH',token:root,body:{estatus:'CERRADO'}})).response.status).toBe(409);
+  expect((await post({...cuerpo,parcial:0,items:[{alumnoId:manual.data.id,calificacion:7}]})).response.status).toBe(201);
+  for(const parcial of [1,2,3,4]) {
+   const estado=await ctx.api(`/calificaciones/periodos/${clase.id}/${parcial}`,{token:root});expect(estado.data).toMatchObject({inscritos:3,capturados:3,faltantes:0});
+  }
   const cerrar=(parcial:number)=>ctx.api(`/calificaciones/periodos/${clase.id}/${parcial}`,{method:'PATCH',token:root,body:{estatus:'CERRADO'}});
   for(const p of [1,2,3,4]) expect((await cerrar(p)).response.status).toBe(200);
   const inscripcion=await ds.getRepository(Inscripcion).findOneByOrFail({alumnoId,grupoId:grupo.id});
@@ -78,6 +85,7 @@ export function registrarEvaluaciones(ctx:ContextoIntegracion) {
   const acta=await ctx.api(`/reportes/formatos/acta/${clase.id}?parcial=0`,{token:root});expect(acta.response.status).toBe(200);expect(acta.data).toMatchObject({estado:'CERRADO',faltantes:0});
   expect(acta.data.filas.find((f:{alumnoId:number})=>f.alumnoId===segundo.data.id)).toMatchObject({calificacion:6.5});expect(acta.data.filas.find((f:{alumnoId:number})=>f.alumnoId===alumnoId)).toMatchObject({calificacion:6.4});
   const actaArchivo=await fetch(`${ctx.baseUrl}/reportes/formatos/acta/${clase.id}/excel?parcial=0`,{headers:{authorization:`Bearer ${root}`}});expect(actaArchivo.status).toBe(200);const actaLibro=new ExcelJS.Workbook();await actaLibro.xlsx.load(Buffer.from(await actaArchivo.arrayBuffer()) as never);expect([actaLibro.worksheets[0].getCell('W8').value,actaLibro.worksheets[0].getCell('W9').value]).toEqual(expect.arrayContaining([6.4,6.5]));
+  expect(await ds.getRepository(Calificacion).countBy({alumnoId:manual.data.id,grupoMateriaId:clase.id})).toBe(1);
   expect((await ponderar(ponderada)).response.status).toBe(409);
   expect((await post({...cuerpo,parcial:0,motivo:'Intento tardío',items:[{alumnoId,calificacion:8}]})).response.status).toBe(409);
   const plantilla=await fetch(`${ctx.baseUrl}/importaciones/calificaciones/plantilla?grupoMateriaId=${clase.id}&parcial=4`,{headers:{authorization:`Bearer ${root}`}});

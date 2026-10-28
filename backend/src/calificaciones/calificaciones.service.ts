@@ -3,7 +3,7 @@ import { esMaestroRestringido, exigirConsultaAcademica } from '../common/politic
 import { CicloEscolar } from '../entities/ciclo-escolar.entity';
 import { PaginacionDto } from '../common/paginacion.dto';
 import { exigirGrupoVigente, inscripcionVigente } from '../common/contexto-academico';
-import { alumnosConFinalDisponible, calcularPonderada, escalaDe, esRegimenNuevo, notaEnEscala, parcialesDe, resultadoEvaluacion } from '../common/regimen-evaluacion';
+import { alumnosConFinalDisponible, alumnosConParcialDisponible, calcularPonderada, escalaDe, esRegimenNuevo, notaEnEscala, parcialesDe, resultadoEvaluacion } from '../common/regimen-evaluacion';
 import { CapturaPonderadaDto } from './ponderacion.dto';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -155,10 +155,10 @@ export class CalificacionesService {
     const inscritos = await this.inscripciones.find({ where: { ...inscripcionVigente, grupoId: gm.grupoId } });
     const registros = await this.repo.find({ where: { grupoMateriaId, parcial } });
     let capturados = new Set(registros.map((c) => c.alumnoId));
-    if (parcial === 0 && esRegimenNuevo(clase)) {
+    if (esRegimenNuevo(clase)) {
       const todas = await this.repo.find({where:{grupoMateriaId},loadEagerRelations:false});
       const periodos = await this.periodos.find({where:{grupoMateriaId}});
-      capturados = alumnosConFinalDisponible(todas,periodos);
+      capturados = parcial === 0 ? alumnosConFinalDisponible(todas,periodos) : alumnosConParcialDisponible(todas,parcial);
     }
     const faltantes = inscritos.filter((i) => !capturados.has(i.alumnoId)).length;
     return { grupoMateriaId, parcial, escalaMaxima: escalaDe(clase), regimenEvaluacion: clase.regimenEvaluacion ?? 'LEGADO_100', parciales: parcialesDe(clase), redondeoAutomatico: false, estatus: periodo?.estatus ?? 'ABIERTO', inscritos: inscritos.length,
@@ -187,10 +187,10 @@ export class CalificacionesService {
         const inscritos = await manager.getRepository(Inscripcion).find({ where: { ...inscripcionVigente, grupoId: gm.grupoId } });
         const notas = await manager.getRepository(Calificacion).find({ where: { grupoMateriaId, parcial } });
         let capturados = new Set(notas.map((c) => c.alumnoId));
-        if (parcial === 0 && esRegimenNuevo(gm)) {
+        if (esRegimenNuevo(gm)) {
           const todas = await manager.getRepository(Calificacion).find({where:{grupoMateriaId},loadEagerRelations:false});
           const periodos = await manager.getRepository(PeriodoCalificacion).find({where:{grupoMateriaId}});
-          capturados = alumnosConFinalDisponible(todas,periodos);
+          capturados = parcial === 0 ? alumnosConFinalDisponible(todas,periodos) : alumnosConParcialDisponible(todas,parcial);
         }
         if (inscritos.some((i) => !capturados.has(i.alumnoId))) throw new ConflictException('No puedes cerrar el periodo: hay alumnos sin calificación');
       }
