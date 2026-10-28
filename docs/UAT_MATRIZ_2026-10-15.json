@@ -1,6 +1,6 @@
 {
-  "version": "1.30.0",
-  "alcance": "Candidata 1.30.0 sobre main 1.29.0: calendario institucional con logo configurable, lámina anual/mensual imprimible, leyenda, marcadores por plantel y rangos de eventos. Sin despliegue ni aceptación UAT de esta versión acreditados.",
+  "version": "1.30.1",
+  "alcance": "Candidata 1.30.1 sobre main 1.30.0: aislamiento de consultas académicas Expo al cambiar de sesión; rechaza respuestas tardías exitosas o fallidas. Sin cambios en API, BD o web. Pendiente CI del SHA y UAT de Android/iOS.",
   "escenarios": [
     {
       "id": "UAT-01",

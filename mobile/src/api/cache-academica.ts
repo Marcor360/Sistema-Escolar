@@ -1,4 +1,6 @@
 /** Retención mínima: solo memoria de la sesión, nunca expedientes académicos en disco/SecureStore. */
+import { CanceledError } from "axios";
+
 const TTL = 5 * 60 * 1000;
 let identidad: number | null = null,
   generacion = 0;
@@ -19,12 +21,16 @@ export async function leerConCache<T>(
 ) {
   const actual = generacion;
   try {
-    const respuesta = await solicitar(),
-      fecha = Date.now();
+    const respuesta = await solicitar();
+    if (actual !== generacion || identidad === null)
+      throw new CanceledError("La sesión cambió durante la consulta");
+    const fecha = Date.now();
     if (actual === generacion && identidad !== null)
       registros.set(ruta, { data: respuesta.data, fecha });
     return { data: respuesta.data, offline: false, fecha };
   } catch (e) {
+    if (actual !== generacion || identidad === null)
+      throw new CanceledError("La sesión cambió durante la consulta");
     const error = e as { response?: unknown; code?: string };
     const cache = registros.get(ruta);
     if (

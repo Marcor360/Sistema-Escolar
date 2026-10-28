@@ -47,7 +47,17 @@ describe("Caché académica de retención mínima", () => {
     );
     configurarCacheAcademica(2);
     resolver({ data: [92] });
-    await p;
+    await expect(p).rejects.toMatchObject({ code: "ERR_CANCELED" });
     await expect(leerConCache("/notas", offline)).rejects.toBeTruthy();
+  });
+  it("rechaza una solicitud antigua aunque termine con error de red", async () => {
+    configurarCacheAcademica(1);
+    let rechazar!: (e: unknown) => void;
+    const consulta = leerConCache("/notas", () => new Promise<{ data: number[] }>((_, reject) => {
+      rechazar = reject;
+    }));
+    configurarCacheAcademica(2);
+    rechazar({ code: "ERR_NETWORK" });
+    await expect(consulta).rejects.toMatchObject({ code: "ERR_CANCELED" });
   });
 });
