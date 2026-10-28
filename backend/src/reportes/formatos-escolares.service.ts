@@ -4,7 +4,7 @@ import { uploadsPath } from '../common/uploads-path';
 import type { LogoDocumento } from './formatos-escolares.xlsx';
 import { boletaPublicable } from './publicacion-boleta';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, In } from 'typeorm';
 import PDFDocument from 'pdfkit';
 import { Alumno } from '../entities/alumno.entity';
 import { Inscripcion } from '../entities/inscripcion.entity';
@@ -38,7 +38,7 @@ export class FormatosEscolaresService {
     if (parcial === 4 && !esRegimenNuevo(gm)) throw new BadRequestException('La clase histórica tiene tres parciales');
     const finalCalculada = parcial === 0 && esRegimenNuevo(gm);
     const [inscritos, notas, periodo, marca] = await Promise.all([
-      this.ds.getRepository(Inscripcion).find({ where: { grupoId: gm.grupoId, estatus: 'ACTIVA', alumno: { estatus: 'ACTIVO' } } }),
+      this.ds.getRepository(Inscripcion).find({ where: { grupoId: gm.grupoId, estatus: In(['ACTIVA','HISTORICA']), alumno: { estatus: 'ACTIVO' } } }),
       this.ds.getRepository(Calificacion).find({ where: { grupoMateriaId: id, ...(finalCalculada ? {} : {parcial}) } }),
       this.ds.getRepository(PeriodoCalificacion).findOneBy({ grupoMateriaId: id, parcial }),
       this.marca.obtener(),

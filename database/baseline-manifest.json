@@ -52,7 +52,8 @@
         "migracion_evaluaciones_cuatro_parciales.sql",
         "migracion_escalas_entregas_recursamiento.sql",
         "migracion_precision_entregas.sql",
-        "migracion_aprobacion_final_precision.sql"
+        "migracion_aprobacion_final_precision.sql",
+        "migracion_reinscripciones_periodo.sql"
       ]
     },
     "sqlserver": {
@@ -105,7 +106,8 @@
         "migracion_evaluaciones_cuatro_parciales.sql",
         "migracion_escalas_entregas_recursamiento.sql",
         "migracion_precision_entregas.sql",
-        "migracion_aprobacion_final_precision.sql"
+        "migracion_aprobacion_final_precision.sql",
+        "migracion_reinscripciones_periodo.sql"
       ]
     }
   }

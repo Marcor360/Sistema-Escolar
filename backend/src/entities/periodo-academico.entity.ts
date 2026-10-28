@@ -18,5 +18,7 @@ export class PeriodoAcademico {
   @Column({ length: 120 }) nombre!: string;
   @Column({ type: String, length: 16 }) tipo!: 'ANUAL' | 'SEMESTRAL' | 'CUATRIMESTRAL';
   @Column({ type: 'int' }) numero!: number;
+  @Column({type:'date',nullable:true}) fechaInicio!:string|null;
+  @Column({type:'date',nullable:true}) fechaFin!:string|null;
   @Column({ default: true }) activo!: boolean;
 }

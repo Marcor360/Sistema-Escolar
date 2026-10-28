@@ -29,8 +29,8 @@ async materiasDeGrupo(grupoId: number, user: JwtUser) { return this.grupos.mater
 async asignarMateria(grupoId: number, dto: AsignarMateriaDto, user: JwtUser) { return this.grupos.asignarMateria(grupoId, dto, user); }
 async asignarDocente(grupoMateriaId: number, docenteId: number, user: JwtUser) { return this.grupos.asignarDocente(grupoMateriaId, docenteId, user); }
 async eliminarGrupoMateria(id: number, user: JwtUser) { return this.grupos.eliminarGrupoMateria(id, user); }
-async inscribirAlumno(grupoId: number, alumnoId: number, user: JwtUser) { return this.inscripciones.inscribirAlumno(grupoId, alumnoId, user); }
-async alumnosDeGrupo(grupoId: number, user: JwtUser) { return this.inscripciones.alumnosDeGrupo(grupoId, user); }
+async inscribirAlumno(grupoId: number, alumnoId: number, user: JwtUser, correccion?: {motivo?:string;documentoRef?:string}) { return this.inscripciones.inscribirAlumno(grupoId, alumnoId, user, correccion); }
+async alumnosDeGrupo(grupoId: number, user: JwtUser, incluirHistoricas=false) { return this.inscripciones.alumnosDeGrupo(grupoId, user, incluirHistoricas); }
 async bajaInscripcion(id: number, user: JwtUser) { return this.inscripciones.bajaInscripcion(id, user); }
 async bitacoraAcademica(user: JwtUser, query: ListarGruposDto) { return this.inscripciones.bitacoraAcademica(user, query); }
 async misGrupos(usuarioId: number) { return this.grupos.misGrupos(usuarioId); }

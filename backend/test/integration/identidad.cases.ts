@@ -1,3 +1,4 @@
+import { crearInscripcionFixture } from './fixtures-inscripcion';
 import { ContextoIntegracion } from './contexto';
 import { PushService } from '../../src/notificaciones/push.service';
 import { NotificacionesService } from '../../src/notificaciones/notificaciones.service';
@@ -219,7 +220,7 @@ it('bloquea PATCH de estado/plantel, impide egreso sin cierre y completa transfe
       } }); expect(alta.response.status).toBe(201);
       const id = alta.data.id; const usuarioId = alta.data.usuarioId;
       const movil = await ctx.emitirToken(`${accion}_${ctx.sufijo}@example.invalid`);
-      expect((await ctx.api(`/academico/grupos/${grupo.id}/alumnos`, { method: 'POST', token, body: { alumnoId: id } })).response.status).toBe(201);
+      await crearInscripcionFixture(ctx,grupo.id,id);
       expect((await ctx.api(`/alumnos/${id}`, { method: 'PATCH', token, body: { estatus: 'BAJA' } })).response.status).toBe(400);
       expect((await ctx.api(`/alumnos/${id}`, { method: 'PATCH', token, body: { plantelId: ctx.otroPlantelId } })).response.status).toBe(400);
       const resultado = await ctx.api(`/alumnos/${id}/${accion}`, { method: 'POST', token,
@@ -324,7 +325,7 @@ it('reactiva alumno sin restaurar inscripciones y docente sin restaurar clases',
     const admin = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.adminId })).email);
     const alumno = await ctx.api('/alumnos', { method: 'POST', token: admin, body: { email: `reactiva_${ctx.sufijo}@example.invalid`, nombre: 'Reactiva', apellidoPaterno: 'Prueba', matricula: `RA${ctx.sufijo}`, plantelId: ctx.plantelId, curp: 'GODE561231HDFRRN09' } });
     const clase = await ctx.dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: ctx.grupoMateriaIdMaestro });
-    expect((await ctx.api(`/academico/grupos/${clase.grupoId}/alumnos`, { method: 'POST', token: admin, body: { alumnoId: alumno.data.id } })).response.status).toBe(201);
+    await crearInscripcionFixture(ctx,clase.grupoId,alumno.data.id);
     expect((await ctx.api(`/alumnos/${alumno.data.id}/baja`, { method: 'POST', token: admin })).response.status).toBe(201);
     const reactivado = await ctx.api(`/alumnos/${alumno.data.id}/reactivacion`, { method: 'POST', token: admin, body: { motivo: 'Retorno autorizado' } }); expect(reactivado.response.status).toBe(201);
     const expediente = await ctx.dataSource.getRepository(Alumno).findOneByOrFail({ id: alumno.data.id }); expect(expediente.estatus).toBe('ACTIVO'); expect(expediente.usuario.activo).toBe(true);

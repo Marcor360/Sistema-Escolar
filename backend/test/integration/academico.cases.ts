@@ -1,3 +1,4 @@
+import { crearInscripcionFixture } from './fixtures-inscripcion';
 import { ContextoIntegracion } from './contexto';
 import { expect, it, jest } from '@jest/globals';
 import * as ExcelJS from 'exceljs';
@@ -91,10 +92,8 @@ it('MAESTRO solo lista y consulta alumnos de sus grupos, aunque compartan plante
       body: { cicloId: ciclo.id, plantelId: ctx.plantelId, nombre: `Y${ctx.sufijo}`, grado: '2' },
     });
     expect(grupoOtro.response.status).toBe(201);
-    const inscripcion = await ctx.api(`/academico/grupos/${grupoOtro.data.id}/alumnos`, {
-      method: 'POST', token: tokenAdmin, body: { alumnoId: segundoAlumno.data.id },
-    });
-    expect(inscripcion.response.status).toBe(201);
+    const inscripcion = await crearInscripcionFixture(ctx,grupoOtro.data.id,segundoAlumno.data.id);
+
 
     const tokenMaestro = await ctx.emitirToken(`maestro_scope_${ctx.sufijo}@example.invalid`);
     const [listado, propio, ajeno] = await Promise.all([
@@ -117,8 +116,9 @@ it('impide doble inscripción concurrente y cambios de ciclo; rechaza grupos en 
     const alta = await ctx.api('/alumnos', { method: 'POST', token, body: { nombre: 'Concurrente', apellidoPaterno: 'Prueba',
       matricula: `CON${ctx.sufijo}`, email: `con_${ctx.sufijo}@example.invalid`, curp: 'GODE561231HDFRRN09', plantelId: ctx.plantelId } });
     expect(alta.response.status).toBe(201);
+    await ctx.dataSource.getRepository(Inscripcion).save([grupoA,grupoB].map(g=>({grupoId:g.id,alumnoId:alta.data.id,estatus:'BAJA' as const})));
     const respuestas = await Promise.all([grupoA, grupoB].map((g) => ctx.api(`/academico/grupos/${g.id}/alumnos`, {
-      method: 'POST', token, body: { alumnoId: alta.data.id },
+      method: 'POST', token, body: { alumnoId: alta.data.id,motivo:'Reactivación concurrente documentada',documentoRef:'ACTA-CONC-2026' },
     })));
     expect(respuestas.map((r) => r.response.status).sort()).toEqual([201, 409]);
     expect(await ctx.dataSource.getRepository(Inscripcion).countBy({ alumnoId: alta.data.id, estatus: 'ACTIVA' })).toBe(1);

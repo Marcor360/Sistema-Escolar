@@ -1,3 +1,4 @@
+import { crearInscripcionFixture } from './fixtures-inscripcion';
 import { expect, it } from '@jest/globals';
 import { randomUUID } from 'crypto';
 import { Calificacion, CalificacionRecursamiento, HistorialRecursamiento, GrupoMateria, Inscripcion, Usuario, Material } from '../../src/entities';
@@ -17,7 +18,7 @@ export function registrarRecursamientos(ctx:ContextoIntegracion){
     const ingles=await post(`/academico/grupos/${receptor.id}/materias`,{materiaId:ing.id,docenteId:actual.docenteId});
     const original=await post(`/academico/grupos/${principal.id}/materias`,{materiaId:mat.id,docenteId:actual.docenteId});
     const alumnos:{id:number}[]=[];
-    for(let n=0;n<2;n++){const a=await post('/alumnos',{email:`rc${n}${ctx.sufijo}@example.invalid`,matricula:`RC${n}${ctx.sufijo}`,nombre:'Alumno',apellidoPaterno:`Recursamiento ${n}`,curp:'GODE561231HDFRRN09',plantelId:ctx.plantelId});alumnos.push(a);await post(`/academico/grupos/${principal.id}/alumnos`,{alumnoId:a.id});}
+    for(let n=0;n<2;n++){const a=await post('/alumnos',{email:`rc${n}${ctx.sufijo}@example.invalid`,matricula:`RC${n}${ctx.sufijo}`,nombre:'Alumno',apellidoPaterno:`Recursamiento ${n}`,curp:'GODE561231HDFRRN09',plantelId:ctx.plantelId});alumnos.push(a);await crearInscripcionFixture(ctx,principal.id,a.id);}
     const notaOriginal=await ctx.dataSource.getRepository(Calificacion).save({alumnoId:alumnos[0].id,grupoMateriaId:original.id,parcial:1,calificacion:40});
     const body={alumnoId:alumnos[0].id,grupoMateriaId:matematicas.id,cupoTotalManual:1,idempotencia:randomUUID(),confirmado:true};
     const pares=await Promise.all([0,1].map(()=>ctx.api('/recursamientos',{method:'POST',token:admin,body})));expect(pares.map(r=>r.response.status)).toEqual([201,201]);expect(pares[0].data.id).toBe(pares[1].data.id);const id=pares[0].data.id;
@@ -48,9 +49,10 @@ export function registrarRecursamientos(ctx:ContextoIntegracion){
     const nuevo=await ctx.api('/recursamientos',{method:'POST',token:admin,body:{...body,idempotencia:randomUUID()}});expect(nuevo.response.status).toBe(201);expect(nuevo.data.intento).toBe(2);expect(nuevo.data.id).not.toBe(id);
     expect((await ctx.api(`/academico/grupos/${receptor.id}`,{method:'PATCH',token:admin,body:{nivelId:nivel.id,carreraId:carrera.id,periodoAcademicoId:periodo.id}})).response.status).toBe(409);
     const regular=await post('/alumnos',{email:`rc2${ctx.sufijo}@example.invalid`,matricula:`RC2${ctx.sufijo}`,nombre:'Alumno',apellidoPaterno:'Regular receptor',curp:'GODE561231HDFRRN09',plantelId:ctx.plantelId});
-    expect((await ctx.api(`/academico/grupos/${receptor.id}/alumnos`,{method:'POST',token:admin,body:{alumnoId:regular.id}})).response.status).toBe(409);
+    await ctx.dataSource.getRepository(Inscripcion).save({grupoId:receptor.id,alumnoId:regular.id,estatus:'BAJA'});
+    expect((await ctx.api(`/academico/grupos/${receptor.id}/alumnos`,{method:'POST',token:admin,body:{alumnoId:regular.id,motivo:'Reactivación documentada sujeta a cupo',documentoRef:'ACTA-CUPO-2026'}})).response.status).toBe(409);
     expect((await ctx.api(`/recursamientos/clases/${matematicas.id}/cupo`,{method:'PATCH',token:admin,body:{cupoTotalManual:2,confirmado:true,motivo:'Ampliación manual autorizada'}})).response.status).toBe(200);
-    expect((await ctx.api(`/academico/grupos/${receptor.id}/alumnos`,{method:'POST',token:admin,body:{alumnoId:regular.id}})).response.status).toBe(201);
+    expect((await ctx.api(`/academico/grupos/${receptor.id}/alumnos`,{method:'POST',token:admin,body:{alumnoId:regular.id,motivo:'Reactivación documentada sujeta a cupo',documentoRef:'ACTA-CUPO-2026'}})).response.status).toBe(201);
     expect((await ctx.api('/recursamientos',{method:'POST',token:admin,body:{...body,alumnoId:alumnos[1].id,cupoTotalManual:2,idempotencia:randomUUID()}})).response.status).toBe(409);
     expect(await ctx.dataSource.getRepository(CalificacionRecursamiento).countBy({participacionId:id})).toBe(1);expect(await ctx.dataSource.getRepository(CalificacionRecursamiento).countBy({participacionId:nuevo.data.id})).toBe(0);
     expect((await ctx.api(`/academico/grupo-materias/${matematicas.id}`,{method:'DELETE',token:admin})).response.status).toBe(409);

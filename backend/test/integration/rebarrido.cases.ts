@@ -1,3 +1,4 @@
+import { crearInscripcionFixture } from './fixtures-inscripcion';
 import { expect, it, jest } from '@jest/globals';
 import { ContextoIntegracion } from './contexto';
 import { Actividad, Alumno, Calificacion, ConceptoPago, Entrega, GrupoMateria, HistorialCalificacion, OrdenPago, Pago, Usuario } from '../../src/entities';
@@ -38,7 +39,7 @@ export function registrarRebarrido(ctx: ContextoIntegracion) {
     const token = await root();
     const alumno = await ctx.api('/alumnos',{ method: 'POST',token,body: { email: `rnota_${ctx.sufijo}@example.invalid`,nombre: 'Nota',apellidoPaterno: 'Limpieza',matricula: `RT${ctx.sufijo}`,plantelId: ctx.plantelId, curp: 'GODE561231HDFRRN09' } }); expect(alumno.response.status).toBe(201);
     const gm = await ctx.dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: ctx.grupoMateriaIdMaestro });
-    expect((await ctx.api(`/academico/grupos/${gm.grupoId}/alumnos`,{ method: 'POST',token,body: { alumnoId: alumno.data.id } })).response.status).toBe(201);
+    await crearInscripcionFixture(ctx,gm.grupoId,alumno.data.id);
     const body = { grupoMateriaId: gm.id,parcial: 3,items: [{ alumnoId: alumno.data.id,calificacion: 85,observaciones: 'Texto anterior' }] };
     expect((await ctx.api(`/calificaciones/periodos/${gm.id}/3`,{ method: 'PATCH',token,body: { estatus: 'ABIERTO' } })).response.status).toBe(200);
     expect((await ctx.api('/calificaciones/captura',{ method: 'POST',token,body })).response.status).toBe(201);

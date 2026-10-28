@@ -95,7 +95,7 @@ export class CalificacionesService {
       if (periodo?.estatus === 'CERRADO') throw new ConflictException('El periodo está cerrado');
       const inscripciones = manager.getRepository(Inscripcion);
       const activos = await inscripciones.find({
-        where: { ...inscripcionVigente, alumnoId: In(ids), grupoId: gm.grupoId },
+        where: { ...inscripcionVigente, estatus: In(['ACTIVA','HISTORICA']), alumnoId: In(ids), grupoId: gm.grupoId },
       });
       const activosIds = new Set(activos.map((i) => i.alumnoId));
       if (ids.some((id) => !activosIds.has(id))) {
@@ -143,7 +143,7 @@ export class CalificacionesService {
     const clase=await this.validarGrupoMateria(grupoMateriaId,user);
     if (!esRegimenNuevo(clase)) throw new BadRequestException('La aprobación corresponde al régimen de cuatro parciales');
     const [inscritos,notas]=await Promise.all([
-      this.inscripciones.find({where:{...inscripcionVigente,grupoId:clase.grupoId}}),
+      this.inscripciones.find({where:{...inscripcionVigente,estatus:In(['ACTIVA','HISTORICA']),grupoId:clase.grupoId}}),
       this.repo.find({where:{grupoMateriaId},loadEagerRelations:false}),
     ]);
     return inscritos.map(i=>{
@@ -189,7 +189,7 @@ export class CalificacionesService {
     if (parcial === 4 && !esRegimenNuevo(clase)) throw new BadRequestException('La clase histórica tiene tres parciales');
     const periodo = await this.periodos.findOne({ where: { grupoMateriaId, parcial } });
     const gm = await this.grupoMaterias.findOneOrFail({ where: { id: grupoMateriaId } });
-    const inscritos = await this.inscripciones.find({ where: { ...inscripcionVigente, grupoId: gm.grupoId } });
+    const inscritos = await this.inscripciones.find({ where: { ...inscripcionVigente, estatus:In(['ACTIVA','HISTORICA']), grupoId: gm.grupoId } });
     const registros = await this.repo.find({ where: { grupoMateriaId, parcial } });
     let capturados = new Set(registros.map((c) => c.alumnoId));
     if (esRegimenNuevo(clase)) {
@@ -220,7 +220,7 @@ export class CalificacionesService {
       exigirGrupoVigente(gm.grupo);
       if (parcial === 4 && !esRegimenNuevo(gm)) throw new BadRequestException('La clase histórica tiene tres parciales');
       if (estatus === 'CERRADO') {
-        const inscritos = await manager.getRepository(Inscripcion).find({ where: { ...inscripcionVigente, grupoId: gm.grupoId } });
+        const inscritos = await manager.getRepository(Inscripcion).find({ where: { ...inscripcionVigente, estatus:In(['ACTIVA','HISTORICA']), grupoId: gm.grupoId } });
         const notas = await manager.getRepository(Calificacion).find({ where: { grupoMateriaId, parcial } });
         let capturados = new Set(notas.map((c) => c.alumnoId));
         if (esRegimenNuevo(gm)) {
@@ -280,7 +280,7 @@ export class CalificacionesService {
       const grupoIds = [...new Set(asignacionesActivas.map((gm) => gm.grupoId))];
       if (grupoIds.length === 0) throw new ForbiddenException('El alumno no pertenece a uno de tus grupos');
       const inscripcionesActivas = await this.inscripciones.find({
-        where: { alumnoId, grupoId: In(grupoIds), estatus: 'ACTIVA' },
+        where: { alumnoId, grupoId: In(grupoIds), estatus: In(['ACTIVA','HISTORICA']) },
       });
       const gruposActivos = new Set(inscripcionesActivas.map((i) => i.grupoId));
       const grupoMateriaIds = asignacionesActivas.filter((gm) => gruposActivos.has(gm.grupoId)).map((gm) => gm.id);

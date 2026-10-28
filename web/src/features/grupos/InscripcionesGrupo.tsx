@@ -4,6 +4,7 @@ import { SelectorBuscable } from '../../components/SelectorBuscable';
 import type { Grupo, Inscripcion, Alumno } from './tipos';
 import type * as React from 'react';
 interface Props {
+motivo:string;setMotivo:(v:string)=>void;documento:string;setDocumento:(v:string)=>void;
 seleccionado: Grupo;
 inscribir: (e: FormEvent) => Promise<void>;
 alumnoId: string;
@@ -12,13 +13,14 @@ enviando: boolean;
 inscritos: Inscripcion[];
 operar: (ruta: string, metodo: 'delete' | 'patch', datos?: object) => Promise<void>;
 }
-export function InscripcionesGrupo({ seleccionado, inscribir, alumnoId, setAlumnoId, enviando, inscritos, operar }: Props) { return (<section className="panel">
+export function InscripcionesGrupo({ seleccionado, motivo,setMotivo,documento,setDocumento, inscribir, alumnoId, setAlumnoId, enviando, inscritos, operar }: Props) { return (<section className="panel">
             <h2>Alumnos inscritos en {seleccionado.nombre}</h2>
-            <p className="texto-ayuda">Las altas ordinarias deben realizarse mediante cartera. Esta corrección académica no genera cargos y puede quedar restringida a reactivaciones de bajas previas según la política institucional. Utiliza <Link to="/apertura-cartera/nueva">Apertura de cartera</Link>. Las correcciones directas requieren autorización de Control Escolar.</p>
+            <p className="texto-ayuda">Las altas ordinarias deben realizarse mediante cartera. Esta ruta solo reactiva una inscripción previa en baja de este mismo grupo, con motivo y referencia documental; no crea altas nuevas ni cargos retroactivos. Utiliza <Link to="/apertura-cartera/nueva">Apertura de cartera</Link>. Las correcciones directas requieren autorización de Control Escolar.</p>
             <form onSubmit={inscribir} className="fila" style={{ marginBottom: 14 }}>
               <SelectorBuscable<Alumno> ruta="/alumnos" valor={alumnoId} cambiar={setAlumnoId} etiqueta="Alumno"
                 filtros={{ plantelId: seleccionado.plantel?.id }} texto={(a) => `${a.matricula} — ${a.usuario.nombre} ${a.usuario.apellidoPaterno}`} />
-              <button disabled={enviando} className="boton">Corrección académica sin cargos</button>
+              <label>Motivo de reactivación<input required minLength={10} maxLength={300} value={motivo} onChange={e=>setMotivo(e.target.value)}/></label><label>Referencia documental<input required minLength={5} maxLength={200} value={documento} onChange={e=>setDocumento(e.target.value)}/></label>
+              <button disabled={enviando} className="boton">Reactivar inscripción previa</button>
             </form>
             <div className="tabla-contenedor" role="region" aria-label="Inscripciones del grupo" tabIndex={0}><table className="tabla">
               <thead><tr><th>Matrícula</th><th>Alumno</th><th>Correcciones</th></tr></thead>

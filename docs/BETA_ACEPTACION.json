@@ -1,6 +1,6 @@
 {
-  "version": "1.28.0",
-  "alcance": "Candidata 1.28.0: P1–P4 mensuales, escala 0–10, ponderaciones y Final manual; originales 0–100 conservados. Redondeo automático pendiente de resolver ejemplos contradictorios. Sin despliegue ni UAT de esta versión acreditados.",
+  "version": "1.29.0",
+  "alcance": "Candidata 1.29.0 sobre main 1.28.0: inscripción ordinaria por cartera, reinscripción por periodo, autorización financiera y cuotas congeladas con historial académico/financiero conservado. Protección de main (#158) bloqueada por permisos de integración; sin despliegue ni UAT institucional de esta versión acreditados.",
   "puertas": [
     {
       "id": "ci_ultimo_sha",

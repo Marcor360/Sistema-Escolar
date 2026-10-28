@@ -1,3 +1,4 @@
+import { registrarReinscripcionesPeriodo } from './integration/reinscripciones-periodo.cases';
 import { registrarEvaluaciones } from './integration/evaluaciones.cases';
 import { registrarEntregasConservacion } from './integration/entregas-conservacion.cases';
 import { registrarSeguimiento } from './integration/seguimiento.cases';
@@ -475,6 +476,7 @@ Object.keys(casos).map(Number).sort((a,b) => a-b).forEach((id) => casos[id](cont
   registrarMateriasContexto(contexto);
   registrarProgramasEspeciales(contexto);
   registrarCartera(contexto);
+  registrarReinscripcionesPeriodo(contexto);
   registrarAgrupacion(contexto);
   registrarRecursamientos(contexto);
   registrarEliminacion(contexto);
@@ -497,7 +499,7 @@ Object.keys(casos).map(Number).sort((a,b) => a-b).forEach((id) => casos[id](cont
       if (tipo === 'academico') await emitirToken(`browserdoc_${tipo}_${sufijo}@example.invalid`);
       const clase = await dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: grupoMateriaIdMaestro });
       const concepto = await dataSource.getRepository(ConceptoPago).findOneByOrFail({ clave: `CW${sufijo}` });
-      await (await import('./recorridos-web')).recorridoWeb({ baseUrl, email: usuario.email, password: passwords.get(usuario.email) ?? 'Integracion_Segura_42!', sufijo, plantelId, cicloId: clase.grupo.cicloId, materiaId: clase.materiaId, docenteId: docente.data.id, docenteEmail: `browserdoc_${tipo}_${sufijo}@example.invalid`, docentePassword: passwords.get(`browserdoc_${tipo}_${sufijo}@example.invalid`) ?? 'Integracion_Segura_42!', conceptoId: concepto.id }, tipo);
+      await (await import('./recorridos-web')).recorridoWeb({ prepararReactivacion:async(nombre,matricula)=>{const g=await dataSource.getRepository(Grupo).findOneByOrFail({nombre,plantelId});const a=await dataSource.getRepository(Alumno).findOneByOrFail({matricula:matricula.toUpperCase()});await dataSource.getRepository(Inscripcion).save({grupoId:g.id,alumnoId:a.id,estatus:'BAJA'});}, baseUrl, email: usuario.email, password: passwords.get(usuario.email) ?? 'Integracion_Segura_42!', sufijo, plantelId, cicloId: clase.grupo.cicloId, materiaId: clase.materiaId, docenteId: docente.data.id, docenteEmail: `browserdoc_${tipo}_${sufijo}@example.invalid`, docentePassword: passwords.get(`browserdoc_${tipo}_${sufijo}@example.invalid`) ?? 'Integracion_Segura_42!', conceptoId: concepto.id }, tipo);
     });
   }
   registrarProgramacionesCobro(contexto);

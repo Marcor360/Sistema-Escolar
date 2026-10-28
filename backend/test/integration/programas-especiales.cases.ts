@@ -1,3 +1,4 @@
+import { crearInscripcionFixture } from './fixtures-inscripcion';
 import { expect, it } from '@jest/globals';
 import { Calificacion, Cargo, Grupo, GrupoMateria, Inscripcion, Usuario } from '../../src/entities';
 import { ContextoIntegracion } from './contexto';
@@ -27,7 +28,7 @@ export function registrarProgramasEspeciales(ctx: ContextoIntegracion) {
       const a = await ctx.api('/alumnos', { method: 'POST', token: admin, body: { email: `espa${n}${ctx.sufijo}@example.invalid`, matricula: `ES${n}${ctx.sufijo}`, nombre: 'Alumno', apellidoPaterno: `Especial ${n}`, curp: 'GODE561231HDFRRN09', plantelId: ctx.plantelId } }); expect(a.response.status).toBe(201); alumnos.push(a.data);
     }
     const regular = await ctx.api('/academico/grupos', { method: 'POST', token: admin, body: { plantelId: ctx.plantelId, cicloId: ciclo.data.id, nombre: `ER${ctx.sufijo}` } }); expect(regular.response.status).toBe(201);
-    const primaria = await ctx.api(`/academico/grupos/${regular.data.id}/alumnos`, { method: 'POST', token: admin, body: { alumnoId: alumnos[0].id } }); expect(primaria.response.status).toBe(201);
+    const primaria = await crearInscripcionFixture(ctx,regular.data.id,alumnos[0].id);
     const inscribir = (gid: number, alumnoId: number) => ctx.api(`/programas-especiales/grupos/${gid}/inscripciones`, { method: 'POST', token: admin, body: { alumnoId } });
     const especial = await inscribir(grupo.data.id, alumnos[0].id); expect(especial.response.status).toBe(201);
     expect((await inscribir(grupo.data.id, alumnos[0].id)).response.status).toBe(409);
@@ -36,7 +37,7 @@ export function registrarProgramasEspeciales(ctx: ContextoIntegracion) {
     expect(await ctx.dataSource.getRepository(Inscripcion).countBy({ grupoId: segundo.data.id, estatus: 'ACTIVA' })).toBe(1);
     // La matrícula regular sigue siendo posible después de una especial del mismo ciclo.
     const ganador = concurrentes.find((r) => r.response.status === 201)!.data.alumnoId;
-    expect((await ctx.api(`/academico/grupos/${regular.data.id}/alumnos`, { method: 'POST', token: admin, body: { alumnoId: ganador } })).response.status).toBe(201);
+    await crearInscripcionFixture(ctx,regular.data.id,ganador);
     expect((await ctx.api(`/academico/grupos/${grupo.data.id}/alumnos`, { method: 'POST', token: admin, body: { alumnoId: alumnos[2].id } })).response.status).toBe(409);
     expect((await inscribir(regular.data.id, alumnos[2].id)).response.status).toBe(404);
     expect((await ctx.api(`/academico/grupos/${grupo.data.id}`, { method: 'PATCH', token: admin, body: { nombre: 'Mover a regular' } })).response.status).toBe(409);
@@ -60,7 +61,7 @@ export function registrarProgramasEspeciales(ctx: ContextoIntegracion) {
     expect((await ctx.api(`/programas-especiales/grupos/${grupo.data.id}`, { method: 'PATCH', token: admin, body: { cupoManual: 1 } })).response.status).toBe(409);
     expect((await ctx.api(`${ruta}/cerrar`, { method: 'POST', token: admin, body: { confirmado: true, motivo: 'Programa concluido' } })).response.status).toBe(201);
     expect((await inscribir(grupo.data.id, alumnos[2].id)).response.status).toBe(409);
-    expect((await ctx.dataSource.getRepository(Inscripcion).findOneByOrFail({ id: primaria.data.id })).estatus).toBe('ACTIVA');
+    expect((await ctx.dataSource.getRepository(Inscripcion).findOneByOrFail({ id: primaria.id })).estatus).toBe('ACTIVA');
     expect((await ctx.dataSource.getRepository(Inscripcion).findOneByOrFail({ id: especial.data.id })).estatus).toBe('BAJA');
     expect((await ctx.dataSource.getRepository(Calificacion).findOneByOrFail({ id: nota.id })).calificacion).toBe(88);
     expect(await ctx.dataSource.getRepository(GrupoMateria).existsBy({ id: grupo.data.clase.id })).toBe(true);

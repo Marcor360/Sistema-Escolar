@@ -1,6 +1,6 @@
 # Política de versiones por pull request
 
-**Corte 28/oct/2026:** candidata 1.28.0 dirigida a main 1.27.58 (#207). Incluye 1.27.59 (#208), fusionada en una rama intermedia pero todavía fuera de main; el PR integra ambos alcances y el filtro de conservación por plantel. El reglamento fue confirmado por el solicitante; el redondeo automático sigue pendiente de aclarar.
+**Corte 28/oct/2026:** candidata 1.29.0 sobre main 1.28.0 (#209, c2d2dc9). Implementa #152/#177 con autorización explícita del solicitante; conserva evaluación con aprobación de Final. #158 sigue abierto por HTTP 403 de la integración al aplicar protección de main.
 
 ## Numeración
 

@@ -1,3 +1,4 @@
+import { crearInscripcionFixture } from './fixtures-inscripcion';
 import { expect, it } from '@jest/globals';
 import { Alumno, Cargo, CicloEscolar, ConceptoPago, Inscripcion, Usuario } from '../../src/entities';
 import { ContextoIntegracion } from './contexto';
@@ -27,9 +28,7 @@ export function registrarRecorridoInstitucional(ctx: ContextoIntegracion) {
       cicloId: ciclo.id, plantelId: ctx.plantelId, nombre: `Flujo ${ctx.sufijo}`,
     } });
     expect(grupo.response.status).toBe(201);
-    expect((await ctx.api(`/academico/grupos/${grupo.data.id}/alumnos`, {
-      method: 'POST', token: tokenAdmin, body: { alumnoId },
-    })).response.status).toBe(201);
+    await crearInscripcionFixture(ctx,grupo.data.id,alumnoId);
     expect(await ctx.dataSource.getRepository(Inscripcion).countBy({
       alumnoId, grupoId: grupo.data.id, estatus: 'ACTIVA',
     })).toBe(1);

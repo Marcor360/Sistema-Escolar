@@ -1,3 +1,4 @@
+import { crearInscripcionFixture } from './fixtures-inscripcion';
 import { ContextoIntegracion } from './contexto';
 import { expect,it } from '@jest/globals';
 import { CicloEscolar,Inscripcion,Calificacion,Usuario,GrupoMateria } from '../../src/entities';
@@ -21,18 +22,18 @@ export function registrarCicloOperativo(ctx: ContextoIntegracion) {
       // Recorrido histórico 0–100; el régimen nuevo tiene un recorrido independiente.
       await ctx.dataSource.getRepository(GrupoMateria).update(claseB.data.id,{regimenEvaluacion:'LEGADO_100'});
       expect((await post(`/academico/ciclos/${ciclo.data.id}/activar`,{ confirmado: true })).response.status).toBe(201);
-      const inscripcionA = await post(`/academico/grupos/${grupoA.data.id}/alumnos`,{ alumnoId: alumno.data.id }); expect(inscripcionA.response.status).toBe(201);
+      const inscripcionA = await crearInscripcionFixture(ctx,grupoA.data.id,alumno.data.id);
       expect((await ctx.api(`/alumnos/${alumno.data.id}`,{ method: 'PATCH',token,body: { plantelId: ctx.otroPlantelId } })).response.status).toBe(400);
       expect((await post(`/alumnos/${alumno.data.id}/transferencia`,{ plantelId: ctx.otroPlantelId })).response.status).toBe(201);
       expect(await ctx.dataSource.getRepository(Inscripcion).countBy({ alumnoId: alumno.data.id,grupoId: grupoA.data.id,estatus: 'ACTIVA' })).toBe(0);
-      const inscripcionB = await post(`/academico/grupos/${grupoB.data.id}/alumnos`,{ alumnoId: alumno.data.id }); expect(inscripcionB.response.status).toBe(201);
+      const inscripcionB = await crearInscripcionFixture(ctx,grupoB.data.id,alumno.data.id);
       expect((await post(`/academico/grupos/${grupoB.data.id}/alumnos`,{ alumnoId: alumno.data.id })).response.status).toBe(409);
       const historialRuta = `/alumnos/${alumno.data.id}/historial/listado`;
       const historialPagina1 = await ctx.api(`${historialRuta}?pagina=1&porPagina=1`, { token });
       expect(historialPagina1.response.status).toBe(200);
-      expect(historialPagina1.data).toMatchObject({ total: 2, pagina: 1, porPagina: 1, datos: [{ id: inscripcionB.data.id }] });
+      expect(historialPagina1.data).toMatchObject({ total: 2, pagina: 1, porPagina: 1, datos: [{ id: inscripcionB.id }] });
       const historialPagina2 = await ctx.api(`${historialRuta}?pagina=2&porPagina=1`, { token });
-      expect(historialPagina2.data).toMatchObject({ total: 2, pagina: 2, datos: [{ id: inscripcionA.data.id }] });
+      expect(historialPagina2.data).toMatchObject({ total: 2, pagina: 2, datos: [{ id: inscripcionA.id }] });
       expect((await ctx.api(`${historialRuta}?pagina=0`, { token })).response.status).toBe(400);
       expect((await ctx.api(historialRuta, { token: await ctx.emitirToken(`ocal_${ctx.sufijo}@example.invalid`) })).response.status).toBe(403);
       for (const parcial of [1,2,3]) {
@@ -41,16 +42,16 @@ export function registrarCicloOperativo(ctx: ContextoIntegracion) {
       }
       const alumnoToken = await ctx.emitirToken(`ocal_${ctx.sufijo}@example.invalid`);
       const notas = await ctx.api('/calificaciones/mias',{ token: alumnoToken }); expect(notas.data).toHaveLength(3); expect(notas.data.every((n: { promedioOficial: number }) => n.promedioOficial === 90)).toBe(true);
-      const boletaDigital = await ctx.api(`/reportes/formatos/mi-boleta?inscripcionId=${inscripcionB.data.id}`,{token:alumnoToken});
+      const boletaDigital = await ctx.api(`/reportes/formatos/mi-boleta?inscripcionId=${inscripcionB.id}`,{token:alumnoToken});
       expect(boletaDigital.response.status).toBe(200);expect(boletaDigital.data).toMatchObject({disponible:true,promedioGeneral:90,matricula:alumno.data.matricula});
       for(const formato of ['informativa-pdf','informativa-excel']) {
-        const enlace = await ctx.api(`/reportes/mi-boleta/enlace?inscripcionId=${inscripcionB.data.id}&formato=${formato}`,{token:alumnoToken});
+        const enlace = await ctx.api(`/reportes/mi-boleta/enlace?inscripcionId=${inscripcionB.id}&formato=${formato}`,{token:alumnoToken});
         expect(enlace.response.status).toBe(200);const archivo=await fetch(new URL(enlace.data.url,ctx.baseUrl));expect(archivo.status).toBe(200);
         const buffer=Buffer.from(await archivo.arrayBuffer());
         if(formato==='informativa-pdf')expect(buffer.subarray(0,4).toString()).toBe('%PDF');
         else {const wb=new ExcelJS.Workbook();await wb.xlsx.load(buffer as never);expect(wb.getWorksheet('Boleta')!.getCell('G8').value).toBe(90);}
       }
-      const pdf = await fetch(`${ctx.baseUrl}/reportes/boleta/${alumno.data.id}?cicloId=${ciclo.data.id}&inscripcionId=${inscripcionB.data.id}`,{ headers: { authorization: `Bearer ${token}` } }); expect(pdf.status).toBe(200); expect(Buffer.from(await pdf.arrayBuffer()).subarray(0,4).toString()).toBe('%PDF');
+      const pdf = await fetch(`${ctx.baseUrl}/reportes/boleta/${alumno.data.id}?cicloId=${ciclo.data.id}&inscripcionId=${inscripcionB.id}`,{ headers: { authorization: `Bearer ${token}` } }); expect(pdf.status).toBe(200); expect(Buffer.from(await pdf.arrayBuffer()).subarray(0,4).toString()).toBe('%PDF');
       const excel = await fetch(`${ctx.baseUrl}/reportes/grupo-materias/${claseB.data.id}/calificaciones.xlsx`,{ headers: { authorization: `Bearer ${token}` } }); expect(excel.status).toBe(200); const libro = new ExcelJS.Workbook(); await libro.xlsx.load(Buffer.from(await excel.arrayBuffer()) as any); expect(JSON.stringify(libro.worksheets[0].getSheetValues())).toContain(`OC${ctx.sufijo}`.toUpperCase()); expect(JSON.stringify(libro.worksheets[0].getSheetValues())).toContain('90');
       expect((await post(`/academico/ciclos/${ciclo.data.id}/iniciar-cierre`,{ confirmado: true })).response.status).toBe(201);
       const resumen = await ctx.api(`/academico/ciclos/${ciclo.data.id}/cierre`,{ token }); expect(resumen.data).toMatchObject({ inscritos: 1,faltantes: [],puedeCerrar: true });

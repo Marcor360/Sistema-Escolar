@@ -40,6 +40,7 @@ export default function GruposPage() {
   const [materiaId, setMateriaId] = useState('');
   const [docenteId, setDocenteId] = useState('');
   const [alumnoId, setAlumnoId] = useState('');
+  const [motivoReactivar,setMotivoReactivar]=useState(''),[documentoReactivar,setDocumentoReactivar]=useState('');
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -202,8 +203,8 @@ export default function GruposPage() {
     if (!seleccionado) return;
     if (enviando) return; setEnviando(true); setError('');
     try {
-      if (!await confirmacion.solicitar('Esta acción no genera cargos y está sujeta a la política institucional de altas ordinarias. Para nuevas altas usa Apertura de cartera. ¿Confirmas la corrección?')) return;
-      await api.post(`/academico/grupos/${seleccionado.id}/alumnos`, { alumnoId: Number(alumnoId) });
+      if (!await confirmacion.solicitar('Reactivar solo recupera una inscripción previa en baja de este mismo grupo, sin borrar notas ni generar cargos. ¿Confirmas la reactivación documentada?')) return;
+      await api.post(`/academico/grupos/${seleccionado.id}/alumnos`, { alumnoId: Number(alumnoId),motivo:motivoReactivar,documentoRef:documentoReactivar });
       setAlumnoId('');
       await abrirGrupo(seleccionado);
       setMensaje('Inscripción académica confirmada sin generar cargos. Revisa el expediente y su apertura de cartera.');
@@ -317,7 +318,7 @@ export default function GruposPage() {
           </section>
           <MateriasGrupo seleccionado={seleccionado} reasignando={reasignando} nuevoDocente={nuevoDocente} setNuevoDocente={setNuevoDocente} enviando={enviando} operar={operar} setReasignando={setReasignando} asignarMateria={asignarMateria} materiaId={materiaId} setMateriaId={setMateriaId} materias={materias} docenteId={docenteId} setDocenteId={setDocenteId} asignaciones={asignaciones} />
 
-          <InscripcionesGrupo seleccionado={seleccionado} inscribir={inscribir} alumnoId={alumnoId} setAlumnoId={setAlumnoId} enviando={enviando} inscritos={inscritos} operar={operar} />
+          <InscripcionesGrupo seleccionado={seleccionado} motivo={motivoReactivar} setMotivo={setMotivoReactivar} documento={documentoReactivar} setDocumento={setDocumentoReactivar} inscribir={inscribir} alumnoId={alumnoId} setAlumnoId={setAlumnoId} enviando={enviando} inscritos={inscritos} operar={operar} />
         </>
       )}
     </>

@@ -22,7 +22,7 @@ describe('ScopeService', () => {
     const repo = { find: jest.fn().mockResolvedValue([{ plantelId: 1 }, { plantelId: 3 }]) };
     const service = new ScopeService(stub<Repository<UsuarioPlantel>>(repo));
     await expect(service.plantelesDe(user())).resolves.toEqual([1, 3]);
-    expect(repo.find).toHaveBeenCalledWith({ where: { usuarioId: 10, activo: true } });
+    expect(repo.find).toHaveBeenCalledWith({ where: { usuarioId: 10, activo: true },select:{plantelId:true},loadEagerRelations:false });
   });
 
   it('resolverFiltro rechaza plantel fuera de alcance', async () => {

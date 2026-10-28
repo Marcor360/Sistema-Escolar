@@ -13,7 +13,7 @@ export interface ContextoRegular { alumnoId: number; plantelId: number; cicloId:
 @Injectable()
 export class AgrupacionRegularService {
   constructor(private readonly scope: ScopeService) {}
-  async solicitar(m: EntityManager, d: ContextoRegular, u: JwtUser, reinscripcionValidada = false) {
+  async solicitar(m: EntityManager, d: ContextoRegular, u: JwtUser, reinscripcionValidada = false, prioritarios:number[] = []) {
     if (!u.roles.some(r => ['SUPERADMIN','ADMINISTRATIVO'].includes(r)) &&
         !(reinscripcionValidada && u.roles.includes('FINANZAS'))) {
       throw new ForbiddenException('Apertura reservada a Control Escolar; Finanzas requiere una reinscripción validada');
@@ -34,6 +34,7 @@ export class AgrupacionRegularService {
     const contexto = { plantelId: d.plantelId, cicloId: d.cicloId, nivelId: d.nivelId, carreraId: d.carreraId, periodoAcademicoId: d.periodoAcademicoId, turno: d.turno };
     const grupos = m.getRepository(Grupo);
     const compatibles = await grupos.find({ where: { ...contexto, tipo: 'REGULAR', activo: true }, order: { id: 'ASC' }, lock: { mode: 'pessimistic_write' } });
+    compatibles.sort((a,b)=>Number(prioritarios.includes(b.id))-Number(prioritarios.includes(a.id))||a.id-b.id);
     if (activa && (!d.grupoId || activa.grupoId !== d.grupoId || !compatibles.some(g => g.id === d.grupoId))) throw new ConflictException('El alumno ya tiene grupo regular; selecciona ese mismo grupo compatible sin trasladarlo');
     if (d.grupoId && !compatibles.some(g => g.id === d.grupoId)) throw new ConflictException('El grupo seleccionado no es regular compatible');
     const solicitud = await solicitudes.save(solicitudes.create({ ...contexto, alumnoId: d.alumnoId, grupoId: null, estado: 'PENDIENTE' }));
@@ -42,6 +43,7 @@ export class AgrupacionRegularService {
       const otra = await inscripciones.findOne({ where: { alumnoId: s.alumnoId, estatus: 'ACTIVA', grupo: { cicloId: s.cicloId, tipo: 'REGULAR' } } });
       if (otra && otra.grupoId !== g.id) throw new ConflictException('La inscripción regular cambió; no se trasladan alumnos automáticamente');
       const anterior = await inscripciones.findOneBy({ alumnoId: s.alumnoId, grupoId: g.id });
+      if(anterior?.estatus==='HISTORICA')throw new ConflictException('No se reutilizan inscripciones históricas al abrir cartera');
       if (!otra) await inscripciones.save(anterior ? { ...anterior, estatus: 'ACTIVA' } : inscripciones.create({ alumnoId: s.alumnoId, grupoId: g.id, estatus: 'ACTIVA' }));
       await solicitudes.update(s.id, { estado: 'ASIGNADA', grupoId: g.id });
       await m.getRepository(BitacoraAcademica).insert({ usuarioId: u.sub, plantelId: s.plantelId, accion: 'AGRUPACION_ORDINARIA', entidadId: s.id, detalle: `alumnoId=${s.alumnoId}; grupoId=${g.id}; apertura ordinaria`, fecha: new Date() });
@@ -82,4 +84,26 @@ export class AgrupacionRegularService {
     }
     return { solicitud: await solicitudes.findOneByOrFail({ id: solicitud.id }), asignadas };
   }
+  /** Resuelve solicitudes ya congeladas en una cohorte compartida, sin crear nuevas altas. */
+  async completarCompatibles(m:EntityManager,d:Omit<ContextoRegular,'alumnoId'>,u:JwtUser,prioritarios:number[]) {
+    const contexto={plantelId:d.plantelId,cicloId:d.cicloId,nivelId:d.nivelId,carreraId:d.carreraId,periodoAcademicoId:d.periodoAcademicoId,turno:d.turno};
+    const solicitudes=m.getRepository(SolicitudGrupoRegular),inscripciones=m.getRepository(Inscripcion);
+    const pendientes=await solicitudes.find({where:{...contexto,estado:'PENDIENTE'},relations:{alumno:{usuario:true}},order:{id:'ASC'}});
+    const grupos=await m.getRepository(Grupo).find({where:{...contexto,tipo:'REGULAR',activo:true},order:{id:'ASC'},lock:{mode:'pessimistic_write'}});
+    grupos.sort((a,b)=>Number(prioritarios.includes(b.id))-Number(prioritarios.includes(a.id))||a.id-b.id);
+    const asignadas:number[]=[];
+    for(const g of grupos){let total=await inscripciones.countBy({grupoId:g.id,estatus:'ACTIVA'});const limite=Math.min(50,await limiteRegulares(m,g.id));
+      for(let i=0;i<pendientes.length&&total<limite;){const s=pendientes[i];
+        if(s.alumno.estatus!=='ACTIVO'||!s.alumno.usuario.activo||s.alumno.plantelId!==s.plantelId){i++;continue;}
+        const otra=await inscripciones.findOne({where:{alumnoId:s.alumnoId,estatus:'ACTIVA',grupo:{cicloId:s.cicloId,tipo:'REGULAR'}}});
+        const previa=await inscripciones.findOneBy({alumnoId:s.alumnoId,grupoId:g.id});
+        if((otra&&otra.grupoId!==g.id)||previa?.estatus==='HISTORICA'){i++;continue;}
+        if(!otra){await inscripciones.save(previa?{...previa,estatus:'ACTIVA'}:inscripciones.create({alumnoId:s.alumnoId,grupoId:g.id,estatus:'ACTIVA'}));total++;}
+        await solicitudes.update(s.id,{estado:'ASIGNADA',grupoId:g.id});pendientes.splice(i,1);asignadas.push(s.id);
+        await m.getRepository(BitacoraAcademica).insert({usuarioId:u.sub,plantelId:s.plantelId,accion:'AGRUPACION_ORDINARIA',entidadId:s.id,detalle:`alumnoId=${s.alumnoId}; grupoId=${g.id}; cohorte compartida con reinscripciones`,fecha:new Date()});
+      }
+    }
+    return asignadas;
+  }
+
 }

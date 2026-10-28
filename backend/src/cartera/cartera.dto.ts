@@ -36,7 +36,7 @@ export class PrevisualizarReinscripcionDto extends PrevisualizarCarteraDto {
   @ApiPropertyOptional({ description: 'Obligatorio al retroceder, repetir o saltar un periodo' })
   @IsOptional() @IsString() @MinLength(10) @MaxLength(500) motivo?: string;
   @ApiPropertyOptional({ type: [AjusteColegiaturaDto] })
-  @IsOptional() @IsArray() @ArrayUnique((a: AjusteColegiaturaDto) => a.conceptoId)
+  @IsOptional() @IsArray() @ArrayMaxSize(10) @ArrayUnique((a: AjusteColegiaturaDto) => a.conceptoId)
   @ValidateNested({ each: true }) @Type(() => AjusteColegiaturaDto) ajustes?: AjusteColegiaturaDto[];
 }
 export class ConfirmarReinscripcionDto extends PrevisualizarReinscripcionDto {

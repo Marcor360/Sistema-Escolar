@@ -1,16 +1,17 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { DataSource, EntityTarget } from 'typeorm';
+import { DataSource, EntityManager, EntityTarget } from 'typeorm';
 import { BitacoraAcademica, CarreraPlan, CicloEscolar, Grupo, NivelAcademico, PeriodoAcademico, Plantel } from '../entities';
 import { JwtUser } from '../common/current-user.decorator';
 import { exigirCambios } from '../common/exigir-cambios';
 import { ScopeService } from '../planteles/scope.service';
 import { esConflictoUnico, esConflictoTransaccional } from '../academico/conflictos';
-import { CrearCarreraDto, CrearNivelDto, CrearPeriodoDto, EditarCatalogoDto, ListarCatalogosDto } from './catalogos.dto';
+import { CrearCarreraDto, CrearNivelDto, CrearPeriodoDto, EditarCatalogoDto, EditarPeriodoDto, ListarCatalogosDto } from './catalogos.dto';
 
 export type TipoCatalogo = 'niveles' | 'carreras' | 'periodos';
 interface RegistroCatalogo {
   id: number; plantelId: number; clave: string; nombre: string; activo: boolean;
   nivelId?: number; carreraId?: number; cicloId?: number; versionPlan?: string;
+  fechaInicio?:string|null; fechaFin?:string|null;
   tipo?: 'ANUAL' | 'SEMESTRAL' | 'CUATRIMESTRAL'; numero?: number;
 }
 const entidades: Record<TipoCatalogo, EntityTarget<RegistroCatalogo>> = { niveles: NivelAcademico, carreras: CarreraPlan, periodos: PeriodoAcademico };
@@ -37,6 +38,11 @@ export class CatalogosAcademicosService {
     await this.scope.validarGestion(user, fila.plantelId);
     return fila;
   }
+  private async validarFechas(m:EntityManager,cicloId:number,inicio?:string|null,fin?:string|null) {
+    if(!inicio&&!fin)return;
+    const ciclo=await m.getRepository(CicloEscolar).findOneByOrFail({id:cicloId});
+    if(!inicio||!fin||!/^\d{4}-\d{2}-\d{2}$/.test(inicio)||!/^\d{4}-\d{2}-\d{2}$/.test(fin)||inicio>fin||inicio<ciclo.fechaInicio||fin>ciclo.fechaFin)throw new ConflictException('Indica inicio y fin reales del periodo dentro de las fechas del ciclo');
+  }
   async crear(tipo: TipoCatalogo, dto: CrearNivelDto | CrearCarreraDto | CrearPeriodoDto, user: JwtUser) {
     await this.scope.validarGestion(user, dto.plantelId);
     return this.operar(async () => this.ds.transaction(async (m) => {
@@ -54,13 +60,14 @@ export class CatalogosAcademicosService {
         const ciclo = await m.getRepository(CicloEscolar).findOneBy({ id: d.cicloId });
         if (!carrera || !nivel || !ciclo || !['PREPARACION', 'ACTIVO'].includes(ciclo.estado)) throw new ConflictException('Selecciona carrera/plan y ciclo activos o en preparación');
       }
+      if(tipo==='periodos') { const d=dto as CrearPeriodoDto; await this.validarFechas(m,d.cicloId,d.fechaInicio,d.fechaFin); }
       const repo = m.getRepository(entidades[tipo]);
       const registro = await repo.save(repo.create({ ...dto, activo: true }));
       await m.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId: dto.plantelId, accion: 'CATALOGO_CREADO', entidadId: registro.id, detalle: `tipo=${tipo}`, fecha: new Date() });
       return registro;
     }));
   }
-  async editar(tipo: TipoCatalogo, id: number, dto: EditarCatalogoDto, user: JwtUser) {
+  async editar(tipo: TipoCatalogo, id: number, dto: EditarCatalogoDto | EditarPeriodoDto, user: JwtUser) {
     exigirCambios(dto);
     const actual = await this.ds.getRepository(entidades[tipo]).findOneBy({ id });
     if (!actual) throw new NotFoundException('Registro de catálogo no encontrado');
@@ -69,6 +76,7 @@ export class CatalogosAcademicosService {
       await m.getRepository(Plantel).findOne({ where: { id: actual.plantelId }, lock: { mode: 'pessimistic_write' } });
       const repo = m.getRepository(entidades[tipo]);
       const fila = await repo.findOneOrFail({ where: { id }, lock: { mode: 'pessimistic_write' } });
+      if(tipo==='periodos' && fila.cicloId) { const d=dto as EditarPeriodoDto; await this.validarFechas(m,fila.cicloId,d.fechaInicio??fila.fechaInicio,d.fechaFin??fila.fechaFin); }
       if (dto.activo === false) {
         const campo = tipo === 'niveles' ? 'nivelId' : tipo === 'carreras' ? 'carreraId' : 'periodoAcademicoId';
         if (await m.getRepository(Grupo).existsBy({ [campo]: id, activo: true })) throw new ConflictException('El catálogo está usado por grupos activos');

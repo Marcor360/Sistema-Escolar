@@ -7,7 +7,7 @@ import { Inscripcion } from '../entities/inscripcion.entity';
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfiguracionService } from '../configuracion/configuracion.service';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import type { Response } from 'express';
 import PDFDocument from 'pdfkit';
 import * as ExcelJS from 'exceljs';
@@ -128,7 +128,7 @@ export class ReportesService {
     });
 
     const inscritos = await this.grupos.manager.getRepository(Inscripcion).find({
-      where: { grupoId: gm.grupoId, estatus: 'ACTIVA', alumno: { estatus: 'ACTIVO' } },
+      where: { grupoId: gm.grupoId, estatus: In(['ACTIVA','HISTORICA']), alumno: { estatus: 'ACTIVO' } },
       order: { alumnoId: 'ASC' },
     });
     // Pivote: todas las inscripciones, incluso sin calificación.

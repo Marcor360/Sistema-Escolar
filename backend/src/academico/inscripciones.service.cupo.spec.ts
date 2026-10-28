@@ -73,13 +73,13 @@ describe('InscripcionesService: cupo regular directo', () => {
     }
   });
 
-  it('conserva inscripciones de integración hasta habilitar formalmente la política', async () => {
+  it('exige cartera también sin bandera de activación', async () => {
     const anterior = process.env.INSCRIPCION_ORDINARIA_SOLO_CARTERA;
     delete process.env.INSCRIPCION_ORDINARIA_SOLO_CARTERA;
     try {
       const { servicio, actor, inscripciones } = prepararInscripcion(49);
-      await expect(servicio.inscribirAlumno(9, 10, actor)).resolves.toMatchObject({ alumnoId: 10, grupoId: 9 });
-      expect(inscripciones.save).toHaveBeenCalledTimes(1);
+      await expect(servicio.inscribirAlumno(9, 10, actor)).rejects.toThrow('requieren Apertura de cartera');
+      expect(inscripciones.save).not.toHaveBeenCalled();
     } finally {
       if (anterior !== undefined) process.env.INSCRIPCION_ORDINARIA_SOLO_CARTERA = anterior;
     }
@@ -87,7 +87,7 @@ describe('InscripcionesService: cupo regular directo', () => {
 
   it('reactiva una inscripción previa en baja del mismo grupo cuando hay cupo', async () => {
     const { servicio, actor, inscripciones, bitacora } = prepararInscripcion(49, true);
-    await expect(servicio.inscribirAlumno(9, 10, actor)).resolves.toMatchObject({
+    await expect(servicio.inscribirAlumno(9, 10, actor,{motivo:'Reactivación documental autorizada',documentoRef:'ACTA-123'})).resolves.toMatchObject({
       grupoId: 9, alumnoId: 10,
     });
     expect(inscripciones.save).toHaveBeenCalledTimes(1);

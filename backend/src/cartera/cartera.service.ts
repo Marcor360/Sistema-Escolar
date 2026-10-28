@@ -1,8 +1,10 @@
+import { materializarAperturas } from './materializar-aperturas';
+import { ReinscripcionPeriodoService } from './reinscripcion-periodo.service';
 import { condicionBusquedaAlumno } from '../common/busqueda-alumno';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { createHash } from 'crypto';
 import { DataSource, EntityManager, In } from 'typeorm';
-import { Alumno, AperturaCartera, BitacoraFinanciera, Cargo, CicloEscolar, ConceptoPago, Grupo, Inscripcion, PeriodoAcademico, Plantel } from '../entities';
+import { Alumno, AperturaCartera, BitacoraFinanciera, CicloEscolar, ConceptoPago, ReinscripcionPeriodo, Grupo, Inscripcion, PeriodoAcademico, Plantel } from '../entities';
 import { AgrupacionRegularService } from '../academico/agrupacion-regular.service';
 import { validarContextoGrupo } from '../catalogos-academicos/contexto-grupo';
 import { esConflictoTransaccional, esConflictoUnico } from '../academico/conflictos';
@@ -12,7 +14,7 @@ import { ConfirmarCarteraDto, ConfirmarReinscripcionDto, ListarCarteraDto, Previ
 const hash = (valor: unknown) => createHash('sha256').update(JSON.stringify(valor)).digest('hex');
 @Injectable()
 export class CarteraService {
-  constructor(private readonly ds: DataSource, private readonly scope: ScopeService, private readonly agrupacion: AgrupacionRegularService) {}
+  constructor(private readonly ds: DataSource, private readonly scope: ScopeService, private readonly agrupacion: AgrupacionRegularService, private readonly reinscripciones?: ReinscripcionPeriodoService) {}
   async trayectoria(alumnoId: number, u: JwtUser) {
     const alumno = await this.ds.getRepository(Alumno).findOneBy({ id: alumnoId });
     if (!alumno) throw new NotFoundException('Alumno no encontrado');
@@ -69,6 +71,7 @@ export class CarteraService {
     const pl = await m.getRepository(Plantel).findOne({ where: { id: d.plantelId }, lock: { mode: 'pessimistic_write' } });
     const ciclo = await m.getRepository(CicloEscolar).findOneBy({ id: d.cicloId });
     if (!pl?.activo || !ciclo || !['PREPARACION','ACTIVO'].includes(ciclo.estado)) throw new ConflictException('Plantel y ciclo no disponibles');
+    if(await m.getRepository(ReinscripcionPeriodo).existsBy({alumnoId:d.alumnoId,cicloId:d.cicloId,estado:In(['PENDIENTE','CONFIRMADA','REQUIERE_REVISION'])}))throw new ConflictException('Ya existe una reinscripción del alumno en el ciclo; consulta esa operación antes de abrir otra cartera');
     await validarContextoGrupo(m, d);
     if ('origenInscripcionId' in d) await this.validarReinscripcion(m, d as PrevisualizarReinscripcionDto, u);
     const a = await m.getRepository(Alumno).findOneBy({ id: d.alumnoId, plantelId: d.plantelId });
@@ -108,25 +111,11 @@ export class CarteraService {
         const precio = await this.cotizar(m, d, u);
         if (d.cotizacion !== precio.cotizacion) throw new ConflictException('La cotización cambió; vuelve a previsualizar y confirmar');
         const apertura = await repo.save(repo.create({ idempotencia: d.idempotencia, peticionHash, alumnoId: d.alumnoId, plantelId: d.plantelId, cicloId: d.cicloId, creadoPorId: u.sub, estado: 'PENDIENTE', conceptos: precio.conceptos, solicitudId: null }));
-        const resultado = await this.agrupacion.solicitar(m, d, u, 'origenInscripcionId' in d);
+        const prioritarios=!d.grupoId ? await this.reinscripciones?.prepararMixta(m,d,u,1)??[] : [];
+        const resultado = await this.agrupacion.solicitar(m, d, u, false,prioritarios);
         await repo.update(apertura.id, { solicitudId: resultado.solicitud.id });
-        const asignadas = resultado.asignadas.length ? await repo.find({ where: { solicitudId: In(resultado.asignadas) }, order: { id: 'ASC' } }) : [];
-        for (const a of asignadas) {
-          const cargos = m.getRepository(Cargo);
-          for (const c of a.conceptos) {
-            const claveGeneracion = c.tipo === 'COLEGIATURA' ? `COLEGIATURA:${a.cicloId}:${a.alumnoId}:${c.periodo}` : `APERTURA:${a.id}:${c.conceptoId}`;
-            const existente = await cargos.findOneBy({ alumnoId: a.alumnoId, cicloId: a.cicloId, conceptoId: c.conceptoId, periodo: c.periodo });
-            if (existente) {
-              if (existente.estatus === 'CANCELADO' || existente.monto !== c.monto || existente.claveGeneracion !== claveGeneracion) throw new ConflictException('Existe un cargo previo incompatible; Finanzas debe revisarlo sin duplicarlo');
-              c.cargoId = existente.id;
-            } else {
-              const cargo = await cargos.save(cargos.create({ plantelId: a.plantelId, alumnoId: a.alumnoId, cicloId: a.cicloId, conceptoId: c.conceptoId, periodo: c.periodo, claveGeneracion, descripcion: c.nombre, monto: c.monto, descuento: 0, recargo: 0, fechaVencimiento: c.fechaVencimiento, estatus: 'PENDIENTE' }));
-              c.cargoId = cargo.id;
-              await m.getRepository(BitacoraFinanciera).insert({ usuarioId: u.sub, plantelId: a.plantelId, accion: 'APERTURA_CARGO', entidad: 'cargo', entidadId: cargo.id, detalle: `aperturaId=${a.id}; monto autorizado=${c.monto}` });
-            }
-          }
-          await repo.update(a.id, { estado: 'ABIERTA', conceptos: a.conceptos });
-        }
+        await materializarAperturas(m,resultado.asignadas,u);
+        await this.reinscripciones?.completarCohorte(m,d,u);
         await m.getRepository(BitacoraFinanciera).insert({ usuarioId: u.sub, plantelId: d.plantelId, accion: 'APERTURA_CARTERA', entidad: 'apertura', entidadId: apertura.id, detalle: `solicitudId=${resultado.solicitud.id}; cotizacion=${precio.cotizacion}${'origenInscripcionId' in d ? `; reinscripcionOrigen=${(d as ConfirmarReinscripcionDto).origenInscripcionId}; motivo=${(d as ConfirmarReinscripcionDto).motivo ?? 'AVANCE'}; ajustes=${JSON.stringify((d as ConfirmarReinscripcionDto).ajustes ?? [])}` : ''}`.slice(0, 500) });
         return this.proyectar(await repo.findOneOrFail({ where: { id: apertura.id }, relations: { solicitud: true } }));
       });

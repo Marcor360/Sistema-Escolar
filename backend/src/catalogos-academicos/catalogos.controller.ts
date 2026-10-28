@@ -5,7 +5,7 @@ import { RolesGuard } from '../common/roles.guard';
 import { Roles } from '../common/roles.decorator';
 import { CurrentUser, JwtUser } from '../common/current-user.decorator';
 import { CatalogosAcademicosService } from './catalogos.service';
-import { CrearNivelDto, CrearCarreraDto, CrearPeriodoDto, EditarCatalogoDto, ListarCatalogosDto } from './catalogos.dto';
+import { CrearNivelDto, CrearCarreraDto, CrearPeriodoDto, EditarCatalogoDto, EditarPeriodoDto, ListarCatalogosDto } from './catalogos.dto';
 @ApiTags('catalogos-academicos') @ApiBearerAuth() @UseGuards(JwtAuthGuard, RolesGuard) @Roles('ADMINISTRATIVO')
 @Controller('academico/catalogos')
 export class CatalogosAcademicosController {
@@ -27,5 +27,5 @@ export class CatalogosAcademicosController {
   @Get('periodos/:id') @Roles('ADMINISTRATIVO', 'FINANZAS', 'MAESTRO')
   obtenerperiodos(@Param('id', ParseIntPipe) id: number, @CurrentUser() u: JwtUser) { return this.service.obtener('periodos', id, u); }
   @Post('periodos') crearperiodos(@Body() d: CrearPeriodoDto, @CurrentUser() u: JwtUser) { return this.service.crear('periodos', d, u); }
-  @Patch('periodos/:id') editarperiodos(@Param('id', ParseIntPipe) id: number, @Body() d: EditarCatalogoDto, @CurrentUser() u: JwtUser) { return this.service.editar('periodos', id, d, u); }
+  @Patch('periodos/:id') editarperiodos(@Param('id', ParseIntPipe) id: number, @Body() d: EditarPeriodoDto, @CurrentUser() u: JwtUser) { return this.service.editar('periodos', id, d, u); }
 }

@@ -53,7 +53,7 @@ export default function CalificacionesPage() {
     limpiar(); const actual = contexto.current; setCargando(true);
     try {
       const [insc,notas,estado,auditoria,propuestasFinal] = await Promise.all([
-        api.get<Inscripcion[]>(`/academico/grupos/${clase.grupo.id}/alumnos`),
+        api.get<Inscripcion[]>(`/academico/grupos/${clase.grupo.id}/alumnos`,{params:{incluirHistoricas:'true'}}),
         api.get<Registro[]>(`/calificaciones/grupo-materia/${clase.id}`,{ params: { parcial } }),
         api.get<EstadoPeriodo>(`/calificaciones/periodos/${clase.id}/${parcial}`),
         api.get<Historial>(`/calificaciones/periodos/${clase.id}/${parcial}/historial`),
