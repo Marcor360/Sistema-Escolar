@@ -1,4 +1,5 @@
 import { useDisenoAlumno } from "../use-diseno-alumno";
+import { useSesion } from "../sesion";
 import { crearControlLectura } from "../api/lectura-vigente";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -50,8 +51,14 @@ interface Estado {
 
 export default function EstadoCuentaScreen() {
   const diseno = useDisenoAlumno();
+  const { sesion } = useSesion();
+  const usuarioActual = sesion?.sub ?? null;
+  const identidad = useRef({ usuario: usuarioActual });
+  if (identidad.current.usuario !== usuarioActual) identidad.current = { usuario: usuarioActual };
+  const pagoEnCurso = useRef<typeof identidad.current | null>(null);
   const { marca } = useMarca();
-  const [estado, setEstado] = useState<Estado | null>(null);
+  const [estadoPorUsuario, setEstadoPorUsuario] = useState<{ usuario: number; datos: Estado } | null>(null);
+  const estado = estadoPorUsuario?.usuario === usuarioActual ? estadoPorUsuario.datos : null;
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
   const [ultimaActualizacion, setUltimaActualizacion] = useState<string | null>(
@@ -75,14 +82,26 @@ export default function EstadoCuentaScreen() {
   }, []);
 
   const lectura = useRef(crearControlLectura());
+  useEffect(() => {
+    lectura.current.invalidar();
+    setEstadoPorUsuario(null);
+    setDatosVigentes(false);
+    setUltimaActualizacion(null);
+    setFechaConsulta(0);
+    setError("");
+    pagoEnCurso.current = null;
+    setPagando(false);
+    setCargando(false);
+  }, [usuarioActual]);
   const cargar = useCallback(() => {
+    if (usuarioActual === null) return;
     setError("");
     setDatosVigentes(false);
     setCargando(true);
     void lectura.current.cargar(
       () => api.get<Estado>("/finanzas/me/estado-cuenta"),
       (r) => {
-        setEstado(r.data);
+        setEstadoPorUsuario({ usuario: usuarioActual, datos: r.data });
         setFechaConsulta(Date.now());
         setDatosVigentes(true);
         setUltimaActualizacion(new Date().toLocaleString());
@@ -93,7 +112,7 @@ export default function EstadoCuentaScreen() {
       },
       () => setCargando(false),
     );
-  }, []);
+  }, [usuarioActual]);
 
   useFocusEffect(
     useCallback(() => {
@@ -102,20 +121,21 @@ export default function EstadoCuentaScreen() {
     }, [cargar]),
   );
 
-  const pagoEnCurso = useRef(false);
   const pagarEnLinea = async (cargo: CargoDetalle) => {
-    if (!activa.current || pagoEnCurso.current) return;
-    if (!datosVigentes) {
+    const sesionPago = identidad.current;
+    const vigente = () => activa.current && identidad.current === sesionPago;
+    if (!vigente() || sesionPago.usuario !== usuarioActual || pagoEnCurso.current) return;
+    if (!datosVigentes || !estado || usuarioActual === null) {
       Alert.alert("Actualiza tu saldo", "Necesitas conexión y un estado de cuenta actualizado antes de iniciar un pago.");
       return;
     }
-    pagoEnCurso.current = true;
+    pagoEnCurso.current = sesionPago;
     setPagando(true);
     try {
       const { data: actualizado } = await api.get<Estado>("/finanzas/me/estado-cuenta");
-      if (!activa.current) return;
+      if (!vigente()) return;
       const cargoVigente = actualizado.cargos.find((item) => item.id === cargo.id);
-      setEstado(actualizado);
+      setEstadoPorUsuario({ usuario: usuarioActual, datos: actualizado });
       setFechaConsulta(Date.now());
       if (!cargoVigente || cargoVigente.saldo <= 0 || cargoVigente.saldo !== cargo.saldo) {
         setDatosVigentes(false);
@@ -125,7 +145,7 @@ export default function EstadoCuentaScreen() {
       const { data } = await api.post("/finanzas/ordenes", {
         cargoId: cargo.id,
       });
-      if (!activa.current) return;
+      if (!vigente()) return;
       if (data.estatus === "COMPLETADA") {
         Alert.alert(
           "Pago confirmado",
@@ -153,16 +173,17 @@ export default function EstadoCuentaScreen() {
         );
       }
     } catch (err) {
-      if (activa.current) {
+      if (vigente()) {
         setDatosVigentes(false);
         Alert.alert("No se pudo generar la orden", mensajeDeError(err));
       }
     } finally {
-      pagoEnCurso.current = false;
-      if (activa.current) setPagando(false);
+      if (pagoEnCurso.current === sesionPago) pagoEnCurso.current = null;
+      if (vigente()) setPagando(false);
     }
   };
 
+  const saldosVigentes = datosVigentes && estado !== null;
   const tono = (estatus: string) =>
     estatus === "PAGADO"
       ? "ok"
@@ -235,8 +256,8 @@ export default function EstadoCuentaScreen() {
               <Sello texto={c.estatus} tono={tono(c.estatus)} />
               {c.saldo > 0 && (
                 <TouchableOpacity
-                  disabled={pagando || !datosVigentes}
-                  accessibilityState={{ disabled: pagando || !datosVigentes, busy: pagando }}
+                  disabled={pagando || !saldosVigentes}
+                  accessibilityState={{ disabled: pagando || !saldosVigentes, busy: pagando }}
                   style={[estilos.boton, { backgroundColor: marca.colorAcento }]}
                   onPress={() =>
                     Alert.alert(
