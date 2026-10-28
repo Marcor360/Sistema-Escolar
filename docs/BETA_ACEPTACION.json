@@ -1,5 +1,5 @@
 {
-  "version": "1.27.58",
+  "version": "1.27.59",
   "alcance": "Puertas de aceptación institucional; egresos únicos y compresión opcional requieren pruebas MySQL/SQL Server, conciliación de legados y política formal de retención. No se habilita borrado de documentos.",
   "puertas": [
     {

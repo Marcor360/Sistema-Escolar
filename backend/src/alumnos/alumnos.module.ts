@@ -1,3 +1,4 @@
+import { ConservacionAcademicaService } from './conservacion-academica.service';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Alumno } from '../entities/alumno.entity';
@@ -12,7 +13,7 @@ import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Alumno, Inscripcion, GrupoMateria]), UsuariosModule, PlantelesModule, AuthModule],
-  providers: [AlumnosService, ArchivoEgresosService],
+  providers: [AlumnosService, ArchivoEgresosService, ConservacionAcademicaService],
   controllers: [AlumnosController],
   exports: [AlumnosService],
 })

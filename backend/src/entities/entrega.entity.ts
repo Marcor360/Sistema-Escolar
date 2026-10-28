@@ -15,6 +15,7 @@ export class Entrega {
   @ManyToOne(() => Alumno, { eager: true })
   @JoinColumn({ name: 'alumno_id' })
   alumno!: Alumno;
+  @Column({ type: String, length: 3000, nullable: true }) respuestaTexto!: string | null;
   @Column({ type: String, length: 500, nullable: true }) comentarioAlumno!: string | null;
   @Column({ type: String, length: 200, nullable: true }) archivoNombre!: string | null;
   @Column({ type: String, length: 300, nullable: true }) archivoRuta!: string | null;

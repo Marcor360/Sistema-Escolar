@@ -90,7 +90,7 @@ it('conserva notas de entregas calificadas y bloquea envíos a actividades desac
     expect(actividad.response.status).toBe(201);
 
     const primera = await ctx.api(`/actividades/${actividad.data.id}/entrega`, {
-      method: 'POST', token: tokenAlumno, body: { comentario: 'Primera versión' },
+      method: 'POST', token: tokenAlumno, body: { comentario: 'Primera versión', respuestaTexto: 'Respuesta académica de prueba' },
     });
     expect(primera.response.status).toBe(201);
     const calificada = await ctx.api(`/entregas/${primera.data.id}/calificar`, {

@@ -47,7 +47,8 @@
         "migracion_calendario_ciclo_nivel.sql",
         "migracion_seguimiento_asistencias.sql",
         "migracion_dispositivo_sesion.sql",
-        "migracion_egresos_unicos_retencion.sql"
+        "migracion_egresos_unicos_retencion.sql",
+        "migracion_entregas_texto_fecha_documental.sql"
       ]
     },
     "sqlserver": {
@@ -95,7 +96,8 @@
         "migracion_calendario_ciclo_nivel.sql",
         "migracion_seguimiento_asistencias.sql",
         "migracion_dispositivo_sesion.sql",
-        "migracion_egresos_unicos_retencion.sql"
+        "migracion_egresos_unicos_retencion.sql",
+        "migracion_entregas_texto_fecha_documental.sql"
       ]
     }
   }

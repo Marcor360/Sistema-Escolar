@@ -1,14 +1,26 @@
 import { PaginacionDto } from '../common/paginacion.dto';
 import { OpcionalNoNulo } from '../common/opcional-no-nulo';
 import { Transform } from 'class-transformer';
-const limpiar = ({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value;
-import { IsDateString, MaxLength, MinLength, IsIn, IsInt, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
+const limpiar = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
+import {
+  IsDateString,
+  MaxLength,
+  MinLength,
+  IsIn,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class CrearActividadDto {
   @IsInt() grupoMateriaId!: number;
   @Transform(limpiar) @IsString() @MinLength(1) @MaxLength(150) titulo!: string;
   @IsOptional() @IsString() @MaxLength(4000) descripcion?: string | null;
-  @OpcionalNoNulo() @IsIn(['TAREA', 'EXAMEN', 'PROYECTO', 'PARTICIPACION'])
+  @OpcionalNoNulo()
+  @IsIn(['TAREA', 'EXAMEN', 'PROYECTO', 'PARTICIPACION'])
   tipo?: 'TAREA' | 'EXAMEN' | 'PROYECTO' | 'PARTICIPACION';
   @OpcionalNoNulo() @IsInt() @Min(0) @Max(3) parcial?: number;
   @OpcionalNoNulo() @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) @Max(100) ponderacion?: number;
@@ -18,7 +30,8 @@ export class CrearActividadDto {
 export class ActualizarActividadDto {
   @OpcionalNoNulo() @Transform(limpiar) @IsString() @MinLength(1) @MaxLength(150) titulo?: string;
   @IsOptional() @IsString() @MaxLength(4000) descripcion?: string | null;
-  @OpcionalNoNulo() @IsIn(['TAREA', 'EXAMEN', 'PROYECTO', 'PARTICIPACION'])
+  @OpcionalNoNulo()
+  @IsIn(['TAREA', 'EXAMEN', 'PROYECTO', 'PARTICIPACION'])
   tipo?: 'TAREA' | 'EXAMEN' | 'PROYECTO' | 'PARTICIPACION';
   @OpcionalNoNulo() @IsInt() @Min(0) @Max(3) parcial?: number;
   @OpcionalNoNulo() @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) @Max(100) ponderacion?: number;
@@ -26,6 +39,7 @@ export class ActualizarActividadDto {
 }
 
 export class EntregarDto {
+  @IsOptional() @Transform(limpiar) @IsString() @MaxLength(3000) respuestaTexto?: string | null;
   @IsOptional() @IsString() @MaxLength(500) comentario?: string | null;
 }
 
