@@ -1,6 +1,6 @@
 {
-  "version": "1.30.1",
-  "alcance": "Candidata 1.30.1 sobre main 1.30.0: aislamiento de consultas académicas Expo al cambiar de sesión; rechaza respuestas tardías exitosas o fallidas. Sin cambios en API, BD o web. Pendiente CI del SHA y UAT de Android/iOS.",
+  "version": "1.30.2",
+  "alcance": "Candidata 1.30.2 sobre 1.30.1: protección de estado de cuenta Expo por identidad de alumno y regresión de cambio de cuenta. Apilada sobre PR #213; sin migraciones o nuevas rutas API. CI y UAT pendientes.",
   "puertas": [
     {
       "id": "ci_ultimo_sha",
