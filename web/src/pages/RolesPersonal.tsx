@@ -85,7 +85,7 @@ export default function RolesPersonalPage() {
                   <td>{cuenta.roles.join(', ')}</td>
                   <td>{cuenta.planteles.join(', ') || 'Sin asignación'}</td>
                   <td><button type="button" className="boton secundario chico"
-                    disabled={!cuenta.activo || cuenta.id === sesion?.sub || cuenta.roles.includes('SUPERADMIN') && !esSuperadmin || cuenta.roles.includes('DIRECTOR') && !esSuperadmin || cuenta.roles.includes('ADMINISTRATIVO') && !esSuperadmin && !esDirector}
+                    disabled={!cuenta.activo || cuenta.id === sesion?.sub || cuenta.roles.includes('SUPERADMIN') || cuenta.roles.includes('DIRECTOR') && !esSuperadmin || cuenta.roles.includes('ADMINISTRATIVO') && !esSuperadmin && !esDirector}
                     onClick={() => editar(cuenta)}>Modificar funciones</button></td>
                 </tr>
               ))}</tbody>
