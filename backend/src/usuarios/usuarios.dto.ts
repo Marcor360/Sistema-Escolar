@@ -70,3 +70,15 @@ export class AsignarRolesPersonalDto {
   @IsArray() @ArrayNotEmpty() @IsIn(ROLES, { each: true })
   roles!: RolClave[];
 }
+
+/** Vincula una identidad laboral nueva sin retirar la identidad académica. */
+export class VincularAlumnoPersonalDto {
+  @Type(() => Number) @IsInt() @Min(1) alumnoId!: number;
+  @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim().toLowerCase() : value)
+  @IsEmail() @MaxLength(120) emailInstitucional!: string;
+  @IsArray() @ArrayNotEmpty() @IsIn(['FINANZAS', 'ADMINISTRATIVO'], { each: true })
+  roles!: Array<'FINANZAS' | 'ADMINISTRATIVO'>;
+  @IsString() @LongitudMinima(8) @MaxLength(200) motivo!: string;
+  @Equals(true, { message: 'Confirma que la contratación o nombramiento fue autorizado' })
+  contratacionConfirmada!: true;
+}
