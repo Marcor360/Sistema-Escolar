@@ -28,7 +28,7 @@ function escenario(actorRoles: string[], destinoRoles: string[], plantelesDestin
     if (entidad.name === 'UsuarioPlantel') return asignaciones;
     if (entidad.name === 'Rol') return roles;
     if (entidad.name === 'Docente') return docente;
-    if (entidad.name === 'BitacoraActividad') return bitacora;
+    if (entidad.name === 'BitacoraActividad' || entidad.name === 'HistorialRolesUsuario') return bitacora;
     throw new Error('Repositorio inesperado');
   }) };
   const service = new UsuariosService(
