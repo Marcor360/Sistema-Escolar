@@ -4,6 +4,7 @@ import React, { useEffect, type ReactNode } from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import MateriasScreen from './Materias';
+import { configurarCacheAcademica } from '../api/cache-academica';
 import { api } from '../api/client';
 import { Linking, RefreshControl } from 'react-native';
 
@@ -45,10 +46,11 @@ let vista: ReactTestRenderer;
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   contexto.sesion = { sub: 1 }; contexto.enfocada = true;
+  configurarCacheAcademica(1);
   vi.mocked(api.get).mockReset().mockResolvedValue({ data: {datos:materias,total:materias.length} });
   vi.mocked(Linking.openURL).mockReset();
 });
-afterEach(async () => { if (vista) await act(async () => vista.unmount()); vi.unstubAllGlobals(); });
+afterEach(async () => { if (vista) await act(async () => vista.unmount()); configurarCacheAcademica(null); vi.unstubAllGlobals(); });
 async function montar() { await act(async () => { vista = create(<MateriasScreen />); }); }
 async function actualizar() { await act(async () => { vista.update(<MateriasScreen />); }); }
 async function pulsar(etiqueta: string) {
