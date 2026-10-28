@@ -1,11 +1,12 @@
 import { PaginacionDto } from '../common/paginacion.dto';
 import { PartialType } from '@nestjs/swagger';
-import { IsBoolean, IsDateString, MaxLength, MinLength, Min } from 'class-validator';
+import { IsBoolean, IsDateString, MaxLength, MinLength, Min, Matches } from 'class-validator';
 import { Transform as Normalizar } from 'class-transformer';
 import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, IsString } from 'class-validator';
 
 export class EventoDto {
+  @IsOptional() @IsString() @Matches(/^([a-z0-9-]{1,50})?$/) marcadorClave?: string;
   @IsOptional()
   @Normalizar(({ value }: { value: unknown }) => (value === 'true' ? true : value === 'false' ? false : value))
   @IsBoolean()
@@ -57,4 +58,15 @@ export class ImportarCalendarioDto {
   @Type(() => Number) @IsInt() @Min(1) plantelId!: number;
   @IsIn(['ACADEMICA', 'ADMINISTRATIVA', 'FINANCIERA']) audiencia!: 'ACADEMICA' | 'ADMINISTRATIVA' | 'FINANCIERA';
   @IsString() @MinLength(1) @MaxLength(100000) contenido!: string;
+}
+
+export class GuardarMarcadorDto {
+  @Type(() => Number) @IsInt() @Min(1) plantelId!: number;
+  @IsOptional() @Matches(/^[a-z0-9-]{1,50}$/) clave?: string;
+  @IsString() @MinLength(1) @MaxLength(150)
+  @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
+  nombre!: string;
+  @Matches(/^#[0-9a-fA-F]{6}$/) color!: string;
+  @IsIn(['FONDO', 'INICIO', 'FIN']) forma!: 'FONDO' | 'INICIO' | 'FIN';
+  @IsOptional() @IsInt() @Min(0) revision?: number;
 }

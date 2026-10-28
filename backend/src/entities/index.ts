@@ -76,3 +76,5 @@ export * from './calendario-historial.entity';
 export * from './egreso-alumno.entity';
 
 export * from './reinscripcion-periodo.entity';
+
+export * from './marcador-calendario.entity';

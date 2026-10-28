@@ -1096,3 +1096,18 @@ CREATE TABLE reinscripciones_periodo (
 );
 CREATE UNIQUE INDEX uq_reinscripcion_origen ON reinscripciones_periodo(clave_origen) WHERE clave_origen IS NOT NULL;
 CREATE INDEX idx_reinscripcion_cohorte ON reinscripciones_periodo(plantel_id,ciclo_id,periodo_academico_id,turno,estado);
+
+-- Extensión de calendario institucional (referencia; usar runner incremental).
+-- Aditiva: eventos anteriores conservan marcador NULL; no se crean fechas ni eventos.
+CREATE TABLE calendario_marcadores (
+ id INT IDENTITY(1,1) PRIMARY KEY,
+ plantel_id INT NOT NULL,
+ clave NVARCHAR(50) NOT NULL,
+ nombre NVARCHAR(150) NOT NULL,
+ color NVARCHAR(7) NOT NULL,
+ forma NVARCHAR(15) NOT NULL,
+ revision INT NOT NULL DEFAULT 1,
+ CONSTRAINT fk_calendario_marcador_plantel FOREIGN KEY (plantel_id) REFERENCES planteles(id),
+ CONSTRAINT uq_calendario_marcador_plantel UNIQUE (plantel_id, clave)
+);
+ALTER TABLE eventos_calendario ADD marcador_clave NVARCHAR(50) NULL;

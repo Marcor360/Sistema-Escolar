@@ -50,3 +50,45 @@ it('aísla eventos de dos grupos y planteles para alumnos, maestros y administra
   });
   },
 };
+
+export function registrarMarcadoresCalendario(ctx: ContextoIntegracion) {
+  it('calendario institucional: persiste marcadores, aísla planteles y resuelve concurrencia sin cambiar eventos', async () => {
+    const ds = ctx.dataSource;
+    const token = await ctx.emitirToken((await ds.getRepository(Usuario).findOneByOrFail({ id: ctx.adminId })).email);
+    const root = await ctx.emitirToken((await ds.getRepository(Usuario).findOneByOrFail({ id: ctx.superadminId })).email);
+    const post = (ruta: string, body: unknown, actor = token) => ctx.api(ruta, { method: 'POST', token: actor, body });
+    const nivel = await post('/academico/catalogos/niveles', { plantelId: ctx.plantelId, clave: `MC${ctx.sufijo}`, nombre: 'Calendario institucional' });
+    expect(nivel.response.status).toBe(201);
+    const iniciales = await ctx.api('/calendario/marcadores', { token });
+    expect(iniciales.response.status).toBe(200);
+    expect(iniciales.data).toHaveLength(16);
+    const base = { plantelId: ctx.plantelId, nombre: 'Semana cultural', color: '#154e7a', forma: 'INICIO' };
+    expect((await post('/calendario/marcadores', { ...base, color: 'red; background:url(x)' })).response.status).toBe(400);
+    expect((await post('/calendario/marcadores', { ...base, nombre: '   ' })).response.status).toBe(400);
+    expect((await post('/calendario/marcadores', base, await ctx.emitirFinanzasB())).response.status).toBe(403);
+    const alumno = await ctx.emitirToken((await ds.getRepository(Usuario).findOneByOrFail({ id: ctx.alumnoUsuarioId })).email);
+    expect((await post('/calendario/marcadores', base, alumno)).response.status).toBe(403);
+    const creado = await post('/calendario/marcadores', base);
+    expect(creado.response.status).toBe(201);
+    expect(creado.data).toMatchObject({ color: '#154E7A', revision: 1 });
+    expect((await ctx.api(`/calendario/marcadores?plantelId=${ctx.otroPlantelId}`, { token })).response.status).toBe(403);
+    const evento = await post('/calendario', { plantelId: ctx.plantelId, titulo: 'Actividad original', marcadorClave: creado.data.clave, fechaInicio: '2026-10-07T06:00:00Z', fechaFin: '2026-10-09T05:59:59Z' });
+    expect(evento.response.status).toBe(201);
+    const nuevo = { ...base, clave: creado.data.clave, revision: 1, nombre: 'Semana de ciencias', color: '#FFFF00' };
+    const concurrentes = await Promise.all([post('/calendario/marcadores', nuevo), post('/calendario/marcadores', nuevo)]);
+    expect(concurrentes.map(r => r.response.status).sort()).toEqual([201, 409]);
+    const lista = await ctx.api('/calendario?desde=2026-10-01&hasta=2026-10-31', { token });
+    const fecha = lista.data.find((e: { id: number }) => e.id === evento.data.id);
+    expect(fecha).toMatchObject({ titulo: 'Actividad original', marcador: { nombre: 'Semana de ciencias', color: '#FFFF00' } });
+    const ajeno = await post('/calendario/marcadores', { ...base, plantelId: ctx.otroPlantelId }, root);
+    expect(ajeno.response.status).toBe(201);
+    expect((await post('/calendario', { plantelId: ctx.plantelId, titulo: 'No debe cruzar planteles', marcadorClave: ajeno.data.clave, fechaInicio: '2026-10-10T06:00:00Z' })).response.status).toBe(400);
+    expect((await post('/calendario/marcadores', { ...base, clave: 'apertura', revision: 0, forma: 'FONDO' })).response.status).toBe(201);
+    const restaurados = await ctx.api(`/calendario/marcadores?plantelId=${ctx.plantelId}`, { token });
+    expect(restaurados.data).toHaveLength(17);
+    expect(restaurados.data.find((m: { clave: string }) => m.clave === 'apertura')).toMatchObject({ nombre: 'Semana cultural', revision: 1 });
+    expect((await ctx.api('/calendario/' + fecha.id, { method: 'PATCH', token, body: { marcadorClave: '', revision: fecha.revision } })).response.status).toBe(200);
+    const final = await ctx.api('/calendario/' + fecha.id, { token });
+    expect(final.data).toMatchObject({ titulo: 'Actividad original', marcadorClave: null });
+  });
+}

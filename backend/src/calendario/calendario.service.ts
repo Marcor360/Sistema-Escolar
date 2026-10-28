@@ -1,3 +1,8 @@
+import { randomUUID } from 'crypto';
+import { MarcadorCalendario } from '../entities/marcador-calendario.entity';
+import { Plantel } from '../entities/plantel.entity';
+import { MARCADORES_INICIALES } from './marcadores';
+import { GuardarMarcadorDto } from './calendario.dto';
 import { EntityManager } from 'typeorm';
 import { CalendarioHistorial } from '../entities/calendario-historial.entity';
 import { Notificacion } from '../entities/notificacion.entity';
@@ -5,7 +10,7 @@ import { ImportarCalendarioDto } from './calendario.dto';
 import { leerIcs } from './calendario-ics';
 import { promises as fs } from 'fs';
 import { join } from 'path';
-import { CicloEscolar, NivelAcademico, Usuario } from '../entities';
+import { BitacoraAcademica, CicloEscolar, NivelAcademico, Usuario } from '../entities';
 import { In } from 'typeorm';
 import { uploadsPath } from '../common/uploads-path';
 import { validarContenidoArchivo } from '../common/validar-archivo';
@@ -43,6 +48,41 @@ export class CalendarioService {
     @InjectRepository(Docente) private readonly docentes: Repository<Docente>,
     private readonly scope: ScopeService,
   ) {}
+
+  async marcadores(user: JwtUser, plantelId?: number) {
+    if (!plantelId) return MARCADORES_INICIALES;
+    const opciones = await this.opciones(user);
+    if (!user.roles.includes('SUPERADMIN') && !opciones.niveles.some((n) => n.plantelId === plantelId))
+      throw new ForbiddenException('Plantel fuera del calendario autorizado');
+    const filas = await this.eventos.manager.getRepository(MarcadorCalendario).find({ where: { plantelId }, order: { id: 'ASC' } });
+    return [...MARCADORES_INICIALES.map((base) => filas.find((f) => f.clave === base.clave) ?? base),
+      ...filas.filter((f) => !MARCADORES_INICIALES.some((b) => b.clave === f.clave))];
+  }
+  async guardarMarcador(dto: GuardarMarcadorDto, user: JwtUser) {
+    if (!user.roles.some((r) => ['SUPERADMIN', 'ADMINISTRATIVO', 'FINANZAS'].includes(r)))
+      throw new ForbiddenException('No puedes configurar marcadores');
+    await this.scope.validarGestion(user, dto.plantelId);
+    const clave = dto.clave ?? randomUUID();
+    return this.eventos.manager.transaction(async (m) => {
+      const plantel = await m.getRepository(Plantel).findOne({ where: { id: dto.plantelId, activo: true }, lock: { mode: 'pessimistic_write' } });
+      if (!plantel) throw new BadRequestException('Plantel no disponible');
+      const repo = m.getRepository(MarcadorCalendario);
+      const previo = await repo.findOneBy({ plantelId: dto.plantelId, clave });
+      if (previo && dto.revision !== previo.revision) throw new ConflictException('El marcador cambió; recarga antes de guardar');
+      if (!previo && dto.revision && dto.revision > 0) throw new ConflictException('El marcador ya no está disponible');
+      if (!previo && await repo.countBy({ plantelId: dto.plantelId }) >= 100)
+        throw new BadRequestException('El plantel admite hasta 100 marcadores personalizados');
+      const guardado = await repo.save({ ...previo, plantelId: dto.plantelId, clave, nombre: dto.nombre, color: dto.color.toUpperCase(), forma: dto.forma, revision: (previo?.revision ?? 0) + 1 });
+      await m.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId: dto.plantelId, accion: 'CALENDARIO_MARCADOR', entidadId: guardado.id, fecha: new Date(), detalle: JSON.stringify({ antes: previo, despues: guardado }) });
+      return guardado;
+    });
+  }
+  private async presentar(eventos: EventoCalendario[]) {
+    const planteles = [...new Set(eventos.filter((e) => e.marcadorClave && e.plantelId).map((e) => e.plantelId!))];
+    const configurados = planteles.length ? await this.eventos.manager.getRepository(MarcadorCalendario).find({ where: { plantelId: In(planteles) }, loadEagerRelations: false }) : [];
+    return eventos.map((e) => ({ ...e, revision: this.revision(e), marcador: e.marcadorClave ?
+      configurados.find((m) => m.plantelId === e.plantelId && m.clave === e.marcadorClave) ?? MARCADORES_INICIALES.find((m) => m.clave === e.marcadorClave) ?? null : null }));
+  }
 
   private async consulta(user: JwtUser, desde?: string, hasta?: string, plantelId?: number) {
     if (
@@ -133,7 +173,7 @@ export class CalendarioService {
     if (cicloId) qb.andWhere('(e.ciclo_id = :cicloId OR e.ciclo_id IS NULL)', { cicloId });
     if (nivelId) qb.andWhere('(e.nivel_id = :nivelId OR e.nivel_id IS NULL)', { nivelId });
     const eventos = await qb.getMany();
-    return eventos.map((e) => ({ ...e, revision: this.revision(e) }));
+    return this.presentar(eventos);
   }
   async consultar(q: ConsultarEventosDto, user: JwtUser) {
     const qb = await this.consulta(user, q.desde, q.hasta, q.plantelId);
@@ -155,7 +195,7 @@ export class CalendarioService {
       .take(q.porPagina)
       .getManyAndCount();
     return {
-      datos: eventos.map((e) => ({ ...e, revision: this.revision(e) })),
+      datos: await this.presentar(eventos),
       total,
       pagina: q.pagina,
       porPagina: q.porPagina,
@@ -229,7 +269,14 @@ export class CalendarioService {
     }
     if (maestroPuro && dto.audiencia && dto.audiencia !== 'ACADEMICA')
       throw new ForbiddenException('El maestro solo publica información académica');
+    if (dto.marcadorClave) {
+      if (!plantelId) throw new BadRequestException('El marcador requiere un plantel');
+      if (!MARCADORES_INICIALES.some((m) => m.clave === dto.marcadorClave) &&
+        !await this.eventos.manager.getRepository(MarcadorCalendario).existsBy({ plantelId, clave: dto.marcadorClave }))
+        throw new BadRequestException('El marcador no pertenece al plantel');
+    }
     return {
+      marcadorClave: dto.marcadorClave || null,
       cicloId: dto.cicloId ?? null,
       nivelId,
       audiencia: dto.audiencia ?? 'ACADEMICA',
@@ -261,6 +308,7 @@ export class CalendarioService {
           e.nivelId,
           e.audiencia,
           e.imagenNombre,
+          ...(e.marcadorClave ? [e.marcadorClave] : []),
         ]),
       )
       .digest('hex');
@@ -285,6 +333,7 @@ export class CalendarioService {
   async editar(id: number, dto: EditarEventoDto, user: JwtUser) {
     if (
       ![
+        'marcadorClave',
         'titulo',
         'descripcion',
         'tipo',
@@ -312,6 +361,7 @@ export class CalendarioService {
         throw new ConflictException('El evento cambió; recarga antes de editar');
       const destino = await this.preparar(
         {
+          marcadorClave: dto.marcadorClave === undefined ? evento.marcadorClave ?? undefined : dto.marcadorClave,
           cicloId: dto.cicloId ?? evento.cicloId ?? undefined,
           nivelId: dto.nivelId ?? evento.nivelId ?? undefined,
           audiencia: dto.audiencia ?? evento.audiencia,

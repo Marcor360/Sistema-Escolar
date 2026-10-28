@@ -1,6 +1,6 @@
 {
-  "version": "1.29.0",
-  "alcance": "Candidata 1.29.0 sobre main 1.28.0: inscripción ordinaria por cartera, reinscripción por periodo, autorización financiera y cuotas congeladas con historial académico/financiero conservado. Protección de main (#158) bloqueada por permisos de integración; sin despliegue ni UAT institucional de esta versión acreditados.",
+  "version": "1.30.0",
+  "alcance": "Candidata 1.30.0 sobre main 1.29.0: calendario institucional con logo configurable, lámina anual/mensual imprimible, leyenda, marcadores por plantel y rangos de eventos. Sin despliegue ni aceptación UAT de esta versión acreditados.",
   "puertas": [
     {
       "id": "ci_ultimo_sha",

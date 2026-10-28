@@ -1,33 +1,65 @@
-.calendario-meses {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
-  gap: 16px;
-  margin-top: 20px;
-}
-.calendario-mes {
-  border: 1px solid var(--linea);
-  padding: 10px;
-  min-width: 0;
-}
-.calendario-dias {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 3px;
-}
-.calendario-dias > div {
-  min-height: 65px;
-  border: 1px solid var(--linea);
-  min-width: 0;
-}
-.calendario-dias p {
-  font-size: 11px;
-  overflow-wrap: anywhere;
-  margin: 3px;
-  color: var(--tinta);
-}
-.calendario-dias button {
-  padding: 2px !important;
-  min-width: 0;
-  width: 100%;
-  background: var(--superficie-suave);
+.calendario-lamina { margin:24px 0; padding:24px; background:#fff; color:#15272b; border:1px solid #c8ced1; border-radius:8px; }
+.calendario-cabecera { display:flex; gap:24px; align-items:center; justify-content:center; text-align:center; margin-bottom:28px; }
+.calendario-cabecera img { width:110px; height:110px; object-fit:contain; }
+.calendario-institucion { font-size:clamp(1.1rem,2vw,1.7rem); font-weight:800; margin:0 0 10px; text-transform:uppercase; }
+.calendario-cabecera h2 { font-size:clamp(1rem,1.8vw,1.4rem); margin:0; text-transform:uppercase; }
+.calendario-cabecera p { overflow-wrap:anywhere; }
+.calendario-vigencia { font-size:.8rem; }
+.calendario-composicion { display:grid; grid-template-columns:minmax(0,1fr) minmax(200px,25%); align-items:start; gap:24px; }
+.calendario-meses { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:26px; align-items:start; }
+.calendario-mes { min-width:0; border:1px solid #36464d; break-inside:avoid; }
+.calendario-mes h3 { margin:0; padding:12px 6px; text-align:center; background:#fa8585; color:#161616; font-size:.9rem; text-transform:uppercase; }
+.calendario-dias { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); }
+.calendario-dias > * { border-top:1px solid #7f898c; border-right:1px solid #7f898c; min-width:0; }
+.calendario-dias > :nth-child(7n) { border-right:0; }
+.calendario-semana { text-align:center; background:#eee; padding:7px 0; color:#20282a; font-size:.75rem; font-weight:700; }
+.calendario-celda,.calendario-hueco { min-height:65px; }
+.calendario-hueco,.calendario-celda.fuera-ciclo { background:#f2f3f3; }
+.calendario-celda > button { margin:1px; padding:1px 4px!important; min-height:24px; min-width:24px; border:0; border-radius:3px; background:#fff!important; color:#15272b!important; font-size:12px; line-height:1.4; }
+.calendario-celda > button:disabled { opacity:1; cursor:default; }
+.calendario-celda.fuera-ciclo > button { color:#6b7376!important; background:transparent!important; }
+.calendario-celda > button:focus-visible { outline:3px solid #146884; outline-offset:1px; }
+.calendario-marcas-dia { padding:0 2px 3px!important; margin:0!important; list-style:none; }
+.calendario-marcas-dia li { display:flex; flex-wrap:wrap; align-items:center; gap:2px; padding:1px 0; }
+.calendario-marcas-dia li > span:last-child { font-size:10px; overflow-wrap:anywhere; background:#fff; color:#15272b; border-radius:2px; }
+.calendario-simbolo { display:inline-block; flex-shrink:0; width:22px; height:20px; border:1px solid #4e5d63; vertical-align:middle; }
+.calendario-simbolo.forma-inicio { clip-path:polygon(0 0,65% 0,100% 50%,65% 100%,0 100%); }
+.calendario-simbolo.forma-fin { clip-path:polygon(35% 0,100% 0,100% 100%,35% 100%,0 50%); }
+.calendario-marcas-dia .forma-fondo { width:8px; height:8px; }
+.calendario-leyenda h4 { margin:0 0 10px; font-size:1rem; }
+.calendario-leyenda ul { list-style:none; margin:0; padding:0; border:1px solid #687479; }
+.calendario-leyenda li { display:flex; align-items:center; gap:8px; padding:7px 6px; border-bottom:1px solid #c8ced1; font-size:.8rem; overflow-wrap:anywhere; }
+.calendario-leyenda li:last-child { border-bottom:0; }
+.calendario-leyenda li .calendario-simbolo { width:28px; height:28px; }
+.calendario-nota-impresion { font-size:.72rem; }
+.calendario-editor { margin:16px 0; padding:12px; border:1px solid var(--linea); }
+.calendario-editor input[type=color] { min-width:60px; min-height:44px; }
+.calendario-compacto .calendario-celda,.calendario-compacto .calendario-hueco { min-height:48px; }
+.calendario-compacto .calendario-marcas-dia { display:flex; flex-wrap:wrap; gap:2px; }
+.calendario-compacto .calendario-marcas-dia li > span:last-child { position:absolute; width:1px; height:1px; padding:0; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+@media(max-width:1050px) { .calendario-composicion { grid-template-columns:minmax(0,1fr); } .calendario-leyenda ul { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:650px) { .calendario-lamina { padding:12px; } .calendario-meses { grid-template-columns:minmax(0,1fr); gap:20px; } .calendario-cabecera { gap:12px; flex-direction:column; } .calendario-cabecera img { width:80px; height:80px; } .calendario-leyenda ul { grid-template-columns:minmax(0,1fr); } .calendario-celda > button { min-height:36px; min-width:30px; } }
+@media print {
+  @page { size:A3 landscape; margin:10mm; }
+  body:has(.calendario-lamina) { margin:0; }
+  body:has(.calendario-lamina) *:not(:has(.calendario-lamina)):not(.calendario-lamina):not(.calendario-lamina *) { display:none!important; }
+  body:has(.calendario-lamina) *:has(.calendario-lamina) { display:block!important; min-height:0!important; height:auto!important; overflow:visible!important; margin:0!important; padding:0!important; width:auto!important; max-width:none!important; position:static!important; }
+  .calendario-lamina { position:static; width:100%; margin:0; border:0; padding:0; font-size:10pt; print-color-adjust:exact; -webkit-print-color-adjust:exact; }
+  .calendario-cabecera { flex-direction:row; margin-bottom:4mm; gap:6mm; }
+  .calendario-cabecera p { margin:1mm 0; line-height:1.2; }
+  .calendario-cabecera .calendario-institucion { font-size:14pt; }
+  .calendario-cabecera h2 { font-size:12pt; }
+  .calendario-cabecera img { width:20mm; height:20mm; }
+  .calendario-composicion { grid-template-columns:minmax(0,1fr) 65mm; gap:7mm; }
+  .calendario-meses { grid-template-columns:repeat(3,minmax(0,1fr)); gap:5mm; }
+  .calendario-corto .calendario-meses { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .calendario-mes h3 { padding:2mm; font-size:9pt; }
+  .calendario-celda,.calendario-hueco,.calendario-compacto .calendario-celda,.calendario-compacto .calendario-hueco { min-height:5mm; }
+  .calendario-celda > button { font-size:8pt; min-width:0; min-height:0; }
+  .calendario-semana { padding:1mm; }
+  .calendario-leyenda ul { display:block; }
+  .calendario-leyenda li { padding:1.5mm; font-size:8pt; }
+  .calendario-leyenda li .calendario-simbolo { width:7mm; height:7mm; }
+  .calendario-marcas-dia li > span:last-child { font-size:6pt; }
+  .calendario-simbolo { width:4mm; height:3mm; }
 }

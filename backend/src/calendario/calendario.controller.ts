@@ -25,7 +25,7 @@ import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { Roles } from '../common/roles.decorator';
 import { RolesGuard } from '../common/roles.guard';
 import { CalendarioService } from './calendario.service';
-import { EventoDto, EditarEventoDto, ConsultarEventosDto, ImportarCalendarioDto } from './calendario.dto';
+import { EventoDto, EditarEventoDto, ConsultarEventosDto, ImportarCalendarioDto, GuardarMarcadorDto } from './calendario.dto';
 
 const ImagenInterceptor = FileInterceptor('imagen', {
   storage: diskStorage({
@@ -49,6 +49,16 @@ const ImagenInterceptor = FileInterceptor('imagen', {
 export class CalendarioController {
   constructor(private readonly service: CalendarioService) {}
 
+  @Get('marcadores')
+  @Roles('ALUMNO', 'MAESTRO', 'ADMINISTRATIVO', 'FINANZAS')
+  marcadores(@CurrentUser() u: JwtUser, @Query('plantelId', new ParseIntPipe({ optional: true })) plantelId?: number) {
+    return this.service.marcadores(u, plantelId);
+  }
+  @Post('marcadores')
+  @Roles('ADMINISTRATIVO', 'FINANZAS')
+  guardarMarcador(@Body() dto: GuardarMarcadorDto, @CurrentUser() u: JwtUser) {
+    return this.service.guardarMarcador(dto, u);
+  }
   @Post('ics/preview')
   @Roles('ADMINISTRATIVO', 'FINANZAS')
   previewIcs(@Body() dto: ImportarCalendarioDto, @CurrentUser() u: JwtUser) {
