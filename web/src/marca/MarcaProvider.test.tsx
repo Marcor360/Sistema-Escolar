@@ -34,6 +34,7 @@ it('muestra la última marca pública de caché y la sustituye al consultar la A
   expect(screen.getByText(/Instituto desde caché/)).toBeTruthy();
   await screen.findByText(/Instituto desde servidor/);
   expect(get).toHaveBeenCalledWith('/configuracion/marca');
+  expect(get).toHaveBeenCalledTimes(1);
   expect(JSON.parse(localStorage.getItem(MARCA_CACHE_WEB) ?? '{}').logoUrl).toBe(identidad.logoUrl);
 });
 
@@ -55,6 +56,9 @@ it('revalida en foco y recibe cambios públicos de otra pestaña sin recargar la
     }));
   });
   expect(screen.getByText(/Instituto otra pestaña/)).toBeTruthy();
+  expect(document.title).toBe('Instituto otra pestaña — Panel');
+  expect(document.documentElement.style.getPropertyValue('--pizarra')).toBe(otraPestana.colorPrimario);
+  expect(get).toHaveBeenCalledTimes(2);
 });
 
 it('ante fallo de red conserva la identidad cacheada y no borra logo ni colores', async () => {

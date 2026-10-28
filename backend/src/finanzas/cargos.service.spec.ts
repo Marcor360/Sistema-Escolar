@@ -1,3 +1,14 @@
+import type { Repository, DataSource } from 'typeorm';
+import type { Pago } from '../entities/pago.entity';
+import type { Inscripcion } from '../entities/inscripcion.entity';
+import type { Grupo } from '../entities/grupo.entity';
+import type { AlumnosService } from '../alumnos/alumnos.service';
+import type { ConceptosService } from './conceptos.service';
+import type { BitacoraFinancieraService } from './bitacora-financiera.service';
+import type { ScopeService } from '../planteles/scope.service';
+import type { Cargo as CargoType } from '../entities/cargo.entity';
+import type { JwtUser } from '../common/current-user.decorator';
+import { stub } from '../test-utils/stub';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { CargosService } from './cargos.service';
@@ -18,9 +29,17 @@ describe('CargosService.saldoDeCargo / totalDeCargo', () => {
 
   it('saldoDeCargo = monto - descuento + recargo, redondeado a 2 decimales, sin pagos', async () => {
     const service = new CargosService(
-      {} as any, pagosSinMovimientos() as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any,
+      stub<Repository<Cargo>>({}),
+      stub<Repository<Pago>>(pagosSinMovimientos()),
+      stub<Repository<Inscripcion>>({}),
+      stub<Repository<Grupo>>({}),
+      stub<AlumnosService>({}),
+      stub<ConceptosService>({}),
+      stub<BitacoraFinancieraService>({}),
+      stub<ScopeService>({}),
+      stub<DataSource>({}),
     );
-    const cargo = { id: 1, monto: 200, descuento: 50.005, recargo: 10 } as any;
+    const cargo = stub<CargoType>({ id: 1, monto: 200, descuento: 50.005, recargo: 10 });
 
     await expect(service.saldoDeCargo(cargo)).resolves.toBe(160);
   });
@@ -29,37 +48,70 @@ describe('CargosService.saldoDeCargo / totalDeCargo', () => {
 describe('CargosService.adeudos minimiza datos del alumno', () => {
   it('no devuelve CURP, tutor, dirección ni correo en el reporte financiero', async () => {
     const cargo = {
-      id: 1, alumnoId: 10, conceptoId: 2, cicloId: null as number | null, periodo: '2026-09', claveGeneracion: 'interno',
-      descripcion: 'Colegiatura', monto: 100, descuento: 0, recargo: 0, fechaVencimiento: null as string | null,
+      id: 1,
+      alumnoId: 10,
+      conceptoId: 2,
+      cicloId: null as number | null,
+      periodo: '2026-09',
+      claveGeneracion: 'interno',
+      descripcion: 'Colegiatura',
+      monto: 100,
+      descuento: 0,
+      recargo: 0,
+      fechaVencimiento: null as string | null,
       estatus: 'PENDIENTE',
       alumno: {
-        id: 10, usuarioId: 80, plantelId: 3, matricula: 'A010', curp: 'CURP-PRIVADA',
-        fechaNacimiento: '2010-01-01', tutorNombre: 'Tutor privado', tutorTelefono: '5550000000',
-        direccion: 'Dirección privada', estatus: 'ACTIVO',
+        id: 10,
+        usuarioId: 80,
+        plantelId: 3,
+        matricula: 'A010',
+        curp: 'CURP-PRIVADA',
+        fechaNacimiento: '2010-01-01',
+        tutorNombre: 'Tutor privado',
+        tutorTelefono: '5550000000',
+        direccion: 'Dirección privada',
+        estatus: 'ACTIVO',
         usuario: { nombre: 'Ana', apellidoPaterno: 'López', nombreCompleto: 'Ana López', email: 'ana@example.invalid' },
       },
     };
     const query = {
-      leftJoinAndSelect: jest.fn().mockReturnThis(), where: jest.fn().mockReturnThis(),
-      orderBy: jest.fn().mockReturnThis(), andWhere: jest.fn().mockReturnThis(),
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
       getMany: jest.fn().mockResolvedValue([cargo]),
     };
     const pagosQuery = {
-      select: jest.fn().mockReturnThis(), addSelect: jest.fn().mockReturnThis(),
-      where: jest.fn().mockReturnThis(), andWhere: jest.fn().mockReturnThis(),
-      groupBy: jest.fn().mockReturnThis(), getRawMany: jest.fn().mockResolvedValue([]),
+      select: jest.fn().mockReturnThis(),
+      addSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      groupBy: jest.fn().mockReturnThis(),
+      getRawMany: jest.fn().mockResolvedValue([]),
     };
     const scope = { resolverFiltro: jest.fn().mockResolvedValue([3]) };
     const service = new CargosService(
-      { createQueryBuilder: jest.fn().mockReturnValue(query) } as any,
-      { createQueryBuilder: jest.fn().mockReturnValue(pagosQuery) } as any,
-      {} as any, {} as any, {} as any, {} as any, {} as any, scope as any, {} as any,
+      stub<Repository<Cargo>>({ createQueryBuilder: jest.fn().mockReturnValue(query) }),
+      stub<Repository<Pago>>({ createQueryBuilder: jest.fn().mockReturnValue(pagosQuery) }),
+      stub<Repository<Inscripcion>>({}),
+      stub<Repository<Grupo>>({}),
+      stub<AlumnosService>({}),
+      stub<ConceptosService>({}),
+      stub<BitacoraFinancieraService>({}),
+      stub<ScopeService>(scope),
+      stub<DataSource>({}),
     );
 
-    const respuesta = await service.adeudos({ sub: 4, roles: ['FINANZAS'] } as any);
+    const respuesta = await service.adeudos(stub<JwtUser | undefined>({ sub: 4, roles: ['FINANZAS'] }));
 
     expect(respuesta[0].alumno).toMatchObject({ matricula: 'A010', usuario: { nombreCompleto: 'Ana López' } });
-    for (const datoPrivado of ['CURP-PRIVADA', 'Tutor privado', '5550000000', 'Dirección privada', 'ana@example.invalid']) {
+    for (const datoPrivado of [
+      'CURP-PRIVADA',
+      'Tutor privado',
+      '5550000000',
+      'Dirección privada',
+      'ana@example.invalid',
+    ]) {
       expect(JSON.stringify(respuesta)).not.toContain(datoPrivado);
     }
   });
@@ -70,49 +122,75 @@ describe('Recargos de importe nulo', () => {
     const dto = plainToInstance(AplicarRecargosDto, { porcentaje: 0, plantelId: 4, confirmado: true });
     expect((await validate(dto)).some((error) => error.property === 'porcentaje')).toBe(true);
     const servicio = Object.create(CargosService.prototype) as CargosService;
-    await expect(servicio.aplicarRecargos(dto, { sub: 1, roles: ['FINANZAS'] } as Parameters<CargosService['aplicarRecargos']>[1]))
-      .rejects.toThrow('mayor que cero');
+    await expect(
+      servicio.aplicarRecargos(dto, { sub: 1, roles: ['FINANZAS'] } as Parameters<CargosService['aplicarRecargos']>[1]),
+    ).rejects.toThrow('mayor que cero');
   });
 });
 
 describe('CargosService.aplicarRecargos', () => {
-  it.each(['PENDIENTE', 'PARCIAL', 'VENCIDO'])('calcula el 10%% una sola vez para cargo %s vencido', async (estatus) => {
-    const cargo = {
-      id: 1, plantelId: 4, monto: 1000, descuento: 100, recargo: 0, estatus,
-      concepto: { activo: true, aplicaRecargo: true }, fechaVencimiento: '2020-01-01', alumno: { plantelId: 4 },
-    };
-    const qb = {
-      innerJoin: jest.fn().mockReturnThis(),
-      where: jest.fn().mockReturnThis(),
-      andWhere: jest.fn().mockReturnThis(),
-      getMany: jest.fn().mockResolvedValue([cargo]),
-    };
-    const cargosRepo = {
-      createQueryBuilder: jest.fn().mockReturnValue(qb),
-      findOne: jest.fn().mockResolvedValue(cargo),
-      save: jest.fn().mockResolvedValue(undefined),
-    };
-    const bitacora = { registrar: jest.fn().mockResolvedValue(undefined) };
-    const scope = { resolverFiltro: jest.fn().mockResolvedValue(null) };
-    const manager = { getRepository: jest.fn().mockReturnValue(cargosRepo) };
-    const dataSource = { transaction: jest.fn((fn) => fn(manager)) };
-    const service = new CargosService(
-      cargosRepo as any, {} as any, {} as any, {} as any, {} as any, {} as any,
-      bitacora as any, scope as any, dataSource as any,
-    );
-    const user = { sub: 1, roles: ['FINANZAS'] } as any;
+  it.each(['PENDIENTE', 'PARCIAL', 'VENCIDO'])(
+    'calcula el 10%% una sola vez para cargo %s vencido',
+    async (estatus) => {
+      const cargo = {
+        id: 1,
+        plantelId: 4,
+        monto: 1000,
+        descuento: 100,
+        recargo: 0,
+        estatus,
+        concepto: { activo: true, aplicaRecargo: true },
+        fechaVencimiento: '2020-01-01',
+        alumno: { plantelId: 4 },
+      };
+      const qb = {
+        innerJoin: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([cargo]),
+      };
+      const cargosRepo = {
+        createQueryBuilder: jest.fn().mockReturnValue(qb),
+        findOne: jest.fn().mockResolvedValue(cargo),
+        save: jest.fn().mockResolvedValue(undefined),
+      };
+      const bitacora = { registrar: jest.fn().mockResolvedValue(undefined) };
+      const scope = { resolverFiltro: jest.fn().mockResolvedValue(null) };
+      const manager = { getRepository: jest.fn().mockReturnValue(cargosRepo) };
+      const dataSource = { transaction: jest.fn((fn) => fn(manager)) };
+      const service = new CargosService(
+        stub<Repository<Cargo>>(cargosRepo),
+        stub<Repository<Pago>>({}),
+        stub<Repository<Inscripcion>>({}),
+        stub<Repository<Grupo>>({}),
+        stub<AlumnosService>({}),
+        stub<ConceptosService>({}),
+        stub<BitacoraFinancieraService>(bitacora),
+        stub<ScopeService>(scope),
+        stub<DataSource>(dataSource),
+      );
+      const user = stub<JwtUser>({ sub: 1, roles: ['FINANZAS'] });
 
-    const resultado = await service.aplicarRecargos({ porcentaje: 10, plantelId: 4, confirmado: true }, user);
+      const resultado = await service.aplicarRecargos({ porcentaje: 10, plantelId: 4, confirmado: true }, user);
 
-    expect(cargo.recargo).toBe(90); // (1000 - 100) * 10 / 100
-    expect(resultado).toEqual({ aplicados: 1, porcentaje: 10 });
-    expect(await service.aplicarRecargos({ porcentaje: 10, plantelId: 4, confirmado: true }, user))
-      .toEqual({ aplicados: 0, porcentaje: 10 });
-    expect(cargosRepo.save).toHaveBeenCalledTimes(1);
-    expect(bitacora.registrar).toHaveBeenCalledWith(
-      1, 'APLICAR_RECARGOS', 'cargo', null, '10% a 1 cargos', 4, manager,
-    );
-  });
+      expect(cargo.recargo).toBe(90); // (1000 - 100) * 10 / 100
+      expect(resultado).toEqual({ aplicados: 1, porcentaje: 10 });
+      expect(await service.aplicarRecargos({ porcentaje: 10, plantelId: 4, confirmado: true }, user)).toEqual({
+        aplicados: 0,
+        porcentaje: 10,
+      });
+      expect(cargosRepo.save).toHaveBeenCalledTimes(1);
+      expect(bitacora.registrar).toHaveBeenCalledWith(
+        1,
+        'APLICAR_RECARGOS',
+        'cargo',
+        null,
+        '10% a 1 cargos',
+        4,
+        manager,
+      );
+    },
+  );
 });
 
 describe('CargosService.crear', () => {
@@ -121,36 +199,57 @@ describe('CargosService.crear', () => {
     const alumnosService = { obtener: jest.fn().mockResolvedValue({ id: 10, plantelId: 3 }) };
     const bitacora = { registrar: jest.fn().mockResolvedValue(undefined) };
     const cargosRepo = {
-      create: jest.fn((d) => d),
+      create: jest.fn().mockImplementation((d: Record<string, unknown>) => d),
       save: jest.fn((d) => Promise.resolve({ id: 99, ...d })),
     };
     const manager = { getRepository: jest.fn().mockReturnValue(cargosRepo) };
     const dataSource = { transaction: jest.fn((fn) => fn(manager)) };
     const service = new CargosService(
-      cargosRepo as any, {} as any, {} as any, {} as any, alumnosService as any,
-      conceptos as any, bitacora as any, {} as any, dataSource as any,
+      stub<Repository<Cargo>>(cargosRepo),
+      stub<Repository<Pago>>({}),
+      stub<Repository<Inscripcion>>({}),
+      stub<Repository<Grupo>>({}),
+      stub<AlumnosService>(alumnosService),
+      stub<ConceptosService>(conceptos),
+      stub<BitacoraFinancieraService>(bitacora),
+      stub<ScopeService>({}),
+      stub<DataSource>(dataSource),
     );
-    const user = { sub: 7, roles: ['FINANZAS'] } as any;
-    const dto = { alumnoId: 10, conceptoId: 5, descripcion: 'Cargo', monto: 100 } as any;
+    const user = stub<JwtUser>({ sub: 7, roles: ['FINANZAS'] });
+    const dto = { alumnoId: 10, conceptoId: 5, descripcion: 'Cargo', monto: 100 };
 
     await service.crear(dto, user);
 
     expect(alumnosService.obtener).toHaveBeenCalledWith(10, user);
-    expect(bitacora.registrar).toHaveBeenCalledWith(
-      7, 'CREAR_CARGO', 'cargo', 99, 'Cargo $100', 3, manager,
-    );
+    expect(bitacora.registrar).toHaveBeenCalledWith(7, 'CREAR_CARGO', 'cargo', 99, 'Cargo $100', 3, manager);
   });
 
   it('rechaza descuento mayor al monto antes de iniciar la transacción', async () => {
     const dataSource = { transaction: jest.fn() };
     const service = new CargosService(
-      {} as any, {} as any, {} as any, {} as any, {} as any,
-      {} as any, {} as any, {} as any, dataSource as any,
+      stub<Repository<Cargo>>({}),
+      stub<Repository<Pago>>({}),
+      stub<Repository<Inscripcion>>({}),
+      stub<Repository<Grupo>>({}),
+      stub<AlumnosService>({}),
+      stub<ConceptosService>({}),
+      stub<BitacoraFinancieraService>({}),
+      stub<ScopeService>({}),
+      stub<DataSource>(dataSource),
     );
 
-    await expect(service.crear({
-      alumnoId: 10, conceptoId: 5, descripcion: 'Cargo', monto: 100, descuento: 101,
-    }, { sub: 7, roles: ['FINANZAS'] } as any)).rejects.toThrow('el descuento no puede excederlo');
+    await expect(
+      service.crear(
+        {
+          alumnoId: 10,
+          conceptoId: 5,
+          descripcion: 'Cargo',
+          monto: 100,
+          descuento: 101,
+        },
+        stub<JwtUser>({ sub: 7, roles: ['FINANZAS'] }),
+      ),
+    ).rejects.toThrow('el descuento no puede excederlo');
     expect(dataSource.transaction).not.toHaveBeenCalled();
   });
 });
@@ -158,13 +257,27 @@ describe('CargosService.crear', () => {
 describe('CargosService.crear bloquea colegiatura por formulario de adicionales', () => {
   it('rechaza colegiatura aunque un cliente omita las restricciones de la web', async () => {
     const service = new CargosService(
-      {} as never, {} as never, {} as never, {} as never, {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
       { obtener: jest.fn().mockResolvedValue({ id: 5, activo: true, tipo: 'COLEGIATURA' }) } as never,
-      {} as never, {} as never, {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
     );
-    await expect(service.crear({
-      alumnoId: 10, conceptoId: 5, descripcion: 'Colegiatura adicional', monto: 100,
-    }, { sub: 7, roles: ['FINANZAS'] } as Parameters<CargosService['crear']>[1])).rejects.toThrow('colegiaturas');
+    await expect(
+      service.crear(
+        {
+          alumnoId: 10,
+          conceptoId: 5,
+          descripcion: 'Colegiatura adicional',
+          monto: 100,
+        },
+        { sub: 7, roles: ['FINANZAS'] } as Parameters<CargosService['crear']>[1],
+      ),
+    ).rejects.toThrow('colegiaturas');
   });
 });
 
@@ -173,54 +286,97 @@ describe('CargosService.crear con clave de idempotencia', () => {
     const claveIdempotencia = '8e50df6c-91a6-4dbe-a3b5-2f98f1f941c9';
     const dto = { alumnoId: 10, conceptoId: 5, descripcion: 'Examen extraordinario', monto: 250, claveIdempotencia };
     const anterior = {
-      id: 90, alumnoId: 10, plantelId: 3, conceptoId: 5, descripcion: dto.descripcion, monto: 250,
-      descuento: 0, cicloId: null, periodo: null, fechaVencimiento: null,
-      alumno: { id: 10, matricula: 'A010', plantelId: 3, curp: 'CURP-PRIVADA',
-        fechaNacimiento: '2010-01-01', direccion: 'Domicilio privado', tutorNombre: 'Tutor privado', tutorTelefono: '5550000000',
-        usuario: { nombre: 'Ana', apellidoPaterno: 'López', nombreCompleto: 'Ana López', email: 'privado@example.test', passwordHash: 'HASH-PRIVADO' } },
+      id: 90,
+      alumnoId: 10,
+      plantelId: 3,
+      conceptoId: 5,
+      descripcion: dto.descripcion,
+      monto: 250,
+      descuento: 0,
+      cicloId: null,
+      periodo: null,
+      fechaVencimiento: null,
+      alumno: {
+        id: 10,
+        matricula: 'A010',
+        plantelId: 3,
+        curp: 'CURP-PRIVADA',
+        fechaNacimiento: '2010-01-01',
+        direccion: 'Domicilio privado',
+        tutorNombre: 'Tutor privado',
+        tutorTelefono: '5550000000',
+        usuario: {
+          nombre: 'Ana',
+          apellidoPaterno: 'López',
+          nombreCompleto: 'Ana López',
+          email: 'privado@example.test',
+          passwordHash: 'HASH-PRIVADO',
+        },
+      },
     };
     const cargosRepo = {
       findOne: jest.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(anterior),
-      create: jest.fn((d) => d),
+      create: jest.fn().mockImplementation((d: Record<string, unknown>) => d),
       save: jest.fn().mockResolvedValue(anterior),
     };
     const auditoriaRepo = { existsBy: jest.fn().mockResolvedValue(true) };
-    const manager = { getRepository: jest.fn((entidad) => entidad === BitacoraFinanciera ? auditoriaRepo : cargosRepo) };
+    const manager = {
+      getRepository: jest.fn((entidad) => (entidad === BitacoraFinanciera ? auditoriaRepo : cargosRepo)),
+    };
     const dataSource = { transaction: jest.fn((fn) => fn(manager)) };
     const bitacora = { registrar: jest.fn().mockResolvedValue(undefined) };
     const scope = { validarGestion: jest.fn().mockResolvedValue(undefined) };
     const service = new CargosService(
-      cargosRepo as never, {} as never, {} as never, {} as never,
+      cargosRepo as never,
+      {} as never,
+      {} as never,
+      {} as never,
       { obtener: jest.fn().mockResolvedValue(anterior.alumno) } as never,
       { obtener: jest.fn().mockResolvedValue({ id: 5, activo: true, tipo: 'OTRO' }) } as never,
-      bitacora as never, scope as never, dataSource as never,
+      bitacora as never,
+      scope as never,
+      dataSource as never,
     );
     const user = { sub: 7, roles: ['FINANZAS'] } as Parameters<CargosService['crear']>[1];
     const nuevo = await service.crear(dto, user);
     const repetido = await service.crear(dto, user);
     expect(nuevo).toEqual(repetido);
     expect(repetido).toMatchObject({ id: 90, alumno: { id: 10, matricula: 'A010' } });
-    for (const secreto of ['CURP-PRIVADA', '2010-01-01', 'Domicilio privado', 'Tutor privado', '5550000000', 'privado@example.test', 'HASH-PRIVADO']) {
+    for (const secreto of [
+      'CURP-PRIVADA',
+      '2010-01-01',
+      'Domicilio privado',
+      'Tutor privado',
+      '5550000000',
+      'privado@example.test',
+      'HASH-PRIVADO',
+    ]) {
       expect(JSON.stringify([nuevo, repetido])).not.toContain(secreto);
     }
     expect(cargosRepo.save).toHaveBeenCalledTimes(1);
     expect(bitacora.registrar).toHaveBeenCalledTimes(1);
-    expect(cargosRepo.create).toHaveBeenCalledWith(expect.objectContaining({ claveGeneracion: `MANUAL:${claveIdempotencia}` }));
+    expect(cargosRepo.create).toHaveBeenCalledWith(
+      expect.objectContaining({ claveGeneracion: `MANUAL:${claveIdempotencia}` }),
+    );
   });
 });
 
 describe('DTO financieros', () => {
   it('rechaza meses imposibles, fechas inválidas y centavos fuera de escala', async () => {
     const cargo = plainToInstance(CrearCargoDto, {
-      alumnoId: 1, conceptoId: 2, descripcion: 'Cargo', monto: 100.001,
-      fechaVencimiento: '2026-02-30', periodo: '2026-13',
+      alumnoId: 1,
+      conceptoId: 2,
+      descripcion: 'Cargo',
+      monto: 100.001,
+      fechaVencimiento: '2026-02-30',
+      periodo: '2026-13',
     });
     const colegiatura = plainToInstance(GenerarColegiaturasDto, { cicloId: 1, periodo: '2026-00' });
 
     const erroresCargo = await validate(cargo);
-    expect(erroresCargo.map((error) => error.property)).toEqual(expect.arrayContaining([
-      'monto', 'fechaVencimiento', 'periodo',
-    ]));
+    expect(erroresCargo.map((error) => error.property)).toEqual(
+      expect.arrayContaining(['monto', 'fechaVencimiento', 'periodo']),
+    );
     expect((await validate(colegiatura)).map((error) => error.property)).toContain('periodo');
   });
 });
@@ -228,25 +384,54 @@ describe('DTO financieros', () => {
 describe('CargosService.generarColegiaturas', () => {
   const crearServicio = (guardar: jest.Mock) => {
     const grupos = { find: jest.fn().mockResolvedValue([{ id: 4, plantelId: 2 }]) };
-    const inscripciones = { find: jest.fn().mockResolvedValue([
-      { alumnoId: 8, alumno: { plantelId: 2, estatus: 'ACTIVO', usuario: { activo: true } } },
-      { alumnoId: 9, alumno: { plantelId: 2, estatus: 'ACTIVO', usuario: { activo: true } } },
-    ]) };
+    const inscripciones = {
+      find: jest.fn().mockResolvedValue([
+        { alumnoId: 8, alumno: { plantelId: 2, estatus: 'ACTIVO', usuario: { activo: true } } },
+        { alumnoId: 9, alumno: { plantelId: 2, estatus: 'ACTIVO', usuario: { activo: true } } },
+      ]),
+    };
     const cargos = {
       find: jest.fn().mockResolvedValue([]),
       exists: jest.fn().mockResolvedValue(false),
-      create: jest.fn((dato) => dato),
+      create: jest.fn().mockImplementation((dato: Record<string, unknown>) => dato),
       save: guardar,
     };
-    const conceptos = { porClave: jest.fn().mockResolvedValue({ id: 5, montoBase: 100, activo: true, tipo: 'COLEGIATURA' }) };
-    const scope = { resolverFiltro: jest.fn().mockResolvedValue([2]), condicion: jest.fn((ids) => ids) };
+    const conceptos = {
+      porClave: jest.fn().mockResolvedValue({ id: 5, montoBase: 100, activo: true, tipo: 'COLEGIATURA' }),
+    };
+    const scope = {
+      resolverFiltro: jest.fn().mockResolvedValue([2]),
+      condicion: jest.fn().mockImplementation((ids: Record<string, unknown>) => ids),
+    };
     const bitacora = { registrar: jest.fn().mockResolvedValue(undefined) };
-    const alumnoActual = { findOne: jest.fn().mockResolvedValue({ id: 8, plantelId: 2, estatus: 'ACTIVO', usuario: { activo: true } }) };
-    const manager = { getRepository: jest.fn((entidad) => entidad === Cargo ? cargos : entidad === CicloEscolar ? { findOne: jest.fn().mockResolvedValue({ activo: true }) } : entidad === Alumno ? alumnoActual : { existsBy: jest.fn().mockResolvedValue(true) }) };
-    const dataSource = { getRepository: jest.fn().mockReturnValue({ findOneBy: jest.fn().mockResolvedValue({ id: 3, activo: true }) }), transaction: jest.fn((fn) => fn(manager)) };
+    const alumnoActual = {
+      findOne: jest.fn().mockResolvedValue({ id: 8, plantelId: 2, estatus: 'ACTIVO', usuario: { activo: true } }),
+    };
+    const manager = {
+      getRepository: jest.fn((entidad) =>
+        entidad === Cargo
+          ? cargos
+          : entidad === CicloEscolar
+            ? { findOne: jest.fn().mockResolvedValue({ activo: true }) }
+            : entidad === Alumno
+              ? alumnoActual
+              : { existsBy: jest.fn().mockResolvedValue(true) },
+      ),
+    };
+    const dataSource = {
+      getRepository: jest.fn().mockReturnValue({ findOneBy: jest.fn().mockResolvedValue({ id: 3, activo: true }) }),
+      transaction: jest.fn((fn) => fn(manager)),
+    };
     const service = new CargosService(
-      cargos as any, {} as any, inscripciones as any, grupos as any, {} as any,
-      conceptos as any, bitacora as any, scope as any, dataSource as any,
+      stub<Repository<Cargo>>(cargos),
+      stub<Repository<Pago>>({}),
+      stub<Repository<Inscripcion>>(inscripciones),
+      stub<Repository<Grupo>>(grupos),
+      stub<AlumnosService>({}),
+      stub<ConceptosService>(conceptos),
+      stub<BitacoraFinancieraService>(bitacora),
+      stub<ScopeService>(scope),
+      stub<DataSource>(dataSource),
     );
     return { service, cargos, grupos, inscripciones, bitacora, manager, alumnoActual };
   };
@@ -256,23 +441,33 @@ describe('CargosService.generarColegiaturas', () => {
     const { service, cargos, grupos, bitacora, manager } = crearServicio(guardar);
 
     const resultado = await service.generarColegiaturas(
-      { cicloId: 3, periodo: '2026-09', plantelId: 2, confirmado: true } as any,
-      { sub: 1, roles: ['FINANZAS'] } as any,
+      { cicloId: 3, periodo: '2026-09', plantelId: 2, confirmado: true } as GenerarColegiaturasDto,
+      stub<JwtUser>({ sub: 1, roles: ['FINANZAS'] }),
     );
 
-    expect(cargos.find).toHaveBeenCalledWith(expect.objectContaining({
-      where: expect.objectContaining({ concepto: { tipo: 'COLEGIATURA' }, cicloId: 3, periodo: '2026-09' }),
-    }));
-    expect(grupos.find).toHaveBeenCalledWith(expect.objectContaining({
-      where: expect.objectContaining({ tipo: 'REGULAR', cicloId: 3, activo: true }),
-    }));
+    expect(cargos.find).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ concepto: { tipo: 'COLEGIATURA' }, cicloId: 3, periodo: '2026-09' }),
+      }),
+    );
+    expect(grupos.find).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ tipo: 'REGULAR', cicloId: 3, activo: true }),
+      }),
+    );
     expect(guardar.mock.calls.map(([cargo]) => cargo.claveGeneracion)).toEqual([
-      'COLEGIATURA:3:8:2026-09', 'COLEGIATURA:3:9:2026-09',
+      'COLEGIATURA:3:8:2026-09',
+      'COLEGIATURA:3:9:2026-09',
     ]);
     expect(resultado).toMatchObject({ generados: 2, omitidos: 0 });
     expect(bitacora.registrar).toHaveBeenCalledWith(
-      1, 'GENERAR_COLEGIATURA', 'cargo', 20,
-      'periodo=2026-09 monto=100', 2, manager,
+      1,
+      'GENERAR_COLEGIATURA',
+      'cargo',
+      20,
+      'periodo=2026-09 monto=100',
+      2,
+      manager,
     );
   });
 
@@ -282,10 +477,12 @@ describe('CargosService.generarColegiaturas', () => {
     grupos.find.mockResolvedValue([]);
     const resultado = await service.generarColegiaturas(
       { cicloId: 3, periodo: '2026-09', plantelId: 2, confirmado: true },
-      { sub: 1, roles: ['FINANZAS'] } as any,
+      stub<JwtUser>({ sub: 1, roles: ['FINANZAS'] }),
     );
     expect(resultado).toEqual({ generados: 0, omitidos: 0 });
-    expect(grupos.find).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ tipo: 'REGULAR' }) }));
+    expect(grupos.find).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ tipo: 'REGULAR' }) }),
+    );
     expect(inscripciones.find).not.toHaveBeenCalled();
     expect(guardar).not.toHaveBeenCalled();
     expect(bitacora.registrar).not.toHaveBeenCalled();
@@ -293,18 +490,26 @@ describe('CargosService.generarColegiaturas', () => {
 
   it('cuenta un conflicto único de otra ejecución como omitido sin duplicar cargos', async () => {
     const duplicado = Object.assign(new Error('duplicate key'), { code: 'ER_DUP_ENTRY' });
-    const guardar = jest.fn().mockRejectedValueOnce(duplicado).mockImplementation(async (cargo) => ({ id: 21, ...cargo }));
+    const guardar = jest
+      .fn()
+      .mockRejectedValueOnce(duplicado)
+      .mockImplementation(async (cargo) => ({ id: 21, ...cargo }));
     const { service, bitacora, manager } = crearServicio(guardar);
 
     const resultado = await service.generarColegiaturas(
-      { cicloId: 3, periodo: '2026-09', plantelId: 2, confirmado: true } as any,
-      { sub: 1, roles: ['FINANZAS'] } as any,
+      { cicloId: 3, periodo: '2026-09', plantelId: 2, confirmado: true } as GenerarColegiaturasDto,
+      stub<JwtUser>({ sub: 1, roles: ['FINANZAS'] }),
     );
 
     expect(resultado).toMatchObject({ generados: 1, omitidos: 1 });
     expect(bitacora.registrar).toHaveBeenCalledWith(
-      1, 'GENERAR_COLEGIATURA', 'cargo', 21,
-      'periodo=2026-09 monto=100', 2, manager,
+      1,
+      'GENERAR_COLEGIATURA',
+      'cargo',
+      21,
+      'periodo=2026-09 monto=100',
+      2,
+      manager,
     );
   });
 
@@ -312,7 +517,10 @@ describe('CargosService.generarColegiaturas', () => {
     const guardar = jest.fn();
     const { service, alumnoActual, bitacora } = crearServicio(guardar);
     alumnoActual.findOne.mockResolvedValue({ id: 8, plantelId: 2, estatus: 'BAJA', usuario: { activo: false } });
-    const resultado = await service.generarColegiaturas({ cicloId: 3, periodo: '2026-09', plantelId: 2, confirmado: true }, { sub: 1, roles: ['FINANZAS'] } as any);
+    const resultado = await service.generarColegiaturas(
+      { cicloId: 3, periodo: '2026-09', plantelId: 2, confirmado: true },
+      stub<JwtUser>({ sub: 1, roles: ['FINANZAS'] }),
+    );
     expect(resultado).toMatchObject({ generados: 0, omitidos: 2 });
     expect(guardar).not.toHaveBeenCalled();
     expect(bitacora.registrar).not.toHaveBeenCalled();
@@ -321,13 +529,11 @@ describe('CargosService.generarColegiaturas', () => {
   it('no genera colegiaturas para alumnos dados de baja', async () => {
     const guardar = jest.fn();
     const { service, inscripciones } = crearServicio(guardar);
-    inscripciones.find.mockResolvedValue([
-      { alumnoId: 8, alumno: { plantelId: 2, estatus: 'BAJA' } },
-    ]);
+    inscripciones.find.mockResolvedValue([{ alumnoId: 8, alumno: { plantelId: 2, estatus: 'BAJA' } }]);
 
     const resultado = await service.generarColegiaturas(
-      { cicloId: 3, periodo: '2026-09', plantelId: 2, confirmado: true } as any,
-      { sub: 1, roles: ['FINANZAS'] } as any,
+      { cicloId: 3, periodo: '2026-09', plantelId: 2, confirmado: true } as GenerarColegiaturasDto,
+      stub<JwtUser>({ sub: 1, roles: ['FINANZAS'] }),
     );
 
     expect(resultado).toEqual({ generados: 0, omitidos: 0 });
@@ -335,18 +541,38 @@ describe('CargosService.generarColegiaturas', () => {
   });
 });
 
-
 describe('Recargos que redondean a cero', () => {
   it.each([true, false])('no cambia estado ni audita un cargo sin importe positivo (preview=%s)', async (preview) => {
     const cargo = { id: 10, monto: 0.01, descuento: 0, recargo: 0, estatus: 'PENDIENTE' };
-    const qb = { innerJoin: jest.fn().mockReturnThis(), where: jest.fn().mockReturnThis(), andWhere: jest.fn().mockReturnThis(), getMany: jest.fn().mockResolvedValue([cargo]) };
+    const qb = {
+      innerJoin: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue([cargo]),
+    };
     const repo = { createQueryBuilder: jest.fn().mockReturnValue(qb), save: jest.fn() };
-    const transaccion = { transaction: jest.fn() }, bitacora = { registrar: jest.fn() };
-    const service = new CargosService(repo as any, {} as any, {} as any, {} as any, {} as any, {} as any,
-      bitacora as any, { resolverFiltro: jest.fn().mockResolvedValue(null) } as any, transaccion as any);
-    const resultado = await service.aplicarRecargos({ porcentaje: 10, plantelId: 4, confirmado: true }, { sub: 1, roles: ['FINANZAS'] } as any, preview);
+    const transaccion = { transaction: jest.fn() },
+      bitacora = { registrar: jest.fn() };
+    const service = new CargosService(
+      stub<Repository<Cargo>>(repo),
+      stub<Repository<Pago>>({}),
+      stub<Repository<Inscripcion>>({}),
+      stub<Repository<Grupo>>({}),
+      stub<AlumnosService>({}),
+      stub<ConceptosService>({}),
+      stub<BitacoraFinancieraService>(bitacora),
+      stub<ScopeService>({ resolverFiltro: jest.fn().mockResolvedValue(null) }),
+      stub<DataSource>(transaccion),
+    );
+    const resultado = await service.aplicarRecargos(
+      { porcentaje: 10, plantelId: 4, confirmado: true },
+      stub<JwtUser>({ sub: 1, roles: ['FINANZAS'] }),
+      preview,
+    );
     expect(resultado).toMatchObject(preview ? { registros: 0, totalEstimado: 0 } : { aplicados: 0 });
-    expect(cargo.estatus).toBe('PENDIENTE'); expect(repo.save).not.toHaveBeenCalled();
-    expect(transaccion.transaction).not.toHaveBeenCalled(); expect(bitacora.registrar).not.toHaveBeenCalled();
+    expect(cargo.estatus).toBe('PENDIENTE');
+    expect(repo.save).not.toHaveBeenCalled();
+    expect(transaccion.transaction).not.toHaveBeenCalled();
+    expect(bitacora.registrar).not.toHaveBeenCalled();
   });
 });

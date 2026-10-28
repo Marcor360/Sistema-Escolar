@@ -57,10 +57,11 @@ export default function PlantelesPage() {
     } catch (err) { if (actual === consultaDetalle.current) setError(mensajeDeError(err)); }
     finally { if (actual === consultaDetalle.current) setCargandoDetalle(false); }
   };
+  const invalidarConsulta = useCallback(() => { consultaDetalle.current += 1; consulta.current++; }, []);
   useEffect(() => {
     if(consultaVisible) void cargar();
-    return () => { consultaDetalle.current += 1; consulta.current++; };
-  }, [cargar,consultaVisible]);
+    return invalidarConsulta;
+  }, [cargar,consultaVisible, invalidarConsulta]);
 
   const crear = async (e: FormEvent) => {
     e.preventDefault();

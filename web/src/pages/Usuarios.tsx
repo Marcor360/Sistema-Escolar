@@ -59,7 +59,8 @@ export default function UsuariosPage() {
   useEffect(() => {
     api.get<Plantel[]>('/planteles/mios').then((r) => setPlanteles(r.data)).catch((err) => setError(mensajeDeError(err)));
   }, []);
-  useEffect(() => { if (!consultaVisible) return; setTipo(tipoQuery); setPlantelId(plantelQuery); setBuscar(buscarQuery); void consultar(paginaQuery,tipoQuery,plantelQuery,buscarQuery); return () => { consulta.current++; }; }, [consultaVisible,paginaQuery,tipoQuery,plantelQuery,buscarQuery,consultar]);
+  const invalidarConsulta = useCallback(() => { consulta.current++; }, []);
+  useEffect(() => { if (!consultaVisible) return; setTipo(tipoQuery); setPlantelId(plantelQuery); setBuscar(buscarQuery); void consultar(paginaQuery,tipoQuery,plantelQuery,buscarQuery); return invalidarConsulta; }, [consultaVisible,paginaQuery,tipoQuery,plantelQuery,buscarQuery,consultar, invalidarConsulta]);
   useEffect(() => {
     if(legado) return;
     if(trabajo.modo === 'nuevo') { setEditarId(null); setForm(FORM_INICIAL); setRolesElegidos(['ADMINISTRATIVO']); setPlantelIds([]); }

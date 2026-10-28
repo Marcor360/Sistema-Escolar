@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { api } from '../api/client';
 import CuentaPage from './Cuenta';
 
@@ -9,6 +9,13 @@ vi.mock('../auth/AuthContext', () => ({ useAuth: () => ({
   sesion: { nombre: 'Alumno de prueba', email: 'test@escuela.example', roles: ['ADMINISTRATIVO'] },
   finalizarSesionLocal: finalizar,
 }) }));
+
+beforeEach(() => {
+  vi.spyOn(api, 'get').mockImplementation(async (ruta) => {
+    if (ruta !== '/auth/me') throw new Error(`GET inesperado: ${ruta}`);
+    return { data: { id: 42, nombreCompleto: 'Personal de prueba', email: 'test@escuela.example', telefono: null, activo: true, passwordChangeRequired: false, roles: [{ clave: 'ADMINISTRATIVO', nombre: 'Administrativo' }] } };
+  });
+});
 
 afterEach(() => {
   cleanup();

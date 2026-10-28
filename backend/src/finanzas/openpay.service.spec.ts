@@ -1,7 +1,9 @@
+import type { ConfigService } from '@nestjs/config';
+import { stub } from '../test-utils/stub';
 import { OpenpayService } from './openpay.service';
 
 function config(values: Record<string, string | undefined>) {
-  return { get: jest.fn((key: string) => values[key]) } as any;
+  return stub<ConfigService>({ get: jest.fn((key: string) => values[key]) });
 }
 
 describe('OpenpayService configuration', () => {
@@ -18,7 +20,9 @@ describe('OpenpayService configuration', () => {
   it('rechaza configuración productiva incompleta', () => {
     expect(() => new OpenpayService(config({ NODE_ENV: 'production' }))).toThrow('OPENPAY_BASE_URL');
     expect(() => new OpenpayService(config({ ...production, OPENPAY_MERCHANT_ID: '' }))).toThrow('OPENPAY_MERCHANT_ID');
-    expect(() => new OpenpayService(config({ ...production, OPENPAY_WEBHOOK_PASS: '' }))).toThrow('OPENPAY_WEBHOOK_USER');
+    expect(() => new OpenpayService(config({ ...production, OPENPAY_WEBHOOK_PASS: '' }))).toThrow(
+      'OPENPAY_WEBHOOK_USER',
+    );
   });
 
   it.each([
@@ -26,8 +30,9 @@ describe('OpenpayService configuration', () => {
     ['retorno local', 'https://api.openpay.mx/v1', 'http://localhost:5173/pago'],
     ['retorno IP privada', 'https://api.openpay.mx/v1', 'https://192.168.1.20/pago'],
   ])('rechaza %s en producción', (_caso, baseUrl, redirectUrl) => {
-    expect(() => new OpenpayService(config({ ...production, OPENPAY_BASE_URL: baseUrl, OPENPAY_REDIRECT_URL: redirectUrl })))
-      .toThrow();
+    expect(
+      () => new OpenpayService(config({ ...production, OPENPAY_BASE_URL: baseUrl, OPENPAY_REDIRECT_URL: redirectUrl })),
+    ).toThrow();
   });
 
   it('acepta las URL productivas explícitas', () => {
@@ -39,9 +44,15 @@ describe('OpenpayService configuration', () => {
   });
 
   it('permite sandbox sin credenciales en staging con Node en modo producción', () => {
-    expect(() => new OpenpayService(config({
-      NODE_ENV: 'production', APP_ENV: 'staging',
-      OPENPAY_BASE_URL: 'https://sandbox-api.openpay.mx/v1',
-    }))).not.toThrow();
+    expect(
+      () =>
+        new OpenpayService(
+          config({
+            NODE_ENV: 'production',
+            APP_ENV: 'staging',
+            OPENPAY_BASE_URL: 'https://sandbox-api.openpay.mx/v1',
+          }),
+        ),
+    ).not.toThrow();
   });
 });

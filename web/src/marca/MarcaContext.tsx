@@ -117,8 +117,9 @@ export function MarcaProvider({ children }: { children: ReactNode }) {
     return consulta;
   }, [usarMarca]);
 
+  useEffect(() => { aplicarMarca(marca); }, [marca]);
+
   useEffect(() => {
-    aplicarMarca(marca);
     void recargar().catch(() => undefined);
     const actualizarSiVisible = () => {
       if (document.visibilityState === 'visible') void recargar().catch(() => undefined);

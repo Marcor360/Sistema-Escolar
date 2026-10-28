@@ -103,10 +103,9 @@ export default function FinanzasPage() {
     if (legado || ['cargo-nuevo','colegiaturas'].includes(modo)) void cargarCatalogos();
     if (legado || ['colegiaturas', 'adeudos'].includes(modo)) api.get('/planteles/mios').then(r => setPlanteles(r.data)).catch(e => setError(mensajeDeError(e)));
   }, [cargarCatalogos, legado, modo]);
-  useEffect(() => { if (listado) void cargarColeccion(tab, pagina); return () => { consultas.current.cargos++; consultas.current.pagos++; consultas.current.adeudos++; }; }, [tab, cargarColeccion, listado, pagina]);
-  useEffect(() => () => {
-    consultas.current.cargos++; consultas.current.pagos++; consultas.current.adeudos++;
-  }, []);
+  const invalidarConsultas = useCallback(() => { consultas.current.cargos++; consultas.current.pagos++; consultas.current.adeudos++; }, []);
+  useEffect(() => { if (listado) void cargarColeccion(tab, pagina); return invalidarConsultas; }, [tab, cargarColeccion, listado, pagina, invalidarConsultas]);
+
 
   const limpiarAvisos = () => { setError(''); setMensaje(''); };
 

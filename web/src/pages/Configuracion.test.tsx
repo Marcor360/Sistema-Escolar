@@ -8,7 +8,10 @@ const { recargar, marca } = vi.hoisted(() => ({ recargar: vi.fn(), marca: { nomb
 vi.mock('../marca/MarcaContext', () => {
   return { useMarca: () => ({ marca, recargar }) };
 });
-beforeEach(() => { recargar.mockReset().mockResolvedValue(undefined); Object.assign(marca, { nombreInstitucion: 'Escuela', nombreCorto: 'SE', colorPrimario: '#14343B', colorAcento: '#C79A3C', mensajeBienvenida: '', tamanoLogo: 'NORMAL', logoUrl: null }); vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: vi.fn(() => 'blob:logo'), revokeObjectURL: vi.fn() })); });
+beforeEach(() => { vi.spyOn(api, 'get').mockImplementation(async (ruta) => {
+  if (ruta !== '/configuracion/bbva') throw new Error(`GET inesperado: ${ruta}`);
+  return { data: { titular: '', numeroCuenta: '', clabe: null, activo: false } };
+}); recargar.mockReset().mockResolvedValue(undefined); Object.assign(marca, { nombreInstitucion: 'Escuela', nombreCorto: 'SE', colorPrimario: '#14343B', colorAcento: '#C79A3C', mensajeBienvenida: '', tamanoLogo: 'NORMAL', logoUrl: null }); vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: vi.fn(() => 'blob:logo'), revokeObjectURL: vi.fn() })); });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 it('dos envíos inmediatos guardan una sola vez y anuncian el resultado', async () => {
   let terminar!: (r: { data: object }) => void;

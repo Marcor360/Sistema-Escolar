@@ -1,4 +1,6 @@
-# Estado de implementación — candidata 1.27.56
+# Estado de implementación — candidata 1.27.58
+
+La candidata 1.27.58 aborda deuda de tipos en pruebas, efectos de React y aislamiento HTTP de Vitest. [Alcance y validaciones](DEUDA_TECNICA_1.27.58.md). Mantiene pendientes institucionales y no acredita despliegue.
 
 Corte documental: 26 de octubre de 2026. Base main 1.27.55, con #203 y #204 fusionados. La candidata 1.27.56 incorpora [diseño adaptable de Expo](APP_RESPONSIVE_1.27.56.md): ancho de lectura, áreas seguras, accesos de Inicio, formularios, títulos y paginación. Conserva recorridos, comparativas, correos y recuperación de la base. No acredita instalación física, UAT ni despliegue. Las reglas académicas y financieras no cambian.
 

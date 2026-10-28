@@ -1,9 +1,12 @@
+import type { ExecutionContext } from '@nestjs/common';
+import { stub } from '../test-utils/stub';
 import { UnauthorizedException } from '@nestjs/common';
 import { OpenpayWebhookGuard } from './openpay-webhook.guard';
 
-const contexto = (headers: Record<string, string>): any => ({
-  switchToHttp: () => ({ getRequest: () => ({ headers }) }),
-});
+const contexto = (headers: Record<string, string>) =>
+  stub<ExecutionContext>({
+    switchToHttp: jest.fn().mockReturnValue({ getRequest: jest.fn().mockReturnValue({ headers }) }),
+  });
 
 describe('OpenpayWebhookGuard', () => {
   const envOriginal = { ...process.env };

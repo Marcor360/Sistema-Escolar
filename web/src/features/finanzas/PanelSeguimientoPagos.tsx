@@ -51,7 +51,8 @@ export function PanelSeguimientoPagos() {
     }catch(e){if (consulta.current === solicitud) setError(mensajeDeError(e));}
     finally{if (consulta.current === solicitud) setCargando(false);}
   },[plantelId,pagina,situacion,sinAbono]);
-  useEffect(() => {void cargar();return () => { consulta.current++; };},[cargar,revision]);
+  const invalidarConsulta = useCallback(() => { consulta.current++; }, []);
+  useEffect(() => {void cargar();return invalidarConsulta;},[cargar,revision, invalidarConsulta]);
   const avisar = async (e:FormEvent) => {
     e.preventDefault();if(enviando||!plantelId||!permitido)return;
     setError('');setMensaje('');setEnviando(true);

@@ -2,7 +2,7 @@ import { OpcionalNoNulo } from '../common/opcional-no-nulo';
 import { IsDateString, MaxLength, Matches, Min, MinLength as LongitudMinima } from 'class-validator';
 import { Transform as Normalizar } from 'class-transformer';
 import { Type } from 'class-transformer';
-import { IsEmail, IsIn, IsInt, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsIn, IsInt, IsOptional, IsString } from 'class-validator';
 import { PaginacionDto } from '../common/paginacion.dto';
 import type { ProveedorCorreo } from '../entities/usuario.entity';
 

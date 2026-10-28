@@ -1,3 +1,12 @@
+import type { Repository } from 'typeorm';
+import type { EventoCalendario } from '../entities/evento-calendario.entity';
+import type { Grupo } from '../entities/grupo.entity';
+import type { GrupoMateria } from '../entities/grupo-materia.entity';
+import type { Inscripcion } from '../entities/inscripcion.entity';
+import type { Alumno } from '../entities/alumno.entity';
+import type { Docente } from '../entities/docente.entity';
+import type { ScopeService } from '../planteles/scope.service';
+import { stub } from '../test-utils/stub';
 import { CalendarioHistorial } from '../entities/calendario-historial.entity';
 import { ForbiddenException } from '@nestjs/common';
 import { CalendarioService } from './calendario.service';
@@ -30,13 +39,13 @@ describe('CalendarioService', () => {
     };
     const scope = { resolverFiltro: jest.fn() };
     const service = new CalendarioService(
-      eventos as any,
-      {} as any,
-      grupoMaterias as any,
-      {} as any,
-      {} as any,
-      docentes as any,
-      scope as any,
+      stub<Repository<EventoCalendario>>(eventos),
+      stub<Repository<Grupo>>({}),
+      stub<Repository<GrupoMateria>>(grupoMaterias),
+      stub<Repository<Inscripcion>>({}),
+      stub<Repository<Alumno>>({}),
+      stub<Repository<Docente>>(docentes),
+      stub<ScopeService>(scope),
     );
 
     await service.listar(maestro);
@@ -62,13 +71,13 @@ describe('CalendarioService', () => {
       find: jest.fn().mockResolvedValue([{ grupoId: 7, grupo: { activo: false, plantelId: 2 } }]),
     };
     const service = new CalendarioService(
-      eventos as any,
-      {} as any,
-      grupoMaterias as any,
-      {} as any,
-      {} as any,
-      docentes as any,
-      {} as any,
+      stub<Repository<EventoCalendario>>(eventos),
+      stub<Repository<Grupo>>({}),
+      stub<Repository<GrupoMateria>>(grupoMaterias),
+      stub<Repository<Inscripcion>>({}),
+      stub<Repository<Alumno>>({}),
+      stub<Repository<Docente>>(docentes),
+      stub<ScopeService>({}),
     );
 
     await service.listar(maestro);
@@ -77,7 +86,15 @@ describe('CalendarioService', () => {
   });
 
   it('maestro no puede crear evento global', async () => {
-    const service = new CalendarioService({} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
+    const service = new CalendarioService(
+      stub<Repository<EventoCalendario>>({}),
+      stub<Repository<Grupo>>({}),
+      stub<Repository<GrupoMateria>>({}),
+      stub<Repository<Inscripcion>>({}),
+      stub<Repository<Alumno>>({}),
+      stub<Repository<Docente>>({}),
+      stub<ScopeService>({}),
+    );
 
     await expect(
       service.crear({ titulo: 'Global', fechaInicio: '2026-07-10T10:00:00.000Z' }, maestro),
@@ -93,13 +110,13 @@ describe('CalendarioService', () => {
       }),
     };
     const service = new CalendarioService(
-      {} as any,
-      {} as any,
-      grupoMaterias as any,
-      {} as any,
-      {} as any,
-      docentes as any,
-      {} as any,
+      stub<Repository<EventoCalendario>>({}),
+      stub<Repository<Grupo>>({}),
+      stub<Repository<GrupoMateria>>(grupoMaterias),
+      stub<Repository<Inscripcion>>({}),
+      stub<Repository<Alumno>>({}),
+      stub<Repository<Docente>>(docentes),
+      stub<ScopeService>({}),
     );
 
     await expect(
