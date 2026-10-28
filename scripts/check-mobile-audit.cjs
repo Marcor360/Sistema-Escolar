@@ -9,7 +9,7 @@ try { report = JSON.parse(audit.stdout || ''); } catch {
 if (audit.error || !report.metadata?.vulnerabilities) {
   process.stderr.write(audit.stderr || 'npm audit no pudo terminar la revisión.\n'); process.exit(1);
 }
-// Sin excepciones: los dos avisos históricos se corrigen en los parches revisables de mobile/vendor.
+// Sin excepciones: los avisos sin corrección oficial se corrigen en los parches revisables de mobile/vendor.
 const avisos = Object.keys(report.vulnerabilities || {});
 const total = report.metadata.vulnerabilities.total ?? Object.values(report.metadata.vulnerabilities).reduce((n, v) => n + Number(v), 0);
 if (avisos.length || total || audit.status !== 0) {

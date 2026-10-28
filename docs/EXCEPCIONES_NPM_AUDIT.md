@@ -48,3 +48,9 @@ El registro npm todavía publica `braces@3.0.3` y `node-forge@1.4.0` sin correcc
 `verificar-parches-mobile.cjs`, ejecutado antes de las pruebas, comprueba rangos y patrones normales, anidación excesiva de patrones/AST, firmas RSA válidas con y sin NULL y rechazo de elementos ASN.1 adicionales. Los paquetes se fijan por archivo e integridad en package-lock, sin desactivar TLS ni verificación de npm.
 
 Mantenimiento: comprobar las publicaciones oficiales antes de cada actualización de Expo; sustituir cada fork por la versión oficial que cierre el aviso y repetir regresiones, audit y build Android. Los parches se usan en las herramientas Expo/Metro; requieren también validación del build nativo firmado al disponer de credenciales EAS.
+
+## Remediación deepmerge en 1.28.0 — 28 de octubre de 2026
+
+CI detectó siete avisos bajos transitivos de Expo cuyo origen es `deepmerge@4.3.1`, [GHSA-gcqx-w48m-w2h4](https://github.com/advisories/GHSA-gcqx-w48m-w2h4). Se reprodujo que un target JSON con `__proto__` altera el prototipo del objeto devuelto. El registro no publica todavía una versión oficial corregida.
+
+Se incorpora el parche local `deepmerge@4.3.2-escolar.0` siguiendo la política de vendor existente: fuente y bundles revisables, licencia, origen e integridades SHA-512. Se descarta `__proto__` en ambas entradas y se usan propiedades de datos propias para evitar setters heredados. Las regresiones verifican configuración Expo habitual, arrays, símbolos, ataques desde ambas entradas y resolución real de la dependencia de Expo. Cero excepciones nuevas; el gate sigue bloqueando cualquier aviso de cualquier severidad. La evidencia de audit y export Android corresponde al SHA validado en el PR.

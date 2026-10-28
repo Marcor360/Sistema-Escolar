@@ -1,0 +1,64 @@
+--- a/index.js
++++ b/index.js
+@@ -53,0 +54,4 @@
++function defineMergeProperty(object, key, value) {
++	Object.defineProperty(object, key, { value: value, enumerable: true, writable: true, configurable: true })
++}
++
+@@ -58 +62 @@
+-			destination[key] = cloneUnlessOtherwiseSpecified(target[key], options)
++			if (key !== '__proto__') defineMergeProperty(destination, key, cloneUnlessOtherwiseSpecified(target[key], options))
+@@ -62 +66 @@
+-		if (propertyIsUnsafe(target, key)) {
++		if (key === '__proto__' || propertyIsUnsafe(target, key)) {
+@@ -67 +71 @@
+-			destination[key] = getMergeFunction(key, options)(target[key], source[key], options)
++			defineMergeProperty(destination, key, getMergeFunction(key, options)(target[key], source[key], options))
+@@ -69 +73 @@
+-			destination[key] = cloneUnlessOtherwiseSpecified(source[key], options)
++			defineMergeProperty(destination, key, cloneUnlessOtherwiseSpecified(source[key], options))
+--- a/dist/cjs.js
++++ b/dist/cjs.js
+@@ -78,0 +79,4 @@
++function defineMergeProperty(object, key, value) {
++	Object.defineProperty(object, key, { value: value, enumerable: true, writable: true, configurable: true })
++}
++
+@@ -83 +87 @@
+-			destination[key] = cloneUnlessOtherwiseSpecified(target[key], options);
++			if (key !== '__proto__') defineMergeProperty(destination, key, cloneUnlessOtherwiseSpecified(target[key], options));
+@@ -87 +91 @@
+-		if (propertyIsUnsafe(target, key)) {
++		if (key === '__proto__' || propertyIsUnsafe(target, key)) {
+@@ -92 +96 @@
+-			destination[key] = getMergeFunction(key, options)(target[key], source[key], options);
++			defineMergeProperty(destination, key, getMergeFunction(key, options)(target[key], source[key], options));
+@@ -94 +98 @@
+-			destination[key] = cloneUnlessOtherwiseSpecified(source[key], options);
++			defineMergeProperty(destination, key, cloneUnlessOtherwiseSpecified(source[key], options));
+--- a/dist/umd.js
++++ b/dist/umd.js
+@@ -83 +83,5 @@
+-	function mergeObject(target, source, options) {
++	function defineMergeProperty(object, key, value) {
++	Object.defineProperty(object, key, { value: value, enumerable: true, writable: true, configurable: true })
++}
++
++function mergeObject(target, source, options) {
+@@ -87 +91 @@
+-				destination[key] = cloneUnlessOtherwiseSpecified(target[key], options);
++				if (key !== '__proto__') defineMergeProperty(destination, key, cloneUnlessOtherwiseSpecified(target[key], options));
+@@ -91 +95 @@
+-			if (propertyIsUnsafe(target, key)) {
++			if (key === '__proto__' || propertyIsUnsafe(target, key)) {
+@@ -96 +100 @@
+-				destination[key] = getMergeFunction(key, options)(target[key], source[key], options);
++				defineMergeProperty(destination, key, getMergeFunction(key, options)(target[key], source[key], options));
+@@ -98 +102 @@
+-				destination[key] = cloneUnlessOtherwiseSpecified(source[key], options);
++				defineMergeProperty(destination, key, cloneUnlessOtherwiseSpecified(source[key], options));
+--- a/package.json
++++ b/package.json
+@@ -12 +12 @@
+-  "version": "4.3.1",
++  "version": "4.3.2-escolar.0",
