@@ -49,13 +49,11 @@ export class AnaliticaService {
         const normalizada = `n.calificacion * CASE WHEN gm.regimen_evaluacion = '${REGIMEN_NUEVO}' THEN 10.0 ELSE 100.0 END / n.escala_maxima`;
         const parciales = await notas.clone().andWhere('n.parcial IN (1,2,3,4)').select('gm.id', 'clase').addSelect('n.parcial', 'parcial').addSelect('COUNT(*)', 'capturados').addSelect(`AVG(${normalizada})`, 'promedio')
           .groupBy('gm.id').addGroupBy('n.parcial').getRawMany<Fila>();
-        // Misma semántica de resultadoEvaluacion: Final manual o cuatro parciales, sin redondeo nuevo.
+        // Misma semántica de resultadoEvaluacion: solo Final registrada en el régimen nuevo.
         const nuevos = `MAX(CASE WHEN gm.regimen_evaluacion = '${REGIMEN_NUEVO}' THEN 1 ELSE 0 END)`;
-        const suma4 = `SUM(CASE WHEN n.parcial IN (1,2,3,4) THEN ${normalizada} ELSE 0 END)`;
-        const cuenta4 = 'SUM(CASE WHEN n.parcial IN (1,2,3,4) THEN 1 ELSE 0 END)';
         const suma3 = `SUM(CASE WHEN n.parcial IN (1,2,3) THEN ${normalizada} ELSE 0 END)`;
         const cuenta3 = 'SUM(CASE WHEN n.parcial IN (1,2,3) THEN 1 ELSE 0 END)';
-        const resultado = `CASE WHEN ${nuevos}=1 THEN COALESCE(MAX(CASE WHEN n.parcial=0 THEN ${normalizada} ELSE NULL END), CASE WHEN ${cuenta4}=4 THEN ${suma4}/4.0 ELSE NULL END) ELSE CASE WHEN ${cuenta3}=3 THEN ROUND(${suma3}/3.0,1) ELSE NULL END END`;
+        const resultado = `CASE WHEN ${nuevos}=1 THEN CAST(MAX(CASE WHEN n.parcial=0 THEN ${normalizada} ELSE NULL END) AS DECIMAL(18,8)) ELSE CAST(CASE WHEN ${cuenta3}=3 THEN ROUND(${suma3}/3.0,1) ELSE NULL END AS DECIMAL(18,8)) END`;
         const porAlumno = notas.clone().select('gm.id', 'clase').addSelect('n.alumno_id', 'alumno').addSelect(resultado, 'promedio').addSelect(`CASE WHEN ${nuevos}=1 THEN 6 ELSE 60 END`, 'minima')
           .groupBy('gm.id').addGroupBy('n.alumno_id');
         const oficiales = await this.ds.createQueryBuilder().select('o.clase', 'clase').addSelect('COUNT(*)', 'completos').addSelect('AVG(o.promedio)', 'promedio')
