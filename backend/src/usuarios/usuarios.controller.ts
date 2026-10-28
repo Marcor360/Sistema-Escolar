@@ -3,7 +3,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { UsuariosService } from './usuarios.service';
 import { ActivacionService } from '../auth/activacion.service';
-import { ActualizarPersonalDto, ActualizarUsuarioDto, CrearPersonalDto, ListadoUsuariosDto, RestablecerPasswordAdministrativoDto } from './usuarios.dto';
+import { ActualizarPersonalDto, ActualizarUsuarioDto, CrearPersonalDto, ListadoUsuariosDto, RestablecerPasswordAdministrativoDto, AsignarRolesPersonalDto } from './usuarios.dto';
 import { PaginacionDto } from '../common/paginacion.dto';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { RolesGuard } from '../common/roles.guard';
@@ -30,6 +30,17 @@ export class UsuariosController {
   @ApiOperation({ summary: 'Restablecer contraseña con alcance de plantel, sin contraseña anterior; revoca todas las sesiones' })
   restablecerPassword(@Param('id', ParseIntPipe) id: number, @Body() dto: RestablecerPasswordAdministrativoDto, @CurrentUser() user: JwtUser) {
     return this.service.restablecerPasswordAdministrativo(id, dto.nueva, user);
+  }
+
+  @Patch(':id/roles')
+  @Roles('SUPERADMIN', 'DIRECTOR', 'ADMINISTRATIVO')
+  @ApiOperation({ summary: 'Asignar roles subordinados a personal existente; valida jerarquía, planteles y expediente docente' })
+  asignarRolesPersonal(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: AsignarRolesPersonalDto,
+    @CurrentUser() actor: JwtUser,
+  ) {
+    return this.service.asignarRolesPersonal(id, dto.roles, actor);
   }
 
   @Get(':id/personal') detallePersonal(@Param('id', ParseIntPipe) id: number) { return this.service.detallePersonal(id); }
