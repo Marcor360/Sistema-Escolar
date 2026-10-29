@@ -99,6 +99,10 @@ export class UsuariosService {
     }
     if (query.tipo === 'ALUMNO') return this.listarAlumnos(query, user, maestroPuro, pagina, porPagina);
     if (query.tipo === 'DOCENTE') return this.listarDocentes(query, user, pagina, porPagina);
+    if (query.tipo === 'PERSONAL' && !user.roles.some((rol) =>
+      ['SUPERADMIN', 'DIRECTOR', 'ADMINISTRATIVO'].includes(rol))) {
+      throw new ForbiddenException('No tienes autorización para consultar funciones del personal');
+    }
     return this.listarAdministrativos(query, user, pagina, porPagina);
   }
 
@@ -145,7 +149,11 @@ export class UsuariosService {
   private async listarAdministrativos(query: ListadoUsuariosDto, user: JwtUser, pagina: number, porPagina: number) {
     const planteles = await this.scope.resolverFiltro(user, query.plantelId);
     const qb = this.usuarios.createQueryBuilder('u')
-      .innerJoin('u.roles', 'rolFiltro', 'rolFiltro.clave IN (:...staff)', { staff: ['ADMINISTRATIVO', 'FINANZAS', 'DIRECTOR', 'SUPERADMIN'] })
+      .innerJoin('u.roles', 'rolFiltro', 'rolFiltro.clave IN (:...staff)', {
+        staff: query.tipo === 'PERSONAL'
+          ? ['MAESTRO', 'ADMINISTRATIVO', 'FINANZAS', 'DIRECTOR', 'SUPERADMIN']
+          : ['ADMINISTRATIVO', 'FINANZAS', 'DIRECTOR', 'SUPERADMIN'],
+      })
       .leftJoinAndSelect('u.roles', 'roles')
       .distinct(true);
     if (planteles !== null) qb.andWhere(
