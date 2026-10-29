@@ -10,11 +10,12 @@ import { Docente } from '../entities/docente.entity';
 import { UsuarioPlantel } from '../entities/usuario-plantel.entity';
 import { PlantelesModule } from '../planteles/planteles.module';
 import { BitacoraActividad } from '../entities/bitacora-actividad.entity';
+import { HistorialRolesUsuario } from '../entities/historial-roles-usuario.entity';
 import { PasswordResetToken } from '../entities/password-reset-token.entity';
 import { ActivacionToken } from '../entities/activacion-token.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Usuario, Rol, Alumno, Docente, UsuarioPlantel, BitacoraActividad, PasswordResetToken, ActivacionToken]), PlantelesModule, AuthModule],
+  imports: [TypeOrmModule.forFeature([Usuario, Rol, Alumno, Docente, UsuarioPlantel, BitacoraActividad, HistorialRolesUsuario, PasswordResetToken, ActivacionToken]), PlantelesModule, AuthModule],
   providers: [UsuariosService],
   controllers: [UsuariosController],
   exports: [UsuariosService],
