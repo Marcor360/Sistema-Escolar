@@ -11,7 +11,13 @@ import { TitulacionService } from './titulacion.service';
 const director = { sub: 2, nombre: 'Rector', email: 'rector@example.test', roles: ['DIRECTOR'], portal: 'WEB' as const };
 
 function escenario(plantelAlumno = 1, plantelCarrera = 1) {
+  const qb: Record<string, jest.Mock> = {};
+  for (const metodo of ['innerJoin', 'andWhere', 'orderBy', 'skip', 'take']) {
+    qb[metodo] = jest.fn().mockReturnValue(qb);
+  }
+  qb.getManyAndCount = jest.fn().mockResolvedValue([[], 0]);
   const expedientes = {
+    createQueryBuilder: jest.fn().mockReturnValue(qb),
     findOne: jest.fn().mockResolvedValue(null),
     create: jest.fn((datos: unknown) => datos),
     save: jest.fn(async (datos: Record<string, unknown>) => ({ ...datos, id: 100 })),
@@ -29,7 +35,7 @@ function escenario(plantelAlumno = 1, plantelCarrera = 1) {
     stub<Repository<Inscripcion>>(inscripciones),
     stub<ScopeService>(scope),
   );
-  return { service, expedientes, egresos, carreras, alumnos, inscripciones, scope };
+  return { service, expedientes, egresos, carreras, alumnos, inscripciones, scope, qb };
 }
 
 describe('titulación: borradores con RVOE pendiente', () => {
@@ -73,4 +79,29 @@ describe('titulación: borradores con RVOE pendiente', () => {
     expect(resultado).toMatchObject({ id: 100, estado: 'BORRADOR', modalidadRvoe: 'SIN_DETERMINAR' });
     expect(expedientes.save).toHaveBeenCalled();
   });
+  it('acepta el alcance global de una cuenta DIRECTOR y SUPERADMIN', async () => {
+    const { service, scope, qb } = escenario();
+    scope.plantelesDe.mockResolvedValueOnce(null);
+    const resultado = await service.listar({ pagina: 1, porPagina: 10 },
+      { ...director, roles: ['DIRECTOR', 'SUPERADMIN'] });
+    expect(resultado.total).toBe(0);
+    expect(qb.andWhere).not.toHaveBeenCalled();
+  });
+
+  it('conserva el filtro de planteles para un director sin alcance global', async () => {
+    const { service, qb } = escenario();
+    await service.listar({ pagina: 1, porPagina: 10 }, director);
+    expect(qb.andWhere).toHaveBeenCalledWith(
+      'al.plantelId IN (:...permitidos)', { permitidos: [1] },
+    );
+  });
+
+  it('impide listar si el director no tiene planteles asignados', async () => {
+    const { service, scope, qb } = escenario();
+    scope.plantelesDe.mockResolvedValueOnce([]);
+    await expect(service.listar({ pagina: 1, porPagina: 10 }, director))
+      .rejects.toThrow('Asigna un plantel');
+    expect(qb.andWhere).not.toHaveBeenCalled();
+  });
+
 });
