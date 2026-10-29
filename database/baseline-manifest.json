@@ -56,6 +56,7 @@
         "migracion_reinscripciones_periodo.sql",
         "migracion_calendario_marcadores.sql",
         "migracion_rol_director.sql",
+        "migracion_historial_roles_usuario.sql",
         "migracion_titulacion_expedientes.sql",
         "migracion_titulacion_firmantes.sql"
       ]
@@ -114,6 +115,7 @@
         "migracion_reinscripciones_periodo.sql",
         "migracion_calendario_marcadores.sql",
         "migracion_rol_director.sql",
+        "migracion_historial_roles_usuario.sql",
         "migracion_titulacion_expedientes.sql",
         "migracion_titulacion_firmantes.sql"
       ]
