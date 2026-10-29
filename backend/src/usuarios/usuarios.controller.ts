@@ -20,7 +20,7 @@ export class UsuariosController {
 
   @Get() listar(@Query() query: PaginacionDto) { return this.service.listar(query); }
   @Get('listado')
-  @Roles('ADMINISTRATIVO', 'FINANZAS', 'MAESTRO')
+  @Roles('ADMINISTRATIVO', 'FINANZAS', 'MAESTRO', 'DIRECTOR')
   listado(@Query() query: ListadoUsuariosDto, @CurrentUser() user: JwtUser) {
     return this.service.listado(query, user);
   }

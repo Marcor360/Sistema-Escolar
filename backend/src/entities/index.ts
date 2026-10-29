@@ -78,6 +78,7 @@ export * from './egreso-alumno.entity';
 export * from './reinscripcion-periodo.entity';
 
 export * from './marcador-calendario.entity';
+export * from './historial-roles-usuario.entity';
 export * from './titulacion-expediente.entity';
 export * from './titulacion-firmante.entity';
 export * from './usuario-vinculo-persona.entity';
