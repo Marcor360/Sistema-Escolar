@@ -1,3 +1,4 @@
+import { OmitType } from '@nestjs/swagger';
 import { OpcionalNoNulo } from '../common/opcional-no-nulo';
 import { IsDateString, MaxLength, Matches, Min, MinLength as LongitudMinima } from 'class-validator';
 import { Transform as Normalizar } from 'class-transformer';
@@ -94,3 +95,6 @@ export class ActualizarAlumnoDto {
 export class ReactivarAlumnoDto {
   @IsString() @LongitudMinima(3) @MaxLength(500) motivo!: string;
 }
+
+/** Identidad escolar sin asignación de correo ni invitación. */
+export class AlumnoSinCorreoDto extends OmitType(CrearAlumnoDto, ['email', 'correoProveedor', 'plantelId'] as const) {}

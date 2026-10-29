@@ -23,7 +23,8 @@ export class AperturaCartera {
   @ManyToOne(() => SolicitudGrupoRegular, { nullable: true }) @JoinColumn({ name: 'solicitud_id' }) solicitud!: SolicitudGrupoRegular | null;
   @Column() creadoPorId!: number;
   @ManyToOne(() => Usuario) @JoinColumn({ name: 'creado_por_id' }) creadoPor!: Usuario;
-  @Column({ type: String, length: 12, default: 'PENDIENTE' }) estado!: 'PENDIENTE' | 'ABIERTA';
+  @Column({ type: String, length: 12, default: 'PENDIENTE' }) estado!: 'PENDIENTE' | 'ABIERTA' | 'PAUSA';
+  @Column({ type: 'text', nullable: true }) contextoJson!: string | null;
   @Column({ type: 'text', transformer: { to: (v: ConceptoApertura[]) => JSON.stringify(v), from: (v: string) => JSON.parse(v) as ConceptoApertura[] } }) conceptos!: ConceptoApertura[];
   @CreateDateColumn() createdAt!: Date;
 }

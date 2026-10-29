@@ -1,3 +1,4 @@
+import { AlertasWeb } from "./src/components/AlertasWeb";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { RecorridoAlumno } from './src/components/RecorridoAlumno';
 import {
@@ -19,10 +20,10 @@ import {
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "expo-status-bar";
-import { ActivityIndicator, AppState, BackHandler, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, AppState, BackHandler, Platform, TouchableOpacity, View } from "react-native";
 import { Text, FuenteContext } from "./src/components/Texto";
 import { useFonts } from "expo-font";
-import * as SecureStore from "expo-secure-store";
+import * as SecureStore from "./src/almacen-seguro";
 import {
   api,
   mensajeDeError,
@@ -120,6 +121,7 @@ function AppInterna() {
   const [listo, setListo] = useState(false);
   const [marca, setMarca] = useState<Marca>(MARCA_POR_DEFECTO);
   const marcaActual = useRef<Marca>(MARCA_POR_DEFECTO);
+  useEffect(() => { if (Platform.OS === "web" && typeof document !== "undefined") document.title = marca.nombrePortalAlumno || "Sistema Escolar Portal Alumno"; }, [marca.nombrePortalAlumno]);
   const consultaMarca = useRef<Promise<void> | null>(null);
   const [marcaLista, setMarcaLista] = useState(false);
   const [errorInicio, setErrorInicio] = useState("");
@@ -283,7 +285,7 @@ function AppInterna() {
       configurarCacheAcademica(null);
       if (sesion?.sub) void limpiarPreferenciaPushLocal(sesion.sub).catch(() => undefined);
       void persistenciaActividad.current.borrar().catch(() => undefined);
-      void Notifications.dismissAllNotificationsAsync().catch(() => undefined);
+      if (Platform.OS !== "web") void Notifications.dismissAllNotificationsAsync().catch(() => undefined);
       setBloqueoBiometrico(false);
       setSesion(null);
     });
@@ -297,8 +299,9 @@ function AppInterna() {
 
   const iniciar = async (email: string, password: string) => {
     const revision = ++revisionSesion.current;
-    const { data } = await api.post("/auth/login", { email, password });
+    const { data } = await api.post(Platform.OS === "web" ? "/auth/login-alumno-web" : "/auth/login", { email, password });
     if (revision !== revisionSesion.current) throw new Error("La sesión cambió. Vuelve a iniciar sesión.");
+    if (!data.usuario.roles.includes("ALUMNO")) throw new Error("Esta aplicación es exclusiva para alumnos. Usa el portal administrativo.");
     await establecerTokensSesion(data.accessToken, data.refreshToken);
     if (revision !== revisionSesion.current) return;
     const ahora = Date.now();
@@ -313,7 +316,7 @@ function AppInterna() {
   };
 
   useEffect(() => {
-    if (!sesion || sesion.passwordChangeRequired) return;
+    if (!sesion || sesion.passwordChangeRequired || Platform.OS === "web") return;
     const escuchar = () => {
       if (navegacion.isReady()) navegacion.navigate("Inicio");
     };
@@ -338,7 +341,7 @@ function AppInterna() {
     setConsentimiento(null);
     setAvisoCierre(motivo === "inactividad"
       ? "La sesión se cerró tras 30 minutos sin actividad. Ingresa nuevamente." : "");
-    await Notifications.dismissAllNotificationsAsync().catch(() => undefined);
+    if (Platform.OS !== "web") await Notifications.dismissAllNotificationsAsync().catch(() => undefined);
     try {
       await borrarTokens;
     } finally {
@@ -361,15 +364,17 @@ function AppInterna() {
       void (async () => {
         const origen = api.defaults.baseURL;
         const retirar = (acceso: string) => fetch(`${origen}/auth/logout`, {
-          method: "POST", headers: { Authorization: `Bearer ${acceso}`, "x-portal": "MOVIL" },
+          method: "POST", credentials: Platform.OS === "web" ? "include" : "omit",
+          headers: { Authorization: `Bearer ${acceso}`, "x-portal": Platform.OS === "web" ? "WEB" : "MOVIL" },
         });
         const respuesta = token ? await retirar(token) : null;
         if (respuesta?.status !== 401 && respuesta !== null) return;
-        if (!refresh) return;
+        if (!refresh && Platform.OS !== "web") return;
         const renovacion = await fetch(`${origen}/auth/refresh`, {
           method: "POST",
-          headers: { "x-portal": "MOVIL", "Content-Type": "application/json" },
-          body: JSON.stringify({ refreshToken: refresh }),
+          credentials: Platform.OS === "web" ? "include" : "omit",
+          headers: { "x-portal": Platform.OS === "web" ? "WEB" : "MOVIL", "Content-Type": "application/json" },
+          body: JSON.stringify(Platform.OS === "web" ? {} : { refreshToken: refresh }),
         });
         if (!renovacion.ok) return;
         const datos: { accessToken?: string } = await renovacion.json();
@@ -415,6 +420,16 @@ function AppInterna() {
       guardarActividad(fecha);
     }
   };
+
+  const interaccionActual = useRef(registrarInteraccion);
+  interaccionActual.current = registrarInteraccion;
+  useEffect(() => {
+    if (Platform.OS !== "web" || typeof document === "undefined") return;
+    const actividad = () => interaccionActual.current();
+    document.addEventListener("keydown", actividad);
+    document.addEventListener("pointerdown", actividad);
+    return () => { document.removeEventListener("keydown", actividad); document.removeEventListener("pointerdown", actividad); };
+  }, []);
 
   if (!listo || !marcaLista) {
     return (
@@ -519,7 +534,7 @@ function AppInterna() {
           ref={navegacion}
           theme={tema}
           onReady={() => {
-            if (sesion && Notifications.getLastNotificationResponse())
+            if (Platform.OS !== "web" && sesion && Notifications.getLastNotificationResponse())
               navegacion.navigate("Inicio");
           }}
         >
@@ -609,7 +624,7 @@ export default function App() {
   }
   return (
     <FuenteContext.Provider value={fuenteLista}>
-      <SafeAreaProvider><AppInterna /></SafeAreaProvider>
+      <SafeAreaProvider><AppInterna /><AlertasWeb /></SafeAreaProvider>
     </FuenteContext.Provider>
   );
 }

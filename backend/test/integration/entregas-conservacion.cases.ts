@@ -61,7 +61,7 @@ export function registrarEntregasConservacion(ctx: ContextoIntegracion) {
           activacionPendiente: false,
         }),
       );
-      ctx.passwords.set(usuario.email, password);
+      ctx.passwords.set(usuario.email!, password);
       const alumno = await ds.getRepository(Alumno).save({
         usuarioId: usuario.id,
         matricula: `AE${ctx.sufijo}`,

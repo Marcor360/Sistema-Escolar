@@ -81,10 +81,10 @@ export default function LoginScreen({ aviso = "" }: { aviso?: string } = {}) {
             </View>
           )}
           <Text style={estilos.titulo} accessibilityRole="header">
-            {marca.nombreInstitucion}
+            {marca.nombrePortalAlumno || 'Sistema Escolar Portal Alumno'}
           </Text>
           <Text style={estilos.descripcion}>
-            App del alumno: consulta materias, entrega tareas y revisa tus
+            Consulta materias, entrega tareas y revisa tus
             calificaciones y pagos. Ingresa con tu correo institucional.
           </Text>
           {aviso !== "" && <Text accessibilityRole="alert" style={estilos.ayuda}>{aviso}</Text>}

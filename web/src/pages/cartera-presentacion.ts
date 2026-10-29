@@ -1,8 +1,10 @@
-export type EstadoApertura = 'ABIERTA' | 'PENDIENTE' | 'REQUIERE_REVISION';
+export type EstadoApertura = 'ABIERTA' | 'PENDIENTE' | 'PAUSA' | 'REQUIERE_REVISION';
 export function estadoApertura(estado: string) {
   switch (estado as EstadoApertura) {
     case 'ABIERTA':
       return { titulo: 'Abierta y asignada', descripcion: 'Inscripción y cargos confirmados para el grupo asignado.' };
+    case 'PAUSA':
+      return { titulo: 'Pausa / baja temporal sin cobros', descripcion: 'Cartera conservada sin cargos ni asignación automática. Reanuda cuando corresponda.' };
     case 'PENDIENTE':
       return { titulo: 'Pendiente de grupo', descripcion: 'La solicitud y las tarifas se conservan; aún no se generan cargos.' };
     case 'REQUIERE_REVISION':

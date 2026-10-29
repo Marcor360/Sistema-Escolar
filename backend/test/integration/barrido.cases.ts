@@ -1,3 +1,4 @@
+import { curpFicticia } from './identidad-ficticia';
 import { crearInscripcionFixture } from './fixtures-inscripcion';
 import { EventoCalendario, BibliotecaCarpeta } from '../../src/entities';
 import { extraerStreamsPdf } from './pdf-streams';
@@ -169,7 +170,7 @@ export function registrarBarrido(ctx: ContextoIntegracion) {
     const clase = await ctx.dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: ctx.grupoMateriaIdMaestro });
     const maestro = await ctx.emitirToken(`barridocon_${ctx.sufijo}@example.invalid`), ids: number[] = [];
     for (const [pos,plantelId] of [ctx.plantelId,ctx.otroPlantelId].entries()) {
-      const alumno = await post('/alumnos',{ email: `barridoconal${pos}_${ctx.sufijo}@example.invalid`,nombre: 'Alumno',apellidoPaterno: 'Conducta',matricula: `BC${pos}${ctx.sufijo}`,curp: 'GODE561231HDFRRN09',plantelId }); expect(alumno.response.status).toBe(201);
+      const alumno = await post('/alumnos',{ email: `barridoconal${pos}_${ctx.sufijo}@example.invalid`,nombre: 'Alumno',apellidoPaterno: 'Conducta',matricula: `BC${pos}${ctx.sufijo}`,curp: curpFicticia(),plantelId }); expect(alumno.response.status).toBe(201);
       const grupo = await post('/academico/grupos',{ nombre: `Conducta${pos}-${ctx.sufijo}`,cicloId: clase.grupo.cicloId,plantelId }); expect(grupo.response.status).toBe(201);
       expect((await post(`/academico/grupos/${grupo.data.id}/materias`,{ materiaId: clase.materiaId,docenteId: docente.data.id })).response.status).toBe(201);
       await crearInscripcionFixture(ctx,grupo.data.id,alumno.data.id);

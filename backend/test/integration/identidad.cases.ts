@@ -1,3 +1,4 @@
+import { curpFicticia } from './identidad-ficticia';
 import { crearInscripcionFixture } from './fixtures-inscripcion';
 import { ContextoIntegracion } from './contexto';
 import { PushService } from '../../src/notificaciones/push.service';
@@ -14,7 +15,7 @@ it('autentica y limita el detalle de planteles a las asignaciones del usuario', 
     const password = 'Integracion_Segura_42!';
     const admin = await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.adminId });
     const inicioSesion = await ctx.api('/auth/login', {
-      method: 'POST', headers: { 'x-portal': 'WEB' }, body: { email: admin.email, password },
+      method: 'POST', headers: { 'x-portal': 'WEB' }, body: { email: admin.email!, password },
     });
     expect(inicioSesion.response.status).toBe(201);
     const token = inicioSesion.data.accessToken as string;
@@ -40,7 +41,7 @@ it('no serializa hashes en login, perfil, alumnos, docentes ni usuarios', async 
     const tokenRoot = await ctx.emitirToken(superadmin.email);
     const inicioSesion = await ctx.api('/auth/login', {
       method: 'POST', headers: { 'x-portal': 'WEB' },
-      body: { email: admin.email, password: 'Integracion_Segura_42!' },
+      body: { email: admin.email!, password: 'Integracion_Segura_42!' },
     });
     expect(inicioSesion.response.status).toBe(201);
     const nuevoDocente = await ctx.api('/docentes', {
@@ -141,7 +142,7 @@ it('revierte la cuenta si falla el alta del expediente relacionado', async () =>
       method: 'POST', token,
       body: {
         email, nombre: 'Rollback', apellidoPaterno: 'Prueba',
-        matricula: `R${ctx.sufijo}`, plantelId: 2147483000, curp: 'GODE561231HDFRRN09',
+        matricula: `R${ctx.sufijo}`, plantelId: 2147483000, curp: curpFicticia(),
       },
     });
 
@@ -156,7 +157,7 @@ it('revoca JWT anteriores tras bajas de alumno/docente y cambio de contraseña',
     const altaAlumno = await ctx.api('/alumnos', {
       method: 'POST', token: tokenAdmin,
       body: {
-        email: `baja_alumno_${ctx.sufijo}@example.invalid`, nombre: 'Baja', apellidoPaterno: 'Alumno', matricula: `B${ctx.sufijo}`, plantelId: ctx.plantelId, curp: 'GODE561231HDFRRN09',
+        email: `baja_alumno_${ctx.sufijo}@example.invalid`, nombre: 'Baja', apellidoPaterno: 'Alumno', matricula: `B${ctx.sufijo}`, plantelId: ctx.plantelId, curp: curpFicticia(),
       },
     });
     const tokenAlumno = await ctx.emitirToken(`baja_alumno_${ctx.sufijo}@example.invalid`);
@@ -216,7 +217,7 @@ it('bloquea PATCH de estado/plantel, impide egreso sin cierre y completa transfe
     for (const accion of ['baja', 'egreso', 'transferencia']) {
       const alta = await ctx.api('/alumnos', { method: 'POST', token, body: {
         nombre: 'Transición', apellidoPaterno: accion, matricula: `T${accion.slice(0, 2)}${ctx.sufijo}`,
-        email: `${accion}_${ctx.sufijo}@example.invalid`, plantelId: ctx.plantelId, curp: 'GODE561231HDFRRN09',
+        email: `${accion}_${ctx.sufijo}@example.invalid`, plantelId: ctx.plantelId, curp: curpFicticia(),
       } }); expect(alta.response.status).toBe(201);
       const id = alta.data.id; const usuarioId = alta.data.usuarioId;
       const movil = await ctx.emitirToken(`${accion}_${ctx.sufijo}@example.invalid`);
@@ -247,7 +248,7 @@ it('bloquea PATCH de estado/plantel, impide egreso sin cierre y completa transfe
   },
   25: (ctx) => {
 it('rota refresh, detecta reutilización y revoca solamente la sesión afectada', async () => {
-    const email = (await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.alumnoUsuarioId })).email;
+    const email = (await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.alumnoUsuarioId })).email!;
     const auth = ctx.app.get(AuthService);
     const primera = await auth.login(email, 'Integracion_Segura_42!', 'MOVIL');
     const segunda = await auth.login(email, 'Integracion_Segura_42!', 'MOVIL');
@@ -323,7 +324,7 @@ it('push registra por sesión/dispositivo, deduplica y no admite personal', asyn
   34: (ctx) => {
 it('reactiva alumno sin restaurar inscripciones y docente sin restaurar clases', async () => {
     const admin = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.adminId })).email);
-    const alumno = await ctx.api('/alumnos', { method: 'POST', token: admin, body: { email: `reactiva_${ctx.sufijo}@example.invalid`, nombre: 'Reactiva', apellidoPaterno: 'Prueba', matricula: `RA${ctx.sufijo}`, plantelId: ctx.plantelId, curp: 'GODE561231HDFRRN09' } });
+    const alumno = await ctx.api('/alumnos', { method: 'POST', token: admin, body: { email: `reactiva_${ctx.sufijo}@example.invalid`, nombre: 'Reactiva', apellidoPaterno: 'Prueba', matricula: `RA${ctx.sufijo}`, plantelId: ctx.plantelId, curp: curpFicticia() } });
     const clase = await ctx.dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: ctx.grupoMateriaIdMaestro });
     await crearInscripcionFixture(ctx,clase.grupoId,alumno.data.id);
     expect((await ctx.api(`/alumnos/${alumno.data.id}/baja`, { method: 'POST', token: admin })).response.status).toBe(201);
@@ -369,7 +370,7 @@ it('recupera push pendiente después de fallar la cola sin duplicar envíos', as
   52: (ctx) => {
     it('reactivación y baja concurrentes mantienen coherentes expediente, usuario e inscripciones', async () => {
       const token = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.adminId })).email);
-      const alta = await ctx.api('/alumnos',{ method: 'POST',token,body: { email: `rb_${ctx.sufijo}@example.invalid`,nombre: 'Carrera',apellidoPaterno: 'Identidad',matricula: `RB${ctx.sufijo}`,plantelId: ctx.plantelId, curp: 'GODE561231HDFRRN09' } }); expect(alta.response.status).toBe(201);
+      const alta = await ctx.api('/alumnos',{ method: 'POST',token,body: { email: `rb_${ctx.sufijo}@example.invalid`,nombre: 'Carrera',apellidoPaterno: 'Identidad',matricula: `RB${ctx.sufijo}`,plantelId: ctx.plantelId, curp: curpFicticia() } }); expect(alta.response.status).toBe(201);
       expect((await ctx.api(`/alumnos/${alta.data.id}/baja`,{ method: 'POST',token })).response.status).toBe(201);
       const respuestas = await Promise.all([ctx.api(`/alumnos/${alta.data.id}/reactivacion`,{ method: 'POST',token,body: { motivo: 'Reactivación institucional autorizada' } }),ctx.api(`/alumnos/${alta.data.id}/baja`,{ method: 'POST',token })]);
       expect(respuestas.every((r) => [201,409].includes(r.response.status))).toBe(true);
@@ -384,7 +385,7 @@ export function registrarAltasInstitucionales(ctx: ContextoIntegracion) {
   it('altas por expediente y rol conservan campos institucionales, alcance y cambio inicial', async () => {
     const root = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.superadminId })).email);
     const datos = { nombre: 'Institucional',apellidoPaterno: 'Prueba',apellidoMaterno: 'Materno',telefono: '5550001111',password: 'Integracion_Segura_42!' };
-    const alumno = await ctx.api('/alumnos',{ method: 'POST',token: root,body: { ...{ nombre: datos.nombre, apellidoPaterno: datos.apellidoPaterno, apellidoMaterno: datos.apellidoMaterno, telefono: datos.telefono },email: `insal_${ctx.sufijo}@example.invalid`,matricula: `IA${ctx.sufijo}`,plantelId: ctx.plantelId,curp: 'TEST090101HMCRXX00',fechaNacimiento: '2009-01-02',direccion: 'Calle institucional 12',tutorNombre: 'Tutor institucional',tutorTelefono: '5550002222' } }); expect(alumno.response.status).toBe(201);
+    const alumno = await ctx.api('/alumnos',{ method: 'POST',token: root,body: { ...{ nombre: datos.nombre, apellidoPaterno: datos.apellidoPaterno, apellidoMaterno: datos.apellidoMaterno, telefono: datos.telefono },email: `insal_${ctx.sufijo}@example.invalid`,matricula: `IA${ctx.sufijo}`,plantelId: ctx.plantelId,curp: curpFicticia(),fechaNacimiento: '2009-01-02',direccion: 'Calle institucional 12',tutorNombre: 'Tutor institucional',tutorTelefono: '5550002222' } }); expect(alumno.response.status).toBe(201);
     const inicioAlumno = await ctx.api('/auth/login', { method: 'POST', headers: { 'x-portal': 'MOVIL' }, body: { email: `insal_${ctx.sufijo}@example.invalid`, password: `IA${ctx.sufijo}`.toUpperCase() } });
     expect(inicioAlumno.response.status).toBe(401);
     expect((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: alumno.data.usuarioId })).activacionPendiente).toBe(true);
@@ -408,17 +409,17 @@ export function registrarAltasInstitucionales(ctx: ContextoIntegracion) {
       const portal = u.roles[0].clave === 'ALUMNO' ? 'MOVIL' : 'WEB';
       if (u.activacionPendiente) {
         expect(u.activacionPendiente).toBe(true);
-        await expect(ctx.app.get(AuthService).login(u.email, datos.password, portal)).rejects.toThrow();
+        await expect(ctx.app.get(AuthService).login(u.email!, datos.password, portal)).rejects.toThrow();
         const token = await ctx.emitirToken(u.email); // Activación por código real del titular.
         expect(token).toBeTruthy();
         continue;
       }
-      const inicial = await ctx.app.get(AuthService).login(u.email,datos.password,portal);
+      const inicial = await ctx.app.get(AuthService).login(u.email!,datos.password,portal);
       expect(inicial.usuario.passwordChangeRequired).toBe(true);
       // El personal conserva el primer cambio obligatorio; el alumno activa por código.
       await ctx.app.get(AuthService).cambiarPassword(u.id,datos.password,'Institucional_Renovada_42!');
       expect((await ctx.api('/auth/me',{ token: inicial.accessToken,headers: { 'x-portal': portal } })).response.status).toBe(401);
-      ctx.passwords.set(u.email,'Institucional_Renovada_42!');
+      ctx.passwords.set(u.email!,'Institucional_Renovada_42!');
       const token = await ctx.emitirToken(u.email); expect(token).toBeTruthy(); expect((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id })).passwordChangeRequired).toBe(false);
     }
     for (const rol of ['ALUMNO','MAESTRO']) expect((await ctx.api('/usuarios',{ method: 'POST',token: root,body: { ...datos,email: `invalid${rol}_${ctx.sufijo}@example.invalid`,roles: [rol],plantelIds: [ctx.plantelId] } })).response.status).toBe(409);

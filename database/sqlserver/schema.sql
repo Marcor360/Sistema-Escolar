@@ -17,7 +17,7 @@ CREATE TABLE roles (
 
 CREATE TABLE usuarios (
   id INT IDENTITY(1,1) PRIMARY KEY,
-  email NVARCHAR(120) NOT NULL UNIQUE,
+  email NVARCHAR(120) NULL,
   password_hash NVARCHAR(100) NOT NULL,
   nombre NVARCHAR(80) NOT NULL,
   apellido_paterno NVARCHAR(80) NOT NULL,
@@ -725,7 +725,7 @@ CREATE TABLE solicitudes_grupo_regular (
  estado NVARCHAR(12) NOT NULL DEFAULT 'PENDIENTE',
  grupo_id INT NULL REFERENCES grupos(id),
  CONSTRAINT uq_solicitud_alumno_ciclo UNIQUE (alumno_id,ciclo_id),
- CONSTRAINT ck_solicitud_estado CHECK (estado IN ('PENDIENTE','ASIGNADA','ANULADA')),
+ CONSTRAINT ck_solicitud_estado CHECK (estado IN ('PENDIENTE','ASIGNADA','ANULADA','PAUSA')),
  CONSTRAINT ck_solicitud_turno CHECK (turno IN ('MATUTINO','VESPERTINO')),
  CONSTRAINT ck_solicitud_asignada CHECK ((estado='ASIGNADA' AND grupo_id IS NOT NULL) OR (estado <> 'ASIGNADA' AND grupo_id IS NULL))
 );
@@ -742,11 +742,12 @@ CREATE TABLE aperturas_cartera (
  solicitud_id INT NULL,
  creado_por_id INT NOT NULL,
  estado NVARCHAR(12) NOT NULL DEFAULT 'PENDIENTE',
+ contexto_json NVARCHAR(MAX) NULL,
  conceptos NVARCHAR(MAX) NOT NULL,
  created_at DATETIME2 NOT NULL DEFAULT CURRENT_TIMESTAMP,
  CONSTRAINT uq_apertura_idempotencia UNIQUE (idempotencia),
  CONSTRAINT uq_apertura_alumno_ciclo UNIQUE (alumno_id,ciclo_id),
- CONSTRAINT ck_apertura_estado CHECK (estado IN ('PENDIENTE','ABIERTA')),
+ CONSTRAINT ck_apertura_estado CHECK (estado IN ('PENDIENTE','ABIERTA','PAUSA')),
  CONSTRAINT fk_ac_alumno FOREIGN KEY (alumno_id) REFERENCES alumnos(id),
  CONSTRAINT fk_ac_plantel FOREIGN KEY (plantel_id) REFERENCES planteles(id),
  CONSTRAINT fk_ac_ciclo FOREIGN KEY (ciclo_id) REFERENCES ciclos_escolares(id),
@@ -1111,3 +1112,23 @@ CREATE TABLE calendario_marcadores (
  CONSTRAINT uq_calendario_marcador_plantel UNIQUE (plantel_id, clave)
 );
 ALTER TABLE eventos_calendario ADD marcador_clave NVARCHAR(50) NULL;
+
+CREATE UNIQUE INDEX uq_alumno_curp ON alumnos(curp) WHERE curp IS NOT NULL;
+CREATE UNIQUE INDEX uq_usuario_email ON usuarios(email) WHERE email IS NOT NULL;
+
+-- Incremental: conserva expedientes, calificaciones y respuestas anteriores.
+ALTER TABLE configuracion_marca ADD nombre_administrativo NVARCHAR(150) NOT NULL CONSTRAINT df_marca_nombre_admin DEFAULT N'Sistema Escolar Administrativo', nombre_portal_alumno NVARCHAR(150) NOT NULL CONSTRAINT df_marca_nombre_alumno DEFAULT N'Sistema Escolar Portal Alumno';
+CREATE TABLE boleta_respuestas (
+ id INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+ inscripcion_id INT NOT NULL, actor_id INT NOT NULL, grupo_materia_id INT NULL,
+ idempotencia NVARCHAR(36) NOT NULL, peticion_hash NVARCHAR(64) NOT NULL, version_hash NVARCHAR(64) NOT NULL,
+ estado NVARCHAR(12) NOT NULL, firmante_nombre NVARCHAR(150) NOT NULL, firmante_tipo NVARCHAR(10) NOT NULL,
+ comentario NVARCHAR(2000) NOT NULL CONSTRAINT df_boleta_respuesta_comentario DEFAULT N'', snapshot_json NVARCHAR(MAX) NULL, created_at DATETIME2 NOT NULL CONSTRAINT df_boleta_respuesta_fecha DEFAULT SYSUTCDATETIME(),
+ CONSTRAINT uq_boleta_respuesta_clave UNIQUE(idempotencia),
+ CONSTRAINT fk_boleta_respuesta_inscripcion FOREIGN KEY(inscripcion_id) REFERENCES inscripciones(id),
+ CONSTRAINT fk_boleta_respuesta_actor FOREIGN KEY(actor_id) REFERENCES usuarios(id),
+ CONSTRAINT fk_boleta_respuesta_materia FOREIGN KEY(grupo_materia_id) REFERENCES grupo_materias(id),
+ CONSTRAINT ck_boleta_respuesta_estado CHECK(estado IN ('ACEPTADA','REVISION','COMENTARIO')),
+ CONSTRAINT ck_boleta_respuesta_firmante CHECK(firmante_tipo IN ('ALUMNO','TUTOR','DOCENTE'))
+);
+CREATE INDEX idx_boleta_respuesta_inscripcion ON boleta_respuestas(inscripcion_id,id);

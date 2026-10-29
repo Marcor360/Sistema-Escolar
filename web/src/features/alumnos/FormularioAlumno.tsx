@@ -87,7 +87,7 @@ export function FormularioAlumno({
           <div className="rejilla-formulario">
             <div className="campo">
               <label htmlFor="alumno-correo">Correo institucional (acceso) *</label>
-              <input id="alumno-correo" type="email" required maxLength={120} disabled={!nuevo}
+              <input id="alumno-correo" type="email" required maxLength={120} disabled={!nuevo} placeholder={!nuevo && !form.email ? 'Pendiente de asignar desde Usuarios' : undefined}
                 autoComplete="email" {...dar('email')} />
             </div>
             <div className="campo">

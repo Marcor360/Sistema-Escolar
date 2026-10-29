@@ -3,7 +3,6 @@ import { ContextosMateria } from '../components/ContextosMateria';
 import { Link, useSearchParams } from 'react-router-dom';
 import { GuiaPreparacionCiclo } from '../components/GuiaPreparacionCiclo';
 import { Paginador } from '../components/Paginador';
-import '../components/tabla-adaptable.css';
 import { useDialogoMotivo } from '../components/useDialogoMotivo';
 import { useConfirmacion } from '../components/useConfirmacion';
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';

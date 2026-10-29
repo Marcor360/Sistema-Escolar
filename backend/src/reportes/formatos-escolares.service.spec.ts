@@ -1,3 +1,4 @@
+import { BoletaRespuesta } from '../entities/boleta-respuesta.entity';
 import { DataSource } from 'typeorm';
 import * as ExcelJS from 'exceljs';
 import { FormatosEscolaresService } from './formatos-escolares.service';
@@ -24,6 +25,7 @@ function preparar(cerrado=true,completo=true){
  const inscripciones={find:jest.fn().mockResolvedValue([{id:8,alumnoId:1,alumno,grupo}])};
  const clases={find:jest.fn().mockResolvedValue([gm])};
  const ds={getRepository:jest.fn((entity:unknown)=>{
+  if(entity===BoletaRespuesta)return {find:jest.fn().mockResolvedValue([])};
   if(entity===Alumno)return alumnoRepo;if(entity===Inscripcion)return inscripciones;if(entity===GrupoMateria)return clases;
   if(entity===Calificacion)return {find:jest.fn().mockImplementation(({where}:{where:{parcial?:number}})=>Promise.resolve(notas.filter(n=>where.parcial===undefined||n.parcial===where.parcial)))};
   if(entity===PeriodoCalificacion)return {find:jest.fn().mockResolvedValue(periodos),findOneBy:jest.fn().mockResolvedValue(periodos[0])};throw new Error('Repositorio inesperado');

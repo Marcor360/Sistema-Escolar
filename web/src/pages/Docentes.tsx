@@ -7,7 +7,6 @@ import { api, mensajeDeError } from '../api/client';
 import { Encabezado } from '../components/Encabezado';
 import { PanelAccionesModulo } from '../components/PanelAccionesModulo';
 import { Paginador } from '../components/Paginador';
-import '../components/tabla-adaptable.css';
 
 interface Docente {
   id: number;

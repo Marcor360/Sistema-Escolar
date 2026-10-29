@@ -2,6 +2,7 @@ import { CalidadService } from './calidad.service';
 import { CorreccionCalidadDto } from './seguimiento.dto';
 import {
   Body,
+  Query,
   Controller,
   Delete,
   Get,
@@ -20,7 +21,7 @@ import { CurrentUser, JwtUser } from '../common/current-user.decorator';
 import { SeguimientoService } from './seguimiento.service';
 import { TramitesService } from './tramites.service';
 import { BancoService } from './banco.service';
-import { NuevoTramiteDto, CambiarTramiteDto, PreferenciasDto } from './seguimiento.dto';
+import { NuevoTramiteDto, CambiarTramiteDto, PreferenciasDto, PendientesDto } from './seguimiento.dto';
 import { ImportarBancoDto, AplicarMovimientoDto } from './banco.dto';
 @ApiTags('seguimiento')
 @ApiBearerAuth()
@@ -38,8 +39,8 @@ export class SeguimientoController {
   @Get('respaldo') @Roles('SUPERADMIN') respaldo() {
     return this.s.respaldo();
   }
-  @Get('pendientes') pendientes(@CurrentUser() u: JwtUser) {
-    return this.s.pendientes(u);
+  @Get('pendientes') pendientes(@CurrentUser() u: JwtUser, @Query() q: PendientesDto) {
+    return this.s.pendientes(u, q.plantelId);
   }
   @Get('calidad') @Roles('ADMINISTRATIVO') calidad(@CurrentUser() u: JwtUser) {
     return this.s.calidad(u);

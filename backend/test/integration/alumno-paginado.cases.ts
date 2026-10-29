@@ -1,3 +1,4 @@
+import { curpFicticia } from './identidad-ficticia';
 import { crearInscripcionFixture } from './fixtures-inscripcion';
 import {expect,it} from '@jest/globals';
 import {ContextoIntegracion} from './contexto';
@@ -7,7 +8,7 @@ export function registrarAlumnoPaginado(ctx:ContextoIntegracion){
   const root=await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({id:ctx.superadminId})).email);
   const post=async(ruta:string,body:unknown)=>{const r=await ctx.api(ruta,{method:'POST',token:root,body});expect(r.response.status).toBe(201);return r.data;};
   const base=await ctx.dataSource.getRepository(GrupoMateria).findOneByOrFail({id:ctx.grupoMateriaIdMaestro});
-  const alumno=await post('/alumnos',{email:`pgal${ctx.sufijo}@example.invalid`,matricula:`PGAL${ctx.sufijo}`,nombre:'Alumno paginado',apellidoPaterno:'Prueba',curp:'GODE561231HDFRRN09',plantelId:ctx.plantelId});
+  const alumno=await post('/alumnos',{email:`pgal${ctx.sufijo}@example.invalid`,matricula:`PGAL${ctx.sufijo}`,nombre:'Alumno paginado',apellidoPaterno:'Prueba',curp: curpFicticia(),plantelId:ctx.plantelId});
   const grupo=await post('/academico/grupos',{plantelId:ctx.plantelId,cicloId:base.grupo.cicloId,nombre:`PGAL${ctx.sufijo}`});
   await crearInscripcionFixture(ctx,grupo.id,alumno.id);
   const clases:GrupoMateria[]=[];
@@ -20,7 +21,7 @@ export function registrarAlumnoPaginado(ctx:ContextoIntegracion){
   expect(primera.response.status).toBe(200);expect(primera.data).toMatchObject({total:12,pagina:1,porPagina:10});expect(primera.data.datos).toHaveLength(10);expect(segunda.data.datos).toHaveLength(2);expect([...primera.data.datos,...segunda.data.datos].map((c:{id:number})=>c.id)).toEqual(clases.map(c=>c.id));
   const notas=ctx.dataSource.getRepository(Calificacion);
   await notas.save([0,1,2,3].map(parcial=>({alumnoId:alumno.id,grupoMateriaId:clases[0].id,parcial,calificacion:parcial===0?60:parcial===1?80:parcial===2?90:100})));
-  const otro=await post('/alumnos',{email:`pgpeer${ctx.sufijo}@example.invalid`,matricula:`PGPEER${ctx.sufijo}`,nombre:'Otro alumno',apellidoPaterno:'Prueba',curp:'GODE561231HDFRRN09',plantelId:ctx.plantelId});
+  const otro=await post('/alumnos',{email:`pgpeer${ctx.sufijo}@example.invalid`,matricula:`PGPEER${ctx.sufijo}`,nombre:'Otro alumno',apellidoPaterno:'Prueba',curp: curpFicticia(),plantelId:ctx.plantelId});
   await crearInscripcionFixture(ctx,grupo.id,otro.id);
   await notas.save({alumnoId:otro.id,grupoMateriaId:clases[0].id,parcial:1,calificacion:12});
   const r=await ctx.api('/calificaciones/mias/listado?porPagina=1',{token}),r2=await ctx.api('/calificaciones/mias/listado?porPagina=1&pagina=2',{token});

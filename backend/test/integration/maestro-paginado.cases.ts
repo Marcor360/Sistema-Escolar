@@ -1,3 +1,4 @@
+import { curpFicticia } from './identidad-ficticia';
 import { expect, it } from '@jest/globals';
 import { ContextoIntegracion } from './contexto';
 import { Actividad, Alumno, Entrega, GrupoMateria, Inscripcion, Material, Usuario } from '../../src/entities';
@@ -12,7 +13,7 @@ export function registrarMaestroPaginado(ctx: ContextoIntegracion) {
     await ctx.dataSource.getRepository(Material).save(Array.from({ length: 12 }, (_, i) => ({ grupoMateriaId: clase.id, titulo: 'Material UX ' + i, archivoNombre: 'fixture.txt', archivoRuta: '/uploads/fixture-ux-' + ctx.sufijo + '-' + i + '.txt', mime: 'text/plain', tamanoKb: 1 })));
     let alumnoPropio = 0, usuarioPropio = 0;
     for (let i = 0; i < 12; i++) {
-      const r = await ctx.api('/alumnos', { method: 'POST', token: root, body: { email: 'uxcl' + i + ctx.sufijo + '@example.invalid', matricula: 'UXCL' + i + ctx.sufijo, nombre: 'Alumno UX', apellidoPaterno: 'Prueba', curp: 'GODE561231HDFRRN09', plantelId: ctx.plantelId } }); expect(r.response.status).toBe(201);
+      const r = await ctx.api('/alumnos', { method: 'POST', token: root, body: { email: 'uxcl' + i + ctx.sufijo + '@example.invalid', matricula: 'UXCL' + i + ctx.sufijo, nombre: 'Alumno UX', apellidoPaterno: 'Prueba', curp: curpFicticia(), plantelId: ctx.plantelId } }); expect(r.response.status).toBe(201);
       await ctx.dataSource.getRepository(Inscripcion).save({ grupoId: grupo.data.id, alumnoId: r.data.id, estatus: 'ACTIVA' });
       await ctx.dataSource.getRepository(Entrega).save({ actividadId: actividades[0].id, alumnoId: r.data.id, comentarioAlumno: 'Entrega de prueba', archivoNombre: null, archivoRuta: null, comentarioDocente: null, calificacion: null, estatus: 'ENTREGADA', fechaEntregado: new Date() });
       if (i === 0) { alumnoPropio = r.data.id; usuarioPropio = r.data.usuarioId; }

@@ -1,3 +1,7 @@
+import type { Alumno, Trayectoria, Ciclo, Concepto, Cotizacion, Autorizacion, Resultado } from '../features/cartera/tipos-reinscripcion';
+import { ConfirmacionReinscripcion } from '../features/cartera/ConfirmacionReinscripcion';
+import { CalendarioReinscripcion } from '../features/cartera/CalendarioReinscripcion';
+import { ResumenCartera } from '../components/ResumenCartera';
 import { useConfirmacion } from '../components/useConfirmacion';
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -6,76 +10,6 @@ import { CONTEXTO_VACIO, ContextoAcademicoSelector } from '../components/Context
 import { SelectorBuscable } from '../components/SelectorBuscable';
 import { useAuth } from '../auth/AuthContext';
 import { pesos } from '../utils/formato';
-
-interface Alumno {
-  id: number;
-  matricula: string;
-  usuario: { nombre: string; apellidoPaterno: string; apellidoMaterno: string | null };
-}
-interface Trayectoria {
-  academico?: {
-    sinMaterias: boolean;
-    pendientes: {
-      grupoMateriaId: number;
-      materia: string;
-      calificacion: number | null;
-      publicada: boolean;
-      participacionId?: number;
-      intento?: number;
-    }[];
-  };
-  recursamientos?: { id: number; grupoMateriaId: number; intento: number }[];
-  alumno: { id: number; matricula: string; nombre: string; plantelId: number };
-  origen: {
-    inscripcionId: number;
-    grupo: string;
-    cicloId: number;
-    nivelId: number;
-    carreraId: number;
-    periodoAcademicoId: number;
-    periodo: string;
-    tipo: string;
-    numero: number;
-    turno: 'MATUTINO' | 'VESPERTINO';
-    fechaFin: string;
-  };
-  advertencia: string;
-}
-interface Ciclo {
-  id: number;
-  nombre: string;
-  clave: string;
-  estado: string;
-  fechaInicio: string;
-  fechaFin: string;
-}
-interface Concepto {
-  id: number;
-  nombre: string;
-  tipo: string;
-  montoBase: number;
-  activo: boolean;
-}
-interface Cotizacion {
-  cotizacion: string;
-  total: number;
-  conceptos: { conceptoId: number; nombre: string; monto: number; descuento?: number }[];
-}
-interface Autorizacion extends Cotizacion {
-  destino: { periodo: string; tipo: string; numero: number; ciclo: string; grupoId: number | null };
-  id: number;
-  financieroId: number;
-  venceAt: string;
-}
-interface Resultado {
-  id: number;
-  estado: string;
-  total: number;
-  origenInscripcionId: number;
-  periodoAcademicoId: number;
-  grupoId: number | null;
-  conceptos: { nombre: string; monto: number; descuento?: number }[];
-}
 
 export default function ReinscribirAlumnoPage() {
   const navigate = useNavigate(),
@@ -393,6 +327,7 @@ export default function ReinscribirAlumnoPage() {
                     {trayectoria.origen.grupo}
                   </p>
                   <p>{trayectoria.advertencia}</p>
+                  {trayectoria.financiero&&<ResumenCartera datos={trayectoria.financiero}/>}
                   {trayectoria.academico && (
                     <>
                       <h3>Materias pendientes</h3>
@@ -572,78 +507,10 @@ export default function ReinscribirAlumnoPage() {
                   </>
                 )}
                 {ajuste && puedeAjustar && (
-                  <section>
-                    <h2>Calendario y beca/descuento del periodo</h2>
-                    <p>
-                      Las cuotas deben sumar exactamente el total autorizado. El descuento de cada cuota se aplica una
-                      sola vez.
-                    </p>
-                    {cuotas.map((q, i) => (
-                      <fieldset key={i}>
-                        <legend>Cuota {i + 1}</legend>
-                        <label>
-                          Mes de cuota {i + 1}
-                          <input
-                            type="month"
-                            required
-                            value={q.periodo}
-                            onChange={(e) =>
-                              setCuotas((v) => v.map((r, n) => (n === i ? { ...r, periodo: e.target.value } : r)))
-                            }
-                          />
-                        </label>
-                        <label>
-                          Vencimiento de cuota {i + 1}
-                          <input
-                            type="date"
-                            required
-                            value={q.fechaVencimiento}
-                            onChange={(e) =>
-                              setCuotas((v) =>
-                                v.map((r, n) => (n === i ? { ...r, fechaVencimiento: e.target.value } : r)),
-                              )
-                            }
-                          />
-                        </label>
-                        <label>
-                          Importe de cuota {i + 1}
-                          <input
-                            type="number"
-                            min="0.01"
-                            step="0.01"
-                            required
-                            value={q.monto}
-                            onChange={(e) =>
-                              setCuotas((v) => v.map((r, n) => (n === i ? { ...r, monto: e.target.value } : r)))
-                            }
-                          />
-                        </label>
-                        <label>
-                          Beca/descuento de cuota {i + 1}
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={q.descuento}
-                            onChange={(e) =>
-                              setCuotas((v) => v.map((r, n) => (n === i ? { ...r, descuento: e.target.value } : r)))
-                            }
-                          />
-                        </label>
-                        <button type="button" onClick={() => setCuotas((v) => v.filter((_, n) => n !== i))}>
-                          Quitar cuota {i + 1}
-                        </button>
-                      </fieldset>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setCuotas((v) => [...v, { periodo, fechaVencimiento: vencimiento, monto: '', descuento: '0' }])
-                      }
-                    >
-                      Añadir cuota
-                    </button>
-                  </section>
+                  <CalendarioReinscripcion cuotas={cuotas}
+                    modificar={(i, cambio) => setCuotas(v => v.map((r, n) => n === i ? { ...r, ...cambio } : r))}
+                    quitar={i => setCuotas(v => v.filter((_, n) => n !== i))}
+                    agregar={() => setCuotas(v => [...v, { periodo, fechaVencimiento: vencimiento, monto: '', descuento: '0' }])} />
                 )}
                 <label htmlFor="reinscripcion-periodo">Mes de cobro</label>
                 <input
@@ -673,30 +540,7 @@ export default function ReinscribirAlumnoPage() {
                   Previsualizar reinscripción
                 </button>
                 {cotizacionValida && cotizacion && (
-                  <div aria-live="polite">
-                    <h2>Confirmar nuevo periodo</h2>
-                    <p>
-                      {trayectoria.origen.periodo} → periodo seleccionado ·{' '}
-                      {cicloElegido?.nombre || cicloElegido?.clave}
-                    </p>
-                    {cotizacion.conceptos.map((c) => (
-                      <p key={c.conceptoId}>
-                        {c.nombre}: {pesos(c.monto)}
-                      </p>
-                    ))}
-                    <p>
-                      <strong>Total: {pesos(cotizacion.total)}</strong>
-                    </p>
-                    <p>
-                      Confirmar crea una nueva solicitud y cargos solo si corresponde; no implica aprobación de materias
-                      reprobadas ni pago registrado.
-                    </p>
-                    {puedeAjustar && (
-                      <button className="boton" type="button" disabled={ocupado} onClick={() => void autorizar()}>
-                        Autorizar precio y calendario como Finanzas
-                      </button>
-                    )}
-                  </div>
+                  <ConfirmacionReinscripcion origen={trayectoria.origen.periodo} ciclo={cicloElegido?.nombre || cicloElegido?.clave} ocupado={ocupado} puedeAjustar={puedeAjustar} cotizacion={cotizacion} autorizar={() => void autorizar()} />
                 )}
               </div>
             )}

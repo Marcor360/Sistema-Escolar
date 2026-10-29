@@ -7,6 +7,8 @@ import { crearLogoPdfPng } from '../utils/crear-logo-pdf';
 
 export default function ConfiguracionPage() {
   const { marca, recargar } = useMarca();
+  const [nombreAdministrativo, setNombreAdministrativo] = useState(marca.nombreAdministrativo || 'Sistema Escolar Administrativo');
+  const [nombrePortalAlumno, setNombrePortalAlumno] = useState(marca.nombrePortalAlumno || 'Sistema Escolar Portal Alumno');
   const [nombreInstitucion, setNombreInstitucion] = useState(marca.nombreInstitucion);
   const [nombreCorto, setNombreCorto] = useState(marca.nombreCorto);
   const [colorPrimario, setColorPrimario] = useState(marca.colorPrimario);
@@ -27,11 +29,13 @@ export default function ConfiguracionPage() {
   const selectorLogo = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    setNombreAdministrativo(marca.nombreAdministrativo || 'Sistema Escolar Administrativo');
+    setNombrePortalAlumno(marca.nombrePortalAlumno || 'Sistema Escolar Portal Alumno');
     setNombreInstitucion(marca.nombreInstitucion);
     setNombreCorto(marca.nombreCorto);
     setColorPrimario(marca.colorPrimario);
     setColorAcento(marca.colorAcento);
-  }, [marca.nombreInstitucion, marca.nombreCorto, marca.colorPrimario, marca.colorAcento]);
+  }, [marca.nombreAdministrativo, marca.nombrePortalAlumno, marca.nombreInstitucion, marca.nombreCorto, marca.colorPrimario, marca.colorAcento]);
 
   useEffect(() => {
     setMensajeBienvenida(marca.mensajeBienvenida ?? '');
@@ -75,7 +79,7 @@ export default function ConfiguracionPage() {
       const webp = archivo ? await optimizarLogo(archivo) : null;
       const logoPdfPng = archivo ? await crearLogoPdfPng(archivo) : null;
       setMensaje('');
-      await api.put('/configuracion/marca', { nombreInstitucion, nombreCorto, colorPrimario, colorAcento });
+      await api.put('/configuracion/marca', { nombreInstitucion, nombreAdministrativo, nombrePortalAlumno, nombreCorto, colorPrimario, colorAcento });
       datosInstitucionalesGuardados = true;
       if (webp) {
         const datos = new FormData();
@@ -166,6 +170,8 @@ export default function ConfiguracionPage() {
     <form className="panel" onSubmit={guardar} aria-busy={guardando}>
       <div className="fila">
         <div className="campo"><label htmlFor="nombre-institucion">Nombre de la institución</label><input id="nombre-institucion" maxLength={150} minLength={2} value={nombreInstitucion} onChange={(e) => setNombreInstitucion(e.target.value)} required /></div>
+        <div className="campo"><label htmlFor="nombre-administrativo">Nombre del sistema administrativo</label><input id="nombre-administrativo" required minLength={2} maxLength={150} value={nombreAdministrativo} onChange={e=>setNombreAdministrativo(e.target.value)} /></div>
+        <div className="campo"><label htmlFor="nombre-portal-alumno">Nombre del portal del alumno</label><input id="nombre-portal-alumno" required minLength={2} maxLength={150} value={nombrePortalAlumno} onChange={e=>setNombrePortalAlumno(e.target.value)} /></div>
         <div className="campo"><label htmlFor="nombre-corto">Nombre corto</label><input id="nombre-corto" maxLength={10} value={nombreCorto} onChange={(e) => setNombreCorto(e.target.value)} required /></div>
         <div className="campo"><label htmlFor="color-primario">Color primario</label><input id="color-primario" type="color" value={colorPrimario} onChange={(e) => setColorPrimario(e.target.value)} /></div>
         <div className="campo"><label htmlFor="color-acento">Color de acento</label><input id="color-acento" type="color" value={colorAcento} onChange={(e) => setColorAcento(e.target.value)} /></div>

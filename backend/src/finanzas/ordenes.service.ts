@@ -64,6 +64,8 @@ export class OrdenesService {
       await this.cargos.validarAcceso(cargo, user);
     }
 
+    const clienteEmail = cargo.alumno.usuario.email;
+    if (!clienteEmail) throw new ConflictException('Asigna el correo institucional antes de pagar en línea');
     const reserva = await this.dataSource.transaction(async (manager) => {
       const cargos = manager.getRepository(Cargo);
       const cargoBloqueado = await cargos.findOne({
@@ -112,7 +114,7 @@ export class OrdenesService {
         descripcion: cargo.descripcion,
         ordenId: `ORD-${orden.id}`,
         clienteNombre: cargo.alumno.usuario.nombreCompleto,
-        clienteEmail: cargo.alumno.usuario.email,
+        clienteEmail,
         clienteIp,
       });
     } catch (error) {

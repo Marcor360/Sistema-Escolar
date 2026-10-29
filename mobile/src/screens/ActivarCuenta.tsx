@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import * as SecureStore from "expo-secure-store";
+import * as SecureStore from "../almacen-seguro";
 import { Text } from "../components/Texto";
 import { api, mensajeDeError } from "../api/client";
 import { colores, espacio, radio, tipografia, textoSobreFondo } from "../theme";

@@ -24,7 +24,7 @@ export class SolicitudGrupoRegular {
   @Column() periodoAcademicoId!: number;
   @ManyToOne(() => PeriodoAcademico) @JoinColumn({ name: 'periodo_academico_id' }) periodo!: PeriodoAcademico;
   @Column({ type: String, length: 10 }) turno!: 'MATUTINO' | 'VESPERTINO';
-  @Column({ type: String, length: 12, default: 'PENDIENTE' }) estado!: 'PENDIENTE' | 'ASIGNADA' | 'ANULADA';
+  @Column({ type: String, length: 12, default: 'PENDIENTE' }) estado!: 'PENDIENTE' | 'ASIGNADA' | 'ANULADA' | 'PAUSA';
   @Column({ type: 'int', nullable: true }) grupoId!: number | null;
   @ManyToOne(() => Grupo, { nullable: true }) @JoinColumn({ name: 'grupo_id' }) grupo!: Grupo | null;
 }

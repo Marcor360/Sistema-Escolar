@@ -1,3 +1,4 @@
+import { curpFicticia } from './identidad-ficticia';
 import { crearInscripcionFixture } from './fixtures-inscripcion';
 import { expect, it } from '@jest/globals';
 import { Calificacion, Cargo, Grupo, GrupoMateria, Inscripcion, Usuario } from '../../src/entities';
@@ -25,7 +26,7 @@ export function registrarProgramasEspeciales(ctx: ContextoIntegracion) {
     const segundo = await ctx.api(`${ruta}/grupos`, { method: 'POST', token: admin, body: { ...grupoBody, nombre: `EB${ctx.sufijo}` } }); expect(segundo.response.status).toBe(201);
     const alumnos = [];
     for (let n = 0; n < 3; n++) {
-      const a = await ctx.api('/alumnos', { method: 'POST', token: admin, body: { email: `espa${n}${ctx.sufijo}@example.invalid`, matricula: `ES${n}${ctx.sufijo}`, nombre: 'Alumno', apellidoPaterno: `Especial ${n}`, curp: 'GODE561231HDFRRN09', plantelId: ctx.plantelId } }); expect(a.response.status).toBe(201); alumnos.push(a.data);
+      const a = await ctx.api('/alumnos', { method: 'POST', token: admin, body: { email: `espa${n}${ctx.sufijo}@example.invalid`, matricula: `ES${n}${ctx.sufijo}`, nombre: 'Alumno', apellidoPaterno: `Especial ${n}`, curp: curpFicticia(), plantelId: ctx.plantelId } }); expect(a.response.status).toBe(201); alumnos.push(a.data);
     }
     const regular = await ctx.api('/academico/grupos', { method: 'POST', token: admin, body: { plantelId: ctx.plantelId, cicloId: ciclo.data.id, nombre: `ER${ctx.sufijo}` } }); expect(regular.response.status).toBe(201);
     const primaria = await crearInscripcionFixture(ctx,regular.data.id,alumnos[0].id);

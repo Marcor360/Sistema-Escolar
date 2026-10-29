@@ -19,6 +19,8 @@ export function nombreLogoPdf(logoUrl: string): string {
 const VALORES_INICIALES = {
   id: 1,
   nombreInstitucion: 'Sistema Escolar',
+  nombreAdministrativo: 'Sistema Escolar Administrativo',
+  nombrePortalAlumno: 'Sistema Escolar Portal Alumno',
   nombreCorto: 'SE',
   logoUrl: null as string | null,
   colorPrimario: '#14343B',
@@ -126,6 +128,8 @@ export class ConfiguracionService {
   private aPublica(marca: ConfiguracionMarca): MarcaPublicaDto {
     return {
       nombreInstitucion: marca.nombreInstitucion,
+      nombreAdministrativo: marca.nombreAdministrativo || 'Sistema Escolar Administrativo',
+      nombrePortalAlumno: marca.nombrePortalAlumno || 'Sistema Escolar Portal Alumno',
       nombreCorto: marca.nombreCorto,
       logoUrl: marca.logoUrl,
       colorPrimario: marca.colorPrimario,

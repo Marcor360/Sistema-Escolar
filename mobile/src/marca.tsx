@@ -2,6 +2,8 @@ import { createContext, useContext } from 'react';
 import { colores } from './theme';
 
 export type Marca = {
+  nombreAdministrativo?: string;
+  nombrePortalAlumno?: string;
   nombreInstitucion: string;
   nombreCorto: string;
   logoUrl: string | null;
@@ -13,6 +15,7 @@ export type Marca = {
 
 export const MARCA_CACHE_KEY = 'escolar_marca';
 export const MARCA_POR_DEFECTO: Marca = {
+  nombreAdministrativo: 'Sistema Escolar Administrativo', nombrePortalAlumno: 'Sistema Escolar Portal Alumno',
   nombreInstitucion: 'Sistema Escolar', nombreCorto: 'SE', logoUrl: null,
   colorPrimario: '#14343B', colorPrimarioOscuro: '#0E262B', colorAcento: '#C79A3C', actualizadoEn: '',
 };

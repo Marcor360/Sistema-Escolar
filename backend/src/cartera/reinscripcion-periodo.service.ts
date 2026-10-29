@@ -1,8 +1,10 @@
+import { evaluarOrigenReinscripcion, MateriaPendiente } from './evaluacion-reinscripcion';
+import { cotizarCuotasReinscripcion, Cuota } from './cuotas-reinscripcion';
+import { resumenCarteraAlumno } from './resumen-cartera';
 import { AgrupacionRegularService, ContextoRegular } from '../academico/agrupacion-regular.service';
 import { materializarAperturas } from './materializar-aperturas';
 import { condicionBusquedaAlumno } from '../common/busqueda-alumno';
 import {
-  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -15,16 +17,13 @@ import {
   AutorizacionReinscripcion,
   BitacoraAcademica,
   BitacoraFinanciera,
-  Calificacion,
   Cargo,
   CicloEscolar,
   ConceptoPago,
   Grupo,
-  GrupoMateria,
   Inscripcion,
   ParticipacionAsignatura,
   PeriodoAcademico,
-  PeriodoCalificacion,
   SolicitudGrupoRegular,
   Plantel,
   ReinscripcionPeriodo,
@@ -33,8 +32,6 @@ import {
 import { JwtUser } from '../common/current-user.decorator';
 import { ScopeService } from '../planteles/scope.service';
 import { validarContextoGrupo } from '../catalogos-academicos/contexto-grupo';
-import { boletaPublicable } from '../reportes/publicacion-boleta';
-import { esRegimenNuevo, resultadoEvaluacion } from '../common/regimen-evaluacion';
 import { limiteRegulares } from '../recursamientos/acceso-recursamiento';
 import { planificarGruposRegulares } from '../academico/distribucion-grupos';
 import { esConflictoTransaccional, esConflictoUnico } from '../academico/conflictos';
@@ -47,23 +44,6 @@ import {
 } from './reinscripcion-periodo.dto';
 const hash = (v: unknown) => createHash('sha256').update(JSON.stringify(v)).digest('hex');
 const centavos = (v: number) => Math.round(v * 100);
-interface Cuota {
-  conceptoId: number;
-  nombre: string;
-  tipo: string;
-  periodo: string;
-  fechaVencimiento: string;
-  monto: number;
-  descuento: number;
-}
-interface MateriaPendiente {
-  grupoMateriaId: number;
-  materia: string;
-  calificacion: number | null;
-  publicada: boolean;
-  participacionId?: number;
-  intento?: number;
-}
 interface Cotizacion {
   peticion: ReinscripcionPeriodoDto;
   conceptos: Cuota[];
@@ -102,62 +82,6 @@ export class ReinscripcionPeriodoService {
     }
     throw new ConflictException('No se pudo estabilizar la reinscripción');
   }
-  private async academico(m: EntityManager, origen: Inscripcion) {
-    const clases = await m
-      .getRepository(GrupoMateria)
-      .find({ where: { grupoId: origen.grupoId }, order: { id: 'ASC' } });
-    const ids = clases.map((c) => c.id);
-    const notas = ids.length
-      ? await m.getRepository(Calificacion).find({
-          where: { alumnoId: origen.alumnoId, grupoMateriaId: In(ids) },
-          loadEagerRelations: false,
-          order: { id: 'ASC' },
-        })
-      : [];
-    const periodos = ids.length
-      ? await m.getRepository(PeriodoCalificacion).find({ where: { grupoMateriaId: In(ids) }, order: { id: 'ASC' } })
-      : [];
-    const pendientes: MateriaPendiente[] = [];
-    for (const c of clases) {
-      const propias = notas.filter((n) => n.grupoMateriaId === c.id),
-        calificacion = resultadoEvaluacion(propias, c),
-        publicada = boletaPublicable([c], propias, periodos);
-      if (calificacion === null || !publicada || calificacion < (esRegimenNuevo(c) ? 6 : 60))
-        pendientes.push({ grupoMateriaId: c.id, materia: c.materia.nombre, calificacion, publicada });
-    }
-    const recursamientos = await m
-      .getRepository(ParticipacionAsignatura)
-      .find({
-        where: {
-          alumnoId: origen.alumnoId,
-          estado: 'ACTIVA',
-          grupoMateria: { grupo: { plantelId: origen.grupo.plantelId } },
-        },
-        relations: { grupoMateria: { materia: true } },
-        order: { id: 'ASC' },
-      });
-    for (const r of recursamientos)
-      pendientes.push({
-        grupoMateriaId: r.grupoMateriaId,
-        materia: `${r.grupoMateria.materia.nombre} (recursamiento activo)`,
-        calificacion: null,
-        publicada: false,
-        participacionId: r.id,
-        intento: r.intento,
-      });
-    return {
-      pendientes,
-      sinMaterias: !clases.length,
-      academicoHash: hash({
-        recursamientos: recursamientos.map((r) => [r.id, r.grupoMateriaId, r.intento]),
-        origen: origen.id,
-        grupo: origen.grupoId,
-        clases: clases.map((c) => [c.id, c.regimenEvaluacion]),
-        notas: notas.map((n) => [n.id, n.parcial, Number(n.calificacion), n.escalaMaxima, n.updatedAt]),
-        periodos: periodos.map((p) => [p.grupoMateriaId, p.parcial, p.estatus, p.cerradoAt, p.reabiertoAt]),
-      }),
-    };
-  }
   async trayectoria(alumnoId: number, u: JwtUser) {
     this.exigir(u, ['ADMINISTRATIVO', 'FINANZAS']);
     const alumno = await this.ds.getRepository(Alumno).findOneBy({ id: alumnoId });
@@ -177,9 +101,10 @@ export class ReinscripcionPeriodoService {
         loadEagerRelations: false,
       });
     const academico = u.roles.some((r) => ['ADMINISTRATIVO', 'SUPERADMIN'].includes(r))
-      ? await this.academico(this.ds.manager, origen)
+      ? await evaluarOrigenReinscripcion(this.ds.manager, origen)
       : undefined;
     return {
+      financiero: await resumenCarteraAlumno(this.ds.manager, alumno.id, alumno.plantelId),
       alumno: {
         id: alumno.id,
         matricula: alumno.matricula,
@@ -293,7 +218,7 @@ export class ReinscripcionPeriodoService {
         );
     }
     if(d.grupoId && await m.getRepository(ParticipacionAsignatura).existsBy({alumnoId:d.alumnoId,estado:'ACTIVA',grupoMateria:{grupoId:d.grupoId}}))throw new ConflictException('El alumno ya recursa en el grupo destino; selecciona otro grupo para no duplicar el intento');
-    const academico = await this.academico(m, origen),
+    const academico = await evaluarOrigenReinscripcion(m, origen),
       movimiento =
         destino.numero === anterior.numero + 1
           ? 'AVANCE'
@@ -318,72 +243,7 @@ export class ReinscripcionPeriodoService {
       order: { id: 'ASC' },
       lock: { mode: 'pessimistic_read' },
     });
-    if (
-      conceptos.length !== d.conceptoIds.length ||
-      conceptos.some((c) => !['INSCRIPCION', 'COLEGIATURA'].includes(c.tipo) || c.montoBase <= 0) ||
-      conceptos.filter((c) => c.tipo === 'COLEGIATURA').length > 1
-    )
-      throw new ConflictException(
-        'Selecciona inscripción y una colegiatura con tarifa positiva. Los trámites/recursamientos se gestionan por separado',
-      );
-    const ajustes = d.ajustes ?? [];
-    if (ajustes.some((a) => !conceptos.some((c) => c.id === a.conceptoId && c.tipo === 'COLEGIATURA')))
-      throw new BadRequestException('Solo se ajusta la colegiatura del periodo futuro');
-    const calendario = d.parcialidades?.length
-      ? d.parcialidades
-      : conceptos.map((c) => ({
-          conceptoId: c.id,
-          periodo: d.periodo,
-          fechaVencimiento: d.fechaVencimiento,
-          monto: ajustes.find((a) => a.conceptoId === c.id)?.monto ?? c.montoBase,
-          descuento: 0,
-        }));
-    const vistos = new Set<string>(),
-      cuotas: Cuota[] = [];
-    for (const q of calendario) {
-      const c = conceptos.find((c) => c.id === q.conceptoId),
-        clave = `${q.conceptoId}:${q.periodo}`;
-      if (
-        !c ||
-        vistos.has(clave) ||
-        !/^\d{4}-\d{2}-\d{2}$/.test(q.fechaVencimiento) ||
-        q.fechaVencimiento < inicio ||
-        q.fechaVencimiento > fin ||
-        q.periodo < inicio.slice(0, 7) ||
-        q.periodo > fin.slice(0, 7) ||
-        centavos(q.descuento ?? 0) > centavos(q.monto)
-      )
-        throw new BadRequestException(
-          'Revisa conceptos, cuotas únicas por mes, descuentos y fechas dentro del periodo',
-        );
-      vistos.add(clave);
-      cuotas.push({
-        conceptoId: c.id,
-        nombre: c.nombre,
-        tipo: c.tipo,
-        periodo: q.periodo,
-        fechaVencimiento: q.fechaVencimiento,
-        monto: q.monto,
-        descuento: q.descuento ?? 0,
-      });
-    }
-    for (const c of conceptos) {
-      const filas = cuotas.filter((q) => q.conceptoId === c.id),
-        tarifa = ajustes.find((a) => a.conceptoId === c.id)?.monto ?? c.montoBase;
-      if (
-        !filas.length ||
-        filas.reduce((s, q) => s + centavos(q.monto), 0) !== centavos(tarifa) ||
-        (c.tipo !== 'COLEGIATURA' && filas.length !== 1)
-      )
-        throw new BadRequestException(
-          'Las parcialidades deben sumar exactamente la tarifa total del concepto; no se cobra el total además de sus cuotas',
-        );
-    }
-    const motivoFinanciero = [d.motivo, ...ajustes.map((a) => a.motivo)]
-      .some((motivo) => (motivo?.trim().length ?? 0) >= 10);
-    if ((cuotas.some((q) => q.descuento > 0) || ajustes.length) && !motivoFinanciero)
-      throw new BadRequestException('La tarifa personalizada o beca/descuento necesita motivo documentado');
-    cuotas.sort((a, b) => a.conceptoId - b.conceptoId || a.periodo.localeCompare(b.periodo));
+    const { ajustes, cuotas } = cotizarCuotasReinscripcion(d, conceptos, inicio, fin);
     const peticion: ReinscripcionPeriodoDto = {
       alumnoId: d.alumnoId,
       plantelId: d.plantelId,
@@ -550,7 +410,7 @@ export class ReinscripcionPeriodoService {
       const financiero = await m
         .getRepository(Usuario)
         .findOne({ where: { id: a.financieroId, activo: true }, relations: { roles: true } });
-      if (!financiero || !financiero.roles.some((r) => ['FINANZAS', 'SUPERADMIN'].includes(r.clave)))
+      if (!financiero?.email || !financiero.roles.some((r) => ['FINANZAS', 'SUPERADMIN'].includes(r.clave)))
         throw new ConflictException('La autorización necesita un responsable financiero vigente');
       await this.scope.validarGestion(
         {
@@ -627,7 +487,7 @@ export class ReinscripcionPeriodoService {
       ['ACTIVO', 'PREPARACION'].includes(ciclo.estado) &&
       hash([p.fechaInicio ?? ciclo.fechaInicio, p.fechaFin ?? ciclo.fechaFin]) === hash(c.ventana) &&
       !otras.some((i) => i.id !== r.origenInscripcionId) &&
-      (await this.academico(m, origen)).academicoHash === r.academicoHash
+      (await evaluarOrigenReinscripcion(m, origen)).academicoHash === r.academicoHash
     );
   }
   private async asignar(m: EntityManager, r: ReinscripcionPeriodo, g: Grupo, u: JwtUser) {

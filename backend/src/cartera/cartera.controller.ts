@@ -1,3 +1,4 @@
+import { AperturaIntegralDto, ConfirmarAperturaIntegralDto, ReanudarAperturaDto } from './apertura-integral.dto';
 import { ReinscripcionPeriodoService } from './reinscripcion-periodo.service';
 import { AnularReinscripcionDto, AutorizarReinscripcionDto, ConfirmarPeriodoDto, ReinscripcionPeriodoDto } from './reinscripcion-periodo.dto';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -31,8 +32,19 @@ export class CarteraController {
   reinscripcion(@Param('id',ParseIntPipe) id:number,@CurrentUser() u:JwtUser){return this.r.obtener(id,u);}
   @Post('reinscripciones/operaciones/:id/anular') @Roles('ADMINISTRATIVO')
   anular(@Param('id',ParseIntPipe) id:number,@Body() d:AnularReinscripcionDto,@CurrentUser() u:JwtUser){return this.r.anular(id,d,u);}
-  @Get() listar(@Query() q: ListarCarteraDto, @CurrentUser() u: JwtUser) { return this.s.listar(q,u); }
-  @Get(':id') obtener(@Param('id', ParseIntPipe) id: number, @CurrentUser() u: JwtUser) { return this.s.obtener(id,u); }
+  @Get('alumnos/:id/resumen')
+  @Roles('ADMINISTRATIVO', 'FINANZAS')
+  resumenAlumno(@Param('id', ParseIntPipe) id: number, @CurrentUser() u: JwtUser) { return this.s.resumenAlumno(id,u); }
+  @Get('alumnos-elegibles')
+  elegibles(@Query() q: ListarCarteraDto, @CurrentUser() u: JwtUser) { return this.s.elegibles(q,u); }
+  @Post('integral/previsualizar')
+  previewIntegral(@Body() d: AperturaIntegralDto, @CurrentUser() u: JwtUser) { return this.s.previsualizarIntegral(d,u); }
+  @Post('integral/confirmar')
+  confirmarIntegral(@Body() d: ConfirmarAperturaIntegralDto, @CurrentUser() u: JwtUser) { return this.s.confirmarIntegral(d,u); }
+  @Post(':id/reanudar')
+  reanudar(@Param('id', ParseIntPipe) id: number, @Body() d: ReanudarAperturaDto, @CurrentUser() u: JwtUser) { return this.s.reanudar(id,d,u); }
+  @Get() @Roles('ADMINISTRATIVO', 'FINANZAS') listar(@Query() q: ListarCarteraDto, @CurrentUser() u: JwtUser) { return this.s.listar(q,u); }
+  @Get(':id') @Roles('ADMINISTRATIVO', 'FINANZAS') obtener(@Param('id', ParseIntPipe) id: number, @CurrentUser() u: JwtUser) { return this.s.obtener(id,u); }
   @Post('previsualizar') preview(@Body() d: PrevisualizarCarteraDto, @CurrentUser() u: JwtUser) { return this.s.previsualizar(d,u); }
   @Post('confirmar') confirmar(@Body() d: ConfirmarCarteraDto, @CurrentUser() u: JwtUser) { return this.s.confirmar(d,u); }
 }

@@ -13,7 +13,7 @@ export interface ContextoRegular { alumnoId: number; plantelId: number; cicloId:
 @Injectable()
 export class AgrupacionRegularService {
   constructor(private readonly scope: ScopeService) {}
-  async solicitar(m: EntityManager, d: ContextoRegular, u: JwtUser, reinscripcionValidada = false, prioritarios:number[] = []) {
+  async solicitar(m: EntityManager, d: ContextoRegular, u: JwtUser, reinscripcionValidada = false, prioritarios:number[] = [], reanudarSolicitudId?: number) {
     if (!u.roles.some(r => ['SUPERADMIN','ADMINISTRATIVO'].includes(r)) &&
         !(reinscripcionValidada && u.roles.includes('FINANZAS'))) {
       throw new ForbiddenException('Apertura reservada a Control Escolar; Finanzas requiere una reinscripción validada');
@@ -28,7 +28,7 @@ export class AgrupacionRegularService {
     if (alumno.estatus !== 'ACTIVO' || !alumno.usuario.activo) throw new ConflictException('Alumno inactivo');
     const solicitudes = m.getRepository(SolicitudGrupoRegular);
     const previa = await solicitudes.findOneBy({ alumnoId: d.alumnoId, cicloId: d.cicloId });
-    if (previa) throw new ConflictException('Ya existe una solicitud ordinaria del alumno en el ciclo; consulta su apertura original');
+    if (previa && !(previa.id === reanudarSolicitudId && previa.estado === 'PAUSA')) throw new ConflictException('Ya existe una solicitud ordinaria del alumno en el ciclo; consulta su apertura original');
     const inscripciones = m.getRepository(Inscripcion);
     const activa = await inscripciones.findOne({ where: { alumnoId: d.alumnoId, estatus: 'ACTIVA', grupo: { cicloId: d.cicloId, tipo: 'REGULAR' } } });
     const contexto = { plantelId: d.plantelId, cicloId: d.cicloId, nivelId: d.nivelId, carreraId: d.carreraId, periodoAcademicoId: d.periodoAcademicoId, turno: d.turno };
@@ -37,7 +37,7 @@ export class AgrupacionRegularService {
     compatibles.sort((a,b)=>Number(prioritarios.includes(b.id))-Number(prioritarios.includes(a.id))||a.id-b.id);
     if (activa && (!d.grupoId || activa.grupoId !== d.grupoId || !compatibles.some(g => g.id === d.grupoId))) throw new ConflictException('El alumno ya tiene grupo regular; selecciona ese mismo grupo compatible sin trasladarlo');
     if (d.grupoId && !compatibles.some(g => g.id === d.grupoId)) throw new ConflictException('El grupo seleccionado no es regular compatible');
-    const solicitud = await solicitudes.save(solicitudes.create({ ...contexto, alumnoId: d.alumnoId, grupoId: null, estado: 'PENDIENTE' }));
+    const solicitud = await solicitudes.save(solicitudes.create({ ...(previa ? { id: previa.id } : {}), ...contexto, alumnoId: d.alumnoId, grupoId: null, estado: 'PENDIENTE' }));
     const asignadas: number[] = [];
     const asignar = async (s: SolicitudGrupoRegular, g: Grupo) => {
       const otra = await inscripciones.findOne({ where: { alumnoId: s.alumnoId, estatus: 'ACTIVA', grupo: { cicloId: s.cicloId, tipo: 'REGULAR' } } });

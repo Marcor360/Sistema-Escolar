@@ -1,3 +1,5 @@
+import { versionAcademicaBoleta } from '../boletas/version-boleta';
+import { BoletaRespuesta } from '../entities/boleta-respuesta.entity';
 import { basename, join } from 'path';
 import { readFile } from 'fs/promises';
 import { uploadsPath } from '../common/uploads-path';
@@ -67,7 +69,7 @@ export class FormatosEscolaresService {
     if (user.roles.includes('ALUMNO')) {
       const propio = await this.alumnos.obtenerPorUsuario(user.sub);
       if (propio.id !== alumnoId) throw new ForbiddenException('No puedes consultar la boleta de otro alumno');
-    } else if (!user.roles.some(r => ['ADMINISTRATIVO','SUPERADMIN'].includes(r))) {
+    } else if (!user.roles.some(r => ['ADMINISTRATIVO','DIRECTOR','SUPERADMIN'].includes(r))) {
       throw new ForbiddenException('La boleta completa es exclusiva del alumno y Control Escolar');
     }
     const alumno = await this.ds.getRepository(Alumno).findOneBy({ id: alumnoId });
@@ -93,6 +95,12 @@ export class FormatosEscolaresService {
         seriacion: '', ciclo: grupo.ciclo.clave, promedioFinal: resultadoEvaluacion(registros, gm),
         observaciones: (registros.find(n=>n.parcial === 0) ?? registros.find(n=>n.parcial === (esRegimenNuevo(gm) ? 4 : 3)))?.observaciones ?? '' };
     });
+    const version = versionAcademicaBoleta(inscripcion.id, clases, notas).hash;
+    const comentarios = await this.ds.getRepository(BoletaRespuesta).find({where:{inscripcionId:inscripcion.id,versionHash:version,estado:'COMENTARIO'},order:{id:'DESC'}});
+    for (let index=0;index<filas.length;index++) {
+      const comentario=comentarios.find(c=>c.grupoMateriaId===clases[index].id);
+      if(comentario) filas[index].observaciones=[filas[index].observaciones, `Comentario docente: ${comentario.comentario}`].filter(Boolean).join(' · ');
+    }
     // No se publica una boleta parcial ni se promedian solo las materias disponibles.
     const disponible = boletaPublicable(clases,notas,periodos);
     const media = filas.reduce((s,f)=>s + Number(f.promedioFinal),0) / filas.length;

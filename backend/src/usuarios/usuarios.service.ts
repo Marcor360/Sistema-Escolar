@@ -1,3 +1,5 @@
+import { esConflictoUnico } from '../academico/conflictos';
+import { AsignarCorreoAlumnoDto } from './usuarios.dto';
 import { randomBytes } from 'crypto';
 import { hashPasswordNueva } from '../common/password-bcrypt';
 import { esMaestroRestringido } from '../common/politica-acceso';
@@ -68,6 +70,7 @@ export class UsuariosService {
           throw new ForbiddenException('La cuenta está fuera de tus planteles autorizados');
         }
       }
+      if (!usuario.email) throw new ConflictException('Asigna primero el correo institucional desde Usuarios');
       usuario.passwordHash = passwordHash;
       usuario.activacionPendiente = false;
       usuario.passwordChangeRequired = true;
@@ -80,6 +83,29 @@ export class UsuariosService {
     });
   }
 
+  async asignarCorreoAlumno(alumnoId: number, dto: AsignarCorreoAlumnoDto, actor: JwtUser) {
+    if (!actor.roles.some(r => ['ADMINISTRATIVO', 'SUPERADMIN'].includes(r))) throw new ForbiddenException('Solo Control Escolar asigna el correo institucional');
+    try {
+      return await this.usuarios.manager.transaction(async m => {
+        const alumno = await m.getRepository(Alumno).findOne({ where: { id: alumnoId }, lock: { mode: 'pessimistic_write' } });
+        if (!alumno) throw new NotFoundException('Alumno no encontrado');
+        await this.scope.validarGestion(actor, alumno.plantelId);
+        const repo = m.getRepository(Usuario);
+        const usuario = await repo.findOneOrFail({ where: { id: alumno.usuarioId }, lock: { mode: 'pessimistic_write' } });
+        if (alumno.estatus !== 'ACTIVO' || !usuario.activo || !usuario.roles.some(r => r.clave === 'ALUMNO')) throw new ConflictException('El expediente no está activo');
+        if (usuario.email) {
+          if (usuario.email === dto.email && usuario.correoProveedor === dto.correoProveedor && usuario.activacionPendiente) return { email: usuario.email };
+          throw new ConflictException('El alumno ya tiene correo institucional; no se sustituye desde esta acción');
+        }
+        if (await repo.findOne({ where: { email: dto.email }, withDeleted: true })) throw new ConflictException('El correo ya está registrado');
+        await repo.update(usuario.id, { email: dto.email, correoProveedor: dto.correoProveedor, activacionPendiente: true,
+          sessionVersion: () => 'COALESCE(session_version, 0) + 1' });
+        await m.getRepository(BitacoraActividad).insert({ usuarioId: actor.sub, metodo: 'POST', ruta: '/api/usuarios/alumnos/:id/correo-institucional', entidad: 'Usuario', entidadId: usuario.id, resultado: 'EXITO', statusCode: 201 });
+        return { email: dto.email };
+      });
+    } catch (e) { if (esConflictoUnico(e)) throw new ConflictException('El correo ya está registrado'); throw e; }
+  }
+
   async listar(query: PaginacionDto) {
     const pagina = query.pagina || 1;
     const porPagina = Math.min(query.porPagina || 10, 100);
@@ -90,6 +116,8 @@ export class UsuariosService {
   }
 
   async listado(query: ListadoUsuariosDto, user: JwtUser) {
+    if (query.activacionPendiente === 'true' && !user.roles.some(r => ['ADMINISTRATIVO', 'SUPERADMIN'].includes(r)))
+      throw new ForbiddenException('Solo Control Escolar puede consultar activaciones pendientes');
     const pagina = query.pagina || 1;
     const porPagina = Math.min(query.porPagina || 10, 100);
     const maestroPuro = esMaestroRestringido(user);
@@ -121,11 +149,13 @@ export class UsuariosService {
       const planteles = await this.scope.resolverFiltro(user, query.plantelId);
       if (planteles !== null) qb.andWhere('a.plantel_id IN (:...planteles)', { planteles });
     }
+    if (query.sinCorreo === 'true') qb.andWhere('u.email IS NULL AND u.activo=:activo AND a.estatus=:estatus', { activo: true, estatus: 'ACTIVO' });
+    if (query.activacionPendiente === 'true') qb.andWhere('u.email IS NOT NULL AND u.activacion_pendiente=:pendiente AND u.activo=:activo AND a.estatus=:estatus', { pendiente: true, activo: true, estatus: 'ACTIVO' });
     this.aplicarBusqueda(qb, query.buscar, 'a.matricula');
     const [filas, total] = await qb.orderBy('a.id', 'DESC').skip((pagina - 1) * porPagina).take(porPagina).getManyAndCount();
     return { datos: filas.map((a) => ({
-      id: a.id, matricula: a.matricula, nombre: a.usuario.nombreCompleto,
-      ...(user.roles.some((r) => ['SUPERADMIN', 'ADMINISTRATIVO'].includes(r)) ? { correo: a.usuario.email, correoProveedor: a.usuario.correoProveedor } : {}), plantel: a.plantel?.nombre ?? null, estatus: a.estatus,
+      id: a.id, usuarioId: a.usuarioId, matricula: a.matricula, nombre: a.usuario.nombreCompleto,
+      ...(user.roles.some((r) => ['SUPERADMIN', 'ADMINISTRATIVO'].includes(r)) ? { correo: a.usuario.email, correoProveedor: a.usuario.correoProveedor, activacionPendiente: a.usuario.activacionPendiente } : {}), plantel: a.plantel?.nombre ?? null, estatus: a.estatus,
     })), total, pagina, porPagina };
   }
 

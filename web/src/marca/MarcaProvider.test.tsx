@@ -48,7 +48,7 @@ it('revalida en foco y recibe cambios públicos de otra pestaña sin recargar la
   await screen.findByText(/Instituto actualizado/);
   await waitFor(() => expect(JSON.parse(localStorage.getItem(MARCA_CACHE_WEB) ?? '{}').colorPrimario).toBe('#001122'));
 
-  const otraPestana = { ...vigente, nombreInstitucion: 'Instituto otra pestaña', logoUrl: null };
+  const otraPestana = { ...vigente, nombreInstitucion: 'Instituto otra pestaña', nombreAdministrativo: 'Administración QA', logoUrl: null };
   act(() => {
     window.dispatchEvent(new StorageEvent('storage', {
       key: MARCA_CACHE_WEB,
@@ -56,7 +56,7 @@ it('revalida en foco y recibe cambios públicos de otra pestaña sin recargar la
     }));
   });
   expect(screen.getByText(/Instituto otra pestaña/)).toBeTruthy();
-  expect(document.title).toBe('Instituto otra pestaña — Panel');
+  expect(document.title).toBe('Administración QA');
   expect(document.documentElement.style.getPropertyValue('--pizarra')).toBe(otraPestana.colorPrimario);
   expect(get).toHaveBeenCalledTimes(2);
 });

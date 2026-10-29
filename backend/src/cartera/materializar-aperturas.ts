@@ -8,13 +8,18 @@ export async function materializarAperturas(m: EntityManager, solicitudIds: numb
   const repo = m.getRepository(AperturaCartera),
     asignadas = await repo.find({ where: { solicitudId: In(solicitudIds) }, order: { id: 'ASC' } });
   for (const a of asignadas) {
-    if (a.estado === 'ABIERTA') continue;
+    if (a.estado === 'ABIERTA' || a.estado === 'PAUSA') continue;
     const cargos = m.getRepository(Cargo);
-    for (const c of a.conceptos) {
+    for (const [i, c] of a.conceptos.entries()) {
       const claveGeneracion =
         c.tipo === 'COLEGIATURA'
           ? `COLEGIATURA:${a.cicloId}:${a.alumnoId}:${c.periodo}`
-          : `APERTURA:${a.id}:${c.conceptoId}`;
+          : `APERTURA:${a.id}:${c.conceptoId}${a.contextoJson ? `:${i}` : ''}`;
+      if (c.tipo === 'COLEGIATURA') {
+        const previos = await cargos.find({ where: { alumnoId: a.alumnoId, cicloId: a.cicloId, periodo: c.periodo } });
+        if (previos.some(v => v.concepto.tipo === 'COLEGIATURA' && v.conceptoId !== c.conceptoId && v.estatus !== 'CANCELADO'))
+          throw new ConflictException('Ya existe colegiatura en este mes; Finanzas debe conciliarla');
+      }
       const existente = await cargos.findOneBy({
         alumnoId: a.alumnoId,
         cicloId: a.cicloId,
@@ -25,7 +30,9 @@ export async function materializarAperturas(m: EntityManager, solicitudIds: numb
         if (
           existente.estatus === 'CANCELADO' ||
           existente.monto !== c.monto ||
-          existente.claveGeneracion !== claveGeneracion
+          (a.contextoJson
+            ? existente.plantelId !== a.plantelId || existente.fechaVencimiento !== c.fechaVencimiento
+            : existente.claveGeneracion !== claveGeneracion)
         )
           throw new ConflictException('Existe un cargo previo incompatible; Finanzas debe revisarlo sin duplicarlo');
         c.cargoId = existente.id;

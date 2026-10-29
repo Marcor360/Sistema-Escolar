@@ -5,7 +5,6 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { Encabezado } from '../components/Encabezado';
-import '../components/tabla-adaptable.css';
 
 interface Plantel {
   id: number; clave: string; nombre: string; direccion?: string; municipio?: string;

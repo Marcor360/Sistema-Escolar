@@ -1,3 +1,6 @@
+import { BoletasService } from '../boletas/boletas.service';
+import { BoletasController } from '../boletas/boletas.controller';
+import { BoletaRespuesta } from '../entities/boleta-respuesta.entity';
 import { FormatosEscolaresController } from './formatos-escolares.controller';
 import { FormatosEscolaresService } from './formatos-escolares.service';
 import { CalificacionesModule } from '../calificaciones/calificaciones.module';
@@ -23,14 +26,14 @@ import { PlantelesModule } from '../planteles/planteles.module';
   imports: [
     CalificacionesModule,
     ArchivosModule,
-    TypeOrmModule.forFeature([Alumno, Docente, Grupo, GrupoMateria, Calificacion, Pago]),
+    TypeOrmModule.forFeature([BoletaRespuesta, Alumno, Docente, Grupo, GrupoMateria, Calificacion, Pago]),
     FinanzasModule,
     DocentesModule,
     AlumnosModule,
     PlantelesModule,
     ConfiguracionModule,
   ],
-  providers: [ReportesService, FormatosEscolaresService],
-  controllers: [ReportesController, BoletaMovilController, FormatosEscolaresController],
+  providers: [BoletasService, ReportesService, FormatosEscolaresService],
+  controllers: [BoletasController, ReportesController, BoletaMovilController, FormatosEscolaresController],
 })
 export class ReportesModule {}

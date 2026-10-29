@@ -1,3 +1,4 @@
+import { curpFicticia } from './integration/identidad-ficticia';
 import { spawn } from 'child_process';
 import { resolve } from 'path';
 import { strict as assert } from 'assert';
@@ -65,7 +66,7 @@ export async function recorridoWeb(d: Datos, tipo: 'academico' | 'financiero' | 
     const plantelNombre = await form.getByLabel('Plantel *', { exact: true }).locator(`option[value="${d.plantelId}"]`).innerText();
     await form.getByLabel('Segundo apellido').fill('Institucional'); await form.getByLabel('Teléfono del alumno', { exact: true }).fill('5550001111'); await form.getByLabel('Fecha de nacimiento').fill('2009-01-02'); await form.getByLabel('Dirección').fill('Calle escolar 12');
     await expect(form.getByLabel('Contraseña inicial')).toHaveCount(0);
-    await form.getByLabel('CURP').fill('GODE561231HDFRRN09');
+    await form.getByLabel('CURP').fill(curpFicticia());
     await expect(form.getByLabel('Correo emisor de notificaciones')).toHaveValue('MICROSOFT365');
     await form.getByLabel('Correo personal (opcional)', { exact: true }).fill(`contacto_${matricula}@example.invalid`);
     await form.getByLabel('Correo institucional (acceso) *', { exact: true }).fill(`${matricula}@example.invalid`); await form.getByRole('button', { name: 'Registrar alumno', exact: true }).click();

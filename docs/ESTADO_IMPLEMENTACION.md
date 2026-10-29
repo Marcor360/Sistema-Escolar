@@ -1,4 +1,24 @@
-# Estado de implementación — candidata 1.30.3
+# Estado de implementación — candidata 1.34.0
+
+Accesos web de alumno/Director corregidos y separados. Nombres independientes para administración y portal del alumno, seguimiento de boletas por versión, firma nominal de alumno/tutor declarado y comentarios docentes por materia. [Contrato](BOLETAS_FIRMADAS_1.34.0.md). Requiere migración incremental espejo. Sin despliegue ni UAT institucional acreditados.
+
+## Corte anterior — candidata 1.33.0
+
+Expo Web para alumnos con la misma app React Native, cookie HttpOnly en navegador, adaptación de diálogos y capacidades nativas, actualizaciones compatibles. [Contrato](APP_WEB_1.33.0.md). No desplegada ni certificada en dispositivos físicos.
+
+## Corte anterior — candidata 1.32.0
+
+Vite 6.4.5, recorrido de cartera incorporado a CI, detalle de apertura en página propia, separación de calendarios/confirmaciones y validaciones, estilos de tablas centralizados y pendientes de inscripción filtrados por plantel. [Alcance y validación](ESTABILIZACION_1.32.0.md). Sin despliegue ni aceptación UAT acreditados.
+
+## Corte anterior — candidata 1.31.1
+
+Reorganización de formularios, cuotas, selectores y resúmenes; corrección de valores ocultos en tablas móviles de Usuarios, foco de asignación de correo y guías de Control Escolar. [Revisión UX](REVISION_UX_1.31.1.md). Sin cambios de reglas financieras, API o esquema respecto de la candidata 1.31.0. Sin despliegue ni aceptación UAT acreditados.
+
+## Corte anterior — candidata 1.31.0
+
+Alta conjunta de alumno y cartera, expediente sin correo institucional, asignación de acceso posterior desde Usuarios, pausa sin cargos y total/cuotas de periodo. CURP única en alta, corrección, importación y base de datos. [Contrato](CARTERA_INTEGRAL_1.31.0.md). Implementado en esta candidata; sin despliegue ni UAT acreditados.
+
+## Corte anterior — candidata 1.30.3
 
 1.30.3 corrige la espera de confirmaciones en el E2E académico tras detectar un fallo intermitente en CI de main 9d7ea9e. También evita que renovar el token de la misma sesión cancele la consulta académica reintentada; un cambio real de sesión conserva la cancelación. Sin cambios de reglas de negocio, API ni esquema. Conserva calendario institucional 1.30.0.
 

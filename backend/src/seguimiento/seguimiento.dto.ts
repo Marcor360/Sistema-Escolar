@@ -54,3 +54,7 @@ export class CorreccionCalidadDto {
  @IsOptional() @IsString() @Matches(/^[A-Z0-9]{18}$/) curp?:string;
  @IsOptional() @IsString() @Length(64,64) revision?:string;
 }
+
+export class PendientesDto {
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) plantelId?: number;
+}

@@ -1,3 +1,4 @@
+import { curpFicticia } from './identidad-ficticia';
 import { expect, it } from '@jest/globals';
 import {
   CarreraPlan,
@@ -24,7 +25,7 @@ export function registrarCalendarioCiclo(ctx: ContextoIntegracion) {
         apellidoPaterno: 'Calendario',
         matricula: `CA${ctx.sufijo}`,
         plantelId: ctx.plantelId,
-        curp: 'GODE561231HDFRRN09',
+        curp: curpFicticia(),
       },
     });
     expect(alta.response.status).toBe(201);

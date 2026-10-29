@@ -1,3 +1,4 @@
+import { curpFicticia } from './identidad-ficticia';
 import { expect, it } from '@jest/globals';
 import { randomUUID } from 'crypto';
 import { Cargo, CarreraPlan, CicloEscolar, ConceptoPago, Grupo, Inscripcion, NivelAcademico, PeriodoAcademico, ProgramacionCobro, Usuario } from '../../src/entities';
@@ -10,7 +11,7 @@ export function registrarProgramacionesCobro(ctx: ContextoIntegracion) {
     const fin = await ctx.emitirToken((await ds.getRepository(Usuario).findOneByOrFail({ id: ctx.finanzasId })).email);
     const alta = await ctx.api('/alumnos', { method: 'POST', token, body: {
       email: `programacion_${ctx.sufijo}@example.invalid`, nombre: 'Alumno', apellidoPaterno: 'Sintético',
-      matricula: `PG${ctx.sufijo}`, plantelId: ctx.plantelId, curp: 'GODE561231HDFRRN09',
+      matricula: `PG${ctx.sufijo}`, plantelId: ctx.plantelId, curp: curpFicticia(),
     } });
     expect(alta.response.status).toBe(201);
     const alumnoId = alta.data.id as number;

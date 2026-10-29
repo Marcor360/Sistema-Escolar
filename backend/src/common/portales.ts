@@ -4,12 +4,12 @@ import { RolClave } from './roles.decorator';
 export type Portal = 'WEB' | 'MOVIL';
 
 export const ROLES_POR_PORTAL: Record<Portal, RolClave[]> = {
-  WEB: ['MAESTRO', 'ADMINISTRATIVO', 'FINANZAS', 'SUPERADMIN'],
+  WEB: ['DIRECTOR', 'MAESTRO', 'ADMINISTRATIVO', 'FINANZAS', 'SUPERADMIN'],
   MOVIL: ['ALUMNO'],
 };
 
 export const MENSAJES_PORTAL: Record<Portal, string> = {
-  WEB: 'Tu cuenta es de alumno. Ingresa desde la app móvil de la escuela.',
+  WEB: 'Tu cuenta es de alumno. Ingresa al Portal Alumno de la escuela.',
   MOVIL: 'Esta app es solo para alumnos. El personal ingresa por el portal web.',
 };
 

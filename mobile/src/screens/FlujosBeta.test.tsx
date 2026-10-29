@@ -502,7 +502,7 @@ it("boleta móvil obtiene enlace propio y no abre una descarga si la pantalla se
 it("boleta móvil selecciona inscripción propia para distinguir traslados del mismo ciclo", async () => {
   vi.mocked(api.get).mockImplementation(async (ruta) => ({
     data:
-      ruta === "/reportes/mis-boletas"
+      ruta.startsWith("/boletas/") ? {disponible:false,estado:"PENDIENTE_PUBLICACION",historial:[]} : ruta === "/reportes/mis-boletas"
         ? [
             {
               inscripcionId: 9,

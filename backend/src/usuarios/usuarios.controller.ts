@@ -1,3 +1,4 @@
+import { AsignarCorreoAlumnoDto } from './usuarios.dto';
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
@@ -17,6 +18,15 @@ import { CurrentUser, JwtUser } from '../common/current-user.decorator';
 @Controller('usuarios')
 export class UsuariosController {
   constructor(private readonly service: UsuariosService, private readonly activacion: ActivacionService) {}
+
+  @Post('alumnos/:id/correo-institucional')
+  @Roles('ADMINISTRATIVO')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  async asignarCorreo(@Param('id', ParseIntPipe) id: number, @Body() dto: AsignarCorreoAlumnoDto, @CurrentUser() actor: JwtUser) {
+    const cuenta = await this.service.asignarCorreoAlumno(id, dto, actor);
+    await this.activacion.solicitar(cuenta.email);
+    return { mensaje: 'Correo asignado. La invitación de activación se ha solicitado.' };
+  }
 
   @Get() listar(@Query() query: PaginacionDto) { return this.service.listar(query); }
   @Get('listado')
@@ -50,7 +60,7 @@ export class UsuariosController {
   @ApiOperation({ summary: 'Crear personal con cuenta pendiente de activación e invitar después de confirmar el alta' })
   async crear(@Body() dto: CrearPersonalDto, @CurrentUser() user: JwtUser) {
     const cuenta = await this.service.crearPersonal(dto, user);
-    await this.activacion.solicitar(cuenta.email);
+    if (cuenta.email) await this.activacion.solicitar(cuenta.email);
     return cuenta;
   }
   @Patch(':id') actualizar(@Param('id', ParseIntPipe) id: number, @Body() dto: ActualizarUsuarioDto) {

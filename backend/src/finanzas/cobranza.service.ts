@@ -95,7 +95,7 @@ export class CobranzaService implements OnModuleInit, OnModuleDestroy {
       const actorId = Number(this.config.get<string>('FINANZAS_AUTO_ACTOR_ID'));
       if (!Number.isSafeInteger(actorId) || actorId <= 0) throw new Error('FINANZAS_AUTO_ACTOR_ID inválido');
       const usuario = await this.ds.getRepository(Usuario).findOneBy({ id: actorId, activo: true });
-      if (!usuario || !usuario.roles.some((rol) => rol.clave === 'FINANZAS')) {
+      if (!usuario?.email || !usuario.roles.some((rol) => rol.clave === 'FINANZAS')) {
         throw new Error('El actor de automatización no es un usuario FINANZAS activo');
       }
       const actor: JwtUser = { sub: usuario.id, email: usuario.email, nombre: usuario.nombre,
@@ -192,7 +192,7 @@ export class CobranzaService implements OnModuleInit, OnModuleDestroy {
         try {
           const usuario = await this.ds.getRepository(Usuario).findOneBy({ id: envio.usuarioId });
           const plantilla = await this.plantillas.findOneBy({ clave: 'AVISO_ADEUDO' });
-          if (!usuario || !plantilla) throw Object.assign(new Error('Datos no disponibles'), { responseCode: 550 });
+          if (!usuario?.email || !plantilla) throw Object.assign(new Error('Datos no disponibles'), { responseCode: 550 });
           const institucion = this.config.get<string>('NOMBRE_INSTITUCION') || 'Institución';
           const html = plantilla.cuerpoHtml.replace(/{{nombre}}/g, escapar(usuario.nombreCompleto)).replace(/{{saldo}}/g, envio.saldo.toFixed(2)).replace(/{{institucion}}/g, escapar(institucion));
           const resultado = await this.notificaciones.enviarEmail(usuario.email, plantilla.asunto.replace(/{{institucion}}/g, institucion), html, `${envio.clave}@escolar.invalid`, 'FINANCIERA');

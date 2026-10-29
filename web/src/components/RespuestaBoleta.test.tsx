@@ -1,0 +1,22 @@
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, expect, it, vi } from 'vitest';
+import { RespuestaBoleta } from './RespuestaBoleta';
+import { api } from '../api/client';
+vi.mock('../auth/AuthContext',()=>({useAuth:()=>({sesion:{roles:['ALUMNO']}})}));
+vi.mock('./useConfirmacion',()=>({useConfirmacion:()=>({solicitar:async()=>true,elemento:null})}));
+afterEach(()=>{cleanup();vi.restoreAllMocks();});
+it('exige nombre, confirmación y comentarios de hasta 2000 para una revisión del tutor',async()=>{
+ vi.spyOn(api,'get').mockResolvedValue({data:{inscripcionId:8,disponible:true,versionHash:'a'.repeat(64),estado:'PENDIENTE_RESPUESTA',materias:[{grupoMateriaId:1,asignatura:'Matemáticas',promedioFinal:8}],historial:[]}});
+ const post=vi.spyOn(api,'post').mockResolvedValue({data:{id:1,estado:'REVISION'}});
+ render(<RespuestaBoleta inscripcionId={8}/>);
+ await screen.findByText('Matemáticas');
+ fireEvent.change(screen.getByLabelText('Respuesta'),{target:{value:'REVISION'}});
+ fireEvent.change(screen.getByLabelText('Quién firma'),{target:{value:'TUTOR'}});
+ fireEvent.change(screen.getByLabelText('Nombre completo de quien firma'),{target:{value:'Madre Ficticia QA'}});
+ const comentarios=screen.getByLabelText('Comentarios para revisión');expect(comentarios.getAttribute('maxlength')).toBe('2000');
+ fireEvent.change(comentarios,{target:{value:'Solicito revisar la evaluación final.'}});
+ fireEvent.click(screen.getByRole('checkbox'));
+ fireEvent.submit(screen.getByRole('button',{name:'Registrar firma y respuesta'}).closest('form')!);
+ await screen.findByText('Respuesta registrada. Se conserva su fecha y versión.');
+ expect(post).toHaveBeenCalledWith('/boletas/inscripciones/8/responder',expect.objectContaining({estado:'REVISION',firmanteNombre:'Madre Ficticia QA',firmanteTipo:'TUTOR',confirmado:true,comentario:'Solicito revisar la evaluación final.'}));
+});

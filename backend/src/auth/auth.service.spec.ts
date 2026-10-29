@@ -46,7 +46,7 @@ describe('AuthService.login', () => {
   it('rechaza alumno en portal WEB', async () => {
     const { service } = await crear(['ALUMNO']);
     await expect(service.login('demo@escuela.mx', 'Correcta123', 'WEB')).rejects.toThrow(
-      'Tu cuenta es de alumno. Ingresa desde la app móvil de la escuela.',
+      'Tu cuenta es de alumno. Ingresa al Portal Alumno de la escuela.',
     );
   });
 

@@ -141,8 +141,9 @@ export class CorreoAccesoOutboxService implements OnModuleInit, OnModuleDestroy 
     heartbeat.unref();
     try {
       const listo = await this.preparar(id, claim);
-      if (!listo) return;
+      if (!listo || !listo.usuario.email) return;
       const { trabajo, usuario, token } = listo;
+      if (!usuario.email) return;
       // El reintento conserva referencia de correlación; SMTP/Graph son al menos una vez.
       const from = this.config.get<string>('SMTP_FROM') || '';
       const dominio = from.trim().match(/@([a-z0-9.-]+)>?$/i)?.[1];
@@ -173,6 +174,7 @@ export class CorreoAccesoOutboxService implements OnModuleInit, OnModuleDestroy 
   }
 
   private async notificarAyudaPlantel(usuario: Usuario) {
+    if (!usuario.email) return;
     const alumno = await this.ds.getRepository(Alumno).findOne({ where: { usuarioId: usuario.id } });
     const asignaciones = alumno ? [] : await this.ds.getRepository(UsuarioPlantel).find({ where: { usuarioId: usuario.id, activo: true } });
     const ids = alumno ? [alumno.plantelId] : asignaciones.map(a => a.plantelId);
@@ -180,7 +182,7 @@ export class CorreoAccesoOutboxService implements OnModuleInit, OnModuleDestroy 
     const responsables = await this.ds.getRepository(UsuarioPlantel).find({ where: { plantelId: In(ids), activo: true }, relations: { usuario: true } });
     const correos = [...new Set(responsables.filter(a => a.usuario.activo && a.usuario.roles.some(r => r.clave === 'ADMINISTRATIVO')).map(a => a.usuario.email))];
     const marca = await this.marca.obtener();
-    for (const email of correos) await this.correo.enviarEmail(email, 'Apoyo de acceso · Cuenta escolar', plantillaApoyoAcceso(usuario.email, marca));
+    for (const email of correos) if (email) await this.correo.enviarEmail(email, 'Apoyo de acceso · Cuenta escolar', plantillaApoyoAcceso(usuario.email, marca));
 
   }
 }

@@ -38,3 +38,22 @@ it('lleva el foco al formulario después de cargar una corrección de personal',
   await waitFor(() => expect(document.activeElement).toBe(titulo));
   expect((screen.getByLabelText('Nombre') as HTMLInputElement).value).toBe('Personal');
 });
+
+it('filtra alumnos sin correo y asigna el institucional solicitando activación desde Usuarios',async()=>{
+  const {fireEvent}=await import('@testing-library/react');
+  const get=vi.spyOn(api,'get').mockImplementation(async url=>({data:url==='/planteles/mios'?[{id:1,nombre:'Centro'}]:{datos:[{id:9,usuarioId:90,matricula:'SIN9',nombre:'Alumno sin correo',correo:null,estatus:'ACTIVO'}],total:1,pagina:1,porPagina:10}}));
+  const post=vi.spyOn(api,'post').mockResolvedValue({data:{mensaje:'Correo asignado. Activación solicitada.'}});
+  render(<UsuariosPage/>);await screen.findByText('Alumno sin correo');
+  fireEvent.click(screen.getByLabelText('Mostrar alumnos sin correo institucional'));
+  await waitFor(()=>expect(get).toHaveBeenCalledWith('/usuarios/listado',expect.objectContaining({params:expect.objectContaining({sinCorreo:'true',tipo:'ALUMNO'})})));
+  const asignar=screen.getByRole('button',{name:'Asignar correo institucional'});
+  fireEvent.click(asignar);
+  await waitFor(()=>expect(document.activeElement).toBe(screen.getByRole('heading',{name:'Asignar correo institucional: Alumno sin correo'})));
+  fireEvent.click(screen.getByRole('button',{name:'Cancelar'}));
+  expect(document.activeElement).toBe(asignar);
+  fireEvent.click(asignar);
+  fireEvent.change(screen.getByLabelText('Correo institucional'),{target:{value:'alumno@example.invalid'}});
+  fireEvent.click(screen.getByRole('button',{name:'Asignar correo y solicitar activación'}));
+  await screen.findByText('Correo asignado. Activación solicitada.');
+  expect(post).toHaveBeenCalledWith('/usuarios/alumnos/9/correo-institucional',{email:'alumno@example.invalid',correoProveedor:'MICROSOFT365'});
+});

@@ -1,3 +1,4 @@
+vi.mock('react-native', () => ({ Platform: { OS: 'android' } }));
 import { beforeEach, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   secure: {

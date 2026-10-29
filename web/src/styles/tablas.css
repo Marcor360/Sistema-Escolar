@@ -1,0 +1,79 @@
+/* Tablas compartidas: escritorio y fichas móviles en una sola fuente de estilos. */
+.tabla tr:last-child td { border-bottom: none; }
+@media (max-width: 800px) {
+  .tabla {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+}
+.tabla td.vacio {
+  text-align: center;
+  color: #5c6a66;
+  padding: 26px 12px;
+  white-space: normal;
+}
+.tabla { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--linea); border-color: var(--linea); border-radius: var(--radio-md); overflow: hidden; }
+.tabla th { text-align: left; font-size: .75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--texto-secundario); padding: 13px 15px; border-bottom: 1px solid var(--linea); background: var(--superficie-suave); font-weight: 700;
+}
+.tabla td { padding: 13px 15px; border-bottom: 1px solid var(--linea); vertical-align: middle; }
+.tabla tr:hover td { background: #f8fafb; }
+@media (max-width: 800px) {
+  .tabla { border-radius: var(--radio-sm); overflow-x: auto; }
+}
+.tabla-contenedor:focus-visible { outline: 3px solid var(--dorado); outline-offset: 3px; }
+@media (max-width: 800px) {
+  .tabla-contenedor .tabla { display: table; overflow: visible; }
+}
+@media (max-width: 700px) {
+  .tabla th, .tabla td { padding: 12px 10px; }
+}
+.tabla-contenedor { max-width: 100%; overflow-x: auto; border-radius: var(--radio-md); -webkit-overflow-scrolling: touch; min-width: 0; overscroll-behavior-inline: contain; }
+.tabla-contenedor .tabla { min-width: 640px; width: 100%; }
+.tabla-contenedor :is(td, th) { overflow-wrap: anywhere; }
+@media (max-width: 700px) {
+  .tabla-contenedor { min-width: 0; }
+}
+.tabla-contenedor[aria-label="Listado de usuarios"] { max-width: 100%; overflow-x: auto; }
+.tabla-contenedor[aria-label="Listado de usuarios"] .tabla { min-width: 1060px; table-layout: fixed; }
+.tabla-contenedor[aria-label="Listado de usuarios"] .tabla th:nth-child(1) { width: 8%; }
+.tabla-contenedor[aria-label="Listado de usuarios"] .tabla th:nth-child(2) { width: 17%; }
+.tabla-contenedor[aria-label="Listado de usuarios"] .tabla th:nth-child(3) { width: 21%; }
+.tabla-contenedor[aria-label="Listado de usuarios"] .tabla th:nth-child(4) { width: 28%; }
+.tabla-contenedor[aria-label="Listado de usuarios"] .tabla th:nth-child(5) { width: 26%; }
+.tabla-contenedor[aria-label="Listado de usuarios"] .tabla td { overflow-wrap: anywhere; vertical-align: top; }
+/* Una sola tabla semántica; en pantallas estrechas cada fila se presenta como ficha. */
+@media (max-width: 700px) {
+  .tabla-contenedor .tabla-adaptable { display: block; min-width: 0; border: 0; overflow: visible; background: transparent; }
+  .tabla-adaptable thead {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip: rect(0,0,0,0); clip-path: inset(50%); white-space: nowrap;
+  }
+  .tabla-adaptable tbody { display: grid; gap: 12px; }
+  .tabla-adaptable tbody tr {
+    display: block; padding: 12px; border: 1px solid var(--linea);
+    border-radius: var(--radio-md); background: #fff;
+  }
+  .tabla-adaptable tbody td {
+    display: grid; grid-template-columns: minmax(90px, 35%) minmax(0, 1fr);
+    gap: 10px; align-items: start; padding: 10px 4px; text-align: left;
+    border-bottom: 1px solid var(--linea); white-space: normal; overflow-wrap: anywhere;
+  }
+  .tabla-adaptable tbody td::before { content: attr(data-etiqueta); color: var(--texto-secundario); font-weight: 700; }
+  .tabla-adaptable tbody td:last-child { border: 0; }
+  .tabla-adaptable tbody td[data-etiqueta="Acciones"], .tabla-adaptable tbody td.vacio { display: block; }
+  .tabla-adaptable tbody td[data-etiqueta="Acciones"]::before { display: block; margin-bottom: 10px; }
+  .tabla-adaptable tbody td.vacio::before { content: none; }
+  .tabla-adaptable .acciones-fila { display: flex; flex-wrap: wrap; justify-content: flex-start; }
+  .tabla-adaptable .acciones-fila .boton { flex: 1 1 auto; min-height: 44px; }
+  .tabla-adaptable tr:hover td { background: transparent; }
+}
+
+/* Los anchos de escritorio no deben ocultar los valores de las fichas móviles. */
+@media(max-width:700px) {
+  .tabla-contenedor .tabla.tabla-adaptable,
+  .tabla-contenedor[aria-label="Listado de usuarios"] .tabla.tabla-adaptable {
+    display:block; min-width:0; width:100%; table-layout:auto;
+  }
+}

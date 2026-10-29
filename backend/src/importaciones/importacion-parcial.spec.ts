@@ -7,14 +7,15 @@ const service = new ImportacionesService(
   {} as DataSource, {} as ScopeService,
   { getOrThrow: () => 'clave-privada-de-prueba-para-importacion-parcial' } as unknown as ConfigService,
 );
+let identidad = 0;
 const alumno = (matricula: string, correo: string, proveedor = 'Microsoft 365') => ({
   matricula, correoInstitucional: correo, correoProveedor: proveedor,
-  nombre: 'Rosa', apellidoPaterno: 'Prueba', curp: 'AAAA010101MDFRRR09', plantelId: '1',
+  nombre: 'Rosa', apellidoPaterno: 'Prueba', curp: `${(++identidad).toString(26).padStart(4,'0').split('').map(c=>String.fromCharCode(65+parseInt(c,26))).join('')}010101MDFRRR09`, plantelId: '1',
 });
 function catalogos() {
   return {
     permitidos: null, planteles: new Map([[1, { activo: true }]]),
-    grupos: new Map(), alumnos: new Map(), emails: new Set(['existente@iua.edu.mx']),
+    grupos: new Map(), alumnos: new Map(), emails: new Set(['existente@iua.edu.mx']), curps: new Set<string>(),
     identificadores: new Set(['EXISTE']), inscripciones: new Set(), previas: new Map(), roles: new Map(),
   } as unknown as Parameters<ImportacionesService['evaluarAlumnos']>[1];
 }
