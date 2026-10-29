@@ -5,6 +5,7 @@ import { JwtUser } from '../common/current-user.decorator';
 import { Alumno } from '../entities/alumno.entity';
 import { CarreraPlan } from '../entities/carrera-plan.entity';
 import { EgresoAlumno } from '../entities/egreso-alumno.entity';
+import { Inscripcion } from '../entities/inscripcion.entity';
 import { TitulacionExpediente } from '../entities/titulacion-expediente.entity';
 import { ScopeService } from '../planteles/scope.service';
 import { PaginacionDto } from '../common/paginacion.dto';
@@ -17,6 +18,7 @@ export class TitulacionService {
     @InjectRepository(EgresoAlumno) private readonly egresos: Repository<EgresoAlumno>,
     @InjectRepository(CarreraPlan) private readonly carreras: Repository<CarreraPlan>,
     @InjectRepository(Alumno) private readonly alumnos: Repository<Alumno>,
+    @InjectRepository(Inscripcion) private readonly inscripciones: Repository<Inscripcion>,
     private readonly scope: ScopeService,
   ) {}
 
@@ -38,6 +40,15 @@ export class TitulacionService {
     const carrera = await this.carreras.findOne({ where: { id: dto.carreraPlanId, activo: true } });
     if (!carrera || carrera.plantelId !== alumno.plantelId) {
       throw new ConflictException('El programa académico no pertenece al plantel del egresado');
+    }
+    const carreraEnHistorial = await this.inscripciones.exist({
+      where: {
+        alumnoId: egreso.alumnoId,
+        grupo: { carreraId: carrera.id, plantelId: alumno.plantelId },
+      },
+    });
+    if (!carreraEnHistorial) {
+      throw new ConflictException('La carrera no coincide con el historial académico del egresado');
     }
     const existente = await this.expedientes.findOne({
       where: { egresoId: egreso.id, carreraPlanId: carrera.id },
