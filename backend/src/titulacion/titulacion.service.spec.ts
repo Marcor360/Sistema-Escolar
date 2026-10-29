@@ -2,6 +2,7 @@ import type { Repository } from 'typeorm';
 import type { Alumno } from '../entities/alumno.entity';
 import type { CarreraPlan } from '../entities/carrera-plan.entity';
 import type { EgresoAlumno } from '../entities/egreso-alumno.entity';
+import type { Inscripcion } from '../entities/inscripcion.entity';
 import type { TitulacionExpediente } from '../entities/titulacion-expediente.entity';
 import type { ScopeService } from '../planteles/scope.service';
 import { stub } from '../test-utils/stub';
@@ -18,15 +19,17 @@ function escenario(plantelAlumno = 1, plantelCarrera = 1) {
   const egresos = { findOne: jest.fn().mockResolvedValue({ id: 7, alumnoId: 12 }) };
   const carreras = { findOne: jest.fn().mockResolvedValue({ id: 4, plantelId: plantelCarrera, activo: true }) };
   const alumnos = { findOne: jest.fn().mockResolvedValue({ id: 12, plantelId: plantelAlumno, estatus: 'EGRESADO' }) };
+  const inscripciones = { exist: jest.fn().mockResolvedValue(true) };
   const scope = { validarGestion: jest.fn().mockResolvedValue(undefined), plantelesDe: jest.fn().mockResolvedValue([1]) };
   const service = new TitulacionService(
     stub<Repository<TitulacionExpediente>>(expedientes),
     stub<Repository<EgresoAlumno>>(egresos),
     stub<Repository<CarreraPlan>>(carreras),
     stub<Repository<Alumno>>(alumnos),
+    stub<Repository<Inscripcion>>(inscripciones),
     stub<ScopeService>(scope),
   );
-  return { service, expedientes, egresos, carreras, alumnos, scope };
+  return { service, expedientes, egresos, carreras, alumnos, inscripciones, scope };
 }
 
 describe('titulación: borradores con RVOE pendiente', () => {
@@ -50,6 +53,13 @@ describe('titulación: borradores con RVOE pendiente', () => {
     egresos.findOne.mockResolvedValueOnce(null);
     await expect(service.crearBorrador({ egresoId: 7, carreraPlanId: 4 }, director)).rejects.toThrow('no encontrado');
   });
+  it('rechaza carreras sin inscripción comprobable del egresado', async () => {
+    const { service, inscripciones, expedientes } = escenario();
+    inscripciones.exist.mockResolvedValueOnce(false);
+    await expect(service.crearBorrador({ egresoId: 7, carreraPlanId: 4 }, director))
+      .rejects.toThrow('historial académico');
+    expect(expedientes.save).not.toHaveBeenCalled();
+  });
   it('rechaza crear expedientes duplicados', async () => {
     const { service, expedientes } = escenario();
     expedientes.findOne.mockResolvedValueOnce({ id: 10 });
@@ -59,6 +69,7 @@ describe('titulación: borradores con RVOE pendiente', () => {
     const { service, expedientes, scope } = escenario();
     const resultado = await service.crearBorrador({ egresoId: 7, carreraPlanId: 4 }, director);
     expect(scope.validarGestion).toHaveBeenCalledWith(director, 1);
+    expect(expedientes.save).toHaveBeenCalledTimes(1);
     expect(resultado).toMatchObject({ id: 100, estado: 'BORRADOR', modalidadRvoe: 'SIN_DETERMINAR' });
     expect(expedientes.save).toHaveBeenCalled();
   });
