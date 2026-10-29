@@ -17,6 +17,7 @@ import { UsuarioPlantel } from '../entities/usuario-plantel.entity';
 import { PasswordResetToken } from '../entities/password-reset-token.entity';
 import { ActivacionToken } from '../entities/activacion-token.entity';
 import { BitacoraActividad } from '../entities/bitacora-actividad.entity';
+import { HistorialRolesUsuario } from '../entities/historial-roles-usuario.entity';
 import { JwtUser } from '../common/current-user.decorator';
 import { ScopeService } from '../planteles/scope.service';
 import { ListadoUsuariosDto } from './usuarios.dto';
@@ -143,7 +144,7 @@ export class UsuariosService {
   private async listarAdministrativos(query: ListadoUsuariosDto, user: JwtUser, pagina: number, porPagina: number) {
     const planteles = await this.scope.resolverFiltro(user, query.plantelId);
     const qb = this.usuarios.createQueryBuilder('u')
-      .innerJoin('u.roles', 'rolFiltro', 'rolFiltro.clave IN (:...staff)', { staff: ['ADMINISTRATIVO', 'FINANZAS', 'SUPERADMIN'] })
+      .innerJoin('u.roles', 'rolFiltro', 'rolFiltro.clave IN (:...staff)', { staff: ['ADMINISTRATIVO', 'FINANZAS', 'DIRECTOR', 'SUPERADMIN'] })
       .leftJoinAndSelect('u.roles', 'roles')
       .distinct(true);
     if (planteles !== null) qb.andWhere(
@@ -227,6 +228,12 @@ export class UsuariosService {
       if (destino.roles.length !== claves.length) throw new ConflictException('Alguno de los roles no existe');
       destino.sessionVersion = (destino.sessionVersion ?? 0) + 1;
       await usuarios.save(destino);
+      await manager.getRepository(HistorialRolesUsuario).insert({
+        usuarioId: id,
+        actorId: actorActual.id,
+        rolesAntes: [...rolesActuales].sort().join(','),
+        rolesDespues: [...claves].sort().join(','),
+      });
       await manager.getRepository(BitacoraActividad).insert({
         usuarioId: actorActual.id,
         metodo: 'PATCH',
