@@ -58,9 +58,9 @@ describe('selector de funciones del personal', () => {
 
   it.each([['MAESTRO'], ['FINANZAS'], ['ALUMNO']])(
     'impide consultar la selección de funciones con rol insuficiente: %j',
-    async (roles) => {
+    async (rol) => {
       const { listado, qb } = escenario();
-      await expect(listado('PERSONAL', roles)).rejects.toThrow();
+      await expect(listado('PERSONAL', [rol])).rejects.toThrow();
       expect(qb.innerJoin).not.toHaveBeenCalled();
     },
   );
