@@ -1,3 +1,4 @@
+import { curpFicticia } from './identidad-ficticia';
 import { crearInscripcionFixture } from './fixtures-inscripcion';
 import { expect, it } from '@jest/globals';
 import { Alumno, Cargo, CicloEscolar, ConceptoPago, Inscripcion, Usuario } from '../../src/entities';
@@ -11,7 +12,7 @@ export function registrarRecorridoInstitucional(ctx: ContextoIntegracion) {
     const email = `institucional_${ctx.sufijo}@example.invalid`;
     const creado = await ctx.api('/alumnos', { method: 'POST', token: tokenAdmin, body: {
       email, nombre: 'Alumno', apellidoPaterno: 'Pruebas', matricula: `FL${ctx.sufijo}`,
-      plantelId: ctx.plantelId, curp: 'GODE561231HDFRRN09', correoProveedor: 'MICROSOFT365',
+      plantelId: ctx.plantelId, curp: curpFicticia(), correoProveedor: 'MICROSOFT365',
     } });
     expect(creado.response.status).toBe(201);
     const alumnoId = creado.data.id as number;

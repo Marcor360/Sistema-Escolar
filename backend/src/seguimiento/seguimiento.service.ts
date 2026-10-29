@@ -1,8 +1,8 @@
 import { readFile } from 'fs/promises';
 import { ConfigService } from '@nestjs/config';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { DataSource, MoreThan } from 'typeorm';
-import { Actividad, Alumno, Cargo, Docente, Entrega, Grupo, Inscripcion, Sesion, Usuario } from '../entities';
+import { Actividad, Alumno, AperturaCartera, Cargo, Docente, Entrega, Grupo, Inscripcion, Sesion, Usuario } from '../entities';
 import { MovimientoBancario } from '../entities/movimiento-bancario.entity';
 import { Asistencia } from '../entities/asistencia.entity';
 import { Tramite } from '../entities/tramite.entity';
@@ -34,7 +34,7 @@ export class SeguimientoService {
       return { estado: 'NO_DISPONIBLE', vencido: true, ultimoExito: null };
     }
   }
-  async pendientes(u: JwtUser) {
+  async pendientes(u: JwtUser, plantelId?: number) {
     const tarjetas: { titulo: string; cantidad: number; ruta: string }[] = [];
     const alumno = u.roles.includes('ALUMNO')
       ? await this.ds.getRepository(Alumno).findOneBy({ usuarioId: u.sub })
@@ -58,7 +58,9 @@ export class SeguimientoService {
     }
     const personal = u.roles.some((r) => ['ADMINISTRATIVO', 'SUPERADMIN'].includes(r));
     const fin = u.roles.some((r) => ['FINANZAS', 'SUPERADMIN'].includes(r));
-    const planteles = !alumno && (personal || fin) ? await this.scope.resolverFiltro(u) : null;
+    if (plantelId && !personal && !fin) throw new ForbiddenException('No puedes filtrar pendientes de otro plantel');
+    const planteles = !alumno && (personal || fin) ? await this.scope.resolverFiltro(u, plantelId) : null;
+    if (personal) tarjetas.push(...await this.pendientesInscripcion(planteles, plantelId));
     if(fin){const banco=this.ds.getRepository(MovimientoBancario).createQueryBuilder('m').where('m.estado<>:estado',{estado:'APLICADO'});if(planteles)banco.andWhere('m.plantel_id IN (:...planteles)',{planteles});tarjetas.push({titulo:'Movimientos por conciliar',cantidad:await banco.getCount(),ruta:'/seguimiento'});}
     if (alumno || fin) {
       const qb = this.ds
@@ -100,12 +102,36 @@ export class SeguimientoService {
     if (personal)
       tarjetas.push({
         titulo: 'Grupos activos sin nivel',
-        cantidad: await this.gruposSinNivel(u).getCount(),
+        cantidad: await this.gruposSinNivel(u, plantelId).getCount(),
         ruta: '/seguimiento',
       });
     return tarjetas;
   }
-  private gruposSinNivel(u: JwtUser) {
+  /** Identidad y cartera son pendientes administrativos; Finanzas no recibe estos datos por su rol. */
+  private async pendientesInscripcion(planteles: number[] | null, plantelId?: number) {
+    const alumnos = this.ds.getRepository(Alumno).createQueryBuilder('a')
+      .innerJoin('a.usuario', 'u').where('a.estatus=:estatus AND u.activo=:activo', { estatus: 'ACTIVO', activo: true });
+    const carteras = this.ds.getRepository(AperturaCartera).createQueryBuilder('c')
+      .innerJoin('c.alumno', 'a').innerJoin('a.usuario', 'u')
+      .where('c.estado=:estado AND a.estatus=:estatus AND u.activo=:activo', { estado: 'PAUSA', estatus: 'ACTIVO', activo: true });
+    if (planteles !== null) {
+      alumnos.andWhere('a.plantel_id IN (:...planteles)', { planteles });
+      carteras.andWhere('c.plantel_id IN (:...planteles)', { planteles });
+    }
+    const [sinCorreo, activaciones, pausadas] = await Promise.all([
+      alumnos.clone().andWhere('u.email IS NULL').getCount(),
+      alumnos.clone().andWhere('u.email IS NOT NULL AND u.activacion_pendiente=:pendiente', { pendiente: true }).getCount(),
+      carteras.getCount(),
+    ]);
+    const filtroUsuarios = plantelId ? '&plantel=' + plantelId : '';
+    const filtroCartera = plantelId ? '&plantelId=' + plantelId : '';
+    return [
+      { titulo: 'Alumnos sin correo institucional', cantidad: sinCorreo, ruta: '/usuarios?vista=consulta&tipo=ALUMNO&sinCorreo=true' + filtroUsuarios },
+      { titulo: 'Alumnos con activación pendiente', cantidad: activaciones, ruta: '/usuarios?vista=consulta&tipo=ALUMNO&activacionPendiente=true' + filtroUsuarios },
+      { titulo: 'Carteras en pausa', cantidad: pausadas, ruta: '/apertura-cartera?vista=consulta&estado=PAUSA' + filtroCartera },
+    ];
+  }
+  private gruposSinNivel(u: JwtUser, plantelId?: number) {
     const qb = this.ds
       .getRepository(Grupo)
       .createQueryBuilder('g')
@@ -115,6 +141,7 @@ export class SeguimientoService {
         'g.plantel_id IN (SELECT up.plantel_id FROM usuario_planteles up WHERE up.usuario_id=:sub AND up.activo=:activo)',
         { sub: u.sub, activo: true },
       );
+    if (plantelId) qb.andWhere('g.plantel_id=:plantelId', { plantelId });
     return qb;
   }
   async calidad(u: JwtUser) {

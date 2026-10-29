@@ -1,6 +1,6 @@
 import {
   Column, CreateDateColumn, DeleteDateColumn, Entity, JoinColumn, ManyToOne,
-  OneToOne, PrimaryGeneratedColumn, UpdateDateColumn,
+  Index, OneToOne, PrimaryGeneratedColumn, UpdateDateColumn,
 } from 'typeorm';
 import { Plantel } from './plantel.entity';
 import { Usuario } from './usuario.entity';
@@ -19,6 +19,7 @@ export class Alumno {
   @JoinColumn({ name: 'plantel_id' })
   plantel!: Plantel;
   @Column({ length: 20, unique: true }) matricula!: string;
+  @Index('uq_alumno_curp', { unique: true, where: 'curp IS NOT NULL' })
   @Column({ type: String, length: 18, nullable: true }) curp!: string | null;
   @Column({ type: 'date', nullable: true }) fechaNacimiento!: string | null;
   @Column({ type: String, length: 120, nullable: true }) tutorNombre!: string | null;

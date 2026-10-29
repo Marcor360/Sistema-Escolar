@@ -5,6 +5,8 @@ import { Column, Entity, PrimaryColumn, UpdateDateColumn } from 'typeorm';
 export class ConfiguracionMarca {
   @PrimaryColumn() id!: number;
   @Column({ length: 150 }) nombreInstitucion!: string;
+  @Column({ length: 150, default: 'Sistema Escolar Administrativo' }) nombreAdministrativo!: string;
+  @Column({ length: 150, default: 'Sistema Escolar Portal Alumno' }) nombrePortalAlumno!: string;
   @Column({ length: 10 }) nombreCorto!: string;
   @Column({ type: String, length: 255, nullable: true }) logoUrl!: string | null;
   @Column({ type: 'char', length: 7 }) colorPrimario!: string;

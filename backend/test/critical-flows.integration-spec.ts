@@ -1,3 +1,6 @@
+import { registrarBoletasFirmas } from './integration/boletas-firmas.cases';
+import { registrarPendientesInscripcion } from './integration/pendientes-inscripcion.cases';
+import { registrarCarteraIntegral } from './integration/cartera-integral.cases';
 import { registrarReinscripcionesPeriodo } from './integration/reinscripciones-periodo.cases';
 import { registrarEvaluaciones } from './integration/evaluaciones.cases';
 import { registrarEntregasConservacion } from './integration/entregas-conservacion.cases';
@@ -265,7 +268,8 @@ describe('Integración de flujos críticos (base aislada)', () => {
   };
 
   const passwords = new Map<string, string>();
-  const emitirToken = async (email: string) => {
+  const emitirToken = async (email: string | null) => {
+    if (!email) throw new Error('El fixture no tiene correo institucional para iniciar sesión');
     const usuario = await dataSource.getRepository(Usuario).findOneOrFail({
       where: { email },
       relations: ['roles'],
@@ -328,7 +332,7 @@ describe('Integración de flujos críticos (base aislada)', () => {
     if (process.env.DB_TYPE === 'mssql') await esperarYCrearBaseSqlServer();
     await instalarBaseline();
 
-    app = await NestFactory.create<NestExpressApplication>(AppModule, { logger: false });
+    app = await NestFactory.create<NestExpressApplication>(AppModule, { logger: false, abortOnError: false });
     app.set('trust proxy', 'loopback'); // Misma política que main.ts detrás de IIS/ARR local.
     if (process.env.RUN_WEB_E2E === '1') { process.env.CORS_ORIGINS = 'http://127.0.0.1:5181,http://localhost:5173'; app.enableCors({ origin: process.env.CORS_ORIGINS.split(','), credentials: true }); }
     app.setGlobalPrefix('api', { exclude: [{ path: 'uploads/:filename', method: RequestMethod.GET }] });
@@ -404,7 +408,7 @@ describe('Integración de flujos críticos (base aislada)', () => {
       apellidoMaterno: null, telefono: null, activo: true, roles: [alumnoRole],
     }));
     alumnoUsuarioId = alumnoUsuario.id;
-    passwords.set(alumnoUsuario.email, password);
+    passwords.set(alumnoUsuario.email!, password);
     const alumno = await dataSource.getRepository(Alumno).save(
       dataSource.getRepository(Alumno).create({
         usuarioId: alumnoUsuario.id, plantelId, matricula: `M${sufijo}`,
@@ -476,6 +480,9 @@ Object.keys(casos).map(Number).sort((a,b) => a-b).forEach((id) => casos[id](cont
   registrarMateriasContexto(contexto);
   registrarProgramasEspeciales(contexto);
   registrarCartera(contexto);
+  registrarCarteraIntegral(contexto);
+  registrarBoletasFirmas(contexto);
+  registrarPendientesInscripcion(contexto);
   registrarMarcadoresCalendario(contexto);
   registrarReinscripcionesPeriodo(contexto);
   registrarAgrupacion(contexto);
@@ -500,7 +507,7 @@ Object.keys(casos).map(Number).sort((a,b) => a-b).forEach((id) => casos[id](cont
       if (tipo === 'academico') await emitirToken(`browserdoc_${tipo}_${sufijo}@example.invalid`);
       const clase = await dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: grupoMateriaIdMaestro });
       const concepto = await dataSource.getRepository(ConceptoPago).findOneByOrFail({ clave: `CW${sufijo}` });
-      await (await import('./recorridos-web')).recorridoWeb({ prepararReactivacion:async(nombre,matricula)=>{const g=await dataSource.getRepository(Grupo).findOneByOrFail({nombre,plantelId});const a=await dataSource.getRepository(Alumno).findOneByOrFail({matricula:matricula.toUpperCase()});await dataSource.getRepository(Inscripcion).save({grupoId:g.id,alumnoId:a.id,estatus:'BAJA'});}, baseUrl, email: usuario.email, password: passwords.get(usuario.email) ?? 'Integracion_Segura_42!', sufijo, plantelId, cicloId: clase.grupo.cicloId, materiaId: clase.materiaId, docenteId: docente.data.id, docenteEmail: `browserdoc_${tipo}_${sufijo}@example.invalid`, docentePassword: passwords.get(`browserdoc_${tipo}_${sufijo}@example.invalid`) ?? 'Integracion_Segura_42!', conceptoId: concepto.id }, tipo);
+      await (await import('./recorridos-web')).recorridoWeb({ prepararReactivacion:async(nombre,matricula)=>{const g=await dataSource.getRepository(Grupo).findOneByOrFail({nombre,plantelId});const a=await dataSource.getRepository(Alumno).findOneByOrFail({matricula:matricula.toUpperCase()});await dataSource.getRepository(Inscripcion).save({grupoId:g.id,alumnoId:a.id,estatus:'BAJA'});}, baseUrl, email: usuario.email!, password: passwords.get(usuario.email!) ?? 'Integracion_Segura_42!', sufijo, plantelId, cicloId: clase.grupo.cicloId, materiaId: clase.materiaId, docenteId: docente.data.id, docenteEmail: `browserdoc_${tipo}_${sufijo}@example.invalid`, docentePassword: passwords.get(`browserdoc_${tipo}_${sufijo}@example.invalid`) ?? 'Integracion_Segura_42!', conceptoId: concepto.id }, tipo);
     });
   }
   registrarProgramacionesCobro(contexto);

@@ -166,6 +166,7 @@ describe('UsuariosService — restablecimiento de cuentas pendientes', () => {
   it('SUPERADMIN puede restablecer una cuenta pendiente y revoca el token de activación', async () => {
     const cuenta = {
       id: 17,
+      email: 'pendiente@example.invalid',
       activo: true,
       activacionPendiente: true,
       roles: [{ clave: 'ADMINISTRATIVO' }],
@@ -212,7 +213,7 @@ describe('UsuariosService — restablecimiento de cuentas pendientes', () => {
     const usuarios = {
       findOne: jest
         .fn()
-        .mockResolvedValue({ id: 17, activo: true, activacionPendiente: true, roles: [{ clave: 'MAESTRO' }] }),
+        .mockResolvedValue({ id: 17, email: 'pendiente@example.invalid', activo: true, activacionPendiente: true, roles: [{ clave: 'MAESTRO' }] }),
     };
     const manager = { getRepository: jest.fn(() => usuarios) };
     const repo = {
@@ -234,5 +235,12 @@ describe('UsuariosService — restablecimiento de cuentas pendientes', () => {
         roles: ['ADMINISTRATIVO'],
       }),
     ).rejects.toThrow('La cuenta requiere activación');
+  });
+});
+
+describe('UsuariosService.listado — activaciones pendientes', () => {
+  it.each([['FINANZAS'], ['MAESTRO']])('rechaza consultar el estado de acceso sin capacidad administrativa: %j', async (...roles) => {
+    const service = new UsuariosService(stub<Repository<Usuario>>({}), stub<Repository<Rol>>({}), stub<Repository<Alumno>>({}), stub<Repository<Docente>>({}), stub<Repository<UsuarioPlantel>>({}), stub<ScopeService>({}));
+    await expect(service.listado(stub<ListadoUsuariosDto>({ tipo: 'ALUMNO', activacionPendiente: 'true' }), { sub: 9, email: 'qa@example.invalid', nombre: 'QA', roles })).rejects.toThrow('Solo Control Escolar');
   });
 });

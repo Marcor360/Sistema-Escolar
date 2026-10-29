@@ -285,7 +285,8 @@ export default function CalificacionesScreen() {
                 </Text>
               ))}
               <Text style={[base.secundario, { marginTop: 4 }]}>
-                Resultado oficial · escala 0–{materia.parciales[0]?.escalaMaxima ?? 100}:{" "}
+                Resultado oficial · escala 0–
+                {materia.parciales[0]?.escalaMaxima ?? 100}:{" "}
                 <Text style={base.monto}>
                   {promedio == null
                     ? "Pendiente de evaluación"

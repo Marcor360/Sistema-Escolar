@@ -1,3 +1,4 @@
+import { curpFicticia } from './identidad-ficticia';
 import { crearInscripcionFixture } from './fixtures-inscripcion';
 import { CorreoAccesoOutboxService } from '../../src/auth/correo-acceso-outbox.service';
 import { AuthCorreoOutbox } from '../../src/entities/auth-correo-outbox.entity';
@@ -89,7 +90,7 @@ export function registrarBeta(ctx: ContextoIntegracion) {
     const usuario = await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.superadminId });
     await ctx.emitirToken(usuario.email);
     const auth = ctx.app.get(AuthService);
-    const tokens = await auth.login(usuario.email, ctx.passwords.get(usuario.email) ?? 'Integracion_Segura_42!', 'WEB');
+    const tokens = await auth.login(usuario.email!, ctx.passwords.get(usuario.email!) ?? 'Integracion_Segura_42!', 'WEB');
     const sid = JSON.parse(Buffer.from(tokens.accessToken.split('.')[1], 'base64url').toString()).sid as string;
     const repo = ctx.dataSource.getRepository(Sesion);
     await repo.update({ id: sid }, { ultimaActividadEn: new Date(Date.now() - 120000) });
@@ -133,7 +134,7 @@ export function registrarBeta(ctx: ContextoIntegracion) {
           nombre: 'Beta',
           apellidoPaterno: 'Notas',
           matricula: `BE${i}${ctx.sufijo}`,
-          curp: 'GODE561231HDFRRN09',
+          curp: curpFicticia(),
           plantelId: ctx.plantelId,
         },
       });

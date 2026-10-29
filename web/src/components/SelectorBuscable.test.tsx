@@ -35,3 +35,17 @@ it('consulta diez de 115, navega en servidor y busca fuera de la primera página
   await waitFor(() => expect(get).toHaveBeenLastCalledWith('/alumnos', expect.objectContaining({ params: expect.objectContaining({ pagina: 1, porPagina: 10, buscar: 'Alumno 115' }) })));
   expect(screen.getAllByRole('option')).toHaveLength(2);
 });
+
+it('oculta paginación innecesaria y vuelve a la primera página al cambiar de plantel',async()=>{
+  const get=vi.spyOn(api,'get').mockImplementation(async(_ruta,config)=>({data:(config?.params as Record<string,unknown>|undefined)?.plantelId===2?{datos:[{id:21,nombre:'Grupo del segundo plantel'}],total:1}:{datos:[{id:1,nombre:'Grupo del primer plantel'}],total:15}}));
+  const props={ruta:'/academico/grupos',valor:'',cambiar:()=>undefined,etiqueta:'Grupo',texto:(g:{id:number;nombre:string})=>g.nombre};
+  const {rerender}=render(<SelectorBuscable {...props} filtros={{plantelId:1}}/>);
+  await screen.findByRole('option',{name:'Grupo del primer plantel'});
+  fireEvent.click(screen.getByRole('button',{name:'Ir a la página siguiente'}));
+  await waitFor(()=>expect(get).toHaveBeenLastCalledWith('/academico/grupos',expect.objectContaining({params:expect.objectContaining({pagina:2})})));
+  rerender(<SelectorBuscable {...props} filtros={{plantelId:2}}/>);
+  await screen.findByRole('option',{name:'Grupo del segundo plantel'});
+  expect(get).toHaveBeenLastCalledWith('/academico/grupos',expect.objectContaining({params:expect.objectContaining({pagina:1,plantelId:2})}));
+  expect(screen.queryByRole('navigation',{name:'Paginación de grupo'})).toBeNull();
+  expect(screen.getByText('1 resultado disponible')).toBeTruthy();
+});

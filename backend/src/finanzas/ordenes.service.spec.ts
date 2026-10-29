@@ -59,7 +59,7 @@ describe('OrdenesService.crear', () => {
   it('rechaza crear una orden si el cargo ya no tiene saldo pendiente', async () => {
     const cargos = {
       validarAcceso: jest.fn().mockResolvedValue(undefined),
-      obtener: jest.fn().mockResolvedValue({ id: 1, alumnoId: 5 }),
+      obtener: jest.fn().mockResolvedValue({ id: 1, alumnoId: 5, alumno: { usuario: { email: 'alumno@example.invalid' } } }),
       saldoDeCargo: jest.fn().mockResolvedValue(0),
     };
     const alumnos = { obtenerPorUsuario: jest.fn().mockResolvedValue({ id: 5 }), obtener: jest.fn() };

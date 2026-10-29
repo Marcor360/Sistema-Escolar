@@ -19,7 +19,7 @@ import { PreviewCifrado } from './preview-cifrado';
 type Fila = Record<string,string>;
 interface Catalogos {
   permitidos: Set<number> | null; planteles: Map<number,Plantel>; grupos: Map<number,Grupo>; alumnos: Map<string,Alumno>;
-  emails: Set<string>; identificadores: Set<string>; inscripciones: Set<string>; previas: Map<string,Inscripcion>; roles: Map<string,Rol>;
+  emails: Set<string>; curps: Set<string>; identificadores: Set<string>; inscripciones: Set<string>; previas: Map<string,Inscripcion>; roles: Map<string,Rol>;
 }
 const trozos = <T>(filas: T[]) => Array.from({ length: Math.ceil(filas.length / 100) }, (_, i) => filas.slice(i*100,(i+1)*100));
 export const CABECERAS: Record<TipoImportacion, string[]> = {
@@ -75,7 +75,7 @@ export class ImportacionesService {
   }
   private async catalogos(manager: EntityManager, tipo: TipoImportacion, filas: Fila[], user: JwtUser, bloquear: boolean): Promise<Catalogos> {
     const scope = await this.scope.resolverFiltro(user);
-    const c: Catalogos = { permitidos: scope === null ? null : new Set(scope), planteles: new Map(), grupos: new Map(), alumnos: new Map(), emails: new Set(), identificadores: new Set(), inscripciones: new Set(), previas: new Map(), roles: new Map() };
+    const c: Catalogos = { permitidos: scope === null ? null : new Set(scope), planteles: new Map(), grupos: new Map(), alumnos: new Map(), emails: new Set(), curps: new Set(), identificadores: new Set(), inscripciones: new Set(), previas: new Map(), roles: new Map() };
     const numericos = (valores: string[]) => [...new Set(valores.map(Number).filter((n) => Number.isSafeInteger(n) && n > 0))];
     const lock = bloquear ? { lock: { mode: 'pessimistic_write' as const } } : {};
     if (tipo === 'INSCRIPCIONES') {
@@ -101,7 +101,11 @@ export class ImportacionesService {
       const ids = numericos(filas.flatMap((f) => tipo === 'ALUMNOS' ? [f.plantelId] : (f.plantelIds ?? '').split(';')));
       if (ids.length) c.planteles = new Map((await manager.getRepository(Plantel).find({ where: { id: In(ids) }, order: { id: 'ASC' }, ...lock })).map((p) => [p.id,p]));
       const emails = [...new Set(filas.map((f) => (tipo === 'ALUMNOS' ? (f.correoInstitucional || f.email) : f.email) ?? '').map((e) => e.trim().toLowerCase()).filter(Boolean))];
-      if (emails.length) c.emails = new Set((await manager.getRepository(Usuario).find({ where: { email: In(emails) }, select: { email: true }, loadEagerRelations: false, withDeleted: true })).map((u) => u.email.toLowerCase()));
+      if (emails.length) c.emails = new Set((await manager.getRepository(Usuario).find({ where: { email: In(emails) }, select: { email: true }, loadEagerRelations: false, withDeleted: true })).map((u) => u.email?.toLowerCase()).filter((email): email is string => !!email));
+      if (tipo === 'ALUMNOS') {
+        const curps = filas.map(f => f.curp?.trim().toUpperCase()).filter((c): c is string => !!c);
+        if (curps.length) c.curps = new Set((await manager.getRepository(Alumno).find({ where: { curp: In(curps) }, select: { curp: true }, loadEagerRelations: false, withDeleted: true })).map(a => a.curp!.trim().toUpperCase()).filter(Boolean));
+      }
       const identificadores = [...new Set(filas.map((f) => (tipo === 'ALUMNOS' ? f.matricula : f.numEmpleado) ?? '').map((s) => s.toUpperCase()))];
       if (tipo === 'ALUMNOS' && identificadores.length) c.identificadores = new Set((await manager.getRepository(Alumno).find({ where: { matricula: In(identificadores) }, select: { matricula: true }, loadEagerRelations: false, withDeleted: true })).map((a) => a.matricula.toUpperCase()));
       if (tipo === 'DOCENTES' && identificadores.length) c.identificadores = new Set((await manager.getRepository(Docente).find({ where: { numEmpleado: In(identificadores) }, select: { numEmpleado: true }, loadEagerRelations: false, withDeleted: true })).map((a) => a.numEmpleado.toUpperCase()));
@@ -130,6 +134,11 @@ export class ImportacionesService {
     if (!ids.length) throw new BadRequestException('Selecciona al menos un plantel');
     for (const id of ids) { if (c.permitidos !== null && !c.permitidos.has(id)) throw new ForbiddenException('El plantel solicitado está fuera de tu alcance'); if (!c.planteles.get(id)?.activo) throw new ConflictException('Plantel inactivo o inexistente'); }
     if (tipo === 'PERSONAL' && (instancia as CrearUsuarioDto).roles.some((r) => !['ADMINISTRATIVO', 'FINANZAS'].includes(r))) throw new BadRequestException('La importación de personal admite Administrativo y Finanzas');
+    if (tipo === 'ALUMNOS') {
+      const curp = (instancia as CrearAlumnoDto).curp;
+      if (c.curps.has(curp)) throw new ConflictException('Ya registrado: CURP');
+      if (vistos.has(`CURP:${curp}`)) throw new ConflictException('Repetido en archivo: CURP');
+    }
     const email = instancia.email.toLowerCase();
     if (tipo === 'ALUMNOS' && c.emails.has(email)) throw new ConflictException('Ya registrado: correo institucional');
     if (tipo === 'ALUMNOS' && vistos.has(`EMAIL:${email}`)) throw new ConflictException('Repetido en archivo: correo institucional');
@@ -141,6 +150,7 @@ export class ImportacionesService {
       if (vistos.has(`${tipo}:${id}`) || c.identificadores.has(id)) throw new ConflictException('Identificador ya registrado o duplicado en el archivo');
       vistos.add(`${tipo}:${id}`);
     }
+    if (tipo === 'ALUMNOS') vistos.add(`CURP:${(instancia as CrearAlumnoDto).curp}`);
     vistos.add(`EMAIL:${email}`);
     return { clase: 'CUENTA', tipo, instancia, ids } as const;
   }

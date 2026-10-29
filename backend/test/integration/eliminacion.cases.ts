@@ -1,3 +1,4 @@
+import { curpFicticia } from './identidad-ficticia';
 import { BitacoraFinanciera } from '../../src/entities/bitacora-financiera.entity';
 import { PushDispositivo, PushEnvio } from '../../src/entities';
 import { randomUUID } from 'crypto';
@@ -24,7 +25,7 @@ export function registrarEliminacion(ctx: ContextoIntegracion) {
 
     const alumno = await ctx.api('/alumnos', { method: 'POST', token: root, body: {
       email: `del_al_${ctx.sufijo}@example.invalid`, nombre: 'Eliminar', apellidoPaterno: 'Alumno',
-      matricula: `DEL${ctx.sufijo}`, plantelId: ctx.plantelId, curp: 'TEST090101HMCRXX00',
+      matricula: `DEL${ctx.sufijo}`, plantelId: ctx.plantelId, curp: curpFicticia(),
     } });
     expect(alumno.response.status).toBe(201);
     expect((await borrar(`/alumnos/${alumno.data.id}/permanente`)).response.status).toBe(200);

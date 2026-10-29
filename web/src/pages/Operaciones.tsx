@@ -6,7 +6,6 @@ import { api, mensajeDeError } from '../api/client';
 import { Encabezado } from '../components/Encabezado';
 import { SelectorBuscable } from '../components/SelectorBuscable';
 import { useAuth } from '../auth/AuthContext';
-import '../components/tabla-adaptable.css';
 interface Grupo { id: number; nombre: string; ciclo: { clave: string }; plantel: { nombre: string } }
 interface PreviewImport { previewId: string | null; registros: number; validos: number; duplicados: { fila: number; mensaje: string }[]; errores: { fila: number; mensaje: string }[]; regla: string; identificadores: { fila: number; identificador: string }[] }
 interface PreviewPromocion { origen: { nombre: string }; destino: { nombre: string }; plantel: string; regla: string; alumnos: { id: number; nombre: string; matricula: string; elegible: boolean }[] }

@@ -1,5 +1,4 @@
 import './temarios.css';
-import '../components/tabla-adaptable.css';
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api, abrirArchivo, mensajeDeError } from '../api/client';

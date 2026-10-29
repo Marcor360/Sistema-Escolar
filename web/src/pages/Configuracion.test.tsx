@@ -135,3 +135,12 @@ it('informa fallo de PNG sin afirmar que las fichas están listas y conserva el 
   expect(input.files).toHaveLength(1);
   expect(screen.queryByText(/logo listo para portal/)).toBeNull();
 });
+
+it('permite configurar nombres distintos para administración y portal del alumno',async()=>{
+ const put=vi.spyOn(api,'put').mockResolvedValue({data:{}});
+ render(<ConfiguracionPage/>);
+ fireEvent.change(screen.getByLabelText('Nombre del sistema administrativo'),{target:{value:'Administración escolar QA'}});
+ fireEvent.change(screen.getByLabelText('Nombre del portal del alumno'),{target:{value:'Portal del alumno QA'}});
+ fireEvent.submit(screen.getByLabelText('Nombre del sistema administrativo').closest('form')!);
+ await waitFor(()=>expect(put).toHaveBeenCalledWith('/configuracion/marca',expect.objectContaining({nombreAdministrativo:'Administración escolar QA',nombrePortalAlumno:'Portal del alumno QA'})));
+});

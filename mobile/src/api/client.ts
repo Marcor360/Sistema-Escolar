@@ -1,7 +1,8 @@
+import { Platform } from "react-native";
 import { limpiarCacheAcademica, vaciarCacheAcademica } from "./cache-academica";
 import { borrarPreferenciaBiometrica } from "../biometria";
 import axios, { CanceledError } from "axios";
-import * as SecureStore from "expo-secure-store";
+import * as SecureStore from "../almacen-seguro";
 import Constants from "expo-constants";
 import { resolverApiUrl } from "./config";
 export { mensajeDeError } from "./errores";
@@ -14,7 +15,8 @@ const baseURL = resolverApiUrl(
 export const api = axios.create({
   baseURL,
   timeout: 20000,
-  headers: { "x-portal": "MOVIL" },
+  withCredentials: Platform.OS === "web",
+  headers: { "x-portal": Platform.OS === "web" ? "WEB" : "MOVIL" },
 });
 
 export const TOKEN_KEY = "escolar_token";
@@ -36,7 +38,7 @@ export function establecerTokensSesion(
   limpiarCacheAcademica();
   return serializarTokens(async () => {
     if (actual !== generacion) throw new CanceledError("La sesión cambió");
-    await SecureStore.setItemAsync(REFRESH_KEY, refreshToken);
+    if (Platform.OS !== "web") await SecureStore.setItemAsync(REFRESH_KEY, refreshToken);
     await SecureStore.setItemAsync(TOKEN_KEY, accessToken);
   });
 }
@@ -62,6 +64,7 @@ api.interceptors.request.use(async (config) => {
     [
       "/configuracion/marca",
       "/auth/login",
+      "/auth/login-alumno-web",
       "/auth/forgot-password",
       "/auth/reset-password",
       "/auth/solicitar-activacion",
@@ -121,11 +124,11 @@ api.interceptors.response.use(
           generacionRenovando = actual;
           const promesa = (async () => {
             const refreshToken = await SecureStore.getItemAsync(REFRESH_KEY);
-            if (!refreshToken) throw new Error("Sin refresh");
+            if (!refreshToken && Platform.OS !== "web") throw new Error("Sin refresh");
             const { data } = await axios.post(
               `${baseURL}/auth/refresh`,
-              { refreshToken },
-              { timeout: 20000, headers: { "x-portal": "MOVIL" } },
+              Platform.OS === "web" ? {} : { refreshToken },
+              { timeout: 20000, withCredentials: Platform.OS === "web", headers: { "x-portal": Platform.OS === "web" ? "WEB" : "MOVIL" } },
             );
             await serializarTokens(async () => {
               if (actual !== generacion)
@@ -133,7 +136,7 @@ api.interceptors.response.use(
                   "La sesión cambió durante la renovación",
                 );
               vaciarCacheAcademica();
-              await SecureStore.setItemAsync(REFRESH_KEY, data.refreshToken);
+              if (Platform.OS !== "web") await SecureStore.setItemAsync(REFRESH_KEY, data.refreshToken);
               await SecureStore.setItemAsync(TOKEN_KEY, data.accessToken);
             });
           })().finally(() => {

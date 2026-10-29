@@ -1,3 +1,4 @@
+import { curpFicticia } from './identidad-ficticia';
 import { crearInscripcionFixture } from './fixtures-inscripcion';
 import { expect, it } from '@jest/globals';
 import { ContextoIntegracion } from './contexto';
@@ -12,7 +13,7 @@ export function registrarTemarios(ctx: ContextoIntegracion) {
     const grupo = await post('/academico/grupos', { nombre: 'XT-' + ctx.sufijo, plantelId: ctx.plantelId, cicloId: base.grupo.cicloId });
     const materia = await ctx.dataSource.getRepository(Materia).save({ clave: ctx.sufijo + 'TEMA', nombre: 'Materia de temario', creditos: 0, activo: true });
     const clase = await ctx.dataSource.getRepository(GrupoMateria).save({ regimenEvaluacion: 'LEGADO_100', grupoId: grupo.id, materiaId: materia.id, docenteId: base.docenteId });
-    const estudiante = await post('/alumnos', { email: 'tema' + ctx.sufijo + '@example.invalid', matricula: 'TX' + ctx.sufijo, nombre: 'Alumno temario', apellidoPaterno: 'Prueba', curp: 'GODE561231HDFRRN09', plantelId: ctx.plantelId });
+    const estudiante = await post('/alumnos', { email: 'tema' + ctx.sufijo + '@example.invalid', matricula: 'TX' + ctx.sufijo, nombre: 'Alumno temario', apellidoPaterno: 'Prueba', curp: curpFicticia(), plantelId: ctx.plantelId });
     await crearInscripcionFixture(ctx,grupo.id,estudiante.id);
     const alumno = await ctx.emitirToken('tema' + ctx.sufijo + '@example.invalid');
     const notasAntes = await ctx.dataSource.getRepository(Calificacion).count(), tareasAntes = await ctx.dataSource.getRepository(Actividad).count();

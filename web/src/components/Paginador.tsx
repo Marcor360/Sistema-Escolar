@@ -1,4 +1,5 @@
 interface Props {
+  etiqueta?: string;
   deshabilitado?: boolean;
   total: number;
   pagina: number;
@@ -7,12 +8,12 @@ interface Props {
 }
 
 /** Navegación paginada con rango de resultados accesible. */
-export function Paginador({ total, pagina, porPagina, onCambio, deshabilitado = false }: Props) {
+export function Paginador({ total, pagina, porPagina, onCambio, deshabilitado = false, etiqueta = 'Paginación del listado' }: Props) {
   const totalPaginas = Math.max(1, Math.ceil(total / porPagina));
   const inicio = total === 0 ? 0 : (pagina - 1) * porPagina + 1;
   const fin = Math.min(total, pagina * porPagina);
   return (
-    <nav className="paginador" aria-label="Paginación del listado">
+    <nav className="paginador" aria-label={etiqueta}>
       <p role="status" aria-live="polite">
         {total === 0 ? 'Sin registros' : `Mostrando ${inicio}–${fin} de ${total} registros`}
       </p>

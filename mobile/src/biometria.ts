@@ -1,4 +1,4 @@
-import * as SecureStore from 'expo-secure-store';
+import * as SecureStore from './almacen-seguro';
 
 const PREFERENCIA = 'escolar_biometria_usuario';
 const GUARDIA = 'escolar_biometria_guardia';

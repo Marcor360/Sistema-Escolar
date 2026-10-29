@@ -225,6 +225,7 @@ export default function SeguimientoPage() {
     <>
       <h1>Seguimiento y pendientes</h1>
       <CentroPendientes />
+      {sesion?.roles.some(r=>['SUPERADMIN','ADMINISTRATIVO','DIRECTOR','MAESTRO'].includes(r))&&<section className="panel"><h2>Boletas · seguimiento del alumno</h2><p>Aceptaciones y solicitudes de revisión, con comentarios de docentes por materia.</p><div className="acciones-formulario"><Link className="boton" to="/boletas?estado=ACEPTADA">Boletas aceptadas</Link><Link className="boton secundario" to="/boletas?estado=REVISION">Boletas con comentarios</Link></div></section>}
       {(administrativo || sesion?.roles.includes('ALUMNO')) && <Tramites />}
       {administrativo && <Calidad />}
       {fin && <ConciliacionBancaria />}

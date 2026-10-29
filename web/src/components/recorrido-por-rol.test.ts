@@ -28,3 +28,12 @@ describe('recorrido según permisos de navegación', () => {
 });
 
 it('profundiza por herramienta sin anunciar áreas ajenas y acumula roles mixtos',()=>{const secciones=[{destino:'/seguimiento',roles:['FINANZAS','MAESTRO','ADMINISTRATIVO']},{destino:'/finanzas',roles:['FINANZAS']},{destino:'/maestro',roles:['MAESTRO']},{destino:'/asistencias',roles:['MAESTRO','ADMINISTRATIVO']},{destino:'/analitica',roles:['FINANZAS','MAESTRO','ADMINISTRATIVO']}];const fin=recorridosPorArea(secciones,['FINANZAS']);expect(fin.map(a=>a.id)).toContain('finanzas');expect(fin.map(a=>a.id)).not.toContain('docencia');expect(fin.find(a=>a.id==='finanzas')!.pasos.length).toBeGreaterThan(5);const mixto=recorridosPorArea(secciones,['MAESTRO','FINANZAS']);expect(mixto.map(a=>a.id)).toEqual(expect.arrayContaining(['finanzas','docencia']));expect(mixto.flatMap(a=>a.pasos).every(p=>p.comprobar)).toBe(true);});
+
+it('explica cartera sin correo y activación posterior solo a quien tiene acceso a esas herramientas',()=>{
+  const secciones=[{destino:'/apertura-cartera',roles:['ADMINISTRATIVO']},{destino:'/usuarios',roles:['ADMINISTRATIVO','FINANZAS','MAESTRO']}];
+  const control=recorridosPorArea(secciones,['ADMINISTRATIVO']).find(a=>a.id==='control')!;
+  expect(control.pasos.map(p=>p.destino)).toEqual(['/apertura-cartera','/usuarios?vista=consulta&tipo=ALUMNO&sinCorreo=true']);
+  expect(control.pasos[0].descripcion).toContain('sin correo institucional');
+  expect(control.pasos[0].comprobar).toContain('pausa sin cargos');
+  expect(recorridosPorArea(secciones,['FINANZAS']).flatMap(a=>a.pasos).some(p=>p.destino==='/apertura-cartera')).toBe(false);
+});

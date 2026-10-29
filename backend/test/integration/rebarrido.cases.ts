@@ -1,3 +1,4 @@
+import { curpFicticia } from './identidad-ficticia';
 import { crearInscripcionFixture } from './fixtures-inscripcion';
 import { expect, it, jest } from '@jest/globals';
 import { ContextoIntegracion } from './contexto';
@@ -27,9 +28,9 @@ export function registrarRebarrido(ctx: ContextoIntegracion) {
     expect((await ctx.api('/calendario?hasta=1970-01-01T00:00:00Z',{ token })).response.status).toBe(400);
     expect((await ctx.api('/calendario',{ method: 'POST',token,body: { titulo: '  ',fechaInicio: '2027-01-01T12:00:00Z' } })).response.status).toBe(400);
     for (const password of ['x'.repeat(73),'á'.repeat(37),'\ud800'.repeat(8)]) expect((await ctx.api('/auth/cambiar-password',{ method: 'POST',token,body: { actual: 'Integracion_Segura_42!',nueva: password } })).response.status).toBe(400);
-    const alta = await ctx.api('/alumnos',{ method: 'POST',token,body: { email: `rn_${ctx.sufijo}@example.invalid`,nombre: 'Antes',apellidoPaterno: 'Alumno',apellidoMaterno: 'Materno',telefono: '55555',matricula: `RN${ctx.sufijo}`,plantelId: ctx.plantelId,curp: 'GODE561231HDFRRN09',tutorNombre: 'Tutor',tutorTelefono: '55555',direccion: 'Dirección' } }); expect(alta.response.status).toBe(201);
-    const patch = await ctx.api(`/alumnos/${alta.data.id}`,{ method: 'PATCH',token,body: { nombre: 'Después',apellidoMaterno: null,telefono: null,curp: null,tutorNombre: null,tutorTelefono: null,direccion: null } }); expect(patch.response.status).toBe(200);
-    expect(patch.data.usuario).toMatchObject({ nombre: 'Después',apellidoMaterno: null,telefono: null }); expect(patch.data).toMatchObject({ curp: null,tutorNombre: null,tutorTelefono: null,direccion: null });
+    const alta = await ctx.api('/alumnos',{ method: 'POST',token,body: { email: `rn_${ctx.sufijo}@example.invalid`,nombre: 'Antes',apellidoPaterno: 'Alumno',apellidoMaterno: 'Materno',telefono: '55555',matricula: `RN${ctx.sufijo}`,plantelId: ctx.plantelId,curp: curpFicticia(),tutorNombre: 'Tutor',tutorTelefono: '55555',direccion: 'Dirección' } }); expect(alta.response.status).toBe(201);
+    const patch = await ctx.api(`/alumnos/${alta.data.id}`,{ method: 'PATCH',token,body: { nombre: 'Después',apellidoMaterno: null,telefono: null,tutorNombre: null,tutorTelefono: null,direccion: null } }); expect(patch.response.status).toBe(200);
+    expect(patch.data.usuario).toMatchObject({ nombre: 'Después',apellidoMaterno: null,telefono: null }); expect(patch.data).toMatchObject({ curp: alta.data.curp,tutorNombre: null,tutorTelefono: null,direccion: null });
     const alumno = await ctx.dataSource.getRepository(Alumno).findOneByOrFail({ id: alta.data.id }); expect(alumno.usuario.nombre).toBe('Después');
     const docente = await ctx.api('/docentes',{ method: 'POST',token,body: { email: `rnd_${ctx.sufijo}@example.invalid`,password: 'Integracion_Segura_42!',nombre: 'Antes',apellidoPaterno: 'Docente',cedulaPendiente: false, numEmpleado: `RD${ctx.sufijo}`,plantelIds: [ctx.plantelId],cedulaProfesional: '123',especialidad: 'Matemáticas' } }); expect(docente.response.status).toBe(201);
     const editar = await ctx.api(`/docentes/${docente.data.id}`,{ method: 'PATCH',token,body: { nombre: 'Después',cedulaProfesional: null,especialidad: null } }); expect(editar.response.status).toBe(200); expect(editar.data.usuario.nombre).toBe('Después'); expect(editar.data).toMatchObject({ cedulaProfesional: null,especialidad: null });
@@ -37,7 +38,7 @@ export function registrarRebarrido(ctx: ContextoIntegracion) {
   });
   it('observaciones y comentarios nullable se limpian; la nota oficial conserva motivo e historial', async () => {
     const token = await root();
-    const alumno = await ctx.api('/alumnos',{ method: 'POST',token,body: { email: `rnota_${ctx.sufijo}@example.invalid`,nombre: 'Nota',apellidoPaterno: 'Limpieza',matricula: `RT${ctx.sufijo}`,plantelId: ctx.plantelId, curp: 'GODE561231HDFRRN09' } }); expect(alumno.response.status).toBe(201);
+    const alumno = await ctx.api('/alumnos',{ method: 'POST',token,body: { email: `rnota_${ctx.sufijo}@example.invalid`,nombre: 'Nota',apellidoPaterno: 'Limpieza',matricula: `RT${ctx.sufijo}`,plantelId: ctx.plantelId, curp: curpFicticia() } }); expect(alumno.response.status).toBe(201);
     const gm = await ctx.dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: ctx.grupoMateriaIdMaestro });
     await crearInscripcionFixture(ctx,gm.grupoId,alumno.data.id);
     const body = { grupoMateriaId: gm.id,parcial: 3,items: [{ alumnoId: alumno.data.id,calificacion: 85,observaciones: 'Texto anterior' }] };

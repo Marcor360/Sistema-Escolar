@@ -7,10 +7,12 @@ import { RutaProtegida } from './auth/RutaProtegida';
 import { Shell } from './layout/Shell';
 
 // Cada página se descarga solo cuando se visita (code splitting)
+const BoletasSeguimiento = lazy(() => import('./pages/BoletasSeguimiento'));
 const AsistenciasPage = lazy(() => import('./pages/Asistencias'));
 const SeguimientoPage = lazy(() => import('./pages/Seguimiento'));
 const TemariosPage = lazy(() => import('./pages/Temarios'));
 const CicloFichaPage = lazy(() => import('./pages/CicloFicha'));
+const DetalleApertura = lazy(() => import('./pages/DetalleApertura').then(m => ({ default: m.DetalleApertura })));
 const AperturaCarteraPage = lazy(() => import('./pages/AperturaCartera'));
 const ReinscribirAlumnoPage = lazy(() => import('./pages/ReinscribirAlumno'));
 const RecursamientosPage = lazy(() => import('./pages/Recursamientos'));
@@ -59,6 +61,7 @@ export default function App() {
       {sesion ? (
         <Route element={<Shell />}>
           <Route path="/" element={<DashboardPage />} />
+          <Route element={<RutaProtegida roles={['MAESTRO','ADMINISTRATIVO','DIRECTOR']} />}><Route path="/boletas" element={<BoletasSeguimiento />} /></Route>
           <Route path="/seguimiento" element={<SeguimientoPage />} />
           <Route element={<RutaProtegida roles={['MAESTRO','ADMINISTRATIVO','ALUMNO']} />}><Route path="/asistencias" element={<AsistenciasPage />} /></Route>
           <Route path="/cuenta" element={<CuentaPage />} />
@@ -87,6 +90,7 @@ export default function App() {
             <Route path="/materias" element={<ModuloTrabajo titulo="Materias y ciclos" acciones={[{titulo:'Registrar materia',detalle:'Clasificación y créditos',vista:'nuevo'},{titulo:'Consultar materias',detalle:'Buscar, editar y vincular planes y periodos',vista:'consulta'},{titulo:'Consultar ciclos',detalle:'Revisar preparación, activación y cierre',vista:'ciclos'},{titulo:'Preparar ciclo',detalle:'Registrar fechas sin activar el ciclo',vista:'ciclo-nuevo'}]} vistas={['editar', 'ciclo-editar', 'contextos']}><MateriasPage /></ModuloTrabajo>} />
             <Route path="/apertura-cartera" element={<AperturaCarteraPage />} />
             <Route path="/apertura-cartera/nueva" element={<AperturaCarteraPage />} />
+            <Route path="/apertura-cartera/:id" element={<DetalleApertura />} />
             <Route path="/apertura-cartera/reinscribir" element={<ReinscribirAlumnoPage />} />
             <Route path="/programas-especiales" element={<ProgramasEspecialesPage />} />
             <Route path="/programas-especiales/:id" element={<ProgramasEspecialesPage />} />

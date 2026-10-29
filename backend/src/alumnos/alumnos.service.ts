@@ -266,7 +266,8 @@ export class AlumnosService {
     const existe = await this.alumnos.findOne({ where: { matricula: dto.matricula }, withDeleted: true });
     if (existe) throw new ConflictException('La matrícula ya está registrada');
 
-    return this.dataSource.transaction(async (manager) => {
+    return this.identidadTx(async (manager) => {
+      await this.validarCurp(manager, dto.curp);
       const plantel = await manager.getRepository(Plantel).findOne({ where: { id: dto.plantelId, activo: true } });
       if (!plantel) throw new ConflictException('El plantel no está activo');
       const usuario = await this.usuarios.crear(
@@ -300,17 +301,36 @@ export class AlumnosService {
     });
   }
 
+  private async identidadTx<T>(f: (m: import('typeorm').EntityManager) => Promise<T>): Promise<T> {
+    try { return await this.dataSource.transaction(f); }
+    catch (e) {
+      if (esConflictoUnico(e)) throw new ConflictException('La CURP, matrícula o correo ya están registrados; consulta el expediente existente');
+      throw e;
+    }
+  }
+
+  private async validarCurp(manager: import('typeorm').EntityManager, curp: string | null | undefined, id?: number) {
+    if (!curp || !/^[A-ZÑ&]{4}\d{6}[HM][A-ZÑ]{5}[A-Z0-9]\d$/.test(curp.trim().toUpperCase()))
+      throw new BadRequestException('La CURP es obligatoria y debe tener formato válido');
+    const existente = await manager.getRepository(Alumno).findOne({ where: { curp: curp.trim().toUpperCase() }, withDeleted: true });
+    if (existente && existente.id !== id) throw new ConflictException('La CURP ya pertenece a un expediente; utiliza el alumno existente');
+  }
+
   async actualizar(id: number, dto: ActualizarAlumnoDto, user?: JwtUser) {
     if (dto.estatus !== undefined)
       throw new BadRequestException('Usa las acciones de baja o egreso para cambiar el estado');
     if (dto.plantelId !== undefined) throw new BadRequestException('Usa la transferencia para cambiar de plantel');
-    return this.dataSource.transaction(async (manager) => {
+    return this.identidadTx(async (manager) => {
       const alumnos = manager.getRepository(Alumno);
       const alumno = await alumnos.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!alumno) throw new NotFoundException('Alumno no encontrado');
       if (user) {
         await this.scope.validarGestion(user, alumno.plantelId);
         if (dto.plantelId) await this.scope.validarGestion(user, dto.plantelId);
+      }
+      if (dto.curp !== undefined) {
+        await this.validarCurp(manager, dto.curp, id);
+        dto.curp = dto.curp!.trim().toUpperCase();
       }
       if (
         [

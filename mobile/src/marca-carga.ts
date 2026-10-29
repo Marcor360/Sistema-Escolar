@@ -62,7 +62,7 @@ export async function cargarMarca(
 
 /** Evita renders y escrituras repetidas mientras el contenido público no cambia. */
 export function mismaMarca(a: Marca, b: Marca): boolean {
-  return a.nombreInstitucion === b.nombreInstitucion
+  return a.nombreAdministrativo === b.nombreAdministrativo && a.nombrePortalAlumno === b.nombrePortalAlumno && a.nombreInstitucion === b.nombreInstitucion
     && a.nombreCorto === b.nombreCorto
     && a.logoUrl === b.logoUrl
     && a.colorPrimario === b.colorPrimario

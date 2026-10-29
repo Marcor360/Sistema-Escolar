@@ -66,13 +66,26 @@ jobs:
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: mobile/package-lock.json
+          cache-dependency-path: |
+            mobile/package-lock.json
+            web/package-lock.json
       - run: node ../scripts/ci-install.cjs
       - name: Revisión de vulnerabilidades npm
         run: node ../scripts/check-mobile-audit.cjs
       - run: npm test
       - run: npx tsc --noEmit
       - run: npx expo export --platform android --output-dir .expo/export
+      - run: npx expo export --platform web --output-dir dist
+        env:
+          APP_ENV: preview
+          EXPO_PUBLIC_API_URL: https://api.example.invalid/api
+      - name: Dependencias del recorrido de navegador del alumno
+        run: node ../scripts/ci-install.cjs
+        working-directory: web
+      - run: npx playwright install --with-deps chromium
+        working-directory: web
+      - name: "Portal Alumno web: acceso, boleta, descarga y firma (API simulada)"
+        run: npm run test:web
 
   integration-mysql:
     runs-on: ubuntu-latest
@@ -223,6 +236,12 @@ jobs:
         working-directory: web
       - name: Navegación, formularios y tablas responsive (API simulada)
         run: npm run test:responsive
+        working-directory: web
+      - name: Cartera integral responsive (API simulada)
+        run: npm run test:cartera
+        working-directory: web
+      - name: Boletas, revisión y comentarios por materia (API simulada)
+        run: npm run test:boletas
         working-directory: web
       - name: Calendario institucional responsive y PDF (API simulada)
         run: node test/calendario-institucional.cjs

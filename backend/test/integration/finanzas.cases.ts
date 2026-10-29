@@ -1,3 +1,4 @@
+import { curpFicticia } from './identidad-ficticia';
 import { ContextoIntegracion } from './contexto';
 import { CobranzaService } from '../../src/finanzas/cobranza.service';
 import { NotificacionesService } from '../../src/notificaciones/notificaciones.service';
@@ -244,7 +245,7 @@ it('mantiene cargos, pagos, permisos y analítica en el plantel de origen despu�
     const root = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.superadminId })).email);
     const a = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.adminId })).email);
     const b = await ctx.emitirFinanzasB();
-    const alta = await ctx.api('/alumnos', { method: 'POST', token: root, body: { email: `origen_${ctx.sufijo}@example.invalid`, curp: 'GODE561231HDFRRN09', nombre: 'Origen', apellidoPaterno: 'Financiero', matricula: `OF${ctx.sufijo}`, plantelId: ctx.plantelId } }); expect(alta.response.status).toBe(201);
+    const alta = await ctx.api('/alumnos', { method: 'POST', token: root, body: { email: `origen_${ctx.sufijo}@example.invalid`, curp: curpFicticia(), nombre: 'Origen', apellidoPaterno: 'Financiero', matricula: `OF${ctx.sufijo}`, plantelId: ctx.plantelId } }); expect(alta.response.status).toBe(201);
     const clase = await ctx.dataSource.getRepository(GrupoMateria).findOneByOrFail({ id: ctx.grupoMateriaIdMaestro });
     const concepto = await ctx.dataSource.getRepository(ConceptoPago).findOneByOrFail({ clave: `CW${ctx.sufijo}` });
     const cargo = await ctx.api('/finanzas/cargos', { method: 'POST', token: a, body: { alumnoId: alta.data.id, conceptoId: concepto.id, cicloId: clase.grupo.cicloId, descripcion: 'Origen inmutable', monto: 100 } }); expect(cargo.response.status).toBe(201);
@@ -297,7 +298,7 @@ it('cobranza deduplica, conserva éxito parcial y exige revisión de timeout ant
 export function registrarRecorridoFinanciero(ctx: ContextoIntegracion) {
   it('recorrido financiero: descuento, pago parcial, anulación, cancelación, conciliación y Excel coherentes', async () => {
     const token = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.superadminId })).email);
-    const alta = await ctx.api('/alumnos',{ method: 'POST',token,body: { nombre: 'Finanzas',apellidoPaterno: 'Operativo',email: `fop_${ctx.sufijo}@example.invalid`,matricula: `FO${ctx.sufijo}`,curp: 'GODE561231HDFRRN09',plantelId: ctx.plantelId } }); expect(alta.response.status).toBe(201);
+    const alta = await ctx.api('/alumnos',{ method: 'POST',token,body: { nombre: 'Finanzas',apellidoPaterno: 'Operativo',email: `fop_${ctx.sufijo}@example.invalid`,matricula: `FO${ctx.sufijo}`,curp: curpFicticia(),plantelId: ctx.plantelId } }); expect(alta.response.status).toBe(201);
     const concepto = await ctx.api('/finanzas/conceptos',{ method: 'POST',token,body: { clave: `OP${ctx.sufijo}`,nombre: 'Cargo operativo',tipo: 'OTRO',montoBase: 200 } }); expect(concepto.response.status).toBe(201);
     const crear = (descripcion: string,monto: number,descuento = 0) => ctx.api('/finanzas/cargos',{ method: 'POST',token,body: { alumnoId: alta.data.id,conceptoId: concepto.data.id,descripcion,monto,descuento,fechaVencimiento: '2026-01-01' } });
     const cargo = await crear('Cargo con corrección',200,20); expect(cargo.response.status).toBe(201);

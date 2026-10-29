@@ -29,6 +29,14 @@ export class AuthController {
     return this.responder(await this.auth.login(dto.email, dto.password, portal, ip, agente), portal, res);
   }
 
+  @Post('login-alumno-web')
+  @Throttle(LIMITE_ESTRICTO)
+  @ApiOperation({summary:'Acceso exclusivo del portal web del alumno; refresh HttpOnly'})
+  async loginAlumnoWeb(@Body() dto:LoginDto,@PortalActual() portal:Portal,@Ip() ip:string,@Res({passthrough:true}) res:Response,@Headers('user-agent') agente?:string){
+    if(portal!=='WEB')throw new ForbiddenException('Utiliza el acceso de la app para Android/iOS');
+    return this.responder(await this.auth.login(dto.email,dto.password,'WEB',ip,agente,true),'WEB',res);
+  }
+
   private responder(tokens: Awaited<ReturnType<AuthService['login']>>, portal: Portal, res: Response) {
     if (portal === 'MOVIL') return tokens;
     res.cookie('escolar_refresh', tokens.refreshToken, { httpOnly: true, secure: process.env.NODE_ENV === 'production',

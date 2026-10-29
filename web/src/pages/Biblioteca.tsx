@@ -4,7 +4,6 @@ import { api, archivosBase, mensajeDeError } from '../api/client';
 import { Encabezado } from '../components/Encabezado';
 import { Paginador } from '../components/Paginador';
 import { useConfirmacion } from '../components/useConfirmacion';
-import '../components/tabla-adaptable.css';
 interface Plantel {
   id: number;
   nombre: string;

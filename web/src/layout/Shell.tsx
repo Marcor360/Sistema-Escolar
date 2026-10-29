@@ -11,6 +11,7 @@ import { RecorridoInicial } from '../components/RecorridoInicial';
 import { construirRecorrido, recorridosPorArea } from '../components/recorrido-por-rol';
 
 const secciones = [
+  { destino: '/boletas', etiqueta: 'Boletas y revisiones', roles: ['MAESTRO','ADMINISTRATIVO','DIRECTOR'] },
   { destino: '/seguimiento', etiqueta: 'Seguimiento y pendientes', roles: ['ALUMNO','MAESTRO','ADMINISTRATIVO','FINANZAS'] },
   { destino: '/asistencias', etiqueta: 'Asistencias', roles: ['ALUMNO','MAESTRO','ADMINISTRATIVO'] },
   { destino: '/biblioteca', etiqueta: 'Biblioteca', roles: ['ADMINISTRATIVO'] },
@@ -39,7 +40,7 @@ const secciones = [
 ];
 
 const gruposMenu = [
-  { titulo: 'Inicio y seguimiento', rutas: ['/', '/seguimiento', '/asistencias', '/calendario', '/avisos'] },
+  { titulo: 'Inicio y seguimiento', rutas: ['/', '/boletas', '/seguimiento', '/asistencias', '/calendario', '/avisos'] },
   { titulo: 'Control escolar', rutas: ['/alumnos', '/docentes', '/catalogos-academicos', '/apertura-cartera', '/recursamientos', '/programas-especiales', '/materias', '/grupos', '/operaciones'] },
   { titulo: 'Docencia', rutas: ['/maestro', '/temarios', '/calificaciones', '/conducta'] },
   { titulo: 'Finanzas e informes', rutas: ['/finanzas', '/analitica'] },
@@ -47,6 +48,7 @@ const gruposMenu = [
 ];
 
 const iconosPorRuta: Record<string, NombreIcono> = {
+  '/boletas': 'clipboard-check',
   '/seguimiento': 'clipboard-check',
   '/asistencias': 'clipboard-check',
   '/': 'layout-dashboard',
@@ -79,6 +81,7 @@ export function Shell() {
   const navigate = useNavigate();
   const location = useLocation();
   const { marca } = useMarca();
+  useEffect(() => { document.title = sesion?.roles.includes('ALUMNO') ? marca.nombrePortalAlumno || 'Sistema Escolar Portal Alumno' : marca.nombreAdministrativo || 'Sistema Escolar Administrativo'; }, [sesion?.roles, marca.nombreAdministrativo, marca.nombrePortalAlumno]);
   const pasosRecorrido = construirRecorrido(gruposMenu, secciones, sesion?.roles ?? []);
   const [errorCierre, setErrorCierre] = useState('');
   const [menuAbierto, setMenuAbierto] = useState(false);
@@ -175,7 +178,7 @@ export function Shell() {
   }
 
   return (
-    <div className={`shell${esFormularioModulo(new URLSearchParams(location.search).get('vista') || '') ? ' shell-enfoque' : ''}`}>
+    <div data-portal-sistema={sesion?.roles.includes('ALUMNO') ? 'ALUMNO' : 'ADMINISTRATIVO'} className={`shell${esFormularioModulo(new URLSearchParams(location.search).get('vista') || '') ? ' shell-enfoque' : ''}`}>
       <a ref={saltoContenido} className="skip-link" href="#contenido-principal">
         Saltar al contenido principal
       </a>
@@ -213,7 +216,7 @@ export function Shell() {
           </div>
         )}
         <p className="lateral-titulo" title={marca.nombreInstitucion}>
-          {marca.nombreInstitucion}
+          {sesion?.roles.includes('ALUMNO') ? marca.nombrePortalAlumno || 'Sistema Escolar Portal Alumno' : marca.nombreAdministrativo || 'Sistema Escolar Administrativo'}
         </p>
         <div className="menu-panel">
           <nav id="navegacion-escolar" aria-label="Navegación principal">

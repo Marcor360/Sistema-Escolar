@@ -1,6 +1,6 @@
 import {
   Column, CreateDateColumn, DeleteDateColumn, Entity, JoinTable,
-  ManyToMany, PrimaryGeneratedColumn, UpdateDateColumn,
+  Index, ManyToMany, PrimaryGeneratedColumn, UpdateDateColumn,
 } from 'typeorm';
 import { Rol } from './rol.entity';
 
@@ -9,7 +9,8 @@ export type ProveedorCorreo = 'GODADDY' | 'MICROSOFT365';
 @Entity('usuarios')
 export class Usuario {
   @PrimaryGeneratedColumn() id!: number;
-  @Column({ length: 120, unique: true }) email!: string;
+  @Index('uq_usuario_email', { unique: true, where: 'email IS NOT NULL' })
+  @Column({ type: String, length: 120, nullable: true }) email!: string | null;
   @Column({ name: 'correo_personal', type: String, length: 120, nullable: true }) correoPersonal!: string | null;
   @Column({ length: 100, select: false }) passwordHash!: string;
   @Column({ length: 80 }) nombre!: string;

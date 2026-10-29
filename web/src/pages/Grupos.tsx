@@ -9,7 +9,6 @@ import { api, mensajeDeError } from '../api/client';
 
 import { Encabezado } from '../components/Encabezado';
 import { Paginador } from '../components/Paginador';
-import '../components/tabla-adaptable.css';
 
 
 

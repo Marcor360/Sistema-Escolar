@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Modal, ScrollView, TouchableOpacity, View } from "react-native";
-import * as SecureStore from "expo-secure-store";
+import * as SecureStore from "../almacen-seguro";
 import { Text } from "./Texto";
 import {
   CLAVE_GUIA_ALUMNO,

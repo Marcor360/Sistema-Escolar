@@ -13,7 +13,6 @@ import { api, mensajeDeError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { Encabezado } from '../components/Encabezado';
 import { Paginador } from '../components/Paginador';
-import '../components/tabla-adaptable.css';
 
 
 
@@ -90,7 +89,7 @@ export default function AlumnosPage() {
     try {
       const { data } = await api.get(`/alumnos/${alumno.id}`);
       setForm({ ...FORM_INICIAL, matricula: data.matricula, plantelId: String(data.plantelId),
-        nombre: data.usuario.nombre, apellidoPaterno: data.usuario.apellidoPaterno, apellidoMaterno: data.usuario.apellidoMaterno ?? '', telefono: data.usuario.telefono ?? '', email: data.usuario.email, correoPersonal: data.usuario.correoPersonal ?? '', correoProveedor: data.usuario.correoProveedor ?? 'MICROSOFT365', curp: data.curp ?? '', fechaNacimiento: data.fechaNacimiento ?? '', direccion: data.direccion ?? '',
+        nombre: data.usuario.nombre, apellidoPaterno: data.usuario.apellidoPaterno, apellidoMaterno: data.usuario.apellidoMaterno ?? '', telefono: data.usuario.telefono ?? '', email: data.usuario.email ?? '', correoPersonal: data.usuario.correoPersonal ?? '', correoProveedor: data.usuario.correoProveedor ?? 'MICROSOFT365', curp: data.curp ?? '', fechaNacimiento: data.fechaNacimiento ?? '', direccion: data.direccion ?? '',
         tutorNombre: data.tutorNombre ?? '', tutorTelefono: data.tutorTelefono ?? '' });
       setEditando(alumno.id);
       if (modo !== 'legado') trabajo.ir('editar', alumno.id);
@@ -252,7 +251,7 @@ export default function AlumnosPage() {
               <td data-etiqueta="Matrícula">{a.matricula}</td>
               <td data-etiqueta="Nombre">{a.usuario.nombre} {a.usuario.apellidoPaterno} {a.usuario.apellidoMaterno ?? ''}</td>
               <td data-etiqueta="Plantel">{a.plantel?.nombre ?? <span className="sello neutro">Sin plantel</span>}</td>
-              <td data-etiqueta="Correo">{a.usuario.email}</td>
+              <td data-etiqueta="Correo">{a.usuario.email === null ? 'Sin correo institucional' : a.usuario.email ?? 'Restringido'}</td>
               <td data-etiqueta="Estatus"><span className={`sello ${a.estatus === 'ACTIVO' ? 'ok' : 'neutro'}`}>{a.estatus}</span></td>
               <td data-etiqueta="Acciones" className="derecha">
                 <span className="acciones-fila"><EliminarRegistro ruta={`/alumnos/${a.id}`} nombre={`alumno ${a.matricula}`} deshabilitado={enviando} alEliminar={() => { setEditando(null); setForm(FORM_INICIAL); historialSolicitud.current++; invalidarNotas(); setHistorial(null); setTransferencia(null); setMensaje('Alumno y cuenta eliminados definitivamente'); recargarListado(); }} />

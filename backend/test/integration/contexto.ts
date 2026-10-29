@@ -15,5 +15,5 @@ ordenId: number;
 cargoWebhookId: number;
  archivoPrueba: string | undefined; passwords: Map<string,string>;
  api: (ruta: string, opciones?: { method?: string; token?: string; body?: unknown; headers?: Record<string,string> }) => Promise<{ response: Response; data: any }>;
- emitirToken: (email: string) => Promise<string>; emitirFinanzasB: () => Promise<string>;
+ emitirToken: (email: string | null) => Promise<string>; emitirFinanzasB: () => Promise<string>;
 }

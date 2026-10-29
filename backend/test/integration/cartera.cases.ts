@@ -1,3 +1,4 @@
+import { curpFicticia } from './identidad-ficticia';
 import { expect, it } from '@jest/globals';
 import { Cargo, ConceptoPago, AperturaCartera, Grupo, Usuario, Inscripcion } from '../../src/entities';
 import { ContextoIntegracion } from './contexto';
@@ -9,7 +10,7 @@ export function registrarCartera(ctx: ContextoIntegracion) {
     process.env.INSCRIPCION_ORDINARIA_SOLO_CARTERA='true';
     try {
     const cuenta = await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.superadminId });
-    const token = await ctx.emitirToken(cuenta.email), user = { sub: cuenta.id, email: cuenta.email, nombre: 'QA', roles: ['SUPERADMIN'] };
+    const token = await ctx.emitirToken(cuenta.email), user = { sub: cuenta.id, email: cuenta.email!, nombre: 'QA', roles: ['SUPERADMIN'] };
     const post = async (ruta: string, body: unknown) => { const r = await ctx.api(ruta, { method: 'POST', token, body }); expect(r.response.status).toBe(201); return r.data; };
     const ciclo = await post('/academico/ciclos', { clave: `AC${ctx.sufijo}`, nombre: 'Ciclo cartera', fechaInicio: '2054-01-01', fechaFin: '2054-12-31' });
     const nivel = await post('/academico/catalogos/niveles', { plantelId: ctx.plantelId, clave: `AC${ctx.sufijo}`, nombre: 'Nivel cartera' });
@@ -17,13 +18,13 @@ export function registrarCartera(ctx: ContextoIntegracion) {
     const periodo = await post('/academico/catalogos/periodos', { plantelId: ctx.plantelId, carreraId: carrera.id, cicloId: ciclo.id, clave: 'P1', nombre: 'Primer periodo', tipo: 'ANUAL', numero: 1 });
     const d = { plantelId: ctx.plantelId, cicloId: ciclo.id, nivelId: nivel.id, carreraId: carrera.id, periodoAcademicoId: periodo.id, turno: 'MATUTINO' as const };
     const alumnos: { id: number }[] = [];
-    for (let n = 0; n < 6; n++) alumnos.push(await post('/alumnos', { email: `ac${n}${ctx.sufijo}@example.invalid`, matricula: `AC${n}${ctx.sufijo}`, nombre: 'Alumno', apellidoPaterno: `Cartera ${n}`, curp: 'GODE561231HDFRRN09', plantelId: ctx.plantelId }));
+    for (let n = 0; n < 6; n++) alumnos.push(await post('/alumnos', { email: `ac${n}${ctx.sufijo}@example.invalid`, matricula: `AC${n}${ctx.sufijo}`, nombre: 'Alumno', apellidoPaterno: `Cartera ${n}`, curp: curpFicticia(), plantelId: ctx.plantelId }));
     const concepto = await ctx.dataSource.getRepository(ConceptoPago).save({ clave: `AC${ctx.sufijo}`, nombre: 'Tarifa cartera QA', tipo: 'INSCRIPCION', montoBase: 125, activo: true, aplicaRecargo: false });
     const base = { ...d, conceptoIds: [concepto.id], periodo: '2054-02', fechaVencimiento: '2054-02-05' };
     const preview = async (n: number) => { const r = await ctx.api('/cartera/previsualizar', { method: 'POST', token, body: { ...base, alumnoId: alumnos[n].id } }); expect(r.response.status).toBe(201); return r.data; };
     const confirmado = async (n: number) => ({ ...base, alumnoId: alumnos[n].id, cotizacion: (await preview(n)).cotizacion, idempotencia: randomUUID(), confirmado: true });
     const ajeno = await ctx.emitirFinanzasB();
-    expect((await ctx.api('/cartera', { token: ajeno })).response.status).toBe(403);
+    expect((await ctx.api('/cartera', { token: ajeno })).data.datos).toEqual([]);
     const q = await preview(0); expect(q.total).toBe(125);
     const cambiado = await confirmado(0);
     await ctx.dataSource.getRepository(ConceptoPago).update(concepto.id, { montoBase: 130 });

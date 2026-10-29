@@ -29,7 +29,7 @@ export class AuthService {
     private readonly dataSource: DataSource,
   ) {}
 
-  async login(email: string, password: string, portal: Portal = 'WEB', ip?: string, agente?:string) {
+  async login(email: string, password: string, portal: Portal = 'WEB', ip?: string, agente?:string, alumnoWeb = false) {
     const usuario = await this.usuarios.findOne({
       where: { email, activo: true },
       select: ['id', 'email', 'passwordHash', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'sessionVersion', 'passwordChangeRequired', 'activacionPendiente'],
@@ -40,9 +40,9 @@ export class AuthService {
     }
     if (usuario.activacionPendiente) throw new UnauthorizedException('La cuenta necesita activación antes de iniciar sesión');
     const roles = usuario.roles.map((r) => r.clave);
-    if (!roles.some((rol) => (ROLES_POR_PORTAL[portal] as string[]).includes(rol))) {
+    if (alumnoWeb ? portal !== 'WEB' || !roles.includes('ALUMNO') : !roles.some((rol) => (ROLES_POR_PORTAL[portal] as string[]).includes(rol))) {
       await this.registrarLoginFallido(usuario.id, 'PORTAL_RECHAZADO', ip);
-      throw new ForbiddenException(MENSAJES_PORTAL[portal]);
+      throw new ForbiddenException(alumnoWeb ? MENSAJES_PORTAL.MOVIL : MENSAJES_PORTAL[portal]);
     }
     await this.validarExpediente(usuario.id, roles);
     const sesiones = this.dataSource.getRepository(Sesion);
@@ -55,6 +55,7 @@ export class AuthService {
   }
 
   private emitir(usuario: Usuario, sesion: Sesion) {
+    if (!usuario.email || usuario.activacionPendiente) throw new UnauthorizedException('La cuenta requiere correo institucional y activación');
     const payload: JwtUser = { sub: usuario.id, email: usuario.email, nombre: usuario.nombreCompleto,
       roles: usuario.roles.map((r) => r.clave), ver: usuario.sessionVersion ?? 0, sid: sesion.id, kind: 'ACCESS', passwordChangeRequired: usuario.passwordChangeRequired };
     const refreshToken = this.jwt.sign({ sub: usuario.id, sid: sesion.id, portal: sesion.portal,
@@ -91,7 +92,7 @@ export class AuthService {
       const usuario = await manager.getRepository(Usuario).findOne({ where: { id: payload.sub, activo: true } });
       if (!usuario || usuario.activacionPendiente || sesion.version !== usuario.sessionVersion) return null;
       const roles = usuario.roles.map((r) => r.clave);
-      if (!roles.some((r) => (ROLES_POR_PORTAL[portal] as string[]).includes(r))) return null;
+      if (!(portal === 'WEB' && roles.includes('ALUMNO')) && !roles.some((r) => (ROLES_POR_PORTAL[portal] as string[]).includes(r))) return null;
       await this.validarExpediente(usuario.id, roles);
       const tokens = this.emitir(usuario, sesion);
       await sesiones.save(sesion);

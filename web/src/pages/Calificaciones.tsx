@@ -4,7 +4,6 @@ import { PonderacionCalificaciones } from '../components/PonderacionCalificacion
 import { ActaEscolar } from '../components/ActaEscolar';
 import { useModuloTrabajo } from '../components/ModuloTrabajo';
 import { ImportarCalificaciones } from '../components/ImportarCalificaciones';
-import '../components/tabla-adaptable.css';
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';

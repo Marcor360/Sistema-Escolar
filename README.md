@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.30.6`** · Renovación de sesión móvil compatible con consultas académicas y confirmaciones fiables del E2E. Base 1.30.2 (#214); conserva aislamiento por alumno y calendario institucional.
+**Versión candidata: `1.34.0`** · Sistemas administrativo/alumno con nombres configurables y boletas con aceptación, revisión y comentarios por materia. [Contrato y validación](docs/BOLETAS_FIRMADAS_1.34.0.md).
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -18,6 +18,12 @@ Sistema escolar multiplataforma para operación académica, administrativa y fin
 Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [índice documental](docs/README.md) e [historial de documentos retirados](docs/HISTORIAL.md).
 
 ### Cambios consolidados recientes
+
+- **1.32.0 (candidata):** [Estabilización y seguimiento](docs/ESTABILIZACION_1.32.0.md): Vite 6.4.5, recorrido de cartera en CI, detalle independiente y pendientes administrativos por plantel.
+
+- **1.31.1 (candidata):** [Revisión UX/UI](docs/REVISION_UX_1.31.1.md): campos y cuotas alineados, datos visibles en tablas móviles, selectores compactos y guías de alta/acceso actualizadas.
+
+- **1.31.0 (candidata):** [Alta integral de alumno y cartera](docs/CARTERA_INTEGRAL_1.31.0.md): correo posterior desde Usuarios, pausa sin cargos, total y cuotas del periodo, pagos previos conservados y CURP única.
 
 - **1.29.0 (candidata):** [Inscripción y reinscripción segura por periodo](docs/REINSCRIPCIONES_SEGURAS_1.29.0.md): autorización financiera, calendario de cuotas, conservación de historial y cierre del bypass de cartera.
 

@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Sistema Escolar",
+    "name": "Sistema Escolar Portal Alumno",
     "slug": "sistema-escolar",
-    "version": "1.30.6",
+    "version": "1.34.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "ios": {
@@ -33,6 +33,12 @@
         }
       ],
       "expo-notifications"
-    ]
+    ],
+    "web": {
+      "bundler": "metro",
+      "name": "Sistema Escolar Portal Alumno",
+      "shortName": "Alumno",
+      "lang": "es"
+    }
   }
 }

@@ -6,6 +6,7 @@ import { crearControlLectura } from "../api/lectura-vigente";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Platform,
   AppState,
   Alert,
   ScrollView,
@@ -391,7 +392,7 @@ export default function PerfilScreen({ abrirDocumentos }: { abrirDocumentos?: ()
         </TouchableOpacity>
         <Text style={base.secundario}>Al cerrar sesión se eliminan los tokens, preferencias y la caché de tu cuenta. El acceso biométrico no prolonga el límite de 30 minutos sin actividad.</Text>
       </Tarjeta>
-      <Tarjeta>
+      {Platform.OS === "web" ? <Tarjeta><Text accessibilityRole="header">Avisos escolares</Text><Text style={base.secundario}>Consulta tus avisos en Inicio. Las notificaciones push y la biometría se configuran desde la app instalada en Android/iOS.</Text></Tarjeta> : <Tarjeta>
         <Text accessibilityRole="header">Avisos en este dispositivo</Text>
         <Text style={base.secundario}>
           Recibe un aviso cuando haya novedades. Puedes desactivarlo aquí; tus
@@ -425,7 +426,7 @@ export default function PerfilScreen({ abrirDocumentos }: { abrirDocumentos?: ()
         >
           <Text>Desactivar avisos en este dispositivo</Text>
         </TouchableOpacity>
-      </Tarjeta>
+      </Tarjeta>}
       <TouchableOpacity
         style={estilos.boton}
         disabled={cerrando}

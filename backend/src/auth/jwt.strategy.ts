@@ -57,6 +57,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       const docente = await this.docentes.findOne({ where: { usuarioId: usuario.id, estatus: 'ACTIVO' } });
       if (!docente) throw new UnauthorizedException('El expediente de docente ya no está activo');
     }
+    if (!usuario.email) throw new UnauthorizedException('La cuenta requiere correo institucional');
     return {
       sub: usuario.id,
       email: usuario.email,

@@ -9,14 +9,13 @@ export function PanelAccionesModulo({ titulo, acciones }: { titulo: string; acci
     <section className="panel" aria-label={titulo}>
       <h2>{titulo}</h2>
       <p className="texto-ayuda">Selecciona la operación que deseas realizar.</p>
-      <div className="rejilla-formulario">
+      <div className="acciones-modulo-grid">
         {acciones.map((accion) => (
           <button
             key={accion.titulo}
             type="button"
-            className="boton secundario"
+            className="boton secundario accion-modulo"
             onClick={accion.ejecutar}
-            style={{ minHeight: 72, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}
           >
             <strong>{accion.titulo}</strong>
             <span>{accion.detalle}</span>

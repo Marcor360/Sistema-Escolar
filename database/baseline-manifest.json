@@ -56,7 +56,9 @@
         "migracion_reinscripciones_periodo.sql",
         "migracion_calendario_marcadores.sql",
         "migracion_rol_director.sql",
-        "migracion_historial_roles_usuario.sql"
+        "migracion_historial_roles_usuario.sql",
+        "migracion_cartera_integral.sql",
+        "migracion_boletas_firmadas_portales.sql"
       ]
     },
     "sqlserver": {
@@ -113,7 +115,9 @@
         "migracion_reinscripciones_periodo.sql",
         "migracion_calendario_marcadores.sql",
         "migracion_rol_director.sql",
-        "migracion_historial_roles_usuario.sql"
+        "migracion_historial_roles_usuario.sql",
+        "migracion_cartera_integral.sql",
+        "migracion_boletas_firmadas_portales.sql"
       ]
     }
   }

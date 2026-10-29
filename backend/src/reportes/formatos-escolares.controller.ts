@@ -18,13 +18,13 @@ export class FormatosEscolaresController {
  async actaExcel(@Param('id',ParseIntPipe) id:number,@Query('parcial',ParseIntPipe) parcial:number,@Query('plantilla',new ParseBoolPipe({optional:true})) plantilla:boolean|undefined,@CurrentUser() u:JwtUser,@Res() res:Response){this.enviar(res,await this.formatos.actaExcel(id,parcial,u,plantilla===true),`acta-${id}-${parcial}${plantilla?'-plantilla':''}.xlsx`);}
  @Header('Cache-Control','private, no-store') @Get('mi-boleta') @Roles('ALUMNO')
  mia(@CurrentUser() u:JwtUser,@Query('inscripcionId',opcional) inscripcionId?:number,@Query('cicloId',opcional) cicloId?:number){return this.formatos.miBoleta(u,inscripcionId,cicloId);}
- @Header('Cache-Control','private, no-store') @Get('boleta/:alumnoId') @Roles('ALUMNO','ADMINISTRATIVO')
+ @Header('Cache-Control','private, no-store') @Get('boleta/:alumnoId') @Roles('ALUMNO','ADMINISTRATIVO','DIRECTOR')
  boleta(@Param('alumnoId',ParseIntPipe) alumnoId:number,@CurrentUser() u:JwtUser,@Query('inscripcionId',opcional) inscripcionId?:number,@Query('cicloId',opcional) cicloId?:number){return this.formatos.boleta(alumnoId,u,inscripcionId,cicloId);}
- @Get('boleta/:alumnoId/pdf') @Roles('ALUMNO','ADMINISTRATIVO')
+ @Get('boleta/:alumnoId/pdf') @Roles('ALUMNO','ADMINISTRATIVO','DIRECTOR')
  async pdf(@Param('alumnoId',ParseIntPipe) alumnoId:number,@CurrentUser() u:JwtUser,@Res() res:Response,@Query('inscripcionId',opcional) inscripcionId?:number,@Query('cicloId',opcional) cicloId?:number){
   const buffer=await this.formatos.boletaPdf(alumnoId,u,inscripcionId,cicloId);res.setHeader('Cache-Control','private, no-store');res.setHeader('Content-Type','application/pdf');res.setHeader('Content-Disposition',contentDisposition(`boleta-${alumnoId}.pdf`,'attachment'));res.send(buffer);
  }
- @Get('boleta/:alumnoId/excel') @Roles('ALUMNO','ADMINISTRATIVO')
+ @Get('boleta/:alumnoId/excel') @Roles('ALUMNO','ADMINISTRATIVO','DIRECTOR')
  async excel(@Param('alumnoId',ParseIntPipe) alumnoId:number,@CurrentUser() u:JwtUser,@Res() res:Response,@Query('inscripcionId',opcional) inscripcionId?:number,@Query('cicloId',opcional) cicloId?:number){this.enviar(res,await this.formatos.boletaExcel(alumnoId,u,inscripcionId,cicloId),`boleta-${alumnoId}.xlsx`);}
  private enviar(res:Response,buffer:Buffer,nombre:string){res.setHeader('Cache-Control','private, no-store');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');res.setHeader('Content-Disposition',contentDisposition(nombre,'attachment'));res.send(buffer);}
 }

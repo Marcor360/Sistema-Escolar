@@ -286,7 +286,7 @@ Contrato detallado y límites: [Seguimiento y asistencias](SEGUIMIENTO_ASISTENCI
 | GET /api/asistencias/clases y /lista | Clases/lista autorizadas; devuelve puedeCapturar y revision |
 | POST /api/asistencias | Solo MAESTRO activo asignado; fecha civil, registros explícitos, motivo y revision; no bypass de SUPERADMIN para escritura |
 | GET /api/asistencias/:id/historial | Personal académico autorizado; el alumno no recibe motivos internos |
-| GET /api/seguimiento/pendientes | Conteos según capacidades y alcance |
+| GET /api/seguimiento/pendientes | Conteos según capacidades y alcance; `plantelId` opcional validado para personal gestor. ADMINISTRATIVO/SUPERADMIN reciben además alumnos sin correo, activación pendiente y carteras en pausa |
 | GET /api/seguimiento/calidad | Diagnóstico administrativo por plantel/global |
 | GET, POST /api/seguimiento/tramites | Lista autorizada; alta solo ALUMNO con clave UUID |
 | GET /api/seguimiento/tramites/:id/historial | Propio o personal autorizado |
@@ -308,3 +308,11 @@ No se añade gestión de personal ni captura de asistencias a Expo. Migraciones 
 - GET /api/analitica/comparativas: ciclo/plantel/desde/hasta; series y categorías agregadas por capacidades; no expone expedientes. Ver [definiciones y límites](RECORRIDOS_COMPARATIVAS_1.27.54.md).
 - POST /api/seguimiento/calidad/preview y /confirmar: alumnoId, teléfono/CURP opcionales; confirmar exige revisión vinculada a valores y expediente actual, con control de plantel y bloqueo transaccional.
 - GET /api/seguimiento/sesiones incorpora dispositivo informativo, sin agente bruto ni identificadores de hardware.
+
+## Seguimiento de inscripción · 1.32.0
+
+Usuarios admite `GET /api/usuarios/listado?tipo=ALUMNO&activacionPendiente=true&plantelId=ID` para ADMINISTRATIVO/SUPERADMIN: alumnos ACTIVO con usuario activo, correo asignado y activación pendiente. `sinCorreo=true` filtra expedientes activos pendientes de asignación. No se envían códigos al consultar. Cartera admite `estado=PAUSA|PENDIENTE|ABIERTA` en `GET /api/cartera`, junto con plantel, búsqueda y paginación. El servidor revalida el alcance. [Contrato y límites](ESTABILIZACION_1.32.0.md).
+
+## Boletas con respuesta · 1.34.0
+
+`GET /api/boletas/seguimiento` y `GET /api/boletas/inscripciones/:id` aplican alcance académico, por plantel o clase, y consulta propia de alumno. `POST /api/boletas/inscripciones/:id/responder` registra nombre completo y confirmación del alumno/tutor declarado, con estado ACEPTADA o REVISION y hasta 2000 caracteres. `POST /api/boletas/inscripciones/:id/comentarios` exige docente activo asignado a la materia. Ambos POST requieren versión e idempotencia; no modifican notas. DIRECTOR puede consultar/descargar la boleta completa dentro de sus planteles autorizados. [Contrato](BOLETAS_FIRMADAS_1.34.0.md).

@@ -287,6 +287,7 @@ export class ArchivosService {
       sesionInactiva(sesion.ultimaActividadEn, new Date())
     )
       throw new UnauthorizedException('La sesión del enlace fue revocada');
+    if (!usuario.email) throw new UnauthorizedException('La cuenta requiere correo institucional');
     return {
       sub: usuario.id,
       email: usuario.email,

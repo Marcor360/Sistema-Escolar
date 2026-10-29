@@ -49,6 +49,8 @@ export class ActualizarUsuarioDto {
 }
 
 export class ListadoUsuariosDto extends PaginacionDto {
+  @IsOptional() @IsIn(['true', 'false']) sinCorreo?: string;
+  @IsOptional() @IsIn(['true', 'false']) activacionPendiente?: string;
   @IsIn(['ALUMNO', 'DOCENTE', 'ADMINISTRATIVO', 'PERSONAL']) tipo!: 'ALUMNO' | 'DOCENTE' | 'ADMINISTRATIVO' | 'PERSONAL';
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) plantelId?: number;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
@@ -69,4 +71,10 @@ export class RestablecerPasswordAdministrativoDto {
 export class AsignarRolesPersonalDto {
   @IsArray() @ArrayNotEmpty() @IsIn(ROLES, { each: true })
   roles!: RolClave[];
+}
+
+export class AsignarCorreoAlumnoDto {
+  @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim().toLowerCase() : value)
+  @IsEmail() @MaxLength(120) email!: string;
+  @IsIn(['GODADDY', 'MICROSOFT365']) correoProveedor!: ProveedorCorreo;
 }

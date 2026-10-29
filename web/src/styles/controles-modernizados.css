@@ -1,3 +1,41 @@
+/* Botones compartidos: variantes y tamaño compacto definidos en un solo archivo. */
+
+
+.boton {
+  font: inherit;
+  padding: 8px 16px;
+  min-height: 44px;
+  border: 1px solid var(--pizarra);
+  background: var(--pizarra);
+  color: #fff;
+  cursor: pointer;
+}
+.boton:hover { background: var(--pizarra-2); }
+.boton.secundario { background: #fff; color: var(--pizarra); }
+.boton.secundario:hover { background: #eef1ee; }
+.boton.fantasma {
+  background: transparent;
+  border-color: rgba(232, 236, 233, 0.4);
+  color: #e8ece9;
+  margin-top: 10px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+}
+.boton.peligro { border-color: var(--peligro); background: #fff; color: var(--peligro); }
+.boton.peligro:hover { background: #faf0ed; }
+.boton:disabled { opacity: 0.55; cursor: default; }
+.boton, button.boton {
+  border-radius: var(--radio-sm);
+  font-size: .875rem;
+  font-weight: 650;
+  padding: 10px 18px;
+}
+.boton:not(.secundario, .peligro, .fantasma) { color: var(--texto-sobre-pizarra); }
+
+.boton:not(.secundario, .peligro, .fantasma):hover {
+  color: var(--texto-sobre-pizarra-2);
+}
+.boton, button.boton { min-height: 44px; }
 /* Controles institucionales: respeta los tokens de marca y los estilos existentes. */
 button:not(.boton), .boton {
   font: inherit;
@@ -77,3 +115,5 @@ input[type="checkbox"], input[type="radio"] {
     border-color: rgba(255, 255, 255, .35);
   }
 }
+
+.boton.chico { min-height:44px; padding:8px 12px; font-size:.8125rem; }

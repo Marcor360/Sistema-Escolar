@@ -21,6 +21,7 @@ export class ConfirmarCarteraDto extends PrevisualizarCarteraDto {
   @Equals(true) confirmado!: boolean;
 }
 export class ListarCarteraDto extends PaginacionDto {
+  @IsOptional() @IsIn(['PAUSA', 'PENDIENTE', 'ABIERTA']) estado?: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) plantelId?: number;
   @IsOptional() @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value) @IsString() @MaxLength(100) buscar?: string;
 }

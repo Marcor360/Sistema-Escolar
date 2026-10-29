@@ -1,12 +1,12 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
-import * as SecureStore from 'expo-secure-store';
+import * as SecureStore from './almacen-seguro';
 import * as Crypto from 'expo-crypto';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { api } from './api/client';
 
-Notifications.setNotificationHandler({ handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: false }) });
+if (Platform.OS !== 'web') Notifications.setNotificationHandler({ handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: false }) });
 const INSTALACION = 'escolar_push_instalacion';
 let revisionPreferencias = 0;
 let operacionesPreferencias: Promise<void> = Promise.resolve();
@@ -21,6 +21,7 @@ async function instalacion() {
   const nueva = Crypto.randomUUID(); await SecureStore.setItemAsync(INSTALACION, nueva); return nueva;
 }
 export async function activarPush(usuarioId: number, solicitarPermiso = true) {
+  if (Platform.OS === 'web') { if (!solicitarPermiso) return false; throw new Error('Los avisos push se activan desde la app instalada.'); }
   const revision = revisionPreferencias;
   if (!solicitarPermiso && await SecureStore.getItemAsync(`push_optin_${usuarioId}`) !== 'true') return;
   if (!Device.isDevice) throw new Error('Las notificaciones push requieren un dispositivo físico y una build firmada.');

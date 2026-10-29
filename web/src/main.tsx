@@ -5,6 +5,8 @@ import App from './App';
 import { AuthProvider } from './auth/AuthContext';
 import './styles.css';
 import './styles/controles-modernizados.css';
+import './styles/organizacion-modulos.css';
+import './styles/tablas.css';
 import { MarcaProvider } from './marca/MarcaContext';
 
 const router = createBrowserRouter([{ path: '*', element: (

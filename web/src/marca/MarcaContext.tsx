@@ -2,6 +2,8 @@ import { createContext, ReactNode, useCallback, useContext, useEffect, useRef, u
 import { api } from '../api/client';
 
 export type Marca = {
+  nombreAdministrativo?: string;
+  nombrePortalAlumno?: string;
   nombreInstitucion: string;
   nombreCorto: string;
   logoUrl: string | null;
@@ -14,6 +16,7 @@ export type Marca = {
 };
 
 export const MARCA_POR_DEFECTO: Marca = {
+  nombreAdministrativo: 'Sistema Escolar Administrativo', nombrePortalAlumno: 'Sistema Escolar Portal Alumno',
   nombreInstitucion: 'Sistema Escolar', nombreCorto: 'SE', logoUrl: null,
   colorPrimario: '#14343B', colorPrimarioOscuro: '#0E262B', colorAcento: '#C79A3C', mensajeBienvenida: '', tamanoLogo: 'NORMAL', actualizadoEn: '',
 };
@@ -67,7 +70,9 @@ function leerMarcaGuardada(): Marca | null {
 }
 
 function marcaIgual(anterior: Marca, siguiente: Marca): boolean {
-  return anterior.nombreInstitucion === siguiente.nombreInstitucion
+  return anterior.nombreAdministrativo === siguiente.nombreAdministrativo
+    && anterior.nombrePortalAlumno === siguiente.nombrePortalAlumno
+    && anterior.nombreInstitucion === siguiente.nombreInstitucion
     && anterior.nombreCorto === siguiente.nombreCorto
     && anterior.logoUrl === siguiente.logoUrl
     && anterior.colorPrimario === siguiente.colorPrimario
@@ -88,7 +93,7 @@ function aplicarMarca(marca: Marca) {
   raiz.setProperty('--texto-sobre-pizarra', textoAccesible(marca.colorPrimario));
   raiz.setProperty('--texto-sobre-pizarra-2', textoAccesible(marca.colorPrimarioOscuro));
   raiz.setProperty('--texto-sobre-dorado', textoAccesible(marca.colorAcento));
-  document.title = `${marca.nombreInstitucion} — Panel`;
+  document.title = document.querySelector('[data-portal-sistema="ALUMNO"]') ? marca.nombrePortalAlumno || 'Sistema Escolar Portal Alumno' : marca.nombreAdministrativo || 'Sistema Escolar Administrativo';
 }
 
 export function MarcaProvider({ children }: { children: ReactNode }) {

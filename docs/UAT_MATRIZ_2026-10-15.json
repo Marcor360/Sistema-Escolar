@@ -1,6 +1,6 @@
 {
-  "version": "1.30.6",
-  "alcance": "Candidata 1.30.3 sobre 1.30.2 (#214), tras #213: renovación del token conserva consultas del mismo alumno y cancela respuestas de otra sesión; confirmaciones explícitas del E2E académico. Sin despliegue ni UAT acreditados.",
+  "version": "1.34.0",
+  "alcance": "Candidata 1.34.0: nombres independientes de administración/alumno, seguimiento de boletas con aceptación nominal y revisión de hasta 2000 caracteres, comentarios docentes por materia e historial por versión. Sin despliegue ni aceptación institucional acreditados.",
   "escenarios": [
     {
       "id": "UAT-01",
@@ -19,7 +19,7 @@
     {
       "id": "UAT-02",
       "rol": "ADMINISTRATIVO",
-      "escenario": "Registrar alumno sin contraseña de matrícula; solicitud y confirmación de activación",
+      "escenario": "Crear alumno y cartera sin correo institucional, dejar en pausa sin cargos, reanudar con grupo y verificar cuotas sin duplicados; filtrar alumnos sin correo desde Usuarios, asignarlo y activar mediante código.",
       "canales": [
         "web",
         "api",
@@ -846,6 +846,22 @@
         "api",
         "mysql",
         "sqlserver"
+      ],
+      "estado": "pendiente",
+      "evidencias": [],
+      "responsable": "Institución/QA (por designar)"
+    },
+    {
+      "id": "UAT-62",
+      "rol": "ALUMNO",
+      "escenario": "Alumno o tutor declarado desde su cuenta revisa la boleta final publicada, firma con nombre completo y confirmación o solicita revisión de hasta 2000 caracteres. Profesor comenta solo su materia; Control Escolar y Director consultan sus planteles; SUPERADMIN global. Cambiar calificaciones deja la respuesta anterior como histórica.",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver",
+        "android",
+        "ios"
       ],
       "estado": "pendiente",
       "evidencias": [],

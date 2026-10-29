@@ -56,3 +56,17 @@ Calendario PATCH conserva autorización por creador/plantel y valida destino si 
 ## Comparativas y correcciones · 1.27.54
 
 Comparativas financieras para capacidad financiera y planteles autorizados; comparativas de inscripciones para capacidad académica, con MAESTRO restringido a sus grupos incluso con FINANZAS. ALUMNO no accede a la analítica institucional. Las guías no conceden permisos. Preview/confirmación de teléfono/CURP requiere ADMINISTRATIVO por plantel o SUPERADMIN global, con verificación del origen y de la revisión en ambas solicitudes.
+
+## Apertura integral y correo posterior · 1.31.0
+
+ADMINISTRATIVO/SUPERADMIN puede crear **alumno sin correo y cartera** en una misma confirmación desde Apertura, o asignar cartera a un alumno activo sin cartera previa. El alta tradicional de `/alumnos` conserva FINANZAS/SUPERADMIN. Las tarifas personalizadas requieren FINANZAS/SUPERADMIN además de permiso para confirmar la parte académica. PAUSA no genera cargos ni participa en agrupaciones; reanudar exige Control Escolar y motivo.
+
+Solo ADMINISTRATIVO/SUPERADMIN dentro del plantel puede asignar por primera vez el correo institucional al alumno desde Usuarios. La invitación se solicita después de guardar la dirección. FINANZAS y MAESTRO no obtienen ese permiso por consultar el listado. ALUMNO sigue sin acceso a gestión. Listados, detalles y resúmenes de cartera para Finanzas/Control Escolar respetan el plantel histórico de la operación; el buscador de elegibles y las mutaciones de apertura siguen reservados a Control Escolar.
+
+## Pendientes de inscripción · 1.32.0
+
+Las categorías de alumnos sin correo, activaciones pendientes y carteras en pausa son administrativas: ADMINISTRATIVO por planteles autorizados y SUPERADMIN global. FINANZAS conserva categorías financieras filtrables; no recibe estos pendientes de acceso por su rol. MAESTRO/ALUMNO no pueden elegir otro plantel para consultar pendientes. El filtro de activación pendiente en Usuarios exige ADMINISTRATIVO/SUPERADMIN. La consulta no invita, reanuda ni cobra. [Contrato](ESTABILIZACION_1.32.0.md).
+
+## Boletas · 1.34.0
+
+ALUMNO firma o solicita revisión solo sobre su boleta final publicada. El firmante ALUMNO/TUTOR es declarado desde esa cuenta. MAESTRO activo consulta inscripciones de clases asignadas, ve solo las calificaciones de sus materias y comenta únicamente en ellas. ADMINISTRATIVO/DIRECTOR leen por plantel y SUPERADMIN global; no suplantan firmas familiares. FINANZAS no recibe acceso. [Contrato](BOLETAS_FIRMADAS_1.34.0.md).
