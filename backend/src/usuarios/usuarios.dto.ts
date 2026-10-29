@@ -64,3 +64,9 @@ export class ActualizarPersonalDto extends OmitType(ActualizarUsuarioDto, ['pass
 export class RestablecerPasswordAdministrativoDto {
   @IsString() @MinLength(8) @PasswordNuevaValida() nueva!: string;
 }
+
+/** Solo roles de personal: la vinculación de alumnos y la condición docente son procesos distintos. */
+export class AsignarRolesPersonalDto {
+  @IsArray() @ArrayNotEmpty() @IsIn(ROLES, { each: true })
+  roles!: RolClave[];
+}

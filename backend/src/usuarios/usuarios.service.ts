@@ -1,6 +1,7 @@
 import { randomBytes } from 'crypto';
 import { hashPasswordNueva } from '../common/password-bcrypt';
 import { esMaestroRestringido } from '../common/politica-acceso';
+import { validarCambioRolesPersonal } from '../common/jerarquia-roles';
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, In, Repository, SelectQueryBuilder } from 'typeorm';
@@ -16,6 +17,7 @@ import { UsuarioPlantel } from '../entities/usuario-plantel.entity';
 import { PasswordResetToken } from '../entities/password-reset-token.entity';
 import { ActivacionToken } from '../entities/activacion-token.entity';
 import { BitacoraActividad } from '../entities/bitacora-actividad.entity';
+import { HistorialRolesUsuario } from '../entities/historial-roles-usuario.entity';
 import { JwtUser } from '../common/current-user.decorator';
 import { ScopeService } from '../planteles/scope.service';
 import { ListadoUsuariosDto } from './usuarios.dto';
@@ -142,7 +144,7 @@ export class UsuariosService {
   private async listarAdministrativos(query: ListadoUsuariosDto, user: JwtUser, pagina: number, porPagina: number) {
     const planteles = await this.scope.resolverFiltro(user, query.plantelId);
     const qb = this.usuarios.createQueryBuilder('u')
-      .innerJoin('u.roles', 'rolFiltro', 'rolFiltro.clave IN (:...staff)', { staff: ['ADMINISTRATIVO', 'FINANZAS', 'SUPERADMIN'] })
+      .innerJoin('u.roles', 'rolFiltro', 'rolFiltro.clave IN (:...staff)', { staff: ['ADMINISTRATIVO', 'FINANZAS', 'DIRECTOR', 'SUPERADMIN'] })
       .leftJoinAndSelect('u.roles', 'roles')
       .distinct(true);
     if (planteles !== null) qb.andWhere(
@@ -181,6 +183,68 @@ export class UsuariosService {
     const usuario = await this.usuarios.findOne({ where: { id } });
     if (!usuario) throw new NotFoundException('Usuario no encontrado');
     return this.proyectar(usuario);
+  }
+
+  /** Asigna capacidades a personal existente sin crear un expediente docente ficticio. */
+  async asignarRolesPersonal(id: number, claves: RolClave[], actor: JwtUser) {
+    if (actor.portal === 'MOVIL') throw new ForbiddenException('Operación disponible solo en el portal web');
+    return this.usuarios.manager.transaction(async (manager) => {
+      const usuarios = manager.getRepository(Usuario);
+      const actorActual = await usuarios.findOne({ where: { id: actor.sub, activo: true } });
+      if (!actorActual) throw new ForbiddenException('La cuenta de quien autoriza ya no está activa');
+      const destino = await usuarios.findOne({ where: { id, activo: true }, lock: { mode: 'pessimistic_write' } });
+      if (!destino) throw new NotFoundException('Cuenta activa no encontrada');
+      const rolesActuales = destino.roles.map((rol) => rol.clave);
+      const rolesActor = actorActual.roles.map((rol) => rol.clave);
+      validarCambioRolesPersonal({ sub: actorActual.id, roles: rolesActor }, id, rolesActuales, claves);
+
+      const plantelesDestino = await manager.getRepository(UsuarioPlantel).find({
+        where: { usuarioId: id, activo: true },
+      });
+      if (!plantelesDestino.length) throw new ForbiddenException('La cuenta requiere un plantel asignado');
+      if (!rolesActor.includes('SUPERADMIN')) {
+        const plantelesActor = await manager.getRepository(UsuarioPlantel).find({
+          where: { usuarioId: actorActual.id, activo: true },
+        });
+        const permitidos = new Set(plantelesActor.map((asignacion) => asignacion.plantelId));
+        if (plantelesDestino.some((asignacion) => !permitidos.has(asignacion.plantelId))) {
+          throw new ForbiddenException('El personal está fuera de tus planteles autorizados');
+        }
+      }
+
+      const eraMaestro = rolesActuales.includes('MAESTRO');
+      const seraMaestro = claves.includes('MAESTRO');
+      if (eraMaestro !== seraMaestro) {
+        throw new ConflictException('El rol docente solo se modifica desde el expediente de Docentes');
+      }
+      if (seraMaestro) {
+        const docente = await manager.getRepository(Docente).findOne({
+          where: { usuarioId: id, estatus: 'ACTIVO' },
+        });
+        if (!docente) throw new ConflictException('Falta expediente docente activo');
+      }
+
+      destino.roles = await this.resolverRoles(claves, manager);
+      if (destino.roles.length !== claves.length) throw new ConflictException('Alguno de los roles no existe');
+      destino.sessionVersion = (destino.sessionVersion ?? 0) + 1;
+      await usuarios.save(destino);
+      await manager.getRepository(HistorialRolesUsuario).insert({
+        usuarioId: id,
+        actorId: actorActual.id,
+        rolesAntes: [...rolesActuales].sort().join(','),
+        rolesDespues: [...claves].sort().join(','),
+      });
+      await manager.getRepository(BitacoraActividad).insert({
+        usuarioId: actorActual.id,
+        metodo: 'PATCH',
+        ruta: '/api/usuarios/:id/roles',
+        entidad: 'Usuario',
+        entidadId: id,
+        resultado: 'EXITO',
+        statusCode: 200,
+      });
+      return { id, roles: destino.roles.map((rol) => rol.clave), sesionesRevocadas: true };
+    });
   }
 
   async detallePersonal(id: number) {
