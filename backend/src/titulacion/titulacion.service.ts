@@ -69,13 +69,13 @@ export class TitulacionService {
   async listar(query: PaginacionDto, actor: JwtUser) {
     this.exigirDirector(actor);
     const permitidos = await this.scope.plantelesDe(actor);
-    if (!permitidos?.length) throw new ForbiddenException('Asigna un plantel autorizado al director');
+    if (permitidos !== null && permitidos.length === 0) throw new ForbiddenException('Asigna un plantel autorizado al director');
     const pagina = query.pagina ?? 1;
     const porPagina = Math.min(query.porPagina ?? 10, 50);
     const qb = this.expedientes.createQueryBuilder('exp')
       .innerJoin('exp.egreso', 'eg')
-      .innerJoin('eg.alumno', 'al')
-      .andWhere('al.plantelId IN (:...permitidos)', { permitidos });
+      .innerJoin('eg.alumno', 'al');
+    if (permitidos !== null) qb.andWhere('al.plantelId IN (:...permitidos)', { permitidos });
     const [filas, total] = await qb.orderBy('exp.id', 'DESC')
       .skip((pagina - 1) * porPagina).take(porPagina).getManyAndCount();
     return {
