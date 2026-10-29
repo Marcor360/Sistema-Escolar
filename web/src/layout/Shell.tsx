@@ -34,6 +34,7 @@ const secciones = [
   { destino: '/avisos', etiqueta: 'Avisos', roles: ['ADMINISTRATIVO'] },
   { destino: '/finanzas', etiqueta: 'Finanzas', roles: ['FINANZAS'] },
   { destino: '/usuarios', etiqueta: 'Usuarios', roles: ['ADMINISTRATIVO', 'FINANZAS', 'MAESTRO'] },
+  { destino: '/roles-personal', etiqueta: 'Asignar funciones', roles: ['ADMINISTRATIVO', 'DIRECTOR'] },
   { destino: '/configuracion', etiqueta: 'Configuración', roles: ['SUPERADMIN'] },
 ];
 
@@ -42,7 +43,7 @@ const gruposMenu = [
   { titulo: 'Control escolar', rutas: ['/alumnos', '/docentes', '/catalogos-academicos', '/apertura-cartera', '/recursamientos', '/programas-especiales', '/materias', '/grupos', '/operaciones'] },
   { titulo: 'Docencia', rutas: ['/maestro', '/temarios', '/calificaciones', '/conducta'] },
   { titulo: 'Finanzas e informes', rutas: ['/finanzas', '/analitica'] },
-  { titulo: 'Administración', rutas: ['/planteles', '/biblioteca', '/usuarios', '/configuracion'] },
+  { titulo: 'Administración', rutas: ['/planteles', '/biblioteca', '/usuarios', '/roles-personal', '/configuracion'] },
 ];
 
 const iconosPorRuta: Record<string, NombreIcono> = {
@@ -69,6 +70,7 @@ const iconosPorRuta: Record<string, NombreIcono> = {
   '/avisos': 'bell',
   '/finanzas': 'coins',
   '/usuarios': 'users',
+  '/roles-personal': 'users',
   '/configuracion': 'settings',
 };
 
