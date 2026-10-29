@@ -1,5 +1,5 @@
 {
-  "version": "1.30.5",
+  "version": "1.30.6",
   "alcance": "Candidata 1.30.3 sobre 1.30.2 (#214), tras #213: renovación del token conserva consultas del mismo alumno y cancela respuestas de otra sesión; confirmaciones explícitas del E2E académico. Sin despliegue ni UAT acreditados.",
   "escenarios": [
     {

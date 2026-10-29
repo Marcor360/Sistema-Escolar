@@ -49,7 +49,7 @@ export class ActualizarUsuarioDto {
 }
 
 export class ListadoUsuariosDto extends PaginacionDto {
-  @IsIn(['ALUMNO', 'DOCENTE', 'ADMINISTRATIVO']) tipo!: 'ALUMNO' | 'DOCENTE' | 'ADMINISTRATIVO';
+  @IsIn(['ALUMNO', 'DOCENTE', 'ADMINISTRATIVO', 'PERSONAL']) tipo!: 'ALUMNO' | 'DOCENTE' | 'ADMINISTRATIVO' | 'PERSONAL';
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) plantelId?: number;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsOptional() @IsString() buscar?: string;
