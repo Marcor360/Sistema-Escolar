@@ -31,6 +31,7 @@ const MaestroPage = lazy(() => import('./pages/Maestro'));
 const CalificacionesPage = lazy(() => import('./pages/Calificaciones'));
 const FinanzasPage = lazy(() => import('./pages/Finanzas'));
 const UsuariosPage = lazy(() => import('./pages/Usuarios'));
+const RolesPersonalPage = lazy(() => import('./pages/RolesPersonal'));
 const PagoCompletadoPage = lazy(() => import('./pages/PagoCompletado'));
 const CalendarioPage = lazy(() => import('./pages/Calendario'));
 const AvisosPage = lazy(() => import('./pages/Avisos'));
@@ -122,6 +123,9 @@ export default function App() {
             <Route path="/usuarios" element={<ModuloTrabajo titulo="Usuarios" acciones={[{titulo:'Registrar personal',detalle:'Crear cuenta y asignar alcance',vista:'nuevo',roles:['SUPERADMIN']},{titulo:'Consultar usuarios',detalle:'Buscar expedientes y gestionar cuentas según permisos',vista:'consulta'}]} vistas={['editar']} permisos={{editar:['SUPERADMIN']}}><UsuariosPage /></ModuloTrabajo>} />
           </Route>
 
+          <Route element={<RutaProtegida roles={['ADMINISTRATIVO', 'DIRECTOR']} />}>
+            <Route path="/roles-personal" element={<RolesPersonalPage />} />
+          </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       ) : (
