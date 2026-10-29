@@ -36,7 +36,7 @@ export default function RolesPersonalPage() {
     setCargando(true); setError('');
     try {
       const { data } = await api.get<Resultado>('/usuarios/listado', {
-        params: { tipo: 'ADMINISTRATIVO', pagina: paginaSolicitada, porPagina: 10 },
+        params: { tipo: 'PERSONAL', pagina: paginaSolicitada, porPagina: 10 },
       });
       setResultado(data);
     } catch (err) { setError(mensajeDeError(err)); }
