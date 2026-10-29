@@ -8,7 +8,7 @@ import { EntityManager, In, Repository, SelectQueryBuilder } from 'typeorm';
 import { Usuario } from '../entities/usuario.entity';
 import { proveedorCorreoPredeterminado } from '../common/proveedor-correo';
 import { Rol } from '../entities/rol.entity';
-import { ActualizarPersonalDto, ActualizarUsuarioDto, CrearUsuarioDto, CrearPersonalDto } from './usuarios.dto';
+import { ActualizarPersonalDto, ActualizarUsuarioDto, CrearUsuarioDto, CrearPersonalDto, VincularAlumnoPersonalDto } from './usuarios.dto';
 import { RolClave } from '../common/roles.decorator';
 import { Plantel } from '../entities/plantel.entity';
 import { Alumno } from '../entities/alumno.entity';
@@ -18,6 +18,7 @@ import { PasswordResetToken } from '../entities/password-reset-token.entity';
 import { ActivacionToken } from '../entities/activacion-token.entity';
 import { BitacoraActividad } from '../entities/bitacora-actividad.entity';
 import { HistorialRolesUsuario } from '../entities/historial-roles-usuario.entity';
+import { UsuarioVinculoPersona } from '../entities/usuario-vinculo-persona.entity';
 import { JwtUser } from '../common/current-user.decorator';
 import { ScopeService } from '../planteles/scope.service';
 import { ListadoUsuariosDto } from './usuarios.dto';
@@ -286,6 +287,66 @@ export class UsuariosService {
       const { plantelIds: _planteles, ...datos } = dto;
       void _planteles;
       return this.actualizar(id, datos, manager);
+    });
+  }
+
+  /** Crea identidad laboral separada; conserva matrícula, expediente y acceso móvil del alumno. */
+  async vincularAlumnoPersonal(dto: VincularAlumnoPersonalDto, actor: JwtUser) {
+    if (actor.portal === 'MOVIL') throw new ForbiddenException('Solo disponible desde el portal web');
+    return this.usuarios.manager.transaction(async (manager) => {
+      const usuarios = manager.getRepository(Usuario);
+      const actorActual = await usuarios.findOne({ where: { id: actor.sub, activo: true } });
+      if (!actorActual) throw new ForbiddenException('El responsable no cuenta con una sesión válida');
+      const rolesActor = actorActual.roles.map((rol) => rol.clave);
+      validarCambioRolesPersonal({ sub: actorActual.id, roles: rolesActor }, null, [], dto.roles);
+      const alumno = await manager.getRepository(Alumno).findOne({
+        where: { id: dto.alumnoId }, lock: { mode: 'pessimistic_write' },
+        loadEagerRelations: false,
+      });
+      if (!alumno) throw new NotFoundException('Expediente del alumno no encontrado');
+      await this.scope.validarGestion({ ...actor, roles: rolesActor }, alumno.plantelId);
+      const usuarioAlumno = await usuarios.findOne({ where: { id: alumno.usuarioId, activo: true } });
+      if (!usuarioAlumno || !usuarioAlumno.roles.some((rol) => rol.clave === 'ALUMNO')) {
+        throw new ConflictException('El expediente no tiene una cuenta de alumno activa');
+      }
+      const vinculos = manager.getRepository(UsuarioVinculoPersona);
+      if (await vinculos.findOneBy({ alumnoUsuarioId: usuarioAlumno.id })) {
+        throw new ConflictException('El alumno ya tiene una identidad laboral vinculada');
+      }
+      const personal = await this.crear({
+        email: dto.emailInstitucional,
+        password: randomBytes(32).toString('base64url'),
+        nombre: usuarioAlumno.nombre,
+        apellidoPaterno: usuarioAlumno.apellidoPaterno,
+        apellidoMaterno: usuarioAlumno.apellidoMaterno,
+        telefono: usuarioAlumno.telefono,
+        roles: dto.roles,
+      }, manager);
+      await usuarios.update({ id: personal.id }, { activacionPendiente: true });
+      await manager.getRepository(UsuarioPlantel).insert({
+        usuarioId: personal.id, plantelId: alumno.plantelId, activo: true,
+      });
+      await vinculos.insert({
+        alumnoUsuarioId: usuarioAlumno.id,
+        personalUsuarioId: personal.id,
+        autorizadoPorId: actorActual.id,
+        motivo: dto.motivo.trim(),
+      });
+      await manager.getRepository(BitacoraActividad).insert({
+        usuarioId: actorActual.id,
+        metodo: 'POST',
+        ruta: '/api/usuarios/promociones-alumno',
+        entidad: 'Usuario',
+        entidadId: personal.id,
+        resultado: 'EXITO',
+        statusCode: 201,
+      });
+      return {
+        personalUsuarioId: personal.id,
+        email: personal.email,
+        roles: dto.roles,
+        activacionPendiente: true,
+      };
     });
   }
 

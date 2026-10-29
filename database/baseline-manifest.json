@@ -58,7 +58,8 @@
         "migracion_rol_director.sql",
         "migracion_historial_roles_usuario.sql",
         "migracion_titulacion_expedientes.sql",
-        "migracion_titulacion_firmantes.sql"
+        "migracion_titulacion_firmantes.sql",
+        "migracion_usuario_vinculos_persona.sql"
       ]
     },
     "sqlserver": {
@@ -117,7 +118,8 @@
         "migracion_rol_director.sql",
         "migracion_historial_roles_usuario.sql",
         "migracion_titulacion_expedientes.sql",
-        "migracion_titulacion_firmantes.sql"
+        "migracion_titulacion_firmantes.sql",
+        "migracion_usuario_vinculos_persona.sql"
       ]
     }
   }
