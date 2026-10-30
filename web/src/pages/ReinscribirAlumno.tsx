@@ -1,3 +1,5 @@
+import { AutorizacionesReinscripcion } from '../features/cartera/AutorizacionesReinscripcion';
+import { HistorialReinscripcion } from '../features/cartera/HistorialReinscripcion';
 import type { Alumno, Trayectoria, Ciclo, Concepto, Cotizacion, Autorizacion, Resultado } from '../features/cartera/tipos-reinscripcion';
 import { ConfirmacionReinscripcion } from '../features/cartera/ConfirmacionReinscripcion';
 import { CalendarioReinscripcion } from '../features/cartera/CalendarioReinscripcion';
@@ -548,104 +550,12 @@ export default function ReinscribirAlumnoPage() {
         )
       )}
       {!resultado && alumnoId && (
-        <section className="panel">
-          <h2>4. Autorizaciones financieras vigentes</h2>
-          <p>
-            Control Escolar confirma una cotización ya autorizada por Finanzas. El contenido guardado en servidor se
-            verifica nuevamente antes de asignar grupo y cargos.
-          </p>
-          <button
-            disabled={ocupado}
-            onClick={async () => {
-              setOcupado(true);
-              setError('');
-              try {
-                const { data } = await api.get<Autorizacion[]>(`/cartera/reinscripciones/autorizaciones/${alumnoId}`);
-                setAutorizaciones(data);
-              } catch (e) {
-                setError(mensajeDeError(e));
-              } finally {
-                setOcupado(false);
-              }
-            }}
-          >
-            Actualizar autorizaciones
-          </button>
-          {!autorizaciones.length && <p>No hay autorizaciones vigentes para este alumno.</p>}
-          {autorizaciones.map((a) => (
-            <label key={a.id}>
-              <input
-                type="radio"
-                name="autorizacion"
-                checked={autorizacion?.id === a.id}
-                disabled={ocupado}
-                onChange={() => {
-                  setAutorizacion(a);
-                  intento.current = crypto.randomUUID();
-                }}
-              />
-              Autorización #{a.id} · {pesos(a.total)} · Finanzas #{a.financieroId} · vence{' '}
-              {new Date(a.venceAt).toLocaleString('es-MX')}
-            </label>
-          ))}
-          {autorizacion && (
-            <>
-              <h3>Cotización autorizada #{autorizacion.id}</h3>
-              <p>
-                Destino autorizado: {autorizacion.destino.periodo} · {autorizacion.destino.tipo}{' '}
-                {autorizacion.destino.numero} · {autorizacion.destino.ciclo} ·{' '}
-                {autorizacion.destino.grupoId ? `Grupo #${autorizacion.destino.grupoId}` : 'Asignación automática'}. Se
-                confirma esta autorización, conservando su total y calendario.
-              </p>
-              {autorizacion.conceptos.map((c, i) => (
-                <p key={i}>
-                  {c.nombre}: {pesos(c.monto)}
-                  {c.descuento ? ` · descuento ${pesos(c.descuento)}` : ''}
-                </p>
-              ))}
-              <p>Total {pesos(autorizacion.total)}. No incluye pagos registrados.</p>
-              {puedeConfirmar && (
-                <button disabled={ocupado} onClick={() => void confirmar()}>
-                  Confirmar reinscripción y cargos
-                </button>
-              )}
-            </>
-          )}
-        </section>
+        <AutorizacionesReinscripcion autorizaciones={autorizaciones} autorizacion={autorizacion} ocupado={ocupado} puedeConfirmar={puedeConfirmar}
+          seleccionar={a=>{setAutorizacion(a);intento.current=crypto.randomUUID();}}
+          actualizar={async()=>{setOcupado(true);setError('');try{const {data}=await api.get<Autorizacion[]>(`/cartera/reinscripciones/autorizaciones/${alumnoId}`);setAutorizaciones(data);}catch(e){setError(mensajeDeError(e));}finally{setOcupado(false);}}}
+          confirmar={confirmar} />
       )}
-      <section className="panel">
-        <h2>Historial de reinscripciones</h2>
-        <button disabled={ocupado} onClick={() => void cargarHistorial()}>
-          Consultar historial de reinscripciones
-        </button>
-        {puedeConfirmar && (
-          <label>
-            Motivo para anular una solicitud pendiente
-            <input
-              minLength={10}
-              maxLength={300}
-              value={motivoAnular}
-              onChange={(e) => setMotivoAnular(e.target.value)}
-            />
-          </label>
-        )}
-        {historial.map((r) => (
-          <article key={r.id}>
-            <h3>
-              Operación #{r.id} · {r.estado}
-            </h3>
-            <p>
-              Origen #{r.origenInscripcionId} → periodo #{r.periodoAcademicoId} ·{' '}
-              {r.grupoId ? `grupo #${r.grupoId}` : 'sin grupo asignado'} · {pesos(r.total)}
-            </p>
-            {puedeConfirmar && ['PENDIENTE', 'REQUIERE_REVISION'].includes(r.estado) && (
-              <button disabled={ocupado || motivoAnular.trim().length < 10} onClick={() => void anular(r.id)}>
-                Anular solicitud #{r.id}
-              </button>
-            )}
-          </article>
-        ))}
-      </section>
+      <HistorialReinscripcion historial={historial} ocupado={ocupado} puedeConfirmar={puedeConfirmar} motivoAnular={motivoAnular} cambiarMotivo={setMotivoAnular} cargar={cargarHistorial} anular={anular} />
     </main>
   );
 }

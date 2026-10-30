@@ -26,7 +26,7 @@
 
 La migración incremental `migracion_boleta_atenciones.sql` tiene espejo MySQL/SQL Server y crea eventos aditivos con FK restrictivas, UUID único, índice por respuesta y constraint de estados. No modifica notas/respuestas previas. El manifiesto y las entidades se mantienen sincronizados. `schema.sql` es documental.
 
-Las versiones académicas se cargan con tres consultas por lote, compartidas por detalle y bandeja. La bandeja recorre lotes de hasta 100 inscripciones y aplica publicación/huella antes de paginar, para dar totales correctos sin saltar pendientes. El cálculo sigue siendo lineal en las inscripciones que coinciden con el contexto: para bases muy grandes podría requerirse una proyección persistida, sin sustituir ahora las reglas de cierre por un estado ficticio. Los selectores de contexto solo cargan metadatos autorizados. Se unifica la apertura/descarga firmada en Expo y se conserva la protección frente a cambios de inscripción durante una descarga.
+Las versiones académicas se cargan con tres consultas por lote, compartidas por detalle y bandeja. La bandeja recorre lotes de hasta 100 inscripciones y aplica publicación/huella antes de paginar, para dar totales correctos sin saltar pendientes. El cálculo sigue siendo lineal en las inscripciones que coinciden con el contexto: para bases muy grandes podría requerirse una proyección persistida, sin sustituir ahora las reglas de cierre por un estado ficticio. Los selectores de contexto solo cargan metadatos autorizados. En Reinscripción se separan las autorizaciones financieras y el historial en componentes propios: la pantalla principal pasa de 651 a 561 líneas, conservando eventos, permisos y confirmaciones. Se unifica la apertura/descarga firmada en Expo y se conserva la protección frente a cambios de inscripción durante una descarga.
 
 Clientes 1.34.0 conservan sus rutas anteriores y omiten los campos nuevos. El listado acepta sus estados anteriores; los clientes nuevos requieren API y migración 1.35.0. Resolver una revisión no altera el contrato de aceptación familiar.
 
@@ -35,7 +35,7 @@ Clientes 1.34.0 conservan sus rutas anteriores y omiten los campos nuevos. El li
 Validación local con datos ficticios:
 
 - Backend: 101 suites / 578 pruebas unitarias aprobadas, lint/tipos y compilación.
-- Web: 74 archivos / 270 pruebas aprobadas; repetición focalizada de atención, filtros y respuesta familiar (4 pruebas) tras los últimos ajustes. Lint y build aprobados.
+- Web: 74 archivos / 270 pruebas aprobadas; repetición focalizada de atención, filtros y respuesta familiar (4 pruebas) tras los últimos ajustes. Lint y build aprobados. Las tres pruebas existentes de Reinscripción se repitieron y aprobaron tras separar autorizaciones e historial.
 - Expo: 27 archivos / 143 pruebas y 11 comprobaciones de scripts aprobadas; TypeScript y exportaciones web/Android aprobadas. Android exporta un bundle, no un APK firmado.
 - Integración del escenario ampliado de boletas: 1 aprobado / 131 omitidos por filtro en cada motor, MySQL 8.4 y SQL Server 2022. Comprueba pendientes sin respuesta, búsquedas/contexto, responsable elegible, transiciones, reintentos, avisos, constancia autenticada/firmada, aceptación histórica y denegación de alumno ajeno/docente dado de baja.
 - Navegador administrativo: SUPERADMIN y MAESTRO en 360/768/1280/1920 px, atención y comentarios por materia, sin errores JavaScript ni desbordamiento global. Reglas axe WCAG 2 A/AA y 2.1 AA ejecutadas sin infracciones reportadas; no es certificación completa.
