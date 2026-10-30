@@ -125,6 +125,7 @@ let browser;
 
     await page.getByLabel('Nombre *', { exact: true }).fill('Alumno');
     await page.getByLabel('Primer apellido *').fill('Nuevo');
+    await page.getByLabel('Segundo apellido *').fill('Escolar');
     await page.getByLabel('CURP *').fill('AAAA010101HDFLRN09');
     await expect(page.getByLabel('Correo institucional', { exact: true })).toHaveCount(0);
     await page.getByLabel('Ciclo', { exact: true }).selectOption('1');
@@ -160,6 +161,7 @@ let browser;
     await expect(page.getByRole('heading', { name: 'Pausa / baja temporal sin cobros' })).toBeVisible();
     expect(confirmaciones).toHaveLength(1);
     expect(confirmaciones[0].nuevoAlumno).not.toHaveProperty('email');
+    expect(confirmaciones[0].nuevoAlumno.apellidoMaterno).toBe('Escolar');
     expect(confirmaciones[0].cuotas).toHaveLength(2);
     expect(confirmaciones[0].asignacion).toBe('PAUSA');
     await page.getByRole('link', { name: 'Consultar aperturas', exact: true }).click();
