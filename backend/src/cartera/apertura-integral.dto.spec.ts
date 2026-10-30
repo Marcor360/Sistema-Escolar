@@ -3,7 +3,7 @@ import { validateSync } from 'class-validator';
 import { AperturaIntegralDto } from './apertura-integral.dto';
 
 const valido = {
-  nuevoAlumno: { nombre: 'Ana', apellidoPaterno: 'Prueba', matricula: 'QA01', curp: 'AAAA010101HDFLRN09' },
+  nuevoAlumno: { nombre: 'Ana', apellidoPaterno: 'Prueba', apellidoMaterno: 'Ficticia', matricula: 'QA01', curp: 'AAAA010101HDFLRN09' },
   plantelId: 1,
   cicloId: 1,
   nivelId: 1,
