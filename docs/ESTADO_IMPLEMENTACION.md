@@ -1,4 +1,8 @@
-# Estado de implementación — candidata 1.34.0
+# Estado de implementación — candidata 1.35.0
+
+Bandeja de boletas publicadas sin respuesta, filtros por alumno y contexto, gestión de revisión por Administración/Dirección con responsable y eventos inmutables, avisos internos y constancias históricas privadas. [Contrato](BOLETAS_ATENCION_1.35.0.md). Pruebas locales aprobadas según el contrato; CI por SHA de entrega y UAT institucional se acreditan por separado. Sin publicación.
+
+## Corte anterior — candidata 1.34.0
 
 Accesos web de alumno/Director corregidos y separados. Nombres independientes para administración y portal del alumno, seguimiento de boletas por versión, firma nominal de alumno/tutor declarado y comentarios docentes por materia. [Contrato](BOLETAS_FIRMADAS_1.34.0.md). Requiere migración incremental espejo. Sin despliegue ni UAT institucional acreditados.
 
@@ -50,7 +54,7 @@ Marca en #163: entrada web PNG/JPEG/WebP ≤20 MiB, salida/API WebP ≤10 MiB, m
 | Identidad y acceso | Expedientes, baja/egreso/transferencia/reactivación; permisos por plantel y clase; auth y ScopeService | Altas nuevas sin contraseña predecible, pendientes hasta activación por código privado; recepción SMTP confirmada por el solicitante para ambos proveedores; nueva candidata sin UAT |
 | Sesiones | Access 15 minutos, refresh rotativo de hasta 30 días, hash, revocación, cookie HttpOnly web y SecureStore móvil | Ensayo HTTPS, expiración y cambio de cuenta en entornos/dispositivos objetivo |
 | Academia | Ciclos en preparación/activo/cierre, grupos, asignaciones, inscripción y promoción transaccional | Validación institucional de cierre/promoción y datos representativos |
-| Calificaciones | Candidata P1–P4/0–10, criterios y Final manual; histórico P1–P3/0–100 conservado; auditoría, cierres y preview de importación | Resolver redondeo, validar ambos motores y UAT de 1.28.0; formatos oficiales firmados |
+| Calificaciones | Candidata P1–P4/0–10, criterios y Final manual; histórico P1–P3/0–100 conservado; auditoría, cierres y preview de importación | Decimales y aprobación manual confirmados; validar UAT vigente y formatos oficiales |
 | Asistencias | Captura por profesor asignado, consulta propia en web/Expo y administrativa por plantel, historial y revisión | UAT por clase/plantel, ciclo y Android/iOS físicos; sin reglas de sanción o nota |
 | Seguimiento | Pendientes por rol, diagnóstico de datos, trámites con folio/estado/responsable, preferencias y sesiones propias | UAT de estados, alcance, accesibilidad y notificaciones reales |
 | Conciliación CSV | Vista previa, folios persistidos, sugerencia por referencia interna y aplicación individual idempotente | Formato bancario institucional y aceptación contable |
@@ -78,9 +82,9 @@ Marca en #163: entrada web PNG/JPEG/WebP ≤20 MiB, salida/API WebP ≤10 MiB, m
 
 ## Pendientes actuales
 
-- #210: completar redondeo, UAT de la candidata y formatos oficiales; implementación y aprobación explícita de #139 en PR #209; no es falta de aprobación general del reglamento.
-- #152/#177: políticas de inscripción por cartera y reinscripción/cobros por periodo.
+- #210: UAT de la candidata y formatos oficiales; decimales y aprobación manual confirmados; implementación y aprobación explícita de #139 en PR #209; no es falta de aprobación general del reglamento.
+- #152/#177: funcionalidad integrada en cartera y reinscripción; no son desarrollo pendiente. Validar los recorridos institucionales de la candidata vigente.
 - #158: protección de main. #179: proveedor y consentimiento para WhatsApp/llamadas.
 - Operación: comprobar versión desplegada, restore aislado, antivirus y conciliación de datos históricos.
 
-Logo (#106), correo (#107), permisos (#140) y aceptación de Android (#141) fueron confirmados por el solicitante y cerrados en GitHub. No convertir estas confirmaciones generales en aprobación de todos los casos UAT ni de iOS. Las matrices conservan pendientes por versión y añaden UAT-47–52 para esta candidata. No se ha desplegado ni aplicado migraciones institucionales desde este trabajo.
+Logo (#106), correo (#107), permisos (#140) y aceptación de Android (#141) fueron confirmados por el solicitante y cerrados en GitHub. No convertir estas confirmaciones generales en aprobación de todos los casos UAT ni de iOS. Las matrices conservan pendientes por versión y añaden UAT-63 para atención de boletas en esta candidata. No se ha desplegado ni aplicado migraciones institucionales desde este trabajo.

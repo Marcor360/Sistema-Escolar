@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.34.0`** · Sistemas administrativo/alumno con nombres configurables y boletas con aceptación, revisión y comentarios por materia. [Contrato y validación](docs/BOLETAS_FIRMADAS_1.34.0.md).
+**Versión candidata: `1.35.0`** · Boletas pendientes, atención con responsable e historial, avisos internos y constancias de aceptación. [Contrato y validación](docs/BOLETAS_ATENCION_1.35.0.md).
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -27,7 +27,7 @@ Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [ín
 
 - **1.29.0 (candidata):** [Inscripción y reinscripción segura por periodo](docs/REINSCRIPCIONES_SEGURAS_1.29.0.md): autorización financiera, calendario de cuotas, conservación de historial y cierre del bypass de cartera.
 
-- **1.28.0 (candidata):** [Cuatro parciales, criterios y aprobación de Final](docs/EVALUACIONES_1.28.0.md). Escala 0–10 en clases nuevas y ciclos abiertos; originales e históricos conservados. Redondeo automático pendiente.
+- **1.28.0 (candidata):** [Cuatro parciales, criterios y aprobación de Final](docs/EVALUACIONES_1.28.0.md). Escala 0–10 en clases nuevas y ciclos abiertos; originales e históricos conservados. Decimales y aprobación manual vigentes; sin redondeo automático.
 
 - **1.27.59:** [Entregas y conservación académica](docs/ENTREGAS_CONSERVACION_1.27.59.md).
 
@@ -167,7 +167,7 @@ Antes de marcar un PR como listo:
 
 ## Pendientes reales conocidos
 
-- Evaluaciones: validar la candidata 1.28.0 y resolver el redondeo contradictorio antes de activarlo [#210](https://github.com/Marcor360/Sistema-Escolar/issues/210). [Contrato](docs/EVALUACIONES_1.28.0.md).
+- Evaluaciones: validar formatos oficiales y UAT de la candidata vigente; decimales y aprobación manual confirmados [#210](https://github.com/Marcor360/Sistema-Escolar/issues/210). [Contrato](docs/EVALUACIONES_1.28.0.md).
 - Inscripción por cartera/reinscripción, protección de main y notificaciones de WhatsApp/llamadas mantienen su seguimiento en GitHub.
 - Restore aislado, antivirus real, pruebas de esta candidata en dispositivos y conciliación del ETL legado.
 
@@ -184,6 +184,6 @@ El solicitante confirmó logo persistente en web/app, correos operativos en ambo
 
 ## Políticas y formatos pendientes de aceptación
 
-Los formatos escolares son informativos y respetan el régimen de cada clase; [alcance y permisos](docs/FORMATOS_ESCOLARES.md). El reglamento fue confirmado por el solicitante; el redondeo completo y los formatos oficiales firmados siguen pendientes. Ver [contrato actual](docs/EVALUACIONES_1.28.0.md).
+Los formatos escolares son informativos y respetan el régimen de cada clase; [alcance y permisos](docs/FORMATOS_ESCOLARES.md). El reglamento fue confirmado por el solicitante; se conservan decimales y aprobación manual; los formatos oficiales firmados siguen pendientes. Ver [contrato actual](docs/EVALUACIONES_1.28.0.md).
 
 `INSCRIPCION_ORDINARIA_SOLO_CARTERA` permanece apagado por defecto. Con `true`, las altas ordinarias nuevas pasan por cartera y la vía académica solo reactiva bajas previas del mismo grupo. Requiere activación institucional y UAT; no genera cobros retroactivos.

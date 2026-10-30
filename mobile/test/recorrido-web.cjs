@@ -110,6 +110,11 @@ const server = http.createServer((req, res) => {
               },
             ],
           };
+        if (p.endsWith("/boletas/mis-pendientes"))
+          data = {
+            total: estadoBoleta === "PENDIENTE_RESPUESTA" ? 1 : 0,
+            datos: [],
+          };
         if (p.endsWith("/boletas/inscripciones/8"))
           data = {
             disponible: true,
@@ -122,28 +127,41 @@ const server = http.createServer((req, res) => {
               },
             ],
             estado: estadoBoleta,
-            historial: respuestas.length
+            atencion: respuestas.length
+              ? { estado: "RESUELTA", vigente: true }
+              : null,
+            historialAtenciones: respuestas.length
               ? [
                   {
                     id: 1,
-                    estado: "REVISION",
-                    comentario: respuestas[0].comentario,
-                    firmanteNombre: "Tutor QA",
-                    firmanteTipo: "TUTOR",
-                    asignatura: null,
-                    fecha: "2026-10-29T12:00:00Z",
-                    vigente: true,
+                    estado: "RESUELTA",
+                    responsable: "Responsable QA",
+                    comentario:
+                      "Los criterios fueron revisados con la familia.",
+                    fecha: "2026-10-29T12:05:00Z",
                   },
                 ]
               : [],
+            historial: respuestas
+              .map((r, n) => ({
+                id: n + 1,
+                estado: r.estado,
+                comentario: r.comentario,
+                firmanteNombre: r.firmanteNombre,
+                firmanteTipo: r.firmanteTipo,
+                asignatura: null,
+                fecha: "2026-10-29T12:00:00Z",
+                vigente: true,
+              }))
+              .reverse(),
           };
         if (
           p.endsWith("/boletas/inscripciones/8/responder") &&
           route.request().method() === "POST"
         ) {
           respuestas.push(route.request().postDataJSON());
-          estadoBoleta = "REVISION";
-          data = { id: 1, estado: "REVISION" };
+          estadoBoleta = respuestas.at(-1).estado;
+          data = { id: respuestas.length, estado: estadoBoleta };
         }
         if (p.endsWith("/reportes/mi-boleta/enlace"))
           data = { url: "/api/reportes/boleta-descarga/1?t=qa" };
@@ -195,6 +213,11 @@ const server = http.createServer((req, res) => {
       await page
         .getByRole("button", { name: "Omitir recorrido", exact: true })
         .click();
+      await expect(
+        page.getByText("Tienes 1 boleta pendiente de aceptación.", {
+          exact: true,
+        }),
+      ).toBeVisible();
       for (const name of [
         /materias/i,
         /calificaciones/i,
@@ -266,6 +289,44 @@ const server = http.createServer((req, res) => {
             confirmado: true,
           });
           expect(respuestas[0].comentario.length).toBe(2000);
+          await expect(
+            page.getByText("Los criterios fueron revisados con la familia.", {
+              exact: true,
+            }),
+          ).toBeVisible();
+          await page
+            .getByRole("button", {
+              name: "Aceptar calificaciones",
+              exact: true,
+            })
+            .click();
+          await page
+            .getByRole("button", {
+              name: "Confirmo que he revisado la boleta y el nombre de quien firma",
+              exact: true,
+            })
+            .click();
+          await page
+            .getByRole("button", {
+              name: "Registrar firma y respuesta",
+              exact: true,
+            })
+            .click();
+          await page
+            .getByRole("dialog")
+            .getByRole("button", { name: "Registrar", exact: true })
+            .click();
+          await expect.poll(() => respuestas.length).toBe(2);
+          const reciboPendiente = page.waitForEvent("download");
+          await page
+            .getByRole("button", {
+              name: "Descargar constancia de aceptación #2",
+              exact: true,
+            })
+            .click();
+          expect((await reciboPendiente).suggestedFilename()).toBe(
+            "constancia-boleta-2.pdf",
+          );
         }
         expect(
           await page.evaluate(

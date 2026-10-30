@@ -81,3 +81,5 @@ export * from './marcador-calendario.entity';
 export * from './historial-roles-usuario.entity';
 
 export * from './boleta-respuesta.entity';
+
+export { BoletaAtencion } from './boleta-atencion.entity';

@@ -1,3 +1,4 @@
+import { BoletasBandejaService } from '../boletas/boletas-bandeja.service';
 import { BoletasService } from '../boletas/boletas.service';
 import { BoletasController } from '../boletas/boletas.controller';
 import { BoletaRespuesta } from '../entities/boleta-respuesta.entity';
@@ -33,7 +34,7 @@ import { PlantelesModule } from '../planteles/planteles.module';
     PlantelesModule,
     ConfiguracionModule,
   ],
-  providers: [BoletasService, ReportesService, FormatosEscolaresService],
+  providers: [BoletasBandejaService, BoletasService, ReportesService, FormatosEscolaresService],
   controllers: [BoletasController, ReportesController, BoletaMovilController, FormatosEscolaresController],
 })
 export class ReportesModule {}

@@ -1,6 +1,6 @@
 # Documentación de Sistema Escolar
 
-Entrada de lectura para la candidata 1.34.0. Revisión documental: 29 de octubre de 2026. Las guías vigentes describen el código consolidado; las auditorías anteriores conservan su propio corte. El README principal resume las funciones y los requisitos de desarrollo, operación y validación.
+Entrada de lectura para la candidata 1.35.0. Revisión documental: 29 de octubre de 2026. Las guías vigentes describen el código consolidado; las auditorías anteriores conservan su propio corte. El README principal resume las funciones y los requisitos de desarrollo, operación y validación.
 
 ## Leer según la tarea
 
@@ -8,6 +8,7 @@ Entrada de lectura para la candidata 1.34.0. Revisión documental: 29 de octubre
 |---|---|
 | Skills de agentes, auditorías y recorridos | [Guía de agentes y skills](AGENTES_Y_SKILLS.md) |
 | Preparar publicación del Portal Alumno web | [Lista previa al despliegue 1.34.0](PRE_DESPLIEGUE_PORTAL_ALUMNO_1.34.0.md) |
+| Pendientes de boletas, atención y constancias | [Candidata 1.35.0](BOLETAS_ATENCION_1.35.0.md) |
 | Boletas, firma nominal y nombres de portales | [Candidata 1.34.0](BOLETAS_FIRMADAS_1.34.0.md) |
 | Estabilización y pendientes por plantel | [Candidata 1.32.0](ESTABILIZACION_1.32.0.md) |
 | Código, evidencias y pendientes actuales | [Estado de implementación](ESTADO_IMPLEMENTACION.md) |

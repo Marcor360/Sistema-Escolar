@@ -33,7 +33,8 @@ interface EnlacePayload {
   kind: 'FILE';
   cicloId?: number;
   inscripcionId?: number;
-  formatoBoleta?: 'informativa-pdf' | 'informativa-excel';
+  formatoBoleta?: 'informativa-pdf' | 'informativa-excel' | 'constancia-aceptacion';
+  respuestaId?: number;
 }
 
 /** Deducción de Content-Type para entregas (los materiales ya guardan su `mime`). */
@@ -168,7 +169,8 @@ export class ArchivosService {
     cicloId: number | undefined,
     inscripcionId: number | undefined,
     user: JwtUser,
-    formatoBoleta?: 'informativa-pdf' | 'informativa-excel',
+    formatoBoleta?: 'informativa-pdf' | 'informativa-excel' | 'constancia-aceptacion',
+    respuestaId?: number,
   ) {
     if (!user.sid || !Number.isInteger(user.ver)) throw new UnauthorizedException('Sesión no válida');
     const token = this.jwt.sign(
@@ -179,6 +181,7 @@ export class ArchivosService {
         cicloId,
         inscripcionId,
         formatoBoleta,
+        respuestaId,
         sid: user.sid,
         ver: user.ver,
         kind: 'FILE',
@@ -196,6 +199,7 @@ export class ArchivosService {
       cicloId: payload.cicloId,
       inscripcionId: payload.inscripcionId,
       formatoBoleta: payload.formatoBoleta,
+      respuestaId: payload.respuestaId,
     };
   }
 
