@@ -396,7 +396,7 @@ export function registrarAltasInstitucionales(ctx: ContextoIntegracion) {
     const docente = await ctx.api('/docentes',{ method: 'POST',token: root,body: { ...datos,email: `insdoc_${ctx.sufijo}@example.invalid`,numEmpleado: `ID${ctx.sufijo}`,plantelIds: [ctx.plantelId],cedulaPendiente: false, cedulaProfesional: 'CED123456',especialidad: 'Matemáticas' } }); expect(docente.response.status).toBe(201);
     expect((await ctx.api(`/docentes/${docente.data.id}`,{ token: root })).data).toMatchObject({ cedulaProfesional: 'CED123456',usuario: { apellidoMaterno: 'Materno',telefono: '5550001111' } });
     expect((await ctx.api(`/docentes/${docente.data.id}`,{ method: 'PATCH',token: root,body: { telefono: '',apellidoMaterno: 'Materno' } })).response.status).toBe(200);
-    expect((await ctx.api(`/docentes/${docente.data.id}`,{ token: root })).data.usuario).toMatchObject({ apellidoMaterno: '',telefono: '' });
+    expect((await ctx.api(`/docentes/${docente.data.id}`,{ token: root })).data.usuario).toMatchObject({ apellidoMaterno: 'Materno',telefono: '' });
     const cuentas = [alumno.data.usuarioId,(await ctx.api(`/docentes/${docente.data.id}`,{ token: root })).data.usuario.id];
     for (const rol of ['ADMINISTRATIVO','FINANZAS','SUPERADMIN']) {
       const alta = await ctx.api('/usuarios',{ method: 'POST',token: root,body: { ...datos,email: `ins${rol.toLowerCase()}_${ctx.sufijo}@example.invalid`,roles: [rol],plantelIds: [ctx.plantelId] } }); expect(alta.response.status).toBe(201); cuentas.push(alta.data.id);
