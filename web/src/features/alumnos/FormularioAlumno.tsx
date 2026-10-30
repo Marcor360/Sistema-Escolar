@@ -66,7 +66,7 @@ export function FormularioAlumno({
               <small id="ayuda-curp" className={mostrarErrorCurp ? 'mensaje-error' : undefined}>
                 {mostrarErrorCurp ? 'Revisa el formato de los 18 caracteres de la CURP.' : '18 caracteres. Se convertirá a mayúsculas.'}
               </small>
-            </div
+            </div>
             <div className="campo">
               <label htmlFor="alumno-nombre">Nombre *</label>
               <input id="alumno-nombre" required maxLength={80} autoComplete="given-name" {...dar('nombre')} />
@@ -83,7 +83,6 @@ export function FormularioAlumno({
               <label htmlFor="alumno-materno">Segundo apellido *</label>
               <input id="alumno-materno" required maxLength={80} {...dar('apellidoMaterno')} />
             </div>
->
           </div>
         </fieldset>
 
