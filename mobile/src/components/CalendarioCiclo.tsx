@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Image, View, TouchableOpacity } from "react-native";
+import { Image, ScrollView, View, TouchableOpacity } from "react-native";
 import { Text } from "./Texto";
 import { api, archivosBase, mensajeDeError } from "../api/client";
 import { base } from "../screens/comunes";
@@ -275,7 +275,8 @@ function ContenidoCalendario() {
                     timeZone: "UTC",
                   }).format(new Date(m + "-01T12:00:00Z"))}
                 </Text>
-                <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+                <ScrollView horizontal nestedScrollEnabled contentContainerStyle={{ minWidth: 336, flexGrow: 1 }}>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", width: "100%" }}>
                   {["L", "M", "X", "J", "V", "S", "D"].map((d, i) => (
                     <Text key={"d" + i} style={{ width: "14.28%" }}>
                       {d}
@@ -309,6 +310,7 @@ function ContenidoCalendario() {
                     );
                   })}
                 </View>
+                </ScrollView>
                 {vista === "mes" && <View style={{ marginTop: espacio.md, padding: espacio.md, backgroundColor: "#fff", borderWidth: 1, borderColor: colores.linea, borderRadius: radio.sm }}>
                   <Text accessibilityRole="header">{diaSeleccionado ? `Actividades del ${diaSeleccionado}` : "Selecciona un día para consultar sus actividades"}</Text>
                   {diaSeleccionado && eventosDelDia(eventos, diaSeleccionado).length === 0 && <Text>Sin actividades publicadas para este día.</Text>}
