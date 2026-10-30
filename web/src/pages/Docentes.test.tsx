@@ -150,3 +150,16 @@ it('preserva cambios tras error, evita doble envío y retorna al listado tras gu
   expect(screen.queryByRole('dialog')).toBeNull();
   expect(patch).toHaveBeenLastCalledWith('/docentes/1', expect.objectContaining({ nombre: 'Nombre nuevo' }));
 });
+
+it('muestra segundo nombre opcional y ambos apellidos requeridos para docentes', async () => {
+  vi.spyOn(api, 'get').mockResolvedValue({ data: [{ id: 1, nombre: 'Centro' }] });
+  mostrar('/docentes/nuevo');
+  const segundo = await screen.findByLabelText('Segundo nombre (opcional)') as HTMLInputElement;
+  expect(segundo.required).toBe(false);
+  expect((screen.getByLabelText('Segundo apellido *') as HTMLInputElement).required).toBe(true);
+  const ids = [...document.querySelectorAll<HTMLInputElement>('#form-docente input')].map(campo => campo.id);
+  expect(ids.indexOf('doc-nombre')).toBeLessThan(ids.indexOf('doc-segundo-nombre'));
+  expect(ids.indexOf('doc-segundo-nombre')).toBeLessThan(ids.indexOf('doc-paterno'));
+  expect(ids.indexOf('doc-paterno')).toBeLessThan(ids.indexOf('doc-materno'));
+  expect(ids.indexOf('doc-materno')).toBeLessThan(ids.indexOf('doc-email'));
+});
