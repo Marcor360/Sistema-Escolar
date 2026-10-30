@@ -55,7 +55,7 @@ import { ActivacionService } from '../src/auth/activacion.service';
 import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { AddressInfo } from 'net';
 import { basename, resolve } from 'path';
-import { readdirSync, existsSync, readFileSync, unlinkSync } from 'fs';
+import { readdirSync, existsSync, readFileSync, unlinkSync, mkdirSync } from 'fs';
 import { spawn, spawnSync } from 'child_process';
 import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcryptjs';
@@ -258,7 +258,21 @@ describe('Integración de flujos críticos (base aislada)', () => {
     if (opciones.body instanceof FormData) body = opciones.body;
     else if (opciones.body !== undefined) {
       headers['content-type'] = 'application/json';
-      body = JSON.stringify(opciones.body);
+      // Fixtures históricos de altas válidas: usar dos apellidos ficticios, sin
+      // alterar solicitudes que envían explícitamente un apellido inválido.
+      const esAlta = (opciones.method ?? 'GET').toUpperCase() === 'POST'
+        && ['/alumnos', '/docentes', '/usuarios'].includes(ruta);
+      const datos = esAlta && opciones.body !== null && typeof opciones.body === 'object'
+        && !Array.isArray(opciones.body)
+        && !Object.prototype.hasOwnProperty.call(opciones.body, 'apellidoMaterno')
+          ? { ...opciones.body, apellidoMaterno: 'Pruebas' } : opciones.body;
+      const aperturaValida = ruta.startsWith('/cartera/integral/')
+        && datos !== null && typeof datos === 'object' && !Array.isArray(datos)
+        && 'nuevoAlumno' in datos && datos.nuevoAlumno !== null
+        && typeof datos.nuevoAlumno === 'object' && !Array.isArray(datos.nuevoAlumno)
+        && !Object.prototype.hasOwnProperty.call(datos.nuevoAlumno, 'apellidoMaterno')
+          ? { ...datos, nuevoAlumno: { ...datos.nuevoAlumno, apellidoMaterno: 'Pruebas' } } : datos;
+      body = JSON.stringify(aperturaValida);
     }
     const response = await fetch(`${baseUrl}${ruta}`, { method: opciones.method ?? 'GET', headers, body });
     const texto = await response.text();
@@ -329,6 +343,7 @@ describe('Integración de flujos críticos (base aislada)', () => {
     process.env.PUSH_ENABLED = 'false'; process.env.SMTP_HOST = '';
     process.env.JWT_SECRET = process.env.JWT_SECRET || 'solo-para-pruebas-integrales';
     process.env.UPLOADS_DIR = process.env.UPLOADS_DIR || 'uploads';
+    mkdirSync(resolve(process.cwd(), process.env.UPLOADS_DIR), { recursive: true });
     if (process.env.DB_TYPE === 'mssql') await esperarYCrearBaseSqlServer();
     await instalarBaseline();
 
@@ -464,6 +479,24 @@ get emitirFinanzasB() { return emitirFinanzasB; },
 };
 const casos = { ...casos_baseline, ...casos_identidad, ...casos_academico, ...casos_calificaciones, ...casos_finanzas, ...casos_archivos, ...casos_calendario, ...casos_conducta, ...casos_analitica, ...casos_importaciones, ...casos_roles };
 Object.keys(casos).map(Number).sort((a,b) => a-b).forEach((id) => casos[id](contexto));
+
+  it('persiste y corrige segundo nombre sin modificar nombres históricos ni admitir apellidos vacíos', async () => {
+    const root = await emitirToken((await dataSource.getRepository(Usuario).findOneByOrFail({ id: superadminId })).email);
+    const datos = { email: `identidad_${sufijo}@example.invalid`, password: 'Integracion_Segura_42!', nombre: 'María del Carmen', segundoNombre: 'Elena', apellidoPaterno: 'De la Cruz', apellidoMaterno: 'García', roles: ['ADMINISTRATIVO'], plantelIds: [plantelId] };
+    for (const apellidoMaterno of [null, '', ' ']) {
+      const invalida = await api('/usuarios', { method: 'POST', token: root, body: { ...datos, apellidoMaterno } });
+      expect(invalida.response.status).toBe(400);
+    }
+    const alta = await api('/usuarios', { method: 'POST', token: root, body: datos });
+    expect(alta.response.status).toBe(201);
+    const identidad = await dataSource.getRepository(Usuario).findOneByOrFail({ email: datos.email });
+    expect(identidad.nombreCompleto).toBe('María del Carmen Elena De la Cruz García');
+    const correccion = await api(`/usuarios/${identidad.id}`, { method: 'PATCH', token: root, body: { segundoNombre: '' } });
+    expect(correccion.response.status).toBe(200);
+    const final = await dataSource.getRepository(Usuario).findOneByOrFail({ id: identidad.id });
+    expect(final.segundoNombre).toBeNull();
+    expect(final.nombreCompleto).toBe('María del Carmen De la Cruz García');
+  });
 
   registrarEntregasConservacion(contexto);
   registrarBeta(contexto);

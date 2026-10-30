@@ -51,7 +51,7 @@ describe('AlumnosService.listar', () => {
           id: 1,
           matricula: 'A1',
           estatus: 'ACTIVO',
-          usuario: { nombre: 'Ana', apellidoPaterno: 'López', apellidoMaterno: null },
+          usuario: { nombre: 'Ana', segundoNombre: null, apellidoPaterno: 'López', apellidoMaterno: null },
           plantel: null,
         },
       ],

@@ -32,7 +32,7 @@ export class AuthService {
   async login(email: string, password: string, portal: Portal = 'WEB', ip?: string, agente?:string, alumnoWeb = false) {
     const usuario = await this.usuarios.findOne({
       where: { email, activo: true },
-      select: ['id', 'email', 'passwordHash', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'sessionVersion', 'passwordChangeRequired', 'activacionPendiente'],
+      select: ['id', 'email', 'passwordHash', 'nombre', 'segundoNombre', 'apellidoPaterno', 'apellidoMaterno', 'sessionVersion', 'passwordChangeRequired', 'activacionPendiente'],
     });
     if (!usuario || !(await compararPassword(password, usuario.passwordHash))) {
       await this.registrarLoginFallido(usuario?.id ?? null, 'FALLIDO', ip);

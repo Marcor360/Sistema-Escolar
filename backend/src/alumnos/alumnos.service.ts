@@ -77,6 +77,7 @@ export class AlumnosService {
         estatus: a.estatus,
         usuario: {
           nombre: a.usuario.nombre,
+          segundoNombre: a.usuario.segundoNombre ?? null,
           apellidoPaterno: a.usuario.apellidoPaterno,
           apellidoMaterno: a.usuario.apellidoMaterno,
           ...(administrativo ? { email: a.usuario.email } : {}),
@@ -122,6 +123,7 @@ export class AlumnosService {
       usuario: {
         id: alumno.usuario.id,
         nombre: alumno.usuario.nombre,
+        segundoNombre: alumno.usuario.segundoNombre ?? null,
         apellidoPaterno: alumno.usuario.apellidoPaterno,
         apellidoMaterno: alumno.usuario.apellidoMaterno,
       },
@@ -225,7 +227,9 @@ export class AlumnosService {
         telefono: alumno.usuario.telefono,
         correoPersonal: alumno.usuario.correoPersonal,
         nombre: alumno.usuario.nombre,
+        segundoNombre: alumno.usuario.segundoNombre ?? null,
         apellidoPaterno: alumno.usuario.apellidoPaterno,
+        apellidoMaterno: alumno.usuario.apellidoMaterno,
         nombreCompleto: alumno.usuario.nombreCompleto,
         email: alumno.usuario.email,
       },
@@ -275,6 +279,7 @@ export class AlumnosService {
           email: dto.email,
           password: randomBytes(32).toString('base64url'),
           nombre: dto.nombre,
+          segundoNombre: dto.segundoNombre,
           apellidoPaterno: dto.apellidoPaterno,
           apellidoMaterno: dto.apellidoMaterno,
           telefono: dto.telefono,
@@ -335,6 +340,7 @@ export class AlumnosService {
       if (
         [
           dto.nombre,
+          dto.segundoNombre,
           dto.apellidoPaterno,
           dto.apellidoMaterno,
           dto.telefono,
@@ -346,6 +352,7 @@ export class AlumnosService {
           alumno.usuarioId,
           {
             nombre: dto.nombre,
+            segundoNombre: dto.segundoNombre,
             apellidoPaterno: dto.apellidoPaterno,
             apellidoMaterno: dto.apellidoMaterno,
             telefono: dto.telefono,

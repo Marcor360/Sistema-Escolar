@@ -12,11 +12,11 @@ const servicio = new ImportacionesService(
   { getOrThrow: () => 'clave-prueba-importacion' } as unknown as ConfigService,
 );
 const docente = {
-  email: 'docente@example.test', nombre: 'Ana', apellidoPaterno: 'Prueba',
+  email: 'docente@example.test', nombre: 'Ana', apellidoPaterno: 'Prueba', apellidoMaterno: 'Ficticia',
   numEmpleado: 'D001', plantelIds: '1', cedulaProfesional: 'ABC123',
 };
 const personal = {
-  email: 'personal@example.test', nombre: 'Beto', apellidoPaterno: 'Prueba',
+  email: 'personal@example.test', nombre: 'Beto', apellidoPaterno: 'Prueba', apellidoMaterno: 'Ficticia',
   roles: 'ADMINISTRATIVO', plantelIds: '1',
 };
 

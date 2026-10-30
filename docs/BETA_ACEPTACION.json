@@ -1,6 +1,6 @@
 {
-  "version": "1.35.4",
-  "alcance": "Candidata 1.35.4: calendario de alumno para Android, iOS y Expo Web con selección diaria táctil, fechas escolares consistentes, filtros institucional/consolidado autorizados y acceso priorizado en Inicio. Sin nuevas pantallas de personal ni cambio de reglas de negocio; UAT por dispositivo pendiente.",
+  "version": "1.35.5",
+  "alcance": "Candidata 1.35.5: identidad con segundo nombre opcional en usuarios, validación de dos apellidos en nuevas altas, migración incremental espejo MySQL/SQL Server, sin dividir datos históricos. Implantación y UAT pendientes.",
   "puertas": [
     {
       "id": "ci_ultimo_sha",

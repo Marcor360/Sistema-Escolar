@@ -33,7 +33,7 @@ export class DocentesService {
       'EXISTS (SELECT 1 FROM usuario_planteles up WHERE up.usuario_id = u.id AND (up.activo = :activa OR d.estatus = :baja) AND up.plantel_id IN (:...planteles))',
       { activa: true, baja: 'BAJA', planteles },
     );
-    if (query.buscar?.trim()) qb.andWhere('(d.num_empleado LIKE :buscar OR u.nombre LIKE :buscar OR u.apellido_paterno LIKE :buscar)', { buscar: `%${query.buscar.trim()}%` });
+    if (query.buscar?.trim()) qb.andWhere('(d.num_empleado LIKE :buscar OR u.nombre LIKE :buscar OR u.segundo_nombre LIKE :buscar OR u.apellido_paterno LIKE :buscar OR u.apellido_materno LIKE :buscar)', { buscar: `%${query.buscar.trim()}%` });
     const [docentes, total] = await qb
       .orderBy('d.id', 'DESC')
       .skip((pagina - 1) * porPagina)
@@ -130,6 +130,7 @@ export class DocentesService {
         email: dto.email,
         password: randomBytes(32).toString('base64url'),
         nombre: dto.nombre,
+        segundoNombre: dto.segundoNombre,
         apellidoPaterno: dto.apellidoPaterno,
         apellidoMaterno: dto.apellidoMaterno,
         telefono: dto.telefono,
@@ -159,9 +160,10 @@ export class DocentesService {
       const docente = await docentes.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!docente) throw new NotFoundException('Docente no encontrado');
       await this.validarAlcanceDocente(docente.usuarioId, user, true);
-      if ([dto.nombre, dto.apellidoPaterno, dto.apellidoMaterno, dto.telefono, dto.correoProveedor].some((v) => v !== undefined)) {
+      if ([dto.nombre, dto.segundoNombre, dto.apellidoPaterno, dto.apellidoMaterno, dto.telefono, dto.correoProveedor].some((v) => v !== undefined)) {
         await this.usuarios.actualizar(docente.usuarioId, {
           nombre: dto.nombre,
+          segundoNombre: dto.segundoNombre,
           apellidoPaterno: dto.apellidoPaterno,
           apellidoMaterno: dto.apellidoMaterno,
           telefono: dto.telefono,
@@ -236,6 +238,7 @@ export class DocentesService {
           email: docente.usuario.email,
           correoProveedor: docente.usuario.correoProveedor,
           nombre: docente.usuario.nombre,
+          segundoNombre: docente.usuario.segundoNombre ?? null,
           apellidoPaterno: docente.usuario.apellidoPaterno,
           apellidoMaterno: docente.usuario.apellidoMaterno,
           telefono: docente.usuario.telefono,
