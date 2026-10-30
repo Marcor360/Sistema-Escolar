@@ -16,13 +16,16 @@ export interface EventoLamina {
   imagenNombre: string | null;
   marcador?: MarcadorCalendario | null;
 }
-export const diaCalendario = (v: string) =>
-  new Intl.DateTimeFormat('en-CA', {
+export const diaCalendario = (v: string) => {
+  const partes = new Intl.DateTimeFormat('es-MX', {
     timeZone: 'America/Mexico_City',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).format(new Date(v));
+  }).formatToParts(new Date(v));
+  const parte = (tipo: 'year' | 'month' | 'day') => partes.find(p => p.type === tipo)?.value ?? '';
+  return `${parte('year')}-${parte('month')}-${parte('day')}`;
+};
 const SIN_MARCADOR: MarcadorCalendario = {
   clave: 'sin-marcador',
   nombre: 'Evento sin marcador',
