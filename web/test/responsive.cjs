@@ -281,6 +281,7 @@ async function esperarServidor() {
       el.scrollLeft = el.scrollWidth;
     });
     await page.getByText('Más acciones', { exact: true }).click();
+    await page.getByRole('button', { name: 'Dar de baja', exact: true }).scrollIntoViewIfNeeded();
     await expect(page.getByRole('button', { name: 'Dar de baja', exact: true })).toBeInViewport();
     console.log('PASS forms/table ' + width);
   }
