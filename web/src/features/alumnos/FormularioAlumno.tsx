@@ -62,12 +62,16 @@ export function FormularioAlumno({
               <input id="alumno-nombre" required maxLength={80} autoComplete="given-name" {...dar('nombre')} />
             </div>
             <div className="campo">
+              <label htmlFor="alumno-segundo-nombre">Segundo nombre (opcional)</label>
+              <input id="alumno-segundo-nombre" maxLength={80} {...dar('segundoNombre')} />
+            </div>
+            <div className="campo">
               <label htmlFor="alumno-paterno">Primer apellido *</label>
               <input id="alumno-paterno" required maxLength={80} autoComplete="family-name" {...dar('apellidoPaterno')} />
             </div>
             <div className="campo">
-              <label htmlFor="alumno-materno">Segundo apellido</label>
-              <input id="alumno-materno" maxLength={80} {...dar('apellidoMaterno')} />
+              <label htmlFor="alumno-materno">Segundo apellido *</label>
+              <input id="alumno-materno" required maxLength={80} {...dar('apellidoMaterno')} />
             </div>
             <div className="campo">
               <label htmlFor="alumno-curp">CURP {nuevo ? '*' : ''}</label>
