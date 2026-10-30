@@ -111,7 +111,7 @@ try {
   } catch {
     throw "CRITICO: el portal no pudo recuperar su Junction. Error inicial: $failure. Error de recuperación: $($_.Exception.Message)"
   }
-  throw "No se activó Portal Alumno $Version: $failure"
+  throw "No se activó Portal Alumno ${Version}: $failure"
 }
 
 Write-Host "Portal Alumno $Version preparado en $release"
