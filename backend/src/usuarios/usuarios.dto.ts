@@ -20,10 +20,12 @@ export class CrearUsuarioDto {
   @IsString() @MinLength(8) @PasswordNuevaValida() password!: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsString() @LongitudMinima(1) @MaxLength(80) nombre!: string;
+  @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() || null : value)
+  @IsOptional() @IsString() @MaxLength(80) segundoNombre?: string | null;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsString() @LongitudMinima(1) @MaxLength(80) apellidoPaterno!: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
-  @IsOptional() @IsString() @MaxLength(80) apellidoMaterno?: string | null;
+  @IsString() @LongitudMinima(1) @MaxLength(80) apellidoMaterno?: string | null;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsOptional() @IsString() @MaxLength(20) telefono?: string | null;
   @IsArray() @ArrayNotEmpty() @IsIn(ROLES, { each: true }) roles!: RolClave[];
@@ -36,6 +38,8 @@ export class CrearPersonalDto extends OmitType(CrearUsuarioDto, ['password'] as 
 export class ActualizarUsuarioDto {
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @OpcionalNoNulo() @IsString() @LongitudMinima(1) @MaxLength(80) nombre?: string;
+  @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() || null : value)
+  @IsOptional() @IsString() @MaxLength(80) segundoNombre?: string | null;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @OpcionalNoNulo() @IsString() @LongitudMinima(1) @MaxLength(80) apellidoPaterno?: string;
   @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
