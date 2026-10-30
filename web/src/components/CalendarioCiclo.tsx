@@ -1,5 +1,5 @@
 import { EditorMarcadores } from './EditorMarcadores';
-import { LaminaCalendario, MarcadorCalendario } from './LaminaCalendario';
+import { LaminaCalendario, MarcadorCalendario, diaCalendario } from './LaminaCalendario';
 import { ImportarCalendario } from './ImportarCalendario';
 import { useConfirmacion } from './useConfirmacion';
 import { exportarIcs } from '../utils/calendario-ics';
@@ -34,13 +34,7 @@ interface Evento {
   imagenNombre: string | null;
   audiencia: string;
 }
-const dia = (v: string) =>
-  new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Mexico_City',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date(v));
+const dia = diaCalendario;
 async function cargarEventosCiclo(ciclo: Ciclo, nivelId: string, ambito: 'CONSOLIDADO' | 'GLOBAL') {
   const eventos = new Map<number, Evento>();
   const fin = new Date(ciclo.fechaFin + 'T23:59:59-06:00').getTime();
