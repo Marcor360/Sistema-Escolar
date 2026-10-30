@@ -1,6 +1,6 @@
 {
-  "version": "1.35.1",
-  "alcance": "Candidata 1.35.1: publicación aislada Expo Web para alumno; mantiene bandeja de boletas pendientes, filtros por contexto, atención con responsable e historial, avisos internos al alumno y constancias privadas de aceptación. Sin despliegue ni aceptación institucional acreditados.",
+  "version": "1.35.2",
+  "alcance": "Candidata 1.35.2: calendario institucional como vista inicial, filtro global validado en API y consulta consolidada por permisos, con gestión secundaria y versión mensual legible. Sin migraciones ni despliegue acreditado; UAT por rol y plantel pendiente.",
   "puertas": [
     {
       "id": "ci_ultimo_sha",
