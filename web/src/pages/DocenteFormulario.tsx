@@ -1,3 +1,4 @@
+import { validarIdentidadPersonal } from '../utils/identidad-personal';
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useBeforeUnload, useBlocker, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { api, mensajeDeError } from '../api/client';
@@ -70,6 +71,8 @@ export default function DocenteFormulario() {
   const guardar = async (e: FormEvent) => {
     e.preventDefault();
     if (mutando.current || cargando) return;
+    const errorIdentidad = validarIdentidadPersonal(form);
+    if (errorIdentidad) { setError(errorIdentidad); return; }
     mutando.current = true; setEnviando(true); setError('');
     try {
       if (id) await api.patch(`/docentes/${id}`, { nombre: form.nombre.trim(), segundoNombre: form.segundoNombre.trim() || null, apellidoPaterno: form.apellidoPaterno,
