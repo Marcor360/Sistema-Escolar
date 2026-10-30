@@ -55,7 +55,7 @@ import { ActivacionService } from '../src/auth/activacion.service';
 import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { AddressInfo } from 'net';
 import { basename, resolve } from 'path';
-import { readdirSync, existsSync, readFileSync, unlinkSync } from 'fs';
+import { readdirSync, existsSync, readFileSync, unlinkSync, mkdirSync } from 'fs';
 import { spawn, spawnSync } from 'child_process';
 import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcryptjs';
@@ -343,6 +343,7 @@ describe('Integración de flujos críticos (base aislada)', () => {
     process.env.PUSH_ENABLED = 'false'; process.env.SMTP_HOST = '';
     process.env.JWT_SECRET = process.env.JWT_SECRET || 'solo-para-pruebas-integrales';
     process.env.UPLOADS_DIR = process.env.UPLOADS_DIR || 'uploads';
+    mkdirSync(resolve(process.cwd(), process.env.UPLOADS_DIR), { recursive: true });
     if (process.env.DB_TYPE === 'mssql') await esperarYCrearBaseSqlServer();
     await instalarBaseline();
 

@@ -15,7 +15,7 @@ it('importa con preview ligado al actor, valida duplicados y confirma una sola v
     const superadmin = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: ctx.superadminId })).email);
     const enviar = (texto: string) => { const f = new FormData(); f.append('tipo', 'ALUMNOS'); f.append('archivo', new Blob([texto]), 'alumnos.csv'); return ctx.api('/importaciones/preview', { method: 'POST', token: admin, body: f }); };
     const email = `importado_${ctx.sufijo}@example.invalid`;
-    const fila = `${email},Microsoft 365,Importado,Escolar,Prueba,Escolar,IMP${ctx.sufijo},${ctx.plantelId},${curpFicticia()}`;
+    const fila = `${email},Microsoft 365,Importado,Segundo,Prueba,Escolar,IMP${ctx.sufijo},${ctx.plantelId},${curpFicticia()}`;
     const csv = 'email,correoProveedor,nombre,segundoNombre,apellidoPaterno,apellidoMaterno,matricula,plantelId,curp\n' + fila;
     const duplicado = await enviar(csv + '\n' + fila); expect(duplicado.response.status).toBe(201); expect(duplicado.data.previewId).not.toBeNull(); expect(duplicado.data.errores).toHaveLength(0); expect(duplicado.data.duplicados).toHaveLength(1); expect(duplicado.data.validos).toBe(1);
     expect(await ctx.dataSource.getRepository(Usuario).findOneBy({ email })).toBeNull();

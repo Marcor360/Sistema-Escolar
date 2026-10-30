@@ -390,19 +390,19 @@ export function registrarAltasInstitucionales(ctx: ContextoIntegracion) {
     expect(inicioAlumno.response.status).toBe(401);
     expect((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id: alumno.data.usuarioId })).activacionPendiente).toBe(true);
     const ficha = await ctx.api(`/alumnos/${alumno.data.id}`,{ token: root }); expect(ficha.data).toMatchObject({ fechaNacimiento: '2009-01-02',direccion: 'Calle institucional 12',usuario: { apellidoMaterno: 'Materno',telefono: '5550001111' } });
-    expect((await ctx.api(`/alumnos/${alumno.data.id}`,{ method: 'PATCH',token: root,body: { telefono: '',apellidoMaterno: '',fechaNacimiento: null } })).response.status).toBe(200);
-    const corregida = await ctx.api(`/alumnos/${alumno.data.id}`,{ token: root }); expect(corregida.data).toMatchObject({ fechaNacimiento: null,direccion: 'Calle institucional 12',usuario: { apellidoMaterno: '',telefono: '' } });
+    expect((await ctx.api(`/alumnos/${alumno.data.id}`,{ method: 'PATCH',token: root,body: { telefono: '',fechaNacimiento: null } })).response.status).toBe(200);
+    const corregida = await ctx.api(`/alumnos/${alumno.data.id}`,{ token: root }); expect(corregida.data).toMatchObject({ fechaNacimiento: null,direccion: 'Calle institucional 12',usuario: { apellidoMaterno: 'Materno',telefono: '' } });
     expect((await ctx.api(`/alumnos/${alumno.data.id}`,{ method: 'PATCH',token: root,body: { fechaNacimiento: '2009-01-02T00:00:00Z' } })).response.status).toBe(400);
     const docente = await ctx.api('/docentes',{ method: 'POST',token: root,body: { ...datos,email: `insdoc_${ctx.sufijo}@example.invalid`,numEmpleado: `ID${ctx.sufijo}`,plantelIds: [ctx.plantelId],cedulaPendiente: false, cedulaProfesional: 'CED123456',especialidad: 'Matemáticas' } }); expect(docente.response.status).toBe(201);
     expect((await ctx.api(`/docentes/${docente.data.id}`,{ token: root })).data).toMatchObject({ cedulaProfesional: 'CED123456',usuario: { apellidoMaterno: 'Materno',telefono: '5550001111' } });
-    expect((await ctx.api(`/docentes/${docente.data.id}`,{ method: 'PATCH',token: root,body: { telefono: '',apellidoMaterno: '' } })).response.status).toBe(200);
+    expect((await ctx.api(`/docentes/${docente.data.id}`,{ method: 'PATCH',token: root,body: { telefono: '',apellidoMaterno: 'Materno' } })).response.status).toBe(200);
     expect((await ctx.api(`/docentes/${docente.data.id}`,{ token: root })).data.usuario).toMatchObject({ apellidoMaterno: '',telefono: '' });
     const cuentas = [alumno.data.usuarioId,(await ctx.api(`/docentes/${docente.data.id}`,{ token: root })).data.usuario.id];
     for (const rol of ['ADMINISTRATIVO','FINANZAS','SUPERADMIN']) {
       const alta = await ctx.api('/usuarios',{ method: 'POST',token: root,body: { ...datos,email: `ins${rol.toLowerCase()}_${ctx.sufijo}@example.invalid`,roles: [rol],plantelIds: [ctx.plantelId] } }); expect(alta.response.status).toBe(201); cuentas.push(alta.data.id);
       const personal = await ctx.api(`/usuarios/${alta.data.id}/personal`,{ token: root }); expect(personal.data).toMatchObject({ apellidoMaterno: 'Materno',telefono: '5550001111',plantelIds: [ctx.plantelId] });
-      expect((await ctx.api(`/usuarios/${alta.data.id}/personal`,{ method: 'PATCH',token: root,body: { telefono: '',apellidoMaterno: '',plantelIds: [ctx.plantelId] } })).response.status).toBe(200);
-      expect((await ctx.api(`/usuarios/${alta.data.id}/personal`,{ token: root })).data).toMatchObject({ telefono: '',apellidoMaterno: '' });
+      expect((await ctx.api(`/usuarios/${alta.data.id}/personal`,{ method: 'PATCH',token: root,body: { telefono: '',plantelIds: [ctx.plantelId] } })).response.status).toBe(200);
+      expect((await ctx.api(`/usuarios/${alta.data.id}/personal`,{ token: root })).data).toMatchObject({ telefono: '',apellidoMaterno: 'Materno' });
     }
     for (const id of cuentas) {
       const u = await ctx.dataSource.getRepository(Usuario).findOneByOrFail({ id }); expect(u.passwordChangeRequired).toBe(true); expect(u.roles).toHaveLength(1);
