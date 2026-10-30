@@ -254,7 +254,7 @@ export default function AlumnosPage() {
               <td data-etiqueta="Correo">{a.usuario.email === null ? 'Sin correo institucional' : a.usuario.email ?? 'Restringido'}</td>
               <td data-etiqueta="Estatus"><span className={`sello ${a.estatus === 'ACTIVO' ? 'ok' : 'neutro'}`}>{a.estatus}</span></td>
               <td data-etiqueta="Acciones" className="derecha">
-                <div className="acciones-fila">{puedeGestionar && <button type="button" className="boton secundario chico" onClick={() => verHistorial(a)}>Historial y boleta</button>}<details className="acciones-expediente"><summary>Más acciones</summary><div className="acciones-expediente-menu"><EliminarRegistro ruta={`/alumnos/${a.id}`} nombre={`alumno ${a.matricula}`} deshabilitado={enviando} alEliminar={() => { setEditando(null); setForm(FORM_INICIAL); historialSolicitud.current++; invalidarNotas(); setHistorial(null); setTransferencia(null); setMensaje('Alumno y cuenta eliminados definitivamente'); recargarListado(); }} />
+                <div className="acciones-fila">{puedeGestionar && <button type="button" className="boton secundario chico" onClick={() => verHistorial(a)}>Historial y boleta</button>}{puedeGestionar && <details className="acciones-expediente"><summary>Más acciones</summary><div className="acciones-expediente-menu"><EliminarRegistro ruta={`/alumnos/${a.id}`} nombre={`alumno ${a.matricula}`} deshabilitado={enviando} alEliminar={() => { setEditando(null); setForm(FORM_INICIAL); historialSolicitud.current++; invalidarNotas(); setHistorial(null); setTransferencia(null); setMensaje('Alumno y cuenta eliminados definitivamente'); recargarListado(); }} />
                   {puedeGestionar && <Link className="boton secundario chico" to={`/recursamientos/nuevo?alumno=${a.id}&plantel=${a.plantel?.id || ''}`}>Recursar materia</Link>}
                   {puedeGestionar && <>
                     <button disabled={enviando} className="boton secundario chico" onClick={() => editar(a)}>Editar</button>
@@ -265,7 +265,7 @@ export default function AlumnosPage() {
                       <button disabled={enviando} className="boton peligro chico" onClick={() => baja(a)}>Dar de baja</button>
                     </>}
                   </>}
-                </div></details></div>
+                </div></details>}</div>
               </td>
             </tr>
           ))}
