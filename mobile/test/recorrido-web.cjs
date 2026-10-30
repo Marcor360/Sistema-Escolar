@@ -71,6 +71,13 @@ const server = http.createServer((req, res) => {
             },
           };
         if (p.endsWith("/auth/consentimiento")) data = { pendiente: false };
+        if (p.endsWith("/calendario/opciones")) data = { ciclos: [{ id: 1, nombre: "Octubre QA", activo: true, fechaInicio: "2026-10-01", fechaFin: "2026-10-31" }] };
+        if (p.endsWith("/calendario")) {
+          const global = { id: 1, titulo: "Evento institucional QA", fechaInicio: "2026-10-15T12:00:00Z", fechaFin: null, imagenNombre: null };
+          const plantel = { ...global, id: 2, titulo: "Evento del plantel QA" };
+          data = new URL(route.request().url()).searchParams.get("ambito") === "GLOBAL" ? [global] : [global, plantel];
+        }
+
         if (p.endsWith("/estado-cuenta"))
           data = { saldoTotal: 100, cargos: [], pagos: [] };
         if (p.endsWith("/recursamientos/me")) data = { datos: [], total: 0 };
@@ -218,6 +225,19 @@ const server = http.createServer((req, res) => {
           exact: true,
         }),
       ).toBeVisible();
+      await page.getByRole("button", { name: "Ver calendario institucional", exact: true }).click();
+      const diaCalendario = page.getByRole("button", { name: "2026-10-15: 2 evento(s)", exact: true });
+      await diaCalendario.click();
+      const actividadesCalendario = page.getByRole("heading", { name: "Actividades del 2026-10-15", exact: true }).locator("..");
+      await expect(actividadesCalendario.getByText("Evento del plantel QA", { exact: true })).toBeVisible();
+      const celda = await diaCalendario.boundingBox();
+      expect(celda.width).toBeGreaterThanOrEqual(44);
+      expect(celda.height).toBeGreaterThanOrEqual(44);
+      await page.getByRole("button", { name: "Solo eventos institucionales", exact: true }).click();
+      await expect(page.getByRole("button", { name: "2026-10-15: 1 evento(s)", exact: true })).toBeVisible();
+      await expect(actividadesCalendario.getByText("Evento institucional QA", { exact: true })).toBeVisible();
+      await expect(actividadesCalendario.getByText("Evento del plantel QA", { exact: true })).toHaveCount(0);
+      await page.getByRole("button", { name: "Ocultar calendario institucional", exact: true }).click();
       for (const name of [
         /materias/i,
         /calificaciones/i,
