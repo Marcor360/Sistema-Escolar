@@ -168,8 +168,9 @@ export class CalendarioService {
     }
     return qb.orderBy('e.fechaInicio', 'ASC');
   }
-  async listar(user: JwtUser, desde?: string, hasta?: string, plantelId?: number, cicloId?: number, nivelId?: number) {
+  async listar(user: JwtUser, desde?: string, hasta?: string, plantelId?: number, cicloId?: number, nivelId?: number, ambito?: 'CONSOLIDADO' | 'GLOBAL') {
     const qb = await this.consulta(user, desde, hasta, plantelId);
+    if (ambito === 'GLOBAL') qb.andWhere('(e.plantel_id IS NULL AND e.grupo_id IS NULL)');
     if (cicloId) qb.andWhere('(e.ciclo_id = :cicloId OR e.ciclo_id IS NULL)', { cicloId });
     if (nivelId) qb.andWhere('(e.nivel_id = :nivelId OR e.nivel_id IS NULL)', { nivelId });
     const eventos = await qb.getMany();
@@ -177,6 +178,7 @@ export class CalendarioService {
   }
   async consultar(q: ConsultarEventosDto, user: JwtUser) {
     const qb = await this.consulta(user, q.desde, q.hasta, q.plantelId);
+    if (q.ambito === 'GLOBAL') qb.andWhere('(e.plantel_id IS NULL AND e.grupo_id IS NULL)');
     if (q.cicloId) qb.andWhere('(e.ciclo_id = :cicloId OR e.ciclo_id IS NULL)', { cicloId: q.cicloId });
     if (q.nivelId) qb.andWhere('(e.nivel_id = :nivelId OR e.nivel_id IS NULL)', { nivelId: q.nivelId });
     if (q.buscar?.trim()) {
