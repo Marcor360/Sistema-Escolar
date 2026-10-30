@@ -49,3 +49,14 @@ it('el alumno consulta sus pendientes sin descargar el catálogo administrativo 
   expect(get).toHaveBeenCalledTimes(1);
   expect(get).toHaveBeenCalledWith('/seguimiento/pendientes', { params: {} });
 });
+
+it('usa el plantel elegido en el dashboard sin mostrar un segundo selector', async () => {
+  const get = vi.spyOn(api, 'get').mockResolvedValue({ data: [{ titulo: 'Pagos pendientes', cantidad: 2, ruta: '/finanzas' }, { titulo: 'Sin incidencias', cantidad: 0, ruta: '/seguimiento' }] });
+  render(<MemoryRouter><CentroPendientes plantelIdExterno="7" /></MemoryRouter>);
+  await screen.findByText('2');
+  expect(screen.queryByLabelText('Plantel de los pendientes')).toBeNull();
+  expect(get).toHaveBeenCalledWith('/seguimiento/pendientes', { params: { plantelId: '7' } });
+  expect(screen.queryByText('Sin incidencias')).toBeNull();
+  fireEvent.click(screen.getByText('Ver categorías al día (1)'));
+  expect(screen.getByText('Sin incidencias: 0')).toBeTruthy();
+});
