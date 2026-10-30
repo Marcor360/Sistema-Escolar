@@ -1,5 +1,5 @@
 vi.mock('../marca/MarcaContext', async (original) => ({ ...await original<typeof import('../marca/MarcaContext')>(), useMarca: () => ({ marca: { nombreInstitucion: 'Universidad de prueba', logoUrl: null } }) }));
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { api } from '../api/client';
 import { CalendarioCiclo } from './CalendarioCiclo';
@@ -26,6 +26,8 @@ it('construye los doce meses del ciclo y permite consultar un mes con sus fechas
         ],
   }));
   render(<CalendarioCiclo />);
+  await waitFor(() => expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(1));
+  fireEvent.change(screen.getByLabelText('Vista'), { target: { value: 'ciclo' } });
   await screen.findByText('Inicio de clases', {}, { timeout: 5000 });
   expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(12);
   fireEvent.change(screen.getByLabelText('Vista'), { target: { value: 'mes' } });
@@ -72,4 +74,19 @@ it('muestra el fallo al consultar opciones', async () => {
   vi.spyOn(api, 'get').mockRejectedValue(new Error('Sin conexión'));
   render(<CalendarioCiclo />);
   expect(await screen.findByRole('alert')).toBeTruthy();
+});
+
+it('consulta por separado las fechas institucionales sin perder el filtro de nivel', async () => {
+  const get = vi.spyOn(api, 'get').mockImplementation(async (ruta) => ({
+    data: String(ruta).endsWith('/opciones')
+      ? { ciclos: [{ id: 2, nombre: '2026', fechaInicio: '2026-01-01', fechaFin: '2026-12-31' }], niveles: [{ id: 7, nombre: 'Universidad', plantelId: 2 }] }
+      : [],
+  }));
+  render(<CalendarioCiclo />);
+  await screen.findByRole('heading', { name: 'Calendario del ciclo escolar' });
+  fireEvent.change(screen.getByLabelText('Nivel académico'), { target: { value: '7' } });
+  fireEvent.change(screen.getByLabelText('Ámbito del calendario'), { target: { value: 'GLOBAL' } });
+  await waitFor(() => expect(get.mock.calls.some(([ruta, config]) =>
+    ruta === '/calendario' && config?.params?.ambito === 'GLOBAL' && config?.params?.nivelId === '7'
+  )).toBe(true));
 });
