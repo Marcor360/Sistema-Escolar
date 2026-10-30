@@ -128,11 +128,11 @@ export default function CalendarioPage() {
 
   return (
     <>{confirmacion.elemento}
+      <Encabezado titulo={consultaVisible ? 'Calendario institucional' : 'Gestionar eventos'} detalle={consultaVisible ? 'Fechas institucionales y actividades de tus planteles autorizados.' : 'Publica y modifica fechas según tus permisos.'} />
+      {consultaVisible && <><p className="texto-ayuda">La vista consolidada reúne los eventos globales y los de tus planteles autorizados. Puedes consultar únicamente las fechas institucionales desde el filtro de ámbito.</p><CalendarioCiclo /></>}
       {consultaVisible && <div className="fila"><div className="campo"><label htmlFor="cal-desde">Desde</label><input id="cal-desde" type="date" value={desde} onChange={(e) => setDesde(e.target.value)} /></div>
         <div className="campo"><label htmlFor="cal-hasta">Hasta</label><input id="cal-hasta" type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} /></div>
         <button disabled={cargando} onClick={filtrarEventos}>Consultar intervalo</button></div>}
-      <CalendarioCiclo/>
-      <Encabezado titulo="Calendario académico" detalle="Exámenes, entregas, días festivos y avisos generales" />
       {(error || errorCarga) && <p role="alert" className="mensaje-error">{error || errorCarga}</p>}
 
       {mensaje && <p role="status">{mensaje}</p>}
