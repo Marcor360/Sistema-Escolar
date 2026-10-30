@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.35.6`** · Boletas pendientes, atención con responsable e historial, avisos internos y constancias de aceptación. [Contrato y validación](docs/BOLETAS_ATENCION_1.35.0.md).
+**Versión candidata: `1.35.7`** · Boletas pendientes, atención con responsable e historial, avisos internos y constancias de aceptación. [Contrato y validación](docs/BOLETAS_ATENCION_1.35.0.md).
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -19,7 +19,7 @@ Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [ín
 
 ### Cambios consolidados recientes
 
-- **1.35.6 (candidata):** corrige el hostname real del portal Expo Web del alumno (`stagin-portal-alumno.iua.edu.mx`) en los scripts de despliegue, configuración IIS y documentación; acepta certificado comodín `*.iua.edu.mx` válido y añade prueba de regresión del dominio. Sin cambios de negocio ni migraciones. [Despliegue Portal Alumno](docs/DESPLIEGUE_PORTAL_ALUMNO_STAGING.md).
+- **1.35.7 (candidata):** corrige el hostname real del portal Expo Web del alumno (`stagin-portal-alumno.iua.edu.mx`) en los scripts de despliegue, configuración IIS y documentación; acepta certificado comodín `*.iua.edu.mx` válido y añade prueba de regresión del dominio. Sin cambios de negocio ni migraciones. [Despliegue Portal Alumno](docs/DESPLIEGUE_PORTAL_ALUMNO_STAGING.md).
 
 - **1.35.1 (candidata):** publicación independiente de Expo Web en IIS para el alumno, proxy `/api` de mismo origen por cookie SameSite Strict, versión inmutable, rollback de Junction y pruebas de contrato. [Despliegue Portal Alumno](docs/DESPLIEGUE_PORTAL_ALUMNO_STAGING.md). No implica que el nuevo dominio esté publicado.
 

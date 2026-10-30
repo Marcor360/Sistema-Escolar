@@ -1,6 +1,6 @@
 # Despliegue de Expo Web · Portal Alumno IUA (staging)
 
-**Candidata:** 1.35.6. **Dominio solicitado:** `https://stagin-portal-alumno.iua.edu.mx/`. Esta guía no acredita que el portal esté publicado ni que DNS/TLS estén configurados.
+**Candidata:** 1.35.7. **Dominio solicitado:** `https://stagin-portal-alumno.iua.edu.mx/`. Esta guía no acredita que el portal esté publicado ni que DNS/TLS estén configurados.
 
 ## Arquitectura y condición de seguridad
 
@@ -12,8 +12,8 @@ El certificado debe cubrir **este nombre exacto** por SAN o mediante un wildcard
 
 ## Prerrequisitos
 
-- Merge del PR de publicación y CI verde en el SHA aprobado. Los tres workspaces, Expo y lockfiles deben marcar 1.35.6.
-- API institucional de staging **ya desplegada a 1.35.6**, `GET https://api-sistema-staging.iua.edu.mx/api/health/ready` con `status=ok` y `version=1.35.6`. Aplicar migraciones mediante el procedimiento existente con respaldo y restore aislado; **no desde este script**.
+- Merge del PR de publicación y CI verde en el SHA aprobado. Los tres workspaces, Expo y lockfiles deben marcar 1.35.7.
+- API institucional de staging **ya desplegada a 1.35.7**, `GET https://api-sistema-staging.iua.edu.mx/api/health/ready` con `status=ok` y `version=1.35.7`. Esta candidata incluye la migración `migracion_segundo_nombre_usuario.sql` de identidad 1.35.5. Aplicar migraciones mediante el procedimiento existente con respaldo y restore aislado; **no desde este script**.
 - Windows Server 2019, IIS, URL Rewrite, ARR con proxy habilitado, Node 24, npm, certificado válido (clave privada) importado a `Cert:\LocalMachine\My`. API escucha en `127.0.0.1:3000`, no abierta a Internet.
 - `C:\SistemaEscolar\config\backend.env`: conservar todos los orígenes actuales y añadir **`https://stagin-portal-alumno.iua.edu.mx`** a `CORS_ORIGINS`, sin slash final. Es necesario para la validación explícita de `Origin` de `POST /api/auth/refresh`, incluso con el proxy de mismo origen. Reiniciar `SistemaEscolarApi` de forma controlada tras editar el archivo privado y verificar health.
 - DNS tipo A/AAAA válido hacia el VPS y TLS activo. El certificado debe cubrir el hostname por SAN o wildcard válido y tener su clave privada. Mantener `NODE_ENV=production`, `APP_ENV=staging`, `DB_SYNC=false`.
@@ -43,12 +43,12 @@ git rev-parse HEAD
 git status --short
 .\scripts\windows\Test-PortalAlumno-Staging.ps1
 .\scripts\windows\Deploy-PortalAlumno-Staging.ps1 `
-  -Version '1.35.6' `
+  -Version '1.35.7' `
   -Source 'C:\Builds\sistema-escolar-mvp' `
   -PortalHost 'stagin-portal-alumno.iua.edu.mx'
 ```
 
-La publicación instala dependencias en `mobile/`, exporta `mobile/dist` con `APP_ENV=preview`, verifica API 1.35.6, crea una release **inmutable** en `C:\SistemaEscolar\portal-alumno\releases\1.35.6` y activa `current` como Junction. Copia `web.config` incluso si Metro no lo incluye en `dist`. No modifica `C:\SistemaEscolar\current`, servicio API, web administrativo, BD ni migraciones.
+La publicación instala dependencias en `mobile/`, exporta `mobile/dist` con `APP_ENV=preview`, verifica API 1.35.7, crea una release **inmutable** en `C:\SistemaEscolar\portal-alumno\releases\1.35.7` y activa `current` como Junction. Copia `web.config` incluso si Metro no lo incluye en `dist`. No modifica `C:\SistemaEscolar\current`, servicio API, web administrativo, BD ni migraciones.
 
 Cuando el archivo está publicado, crear **una sola vez** el sitio IIS y su binding SNI HTTPS:
 
