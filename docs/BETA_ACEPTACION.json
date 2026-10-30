@@ -1,6 +1,6 @@
 {
-  "version": "1.35.3",
-  "alcance": "Candidata 1.35.3: dashboard con filtro único de plantel para indicadores, pendientes y agenda; pendientes sin actividad compactos, acciones de alumnos agrupadas y asignación de funciones legible y adaptable. Conserva permisos y lógica API; UAT sin acreditar.",
+  "version": "1.35.4",
+  "alcance": "Candidata 1.35.4: calendario de alumno para Android, iOS y Expo Web con selección diaria táctil, fechas escolares consistentes, filtros institucional/consolidado autorizados y acceso priorizado en Inicio. Sin nuevas pantallas de personal ni cambio de reglas de negocio; UAT por dispositivo pendiente.",
   "puertas": [
     {
       "id": "ci_ultimo_sha",
