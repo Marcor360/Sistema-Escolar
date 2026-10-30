@@ -43,3 +43,16 @@ describe('FormularioAlumno', () => {
     expect((screen.getByLabelText('CURP') as HTMLInputElement).required).toBe(false);
   });
 });
+
+it('mantiene segundo nombre opcional y exige el segundo apellido', () => {
+  mostrar('GODE561231HDFRRN09');
+  const segundo = screen.getByLabelText('Segundo nombre (opcional)') as HTMLInputElement;
+  const materno = screen.getByLabelText('Segundo apellido *') as HTMLInputElement;
+  expect(segundo.required).toBe(false);
+  expect(materno.required).toBe(true);
+  const campos = [...document.querySelectorAll<HTMLInputElement>('#form-alumno input')].map(campo => campo.id);
+  expect(campos.indexOf('alumno-nombre')).toBeLessThan(campos.indexOf('alumno-segundo-nombre'));
+  expect(campos.indexOf('alumno-segundo-nombre')).toBeLessThan(campos.indexOf('alumno-paterno'));
+  expect(campos.indexOf('alumno-paterno')).toBeLessThan(campos.indexOf('alumno-materno'));
+  expect(campos.indexOf('alumno-materno')).toBeLessThan(campos.indexOf('alumno-correo'));
+});
