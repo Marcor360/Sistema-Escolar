@@ -1,6 +1,6 @@
 param(
   [string]$Root = 'C:\SistemaEscolar\portal-alumno',
-  [string]$PortalHost = 'stagin-portal-alumnoiua.edu.mx',
+  [string]$PortalHost = 'stagin-portal-alumno.iua.edu.mx',
   [string]$SiteName = 'SistemaEscolar-Staging-PortalAlumno',
   [Parameter(Mandatory = $true)][string]$CertificateThumbprint
 )
@@ -34,7 +34,7 @@ $covered = @($names | Where-Object {
     $hostname.Substring(0, $hostname.Length - $_.Length + 1) -notmatch '\.')
 }).Count -gt 0
 if (-not $covered) {
-  throw "El certificado no cubre $PortalHost. Un comodín *.iua.edu.mx NO cubre este dominio independiente."
+  throw "El certificado no cubre $PortalHost. Comprueba la cobertura SAN del hostname; un certificado *.iua.edu.mx válido sí cubre este subdominio de un nivel."
 }
 
 if (-not (Get-WebGlobalModule | Where-Object Name -eq 'RewriteModule')) { throw 'Falta IIS URL Rewrite.' }
