@@ -233,13 +233,13 @@ export default function PerfilScreen({ abrirDocumentos }: { abrirDocumentos?: ()
         <Text style={base.secundario}>{sesion?.email}</Text>
         {perfil && (
           <>
-            <View style={{ marginTop: espacio.md, paddingVertical: espacio.sm, borderBottomWidth: 1, borderColor: colores.linea }}>
+            {perfil.usuario && <View style={{ marginTop: espacio.md, paddingVertical: espacio.sm, borderBottomWidth: 1, borderColor: colores.linea }}>
               <Text accessibilityRole="header" style={base.tituloTarjeta}>Identidad académica</Text>
               <Text style={base.secundario}>Nombre: {perfil.usuario.nombre}</Text>
               {perfil.usuario.segundoNombre ? <Text style={base.secundario}>Segundo nombre: {perfil.usuario.segundoNombre}</Text> : null}
               <Text style={base.secundario}>Primer apellido: {perfil.usuario.apellidoPaterno}</Text>
               {perfil.usuario.apellidoMaterno ? <Text style={base.secundario}>Segundo apellido: {perfil.usuario.apellidoMaterno}</Text> : null}
-            </View>
+            </View>}
             <Text style={[base.secundario, { marginTop: 8 }]}>
               Matrícula: {perfil.matricula}
             </Text>
