@@ -1,3 +1,4 @@
+import { PendientesBoletas } from '../components/PendientesBoletas';
 import { useDisenoAlumno } from "../use-diseno-alumno";
 import { PendientesAlumno } from '../components/PendientesAlumno';
 import { SeguimientoAlumno } from '../components/SeguimientoAlumno';
@@ -140,6 +141,7 @@ export default function InicioScreen() {
       {!cargaInicialCompleta && !error && (
         <ActivityIndicator accessibilityLabel="Cargando inicio" />
       )}
+      <PendientesBoletas />
       <PendientesAlumno/>
       {cargaInicialCompleta && (
         <View style={estilos.resumen}>

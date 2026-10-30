@@ -23,7 +23,7 @@ El API expone `calificacionOriginal`, `escalaOriginal`, `escalaMaxima` y `regime
 
 ## Redondeo pendiente
 
-No se activa redondeo automático de la nota final: los ejemplos iniciales 7.5→6 / 7.6→8 contradicen la regla posterior 5.5→5 / 5.6→7 «igual con todo». Se muestra el resultado decimal y el docente puede consignar la Final manual que corresponda. No sustituir estas instrucciones por `Math.round`, ni recortar notas fuera del rango para simular una norma. La versión no presenta el redondeo institucional como terminado.
+Regla vigente confirmada por el solicitante el 29/oct/2026: conservar los decimales y la aprobación manual del docente. No se activa redondeo automático ni se recalculan históricos. La propuesta mantiene la precisión implementada y la Final requiere aprobación o captura manual. Esta decisión sustituye la indefinición de los ejemplos anteriores; no se necesita una tabla automática de redondeo para este alcance.
 
 ## Migraciones y operación
 

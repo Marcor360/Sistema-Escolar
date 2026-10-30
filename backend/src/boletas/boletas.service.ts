@@ -1,4 +1,8 @@
-import { versionAcademicaBoleta } from './version-boleta';
+import { constanciaBoleta } from './constancia-boleta';
+import { BoletasBandejaService } from './boletas-bandeja.service';
+import { versionesBoletas } from './lectura-boletas';
+import { BoletaAtencion } from '../entities/boleta-atencion.entity';
+import { Notificacion } from '../entities/notificacion.entity';
 import {
   BadRequestException,
   ConflictException,
@@ -8,18 +12,24 @@ import {
 } from '@nestjs/common';
 import { createHash } from 'crypto';
 import { DataSource } from 'typeorm';
-import { Calificacion, CicloEscolar, GrupoMateria, Inscripcion, PeriodoCalificacion } from '../entities';
+import { CicloEscolar, GrupoMateria, Inscripcion, Usuario } from '../entities';
 import { BoletaRespuesta } from '../entities/boleta-respuesta.entity';
 import { JwtUser } from '../common/current-user.decorator';
 import { ScopeService } from '../planteles/scope.service';
-import { boletaPublicable } from '../reportes/publicacion-boleta';
-import { ComentarioBoletaDto, ListarBoletasDto, ResponderBoletaDto } from './boletas.dto';
+import {
+  ComentarioBoletaDto,
+  ListarBoletasDto,
+  ResponderBoletaDto,
+  AtenderBoletaDto,
+  FiltrosBoletaDto,
+} from './boletas.dto';
 const hash = (v: unknown) => createHash('sha256').update(JSON.stringify(v)).digest('hex');
 @Injectable()
 export class BoletasService {
   constructor(
     private readonly ds: DataSource,
     private readonly scope: ScopeService,
+    private readonly bandeja: BoletasBandejaService,
   ) {}
   private async contexto(id: number, u: JwtUser, m = this.ds.manager) {
     const i = await m.getRepository(Inscripcion).findOneBy({ id });
@@ -29,20 +39,19 @@ export class BoletasService {
     } else if (u.roles.some((r) => ['SUPERADMIN', 'ADMINISTRATIVO', 'DIRECTOR'].includes(r)))
       await this.scope.validarGestion(u, i.grupo.plantelId);
     else if (u.roles.includes('MAESTRO')) {
-      if (!(await m.getRepository(GrupoMateria).existsBy({ grupoId: i.grupoId, docente: { usuarioId: u.sub, estatus: 'ACTIVO' } })))
+      if (
+        !(await m
+          .getRepository(GrupoMateria)
+          .existsBy({ grupoId: i.grupoId, docente: { usuarioId: u.sub, estatus: 'ACTIVO' } }))
+      )
         throw new ForbiddenException('La boleta no pertenece a una clase asignada');
     } else throw new ForbiddenException('No tienes acceso al seguimiento de boletas');
     return i;
   }
   private async version(i: Inscripcion, m = this.ds.manager) {
-    const [clases, notas, periodos] = await Promise.all([
-      m.getRepository(GrupoMateria).find({ where: { grupoId: i.grupoId }, order: { id: 'ASC' } }),
-      m.getRepository(Calificacion).find({ where: { alumnoId: i.alumnoId, grupoMateria: { grupoId: i.grupoId } } }),
-      m.getRepository(PeriodoCalificacion).find({ where: { grupoMateria: { grupoId: i.grupoId } } }),
-    ]);
-    const v = versionAcademicaBoleta(i.id, clases, notas);
-    return { ...v, disponible: boletaPublicable(clases, notas, periodos), clases };
+    return (await versionesBoletas(m, [i])).get(i.id)!;
   }
+
   async detalle(id: number, u: JwtUser) {
     const i = await this.contexto(id, u),
       v = await this.version(i);
@@ -54,7 +63,49 @@ export class BoletasService {
       order: { id: 'DESC' },
       take: 100,
     });
+    const ultima = await this.ds
+      .getRepository(BoletaRespuesta)
+      .createQueryBuilder('r')
+      .where("r.inscripcion_id=:id AND r.estado IN ('ACEPTADA','REVISION')", { id })
+      .orderBy('r.id', 'DESC')
+      .getOne();
+    const todasAtenciones = await this.ds.getRepository(BoletaAtencion).find({
+      where: { respuesta: { inscripcionId: id } },
+      relations: { actor: true, responsable: true },
+      order: { id: 'DESC' },
+      take: 100,
+    });
+    const atenciones = todasAtenciones.filter((t) => t.respuestaId === ultima?.id);
+    const gestionar = u.roles.some((r) => ['SUPERADMIN', 'ADMINISTRATIVO', 'DIRECTOR'].includes(r));
     return {
+      historialAtenciones: todasAtenciones.map((t) => ({
+        id: t.id,
+        respuestaId: t.respuestaId,
+        estado: t.estado,
+        responsable: t.responsable.nombreCompleto,
+        actor: t.actor.nombreCompleto,
+        comentario: t.comentario,
+        fecha: t.createdAt,
+      })),
+      revisionId: ultima?.estado === 'REVISION' && ultima.versionHash === v.hash && v.disponible ? ultima.id : null,
+      puedeGestionar: gestionar,
+      responsables: gestionar ? await this.responsables(i) : [],
+      atencion:
+        ultima?.estado === 'REVISION'
+          ? {
+              estado: atenciones[0]?.estado ?? 'PENDIENTE',
+              vigente: ultima.versionHash === v.hash && v.disponible,
+              eventos: atenciones.map((t) => ({
+                id: t.id,
+                estado: t.estado,
+                responsableId: t.responsableId,
+                responsable: t.responsable.nombreCompleto,
+                actor: t.actor.nombreCompleto,
+                comentario: t.comentario,
+                fecha: t.createdAt,
+              })),
+            }
+          : null,
       inscripcionId: id,
       alumnoId: i.alumnoId,
       alumno: i.alumno.usuario.nombreCompleto,
@@ -63,7 +114,9 @@ export class BoletasService {
       versionHash: v.hash,
       estado: !v.disponible
         ? 'PENDIENTE_PUBLICACION'
-        : (eventos.find((e) => e.versionHash === v.hash && e.estado !== 'COMENTARIO')?.estado ?? 'PENDIENTE_RESPUESTA'),
+        : ultima?.versionHash === v.hash
+          ? ultima.estado
+          : 'PENDIENTE_RESPUESTA',
       materiasDocente: v.filas.filter((f) => propias.includes(f.grupoMateriaId)),
       materias: docente ? v.filas.filter((f) => propias.includes(f.grupoMateriaId)) : v.disponible ? v.filas : [],
       historial: eventos
@@ -135,7 +188,9 @@ export class BoletasService {
       await m
         .getRepository(GrupoMateria)
         .findOneOrFail({ where: { id: gm.id }, loadEagerRelations: false, lock: { mode: 'pessimistic_write' } });
-      if (!(await m.getRepository(GrupoMateria).existsBy({ id: gm.id, docente: { usuarioId: u.sub, estatus: 'ACTIVO' } })))
+      if (
+        !(await m.getRepository(GrupoMateria).existsBy({ id: gm.id, docente: { usuarioId: u.sub, estatus: 'ACTIVO' } }))
+      )
         throw new ForbiddenException('La asignación docente cambió');
       const repo = m.getRepository(BoletaRespuesta),
         peticionHash = hash({ id, actor: u.sub, ...d }),
@@ -156,59 +211,125 @@ export class BoletasService {
           peticionHash,
           versionHash: v.hash,
           estado: 'COMENTARIO',
-          firmanteNombre: u.nombre.slice(0,150),
+          firmanteNombre: u.nombre.slice(0, 150),
           firmanteTipo: 'DOCENTE',
           comentario: d.comentario,
           snapshotJson: null,
         }),
       );
+      await this.avisar(
+        m,
+        i.alumno.usuarioId,
+        'Nuevo comentario en tu boleta',
+        'Un profesor respondió en una materia. Consulta Calificaciones para revisar el comentario.',
+      );
       return { id: r.id };
     });
   }
-  async listar(q: ListarBoletasDto, u: JwtUser) {
-    if (!u.roles.some((r) => ['SUPERADMIN', 'ADMINISTRATIVO', 'DIRECTOR', 'MAESTRO'].includes(r)))
-      throw new ForbiddenException('Consulta exclusiva de personal académico');
-    const qb = this.ds
-      .getRepository(BoletaRespuesta)
-      .createQueryBuilder('r')
-      .innerJoinAndSelect('r.inscripcion', 'i')
-      .innerJoinAndSelect('i.alumno', 'a')
-      .innerJoinAndSelect('a.usuario', 'u')
-      .innerJoinAndSelect('i.grupo', 'g')
-      .where(
-        "r.estado IN ('ACEPTADA','REVISION') AND NOT EXISTS (SELECT 1 FROM boleta_respuestas b WHERE b.inscripcion_id=r.inscripcion_id AND b.estado IN ('ACEPTADA','REVISION') AND b.id>r.id)",
-      );
-    const administrativo = u.roles.some((r) => ['SUPERADMIN', 'ADMINISTRATIVO', 'DIRECTOR'].includes(r));
-    if (administrativo) {
-      const ids = await this.scope.resolverFiltro(u, q.plantelId);
-      if (ids !== null) qb.andWhere('g.plantel_id IN (:...ids)', { ids });
-    } else {
-      qb.andWhere(
-        'EXISTS (SELECT 1 FROM grupo_materias gm INNER JOIN docentes d ON d.id=gm.docente_id WHERE gm.grupo_id=i.grupo_id AND d.usuario_id=:actor)',
-        { actor: u.sub },
-      );
-      if (q.plantelId) qb.andWhere('g.plantel_id=:plantel', { plantel: q.plantelId });
-    }
-    if (q.estado) qb.andWhere('r.estado=:estado', { estado: q.estado });
-    const [rows, total] = await qb
-      .orderBy('r.id', 'DESC')
-      .skip((q.pagina - 1) * q.porPagina)
-      .take(q.porPagina)
-      .getManyAndCount();
-    const datos = await Promise.all(
-      rows.map(async (r) => {
-        const v = await this.version(r.inscripcion);
-        return {
-          id: r.id,
-          inscripcionId: r.inscripcionId,
-          alumno: r.inscripcion.alumno.usuario.nombreCompleto,
-          matricula: r.inscripcion.alumno.matricula,
-          estado: r.estado,
-          fecha: r.createdAt,
-          vigente: v.disponible && v.hash === r.versionHash,
-        };
-      }),
+  async constancia(id: number, respuestaId: number, u: JwtUser) {
+    if (!u.roles.some((r) => ['ALUMNO', 'SUPERADMIN', 'ADMINISTRATIVO', 'DIRECTOR'].includes(r)))
+      throw new ForbiddenException('La constancia es privada para la familia y administración');
+    const i = await this.contexto(id, u),
+      r = await this.ds
+        .getRepository(BoletaRespuesta)
+        .findOneBy({ id: respuestaId, inscripcionId: id, estado: 'ACEPTADA' });
+    if (!r || !r.snapshotJson) throw new NotFoundException('Constancia de aceptación no encontrada');
+    const v = await this.version(i);
+    return constanciaBoleta(
+      r,
+      i.alumno.usuario.nombreCompleto,
+      i.alumno.matricula,
+      v.disponible && v.hash === r.versionHash,
     );
-    return { datos, total, pagina: q.pagina, porPagina: q.porPagina };
+  }
+  filtros(q: FiltrosBoletaDto, u: JwtUser) {
+    return this.bandeja.filtros(q, u);
+  }
+  listar(q: ListarBoletasDto, u: JwtUser) {
+    return this.bandeja.listar(q, u);
+  }
+  misPendientes(u: JwtUser) {
+    return this.bandeja.listar(Object.assign(new ListarBoletasDto(), { estado: 'PENDIENTE_RESPUESTA' }), u, true);
+  }
+  private async avisar(m: import('typeorm').EntityManager, usuarioId: number, titulo: string, mensaje: string) {
+    // Aviso interno confirmado con la misma transacción; no dispara correo ni push.
+    await m
+      .getRepository(Notificacion)
+      .save({ usuarioId, titulo, mensaje, tipo: 'ACADEMICA', leida: false, pushPendiente: false });
+  }
+  private async responsables(i: Inscripcion, m = this.ds.manager) {
+    const rows = await m
+      .getRepository(Usuario)
+      .createQueryBuilder('u')
+      .innerJoin('u.roles', 'rol')
+      .where('u.activo=:activo', { activo: true })
+      .andWhere(
+        '(rol.clave=\'SUPERADMIN\' OR (rol.clave IN (\'ADMINISTRATIVO\',\'DIRECTOR\') AND EXISTS (SELECT 1 FROM usuario_planteles up WHERE up.usuario_id=u.id AND up.plantel_id=:plantel AND up.activo=:activo)) OR (rol.clave=\'MAESTRO\' AND EXISTS (SELECT 1 FROM docentes d INNER JOIN grupo_materias gm ON gm.docente_id=d.id WHERE d.usuario_id=u.id AND d.estatus=\'ACTIVO\' AND gm.grupo_id=:grupo)))',
+        { plantel: i.grupo.plantelId, grupo: i.grupoId },
+      )
+      .distinct(true)
+      .orderBy('u.nombre', 'ASC')
+      .getMany();
+    return rows.map((u) => ({ id: u.id, nombre: u.nombreCompleto }));
+  }
+  async atender(id: number, d: AtenderBoletaDto, u: JwtUser) {
+    if (!u.roles.some((r) => ['SUPERADMIN', 'ADMINISTRATIVO', 'DIRECTOR'].includes(r)))
+      throw new ForbiddenException('Solo Administración o Dirección gestiona la revisión');
+    return this.ds.transaction('READ COMMITTED', async (m) => {
+      const i = await this.contexto(id, u, m);
+      await m
+        .getRepository(CicloEscolar)
+        .findOneOrFail({ where: { id: i.grupo.cicloId }, lock: { mode: 'pessimistic_write' } });
+      const repo = m.getRepository(BoletaAtencion),
+        peticionHash = hash({ id, actor: u.sub, ...d });
+      const previa = await repo.findOneBy({ idempotencia: d.idempotencia });
+      if (previa) {
+        if (previa.peticionHash !== peticionHash)
+          throw new ConflictException('La clave ya corresponde a otra atención');
+        return { id: previa.id, estado: previa.estado };
+      }
+      const r = await m
+        .getRepository(BoletaRespuesta)
+        .createQueryBuilder('r')
+        .where("r.inscripcion_id=:id AND r.estado IN ('ACEPTADA','REVISION')", { id })
+        .orderBy('r.id', 'DESC')
+        .getOne();
+      const v = await this.version(i, m);
+      if (
+        !r ||
+        r.id !== d.respuestaId ||
+        r.estado !== 'REVISION' ||
+        !v.disponible ||
+        r.versionHash !== v.hash ||
+        d.versionHash !== v.hash
+      )
+        throw new ConflictException('La revisión cambió. Actualiza la boleta antes de atenderla');
+      if (!(await this.responsables(i, m)).some((p) => p.id === d.responsableId))
+        throw new ForbiddenException('El responsable debe estar activo y tener alcance en este plantel o grupo');
+      const anterior = await repo.findOne({ where: { respuestaId: r.id }, order: { id: 'DESC' } });
+      const estado = anterior?.estado ?? 'PENDIENTE';
+      if (d.estado === 'RESUELTA' && estado !== 'EN_ATENCION')
+        throw new ConflictException('Primero registra la revisión en atención');
+      if (estado === 'RESUELTA' && d.estado !== 'EN_ATENCION')
+        throw new ConflictException('Para reabrir la revisión selecciona En atención');
+      const evento = await repo.save(
+        repo.create({
+          respuestaId: r.id,
+          actorId: u.sub,
+          responsableId: d.responsableId,
+          idempotencia: d.idempotencia,
+          peticionHash,
+          estado: d.estado,
+          comentario: d.comentario,
+        }),
+      );
+      await this.avisar(
+        m,
+        i.alumno.usuarioId,
+        d.estado === 'RESUELTA' ? 'Revisión de boleta resuelta' : 'Actualización de tu revisión de boleta',
+        'Consulta Calificaciones para ver el estado y la respuesta del personal escolar.',
+      );
+      return { id: evento.id, estado: evento.estado };
+    });
   }
 }

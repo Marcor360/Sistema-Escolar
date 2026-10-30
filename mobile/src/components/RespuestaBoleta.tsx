@@ -1,3 +1,4 @@
+import { abrirDocumentoFirmado } from "../api/abrir-documento-firmado";
 import { useEffect, useRef, useState } from "react";
 import { Alert, TextInput, TouchableOpacity, View } from "react-native";
 import { Text } from "./Texto";
@@ -16,6 +17,14 @@ interface Historial {
   vigente: boolean;
 }
 interface Datos {
+  atencion?: { estado: string; vigente: boolean } | null;
+  historialAtenciones?: {
+    id: number;
+    estado: string;
+    responsable: string;
+    comentario: string;
+    fecha: string;
+  }[];
   materias?: {
     grupoMateriaId: number;
     asignatura: string;
@@ -42,6 +51,45 @@ export function RespuestaBoleta({ inscripcionId }: { inscripcionId: number }) {
   const clave = useRef(""),
     versionAnterior = useRef(""),
     bloqueo = useRef(false);
+  const consultaActual = useRef(0);
+  useEffect(() => {
+    consultaActual.current++;
+    return () => {
+      consultaActual.current++;
+    };
+  }, [inscripcionId]);
+  const descargarConstancia = async (respuestaId: number) => {
+    if (bloqueo.current) return;
+    bloqueo.current = true;
+    setOcupado(true);
+    setError("");
+    const consulta = consultaActual.current;
+    try {
+      const r = await api.get("/reportes/mi-boleta/enlace", {
+        params: {
+          inscripcionId,
+          respuestaId,
+          formato: "constancia-aceptacion",
+        },
+      });
+      await abrirDocumentoFirmado(
+        r.data.url,
+        `constancia-boleta-${respuestaId}.pdf`,
+        () => consulta === consultaActual.current,
+      );
+    } catch (e) {
+      if (consulta === consultaActual.current) setError(mensajeDeError(e));
+    } finally {
+      bloqueo.current = false;
+      if (consulta === consultaActual.current) setOcupado(false);
+    }
+  };
+  const nombreAtencion = (estado: string) =>
+    ({
+      PENDIENTE: "Pendiente",
+      EN_ATENCION: "En atención",
+      RESUELTA: "Resuelta",
+    })[estado] ?? estado;
   // UUID compatible con Hermes y navegador a través del proveedor Expo.
   useEffect(() => {
     let vigente = true;
@@ -148,6 +196,12 @@ export function RespuestaBoleta({ inscripcionId }: { inscripcionId: number }) {
                   ? "Pendiente de respuesta"
                   : "Pendiente de publicación"}
           </Text>
+          {datos.atencion && (
+            <Text>
+              Atención de la revisión: {nombreAtencion(datos.atencion.estado)}
+              {!datos.atencion.vigente ? " · respuesta anterior" : ""}
+            </Text>
+          )}
           {datos.disponible && (
             <View style={{ marginVertical: 12, gap: 8 }}>
               <Text accessibilityRole="header" style={base.tituloTarjeta}>
@@ -327,6 +381,26 @@ export function RespuestaBoleta({ inscripcionId }: { inscripcionId: number }) {
           <Text accessibilityRole="header" style={base.tituloTarjeta}>
             Historial y comentarios por materia
           </Text>
+          {!!datos.historialAtenciones?.length && (
+            <View style={{ gap: 10 }}>
+              <Text accessibilityRole="header" style={base.tituloTarjeta}>
+                Respuestas del personal escolar
+              </Text>
+              {datos.historialAtenciones.map((t) => (
+                <View key={t.id} style={{ paddingVertical: 10 }}>
+                  <Text>
+                    {nombreAtencion(t.estado)} · responsable: {t.responsable}
+                  </Text>
+                  <Text>
+                    {new Date(t.fecha).toLocaleString("es-MX", {
+                      timeZone: "America/Mexico_City",
+                    })}
+                  </Text>
+                  <Text>{t.comentario}</Text>
+                </View>
+              ))}
+            </View>
+          )}
           {!datos.historial.length && <Text>Sin respuestas registradas.</Text>}
           {datos.historial.map((h) => (
             <View
@@ -360,6 +434,11 @@ export function RespuestaBoleta({ inscripcionId }: { inscripcionId: number }) {
                 {!h.vigente ? " · Versión anterior" : ""}
               </Text>
               {!!h.comentario && <Text>{h.comentario}</Text>}
+              {h.estado === "ACEPTADA" &&
+                boton(
+                  `Descargar constancia de aceptación #${h.id}`,
+                  () => void descargarConstancia(h.id),
+                )}
             </View>
           ))}
         </>

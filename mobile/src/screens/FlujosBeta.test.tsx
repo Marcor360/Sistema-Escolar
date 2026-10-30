@@ -1,3 +1,4 @@
+import { PendientesBoletas } from '../components/PendientesBoletas';
 vi.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
@@ -1326,4 +1327,12 @@ it.each(["saldo", "orden"])("ignora la respuesta de %s y no abre pagos tras camb
   const visibles = vista.root.findAllByType(Text).map(n => n.children.filter(c => typeof c === 'string').join(' ')).join(' ');
   expect(visibles).toContain('Cargo 2');
   expect(visibles).not.toContain('Cargo 1');
+});
+
+it('Inicio muestra boletas publicadas pendientes y permite ir a Calificaciones',async()=>{
+ vi.mocked(api.get).mockResolvedValue({data:{total:2,datos:[]}});
+ await montar(<PendientesBoletas/>);
+ expect(texto()).toContain('Tienes 2 boletas pendientes de aceptación.');
+ const boton=vista.root.findAllByType(TouchableOpacity).find(b=>b.findAll(n=>n.children.some(c=>typeof c==='string'&&c==='Revisar mis boletas')).length>0)!;
+ await act(async()=>boton.props.onPress());expect(sesion.navegar).toHaveBeenCalledWith('Calificaciones');
 });

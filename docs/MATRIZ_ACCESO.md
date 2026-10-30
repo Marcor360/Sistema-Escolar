@@ -70,3 +70,7 @@ Las categorías de alumnos sin correo, activaciones pendientes y carteras en pau
 ## Boletas · 1.34.0
 
 ALUMNO firma o solicita revisión solo sobre su boleta final publicada. El firmante ALUMNO/TUTOR es declarado desde esa cuenta. MAESTRO activo consulta inscripciones de clases asignadas, ve solo las calificaciones de sus materias y comenta únicamente en ellas. ADMINISTRATIVO/DIRECTOR leen por plantel y SUPERADMIN global; no suplantan firmas familiares. FINANZAS no recibe acceso. [Contrato](BOLETAS_FIRMADAS_1.34.0.md).
+
+## Atención y constancias de boletas (1.35.0)
+
+ADMINISTRATIVO/DIRECTOR por plantel y SUPERADMIN global asignan responsables activos y registran atención/resolución con motivo. MAESTRO mantiene comentarios solo en sus materias y consulta revisiones de sus grupos con expediente activo; ser responsable no concede gestión ni acceso a otras materias. ALUMNO consulta sus pendientes, respuestas e historial y descarga sus aceptaciones con nombre/confirmación, incluso históricas; el tutor sigue declarado desde su cuenta. Las constancias completas corresponden a familia y gestores, sin acceso adicional para FINANZAS ni MAESTRO. Consultas y descargas vuelven a validar el alcance en servidor.

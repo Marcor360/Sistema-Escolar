@@ -1,6 +1,6 @@
 {
-  "version": "1.34.0",
-  "alcance": "Candidata 1.34.0: nombres independientes de administración/alumno, seguimiento de boletas con aceptación nominal y revisión de hasta 2000 caracteres, comentarios docentes por materia e historial por versión. Sin despliegue ni aceptación institucional acreditados.",
+  "version": "1.35.0",
+  "alcance": "Candidata 1.35.0: bandeja de boletas pendientes, filtros por contexto, atención con responsable e historial, avisos internos al alumno y constancias privadas de aceptación. Sin despliegue ni aceptación institucional acreditados.",
   "escenarios": [
     {
       "id": "UAT-01",
@@ -855,6 +855,22 @@
       "id": "UAT-62",
       "rol": "ALUMNO",
       "escenario": "Alumno o tutor declarado desde su cuenta revisa la boleta final publicada, firma con nombre completo y confirmación o solicita revisión de hasta 2000 caracteres. Profesor comenta solo su materia; Control Escolar y Director consultan sus planteles; SUPERADMIN global. Cambiar calificaciones deja la respuesta anterior como histórica.",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver",
+        "android",
+        "ios"
+      ],
+      "estado": "pendiente",
+      "evidencias": [],
+      "responsable": "Institución/QA (por designar)"
+    },
+    {
+      "id": "UAT-63",
+      "rol": "ADMINISTRATIVO",
+      "escenario": "Boletas publicadas sin respuesta aparecen como pendientes, filtros por alumno/plantel/grupo/ciclo conservan alcance, responsable activo atiende y resuelve con comentarios visibles a la familia, los avisos internos y reintentos no se duplican, y la constancia privada conserva la aceptación histórica al cambiar las notas. Docente inactivo y alumno ajeno no acceden.",
       "canales": [
         "web",
         "api",

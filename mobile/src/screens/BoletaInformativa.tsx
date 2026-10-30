@@ -1,18 +1,12 @@
+import { abrirDocumentoFirmado } from "../api/abrir-documento-firmado";
 import { RespuestaBoleta } from "../components/RespuestaBoleta";
 import { useCallback, useRef, useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
-import {
-  ActivityIndicator,
-  Linking,
-  Platform,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ActivityIndicator, TouchableOpacity, View } from "react-native";
 import { colores, textoSobreFondo } from "../theme";
 import { useMarca } from "../marca";
 import { Text } from "../components/Texto";
-import { api, archivosBase, mensajeDeError } from "../api/client";
-import { resolverEnlacePrivado } from "../api/enlaces-privados";
+import { api, mensajeDeError } from "../api/client";
 import { base } from "./comunes";
 interface Boleta {
   institucion: string;
@@ -85,26 +79,11 @@ export function BoletaInformativa({
         { params: { inscripcionId, formato } },
       );
       if (turno !== vigente.current) return;
-      const enlace = resolverEnlacePrivado(archivosBase, data.url, "boleta");
-      if (Platform.OS === "web") {
-        const respuesta = await fetch(enlace, {
-          credentials: "omit",
-          referrerPolicy: "no-referrer",
-        });
-        if (!respuesta.ok)
-          throw new Error(
-            "No se pudo descargar la boleta. Actualiza e inténtalo nuevamente.",
-          );
-        if (turno !== vigente.current) return;
-        const archivo = await respuesta.blob();
-        if (turno !== vigente.current) return;
-        const url = URL.createObjectURL(archivo),
-          a = document.createElement("a");
-        a.href = url;
-        a.download = `boleta-${inscripcionId}.${formato === "informativa-excel" ? "xlsx" : "pdf"}`;
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 60000);
-      } else await Linking.openURL(enlace);
+      await abrirDocumentoFirmado(
+        data.url,
+        `boleta-${inscripcionId}.${formato === "informativa-excel" ? "xlsx" : "pdf"}`,
+        () => turno === vigente.current,
+      );
     } catch (e) {
       if (turno === vigente.current) setError(mensajeDeError(e));
     } finally {

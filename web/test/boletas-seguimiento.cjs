@@ -26,6 +26,7 @@ let browser;
         errores = [],
         envios = [];
       page.on('pageerror', (e) => errores.push(e.message));
+      const atenciones = [];
       const historial = [
         {
           id: 1,
@@ -67,6 +68,7 @@ let browser;
             data = { incompletos: [], duplicados: [], gruposSinNivel: [], inscripcionesInconsistentes: [] };
           if (p.endsWith('/seguimiento/respaldo'))
             data = { estado: 'SIN_CONFIGURAR', vencido: true, ultimoExito: null };
+          if (p.endsWith('/boletas/filtros')) data = { datos: [], total: 0, pagina: 1, porPagina: 10 };
           if (p.endsWith('/boletas/seguimiento'))
             data = {
               datos: [
@@ -93,10 +95,32 @@ let browser;
               disponible: true,
               versionHash: 'a'.repeat(64),
               estado: 'REVISION',
+              revisionId: 1,
+              puedeGestionar: rol === 'SUPERADMIN',
+              responsables: [{ id: 1, nombre: 'Responsable QA' }],
+              atencion: {
+                estado: atenciones.at(-1)?.estado ?? 'PENDIENTE',
+                vigente: true,
+                eventos: [...atenciones].reverse(),
+              },
+              historialAtenciones: [...atenciones].reverse(),
               materias: [{ grupoMateriaId: 4, asignatura: 'Matemáticas', promedioFinal: 8, observaciones: '' }],
               materiasDocente: rol === 'MAESTRO' ? [{ grupoMateriaId: 4, asignatura: 'Matemáticas' }] : [],
               historial,
             };
+          if (p.endsWith('/boletas/inscripciones/8/atencion')) {
+            const body = route.request().postDataJSON();
+            envios.push(body);
+            atenciones.push({
+              ...body,
+              id: atenciones.length + 1,
+              actor: 'Admin QA',
+              responsable: 'Responsable QA',
+              respuestaId: 1,
+              fecha: '2026-10-29T12:05:00Z',
+            });
+            data = { id: atenciones.length };
+          }
           if (p.endsWith('/boletas/inscripciones/8/comentarios')) {
             envios.push(route.request().postDataJSON());
             historial.push({
@@ -120,6 +144,18 @@ let browser;
         await page.getByRole('button', { name: 'Omitir recorrido' }).click();
       await page.getByRole('link', { name: 'Abrir boleta y comentarios' }).click();
       await expect(page.getByText('Solicito revisar Matemáticas.')).toBeVisible();
+      if (rol === 'SUPERADMIN') {
+        await page.getByLabel('Responsable', { exact: true }).selectOption('1');
+        await page.getByLabel('Respuesta o motivo del cambio').fill('Se revisarán los criterios con la familia.');
+        await page.getByRole('button', { name: 'Guardar atención', exact: true }).click();
+        await page.getByRole('dialog').getByRole('button', { name: 'Confirmar', exact: true }).click();
+        await expect.poll(() => envios.length).toBe(1);
+        expect(envios[0]).toMatchObject({ respuestaId: 1, responsableId: 1, estado: 'EN_ATENCION' });
+        await expect(page.getByText('Atención registrada. La familia podrá consultar tu respuesta.')).toBeVisible();
+        await expect(
+          page.locator('.boleta-evento').getByText('Se revisarán los criterios con la familia.', { exact: true }),
+        ).toBeVisible();
+      }
       if (rol === 'MAESTRO') {
         await page.getByLabel('Materia', { exact: true }).selectOption('4');
         await page.getByLabel('Comentarios para revisión').fill('La evaluación fue revisada en la materia.');

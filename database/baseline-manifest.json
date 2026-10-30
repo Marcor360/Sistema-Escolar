@@ -58,7 +58,8 @@
         "migracion_rol_director.sql",
         "migracion_historial_roles_usuario.sql",
         "migracion_cartera_integral.sql",
-        "migracion_boletas_firmadas_portales.sql"
+        "migracion_boletas_firmadas_portales.sql",
+        "migracion_boleta_atenciones.sql"
       ]
     },
     "sqlserver": {
@@ -117,7 +118,8 @@
         "migracion_rol_director.sql",
         "migracion_historial_roles_usuario.sql",
         "migracion_cartera_integral.sql",
-        "migracion_boletas_firmadas_portales.sql"
+        "migracion_boletas_firmadas_portales.sql",
+        "migracion_boleta_atenciones.sql"
       ]
     }
   }

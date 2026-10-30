@@ -1,8 +1,14 @@
+import { AtencionBoleta, nombreAtencion, type Atencion, type EventoAtencion } from './AtencionBoleta';
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { useConfirmacion } from './useConfirmacion';
 export interface SeguimientoBoleta {
+  revisionId?: number | null;
+  puedeGestionar?: boolean;
+  responsables?: { id: number; nombre: string }[];
+  atencion?: Atencion | null;
+  historialAtenciones?: EventoAtencion[];
   inscripcionId: number;
   alumnoId?: number;
   alumno: string;
@@ -120,6 +126,26 @@ export function RespuestaBoleta({ inscripcionId }: { inscripcionId: number }) {
       bloqueo.current = false;
     }
   };
+  const descargarConstancia = async (respuestaId: number) => {
+    if (ocupado) return;
+    setOcupado(true);
+    setError('');
+    try {
+      const r = await api.get(`/boletas/inscripciones/${inscripcionId}/constancias/${respuestaId}/pdf`, {
+        responseType: 'blob',
+      });
+      const url = URL.createObjectURL(r.data),
+        a = document.createElement('a');
+      a.href = url;
+      a.download = `constancia-boleta-${respuestaId}.pdf`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (e) {
+      setError(mensajeDeError(e));
+    } finally {
+      setOcupado(false);
+    }
+  };
   const descargar = async () => {
     if (!datos?.alumnoId || ocupado) return;
     setOcupado(true);
@@ -158,6 +184,26 @@ export function RespuestaBoleta({ inscripcionId }: { inscripcionId: number }) {
           <p>
             <strong>{estados[datos.estado] ?? datos.estado}</strong>
           </p>
+          {datos.atencion && (
+            <p>
+              Atención de la revisión: <strong>{nombreAtencion(datos.atencion.estado)}</strong>
+              {!datos.atencion.vigente && ' · corresponde a una respuesta anterior'}.
+            </p>
+          )}
+          {datos.puedeGestionar && datos.revisionId && (
+            <AtencionBoleta
+              key={`${datos.revisionId}-${intento}`}
+              inscripcionId={inscripcionId}
+              revisionId={datos.revisionId}
+              versionHash={datos.versionHash}
+              responsables={datos.responsables ?? []}
+              atencion={datos.atencion ?? null}
+              alGuardar={() => {
+                setMensaje('Atención registrada. La familia podrá consultar tu respuesta.');
+                setIntento((v) => v + 1);
+              }}
+            />
+          )}
           <h4>Calificaciones de la versión que vas a responder</h4>
           <div className="tabla-contenedor">
             <table className="tabla tabla-adaptable">
@@ -287,6 +333,24 @@ export function RespuestaBoleta({ inscripcionId }: { inscripcionId: number }) {
             </form>
           )}
           <h4>Historial y comentarios por materia</h4>
+          {!!datos.historialAtenciones?.length && (
+            <section aria-label="Historial de atención">
+              <h4>Respuestas del personal escolar</h4>
+              {datos.historialAtenciones.map((t) => (
+                <article className="boleta-evento" key={t.id}>
+                  <strong>{nombreAtencion(t.estado)}</strong>
+                  <p>
+                    Responsable: {t.responsable} · registrado por {t.actor}
+                  </p>
+                  <p>
+                    {new Date(t.fecha).toLocaleString('es-MX', { timeZone: 'America/Mexico_City' })} · revisión #
+                    {t.respuestaId}
+                  </p>
+                  <p className="boleta-comentario">{t.comentario}</p>
+                </article>
+              ))}
+            </section>
+          )}
           {!datos.historial.length && <p>Todavía no hay respuestas registradas.</p>}
           {datos.historial.map((h) => (
             <article className="boleta-evento" key={h.id}>
@@ -305,6 +369,11 @@ export function RespuestaBoleta({ inscripcionId }: { inscripcionId: number }) {
               </p>
               {!h.vigente && <p className="texto-ayuda">Corresponde a una versión anterior de las calificaciones.</p>}
               {h.comentario && <p className="boleta-comentario">{h.comentario}</p>}
+              {h.estado === 'ACEPTADA' && (alumno || datos.puedeGestionar) && (
+                <button type="button" disabled={ocupado} onClick={() => void descargarConstancia(h.id)}>
+                  Descargar constancia de aceptación #{h.id}
+                </button>
+              )}
             </article>
           ))}
         </>
