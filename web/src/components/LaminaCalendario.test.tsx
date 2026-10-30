@@ -1,6 +1,6 @@
 import { render, screen, cleanup } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
-import { LaminaCalendario, EventoLamina, MarcadorCalendario } from './LaminaCalendario';
+import { LaminaCalendario, EventoLamina, MarcadorCalendario, diaCalendario } from './LaminaCalendario';
 vi.mock('../marca/MarcaContext', async (original) => ({
   ...(await original<typeof import('../marca/MarcaContext')>()),
   useMarca: () => ({ marca: { nombreInstitucion: 'Universidad IUA', logoUrl: '/uploads/marca-logo-prueba.png' } }),
@@ -97,4 +97,9 @@ it('mantiene un indicador visible y leyenda para fechas anteriores o importadas 
     .closest('.calendario-celda');
   expect(dia?.querySelector('.calendario-simbolo')).toBeTruthy();
   expect(screen.getByLabelText('Leyenda de marcadores').textContent).toContain('Evento sin marcador');
+});
+
+it('mantiene el día de operación sin depender del formato regional del navegador', () => {
+  expect(diaCalendario('2026-11-01T02:00:00Z')).toBe('2026-10-31');
+  expect(diaCalendario('2026-11-01T13:00:00Z')).toBe('2026-11-01');
 });
