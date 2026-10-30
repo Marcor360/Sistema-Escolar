@@ -1,6 +1,6 @@
 {
-  "version": "1.35.5",
-  "alcance": "Candidata 1.35.5: identidad con segundo nombre opcional en usuarios, validación de dos apellidos en nuevas altas, migración incremental espejo MySQL/SQL Server, sin dividir datos históricos. Implantación y UAT pendientes.",
+  "version": "1.35.6",
+  "alcance": "Candidata 1.35.6: formularios de personal, docentes y alumnos con nombre, segundo nombre opcional, dos apellidos requeridos y correo en orden, validación UX y perfil Expo solo lectura. Depende de la migración y API 1.35.5; CI/UAT pendientes.",
   "escenarios": [
     {
       "id": "UAT-01",
