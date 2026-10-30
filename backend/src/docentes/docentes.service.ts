@@ -33,7 +33,7 @@ export class DocentesService {
       'EXISTS (SELECT 1 FROM usuario_planteles up WHERE up.usuario_id = u.id AND (up.activo = :activa OR d.estatus = :baja) AND up.plantel_id IN (:...planteles))',
       { activa: true, baja: 'BAJA', planteles },
     );
-    if (query.buscar?.trim()) qb.andWhere('(d.num_empleado LIKE :buscar OR u.nombre LIKE :buscar OR u.apellido_paterno LIKE :buscar)', { buscar: `%${query.buscar.trim()}%` });
+    if (query.buscar?.trim()) qb.andWhere('(d.num_empleado LIKE :buscar OR u.nombre LIKE :buscar OR u.segundo_nombre LIKE :buscar OR u.apellido_paterno LIKE :buscar OR u.apellido_materno LIKE :buscar)', { buscar: `%${query.buscar.trim()}%` });
     const [docentes, total] = await qb
       .orderBy('d.id', 'DESC')
       .skip((pagina - 1) * porPagina)
