@@ -58,3 +58,9 @@ cd web && npm run test:responsive
 ```
 
 El último comando requiere dependencias y navegador Playwright ya instalados. El workflow programado corre semanalmente en rama por defecto **solo después de integrar el PR**. No sustituye `.github/workflows/ci.yml`, que comprueba backend, web, Expo, MySQL, SQL Server y E2E. No se generan correos, cargos, migraciones ni despliegues por programar auditorías.
+
+## Revisión aplicada a identidad personal · 1.35.6
+
+Se aplicó `iua-auditoria-ux-accesibilidad` a los formularios de `Usuarios`, `DocenteFormulario` y `FormularioAlumno`, y `iua-expo-alumno` al perfil de solo lectura. El contrato de datos se revisa con `iua-arquitectura-contexto`; se exige separar segundo nombre sin dividir nombres históricos, preservar los dos apellidos y mantener controles de acceso de NestJS.
+
+**Controles reproducibles:** inspeccionar el orden de tabulación y los campos requeridos; comprobar 360/768/1280/1920 px y zoom 200%; ejecutar tests de identidad, `npm run test:responsive`, `node scripts/check-agent-skills.cjs`, `node --test scripts/check-agent-skills.test.cjs` y CI por SHA. La comprobación de estructura no equivale a UAT ni a accesibilidad manual certificada.

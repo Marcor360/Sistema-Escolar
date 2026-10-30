@@ -24,8 +24,8 @@ interface Catalogos {
 const trozos = <T>(filas: T[]) => Array.from({ length: Math.ceil(filas.length / 100) }, (_, i) => filas.slice(i*100,(i+1)*100));
 export const CABECERAS: Record<TipoImportacion, string[]> = {
   ALUMNOS: ['correoInstitucional', 'correoPersonal', 'correoProveedor', 'nombre', 'segundoNombre', 'apellidoPaterno', 'apellidoMaterno', 'matricula', 'plantelId', 'curp', 'fechaNacimiento', 'telefono', 'tutorNombre', 'tutorTelefono', 'direccion', 'email'],
-  DOCENTES: ['email', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'numEmpleado', 'plantelIds', 'cedulaProfesional', 'cedulaPendiente', 'especialidad', 'telefono', 'correoProveedor'],
-  PERSONAL: ['email', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'roles', 'plantelIds', 'telefono', 'correoProveedor'],
+  DOCENTES: ['email', 'nombre', 'segundoNombre', 'apellidoPaterno', 'apellidoMaterno', 'numEmpleado', 'plantelIds', 'cedulaProfesional', 'cedulaPendiente', 'especialidad', 'telefono', 'correoProveedor'],
+  PERSONAL: ['email', 'nombre', 'segundoNombre', 'apellidoPaterno', 'apellidoMaterno', 'roles', 'plantelIds', 'telefono', 'correoProveedor'],
   INSCRIPCIONES: ['matricula', 'grupoId'],
   CALIFICACIONES: ['grupoMateriaId', 'parcial', 'alumnoId', 'matricula', 'grado', 'calificacion', 'observaciones'],
 };
@@ -50,9 +50,6 @@ export class ImportacionesService {
       if (nuevo && anterior && nuevo !== anterior) throw new BadRequestException('correoInstitucional y email no coinciden');
       datos.email = nuevo || anterior;
       delete datos.correoInstitucional;
-      const segundo = String(datos.segundoNombre ?? '').trim();
-      if (segundo) datos.nombre = `${String(datos.nombre ?? '').trim()} ${segundo}`.trim();
-      delete datos.segundoNombre;
       if (datos.correoPersonal === undefined) delete datos.correoPersonal;
     }
     if (tipo === 'ALUMNOS' || tipo === 'DOCENTES' || tipo === 'PERSONAL') {
@@ -314,7 +311,7 @@ export class ImportacionesService {
           const roles = [...new Set(claves)].map((clave) => { const rol = c.roles.get(clave); if (!rol) throw new ConflictException('Rol inexistente'); return rol; });
           const passwordHash = p.tipo === 'ALUMNOS' ? hashesAlumnos.get(d.email.toLowerCase()) : hashes[i];
           if (!passwordHash) throw new ConflictException('El estado de las cuentas cambió; vuelve a previsualizar el archivo');
-          return repo.create({ email: d.email, correoPersonal: p.tipo === 'ALUMNOS' ? (d as CrearAlumnoDto).correoPersonal ?? null : null, correoProveedor: d.correoProveedor ?? proveedorCorreoPredeterminado(claves), nombre: d.nombre, apellidoPaterno: d.apellidoPaterno, apellidoMaterno: d.apellidoMaterno ?? null, telefono: d.telefono ?? null, passwordHash, passwordChangeRequired: true, activacionPendiente: p.tipo === 'ALUMNOS', roles });
+          return repo.create({ email: d.email, correoPersonal: p.tipo === 'ALUMNOS' ? (d as CrearAlumnoDto).correoPersonal ?? null : null, correoProveedor: d.correoProveedor ?? proveedorCorreoPredeterminado(claves), nombre: d.nombre, segundoNombre: d.segundoNombre ?? null, apellidoPaterno: d.apellidoPaterno, apellidoMaterno: d.apellidoMaterno ?? null, telefono: d.telefono ?? null, passwordHash, passwordChangeRequired: true, activacionPendiente: p.tipo === 'ALUMNOS', roles });
         }),{ chunk: 50 });
         const usuarios = new Map(nuevos.map((u) => [u.email,u.id]));
         if (p.tipo === 'ALUMNOS') {

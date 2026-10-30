@@ -4,7 +4,7 @@ export interface Alumno {
   id: number;
   matricula: string;
   estatus: string;
-  usuario: { nombre: string; apellidoPaterno: string; apellidoMaterno?: string; email?: string | null };
+  usuario: { nombre: string; segundoNombre?: string | null; apellidoPaterno: string; apellidoMaterno?: string; email?: string | null };
   plantel: { id: number; nombre: string } | null;
 }
 export interface Historial {
@@ -36,6 +36,7 @@ export interface Resultado {
 export const FORM_INICIAL = {
   matricula: '',
   nombre: '',
+  segundoNombre: '',
   apellidoPaterno: '',
   apellidoMaterno: '',
   email: '',

@@ -50,3 +50,19 @@ it('el listado enlaza a una página de detalle y no incrusta el formulario dentr
   expect(screen.queryByText('Motivo de reanudación')).toBeNull();
   expect(screen.getByText(/2 cuotas/)).toBeTruthy();
 });
+
+it('en apertura integral exige ambos apellidos y respeta el orden de identidad', async () => {
+  vi.spyOn(api, 'get').mockImplementation(async ruta => ({ data:
+    ruta === '/planteles/mios' ? [{ id: 1, nombre: 'Centro' }]
+    : ruta === '/academico/ciclos' ? [{ id: 1, clave: 'QA', estado: 'ACTIVO' }]
+    : [{ id: 3, clave: 'INS', nombre: 'Inscripción', montoBase: 125, tipo: 'INSCRIPCION', activo: true }]
+  }));
+  montar('/apertura-cartera/nueva');
+  await screen.findByLabelText('Total contratado del periodo');
+  const ids = [...document.querySelectorAll<HTMLInputElement>('.cartera-identidad input')].map(c => c.id);
+  expect(ids.indexOf('nuevo-nombre')).toBeLessThan(ids.indexOf('nuevo-segundoNombre'));
+  expect(ids.indexOf('nuevo-segundoNombre')).toBeLessThan(ids.indexOf('nuevo-apellidoPaterno'));
+  expect(ids.indexOf('nuevo-apellidoPaterno')).toBeLessThan(ids.indexOf('nuevo-apellidoMaterno'));
+  expect((screen.getByLabelText('Segundo apellido *') as HTMLInputElement).required).toBe(true);
+  expect((screen.getByLabelText('Segundo nombre (opcional)') as HTMLInputElement).required).toBe(false);
+});

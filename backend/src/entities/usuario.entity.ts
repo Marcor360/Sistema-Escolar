@@ -14,6 +14,7 @@ export class Usuario {
   @Column({ name: 'correo_personal', type: String, length: 120, nullable: true }) correoPersonal!: string | null;
   @Column({ length: 100, select: false }) passwordHash!: string;
   @Column({ length: 80 }) nombre!: string;
+  @Column({ name: 'segundo_nombre', type: String, length: 80, nullable: true }) segundoNombre!: string | null;
   @Column({ length: 80 }) apellidoPaterno!: string;
   @Column({ type: String, length: 80, nullable: true }) apellidoMaterno!: string | null;
   @Column({ type: String, length: 20, nullable: true }) telefono!: string | null;
@@ -39,6 +40,6 @@ export class Usuario {
   @Column({ type: 'bigint', nullable: true }) legacyId!: string | null;
 
   get nombreCompleto(): string {
-    return [this.nombre, this.apellidoPaterno, this.apellidoMaterno].filter(Boolean).join(' ');
+    return [this.nombre, this.segundoNombre, this.apellidoPaterno, this.apellidoMaterno].filter(Boolean).join(' ');
   }
 }

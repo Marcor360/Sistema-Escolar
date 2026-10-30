@@ -92,7 +92,7 @@ it('editar usa ruta propia y cancelar restaura página, filtro y búsqueda', asy
   const router = mostrar('/docentes?vista=consulta&plantel=1&buscar=Prueba&pagina=2');
   fireEvent.click((await screen.findAllByRole('button', { name: 'Editar' }))[0]);
   await screen.findByRole('heading', { name: 'Editar docente' });
-  await waitFor(() => expect((screen.getByLabelText('Nombre') as HTMLInputElement).value).toBe('Docente 1'));
+  await waitFor(() => expect((screen.getByLabelText('Nombre *') as HTMLInputElement).value).toBe('Docente 1'));
   expect(screen.queryByRole('region', { name: 'Listado de docentes' })).toBeNull();
   expect(router.state.location.pathname).toBe('/docentes/1/editar');
   fireEvent.click(screen.getByRole('button', { name: 'Cancelar y volver' }));
@@ -122,22 +122,22 @@ it('protege atrás del navegador y recarga con datos sin guardar', async () => {
   const router = mostrar();
   fireEvent.click(screen.getByRole('button', { name: /Registrar docente/ }));
   await screen.findByLabelText('Centro');
-  fireEvent.change(screen.getByLabelText('Nombre'), { target: { value: 'Cambio pendiente' } });
+  fireEvent.change(screen.getByLabelText('Nombre *'), { target: { value: 'Cambio pendiente' } });
   const evento = new Event('beforeunload', { cancelable: true });
   window.dispatchEvent(evento);
   expect(evento.defaultPrevented).toBe(true);
   await act(async () => { void router.navigate(-1); });
   await screen.findByRole('dialog');
   fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
-  expect((screen.getByLabelText('Nombre') as HTMLInputElement).value).toBe('Cambio pendiente');
+  expect((screen.getByLabelText('Nombre *') as HTMLInputElement).value).toBe('Cambio pendiente');
 });
 
 it('preserva cambios tras error, evita doble envío y retorna al listado tras guardar', async () => {
   mockDirectorio();
   const patch = vi.spyOn(api, 'patch').mockRejectedValueOnce({ response: { data: { message: 'No disponible' } } }).mockResolvedValue({ data: {} });
   const router = mostrar('/docentes/1/editar?vista=consulta&plantel=1&pagina=2');
-  await waitFor(() => expect((screen.getByLabelText('Nombre') as HTMLInputElement).value).toBe('Docente 1'));
-  const nombre = screen.getByLabelText('Nombre');
+  await waitFor(() => expect((screen.getByLabelText('Nombre *') as HTMLInputElement).value).toBe('Docente 1'));
+  const nombre = screen.getByLabelText('Nombre *');
   fireEvent.change(nombre, { target: { value: 'Nombre nuevo' } });
   const form = nombre.closest('form')!;
   fireEvent.submit(form); fireEvent.submit(form);
@@ -149,4 +149,17 @@ it('preserva cambios tras error, evita doble envío y retorna al listado tras gu
   expect(router.state.location.search).toContain('pagina=2');
   expect(screen.queryByRole('dialog')).toBeNull();
   expect(patch).toHaveBeenLastCalledWith('/docentes/1', expect.objectContaining({ nombre: 'Nombre nuevo' }));
+});
+
+it('muestra segundo nombre opcional y ambos apellidos requeridos para docentes', async () => {
+  vi.spyOn(api, 'get').mockResolvedValue({ data: [{ id: 1, nombre: 'Centro' }] });
+  mostrar('/docentes/nuevo');
+  const segundo = await screen.findByLabelText('Segundo nombre (opcional)') as HTMLInputElement;
+  expect(segundo.required).toBe(false);
+  expect((screen.getByLabelText('Segundo apellido *') as HTMLInputElement).required).toBe(true);
+  const ids = [...document.querySelectorAll<HTMLInputElement>('#form-docente input')].map(campo => campo.id);
+  expect(ids.indexOf('doc-nombre')).toBeLessThan(ids.indexOf('doc-segundo-nombre'));
+  expect(ids.indexOf('doc-segundo-nombre')).toBeLessThan(ids.indexOf('doc-paterno'));
+  expect(ids.indexOf('doc-paterno')).toBeLessThan(ids.indexOf('doc-materno'));
+  expect(ids.indexOf('doc-materno')).toBeLessThan(ids.indexOf('doc-email'));
 });

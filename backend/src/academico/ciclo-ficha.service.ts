@@ -36,7 +36,7 @@ export class CicloFichaService {
     return {
       ciclo: { id: ciclo.id, clave: ciclo.clave, nombre: ciclo.nombre, fechaInicio: ciclo.fechaInicio, fechaFin: ciclo.fechaFin, estado: ciclo.estado }, resumen,
       datos: pagina.map(g => ({ id: g.id, nombre: g.nombre, activo: g.activo, tipo: g.tipo, turno: g.turno, plantel: { id: g.plantel.id, nombre: g.plantel.nombre }, nivel: g.nivel?.nombre ?? null, carrera: g.carrera?.nombre ?? null, plan: g.carrera?.versionPlan ?? null, periodo: g.periodoAcademico?.nombre ?? null })), total, pagina: q.pagina, porPagina: q.porPagina,
-      clases: { datos: clases.map(c => ({ id: c.id, grupo: c.grupo.nombre, materia: c.materia.nombre, clave: c.materia.clave, docente: c.docente ? { id: c.docente.id, nombre: [c.docente.usuario.nombre, c.docente.usuario.apellidoPaterno, c.docente.usuario.apellidoMaterno].filter(Boolean).join(' ') } : null })), total: totalClases, pagina: q.clasesPagina, porPagina: q.porPagina },
+      clases: { datos: clases.map(c => ({ id: c.id, grupo: c.grupo.nombre, materia: c.materia.nombre, clave: c.materia.clave, docente: c.docente ? { id: c.docente.id, nombre: [c.docente.usuario.nombre, c.docente.usuario.segundoNombre, c.docente.usuario.apellidoPaterno, c.docente.usuario.apellidoMaterno].filter(Boolean).join(' ') } : null })), total: totalClases, pagina: q.clasesPagina, porPagina: q.porPagina },
     };
   }
 }

@@ -44,7 +44,7 @@ it.each(['usuarios','grupos'])('guardar %s vuelve a consulta sin sobrescribir la
  const post=vi.spyOn(api,'post').mockResolvedValue({data:{id:9}});
  const router=montar(tipo==='usuarios'?<Usuarios/>:<Grupos/>,'/modulo?vista=nuevo&pagina=2&buscar=criterio');
  if(tipo==='usuarios') {
-  fireEvent.change(screen.getByLabelText('Nombre'),{target:{value:'Personal'}});fireEvent.change(screen.getByLabelText('Primer apellido'),{target:{value:'Prueba'}});fireEvent.change(screen.getByLabelText('Correo'),{target:{value:'prueba@example.invalid'}});fireEvent.click(await screen.findByLabelText('Plantel prueba'));fireEvent.click(screen.getByRole('button',{name:'Crear'}));
+  fireEvent.change(screen.getByLabelText('Nombre *'),{target:{value:'Personal'}});fireEvent.change(screen.getByLabelText('Primer apellido *'),{target:{value:'Prueba'}});fireEvent.change(screen.getByLabelText('Segundo apellido *'),{target:{value:'Ejemplo'}});fireEvent.change(screen.getByLabelText('Correo institucional *'),{target:{value:'prueba@example.invalid'}});fireEvent.click(await screen.findByLabelText('Plantel prueba'));fireEvent.click(screen.getByRole('button',{name:'Crear'}));
  } else {
   await waitFor(()=>expect(screen.getByLabelText('Plantel').querySelectorAll('option')).toHaveLength(2));
   fireEvent.change(screen.getByLabelText('Plantel'),{target:{value:'1'}});fireEvent.change(screen.getByLabelText('Ciclo'),{target:{value:'1'}});fireEvent.change(screen.getByLabelText('Nombre'),{target:{value:'Grupo prueba'}});fireEvent.click(screen.getByRole('button',{name:'Crear grupo'}));
