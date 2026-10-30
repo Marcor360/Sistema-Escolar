@@ -36,7 +36,9 @@ interface Perfil {
     telefono: string | null;
     nombreCompleto?: string;
     nombre: string;
+    segundoNombre?: string | null;
     apellidoPaterno: string;
+    apellidoMaterno?: string | null;
     email: string;
   };
 }
@@ -226,10 +228,17 @@ export default function PerfilScreen({ abrirDocumentos }: { abrirDocumentos?: ()
       )}
       <TouchableOpacity accessibilityRole="button" style={base.botonAccesible} onPress={repetirRecorridoAlumno}><Text>Ver recorrido especializado del alumno</Text></TouchableOpacity>
       <Tarjeta>
-        <Text style={base.tituloTarjeta}>{sesion?.nombre}</Text>
+        <Text style={base.tituloTarjeta}>{perfil?.usuario?.nombreCompleto || sesion?.nombre}</Text>
         <Text style={base.secundario}>{sesion?.email}</Text>
         {perfil && (
           <>
+            <View style={{ marginTop: espacio.md, paddingVertical: espacio.sm, borderBottomWidth: 1, borderColor: colores.linea }}>
+              <Text accessibilityRole="header" style={base.tituloTarjeta}>Identidad académica</Text>
+              <Text style={base.secundario}>Nombre: {perfil.usuario.nombre}</Text>
+              {perfil.usuario.segundoNombre ? <Text style={base.secundario}>Segundo nombre: {perfil.usuario.segundoNombre}</Text> : null}
+              <Text style={base.secundario}>Primer apellido: {perfil.usuario.apellidoPaterno}</Text>
+              {perfil.usuario.apellidoMaterno ? <Text style={base.secundario}>Segundo apellido: {perfil.usuario.apellidoMaterno}</Text> : null}
+            </View>
             <Text style={[base.secundario, { marginTop: 8 }]}>
               Matrícula: {perfil.matricula}
             </Text>
