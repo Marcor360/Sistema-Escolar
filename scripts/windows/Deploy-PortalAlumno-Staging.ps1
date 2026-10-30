@@ -2,7 +2,7 @@ param(
   [Parameter(Mandatory = $true)][string]$Version,
   [Parameter(Mandatory = $true)][string]$Source,
   [string]$Root = 'C:\SistemaEscolar\portal-alumno',
-  [string]$PortalHost = 'stagin-portal-alumnoiua.edu.mx',
+  [string]$PortalHost = 'stagin-portal-alumno.iua.edu.mx',
   [string]$UpstreamApiBaseUrl = 'https://api-sistema-staging.iua.edu.mx/api',
   [string]$SiteName = 'SistemaEscolar-Staging-PortalAlumno'
 )
