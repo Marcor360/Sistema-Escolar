@@ -12,9 +12,9 @@ export const COLUMNAS_PLANTILLA: Record<TipoPlantilla, string[]> = {
 };
 
 const OBLIGATORIOS: Record<TipoPlantilla, readonly string[]> = {
-  ALUMNOS: ['correoInstitucional', 'correoProveedor', 'nombre', 'apellidoPaterno', 'matricula', 'plantelId', 'curp'],
-  DOCENTES: ['email', 'nombre', 'apellidoPaterno', 'numEmpleado', 'plantelIds'],
-  PERSONAL: ['email', 'nombre', 'apellidoPaterno', 'roles', 'plantelIds'],
+  ALUMNOS: ['correoInstitucional', 'correoProveedor', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'matricula', 'plantelId', 'curp'],
+  DOCENTES: ['email', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'numEmpleado', 'plantelIds'],
+  PERSONAL: ['email', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'roles', 'plantelIds'],
   INSCRIPCIONES: ['matricula', 'grupoId'],
 };
 

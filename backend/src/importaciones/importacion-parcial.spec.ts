@@ -10,7 +10,7 @@ const service = new ImportacionesService(
 let identidad = 0;
 const alumno = (matricula: string, correo: string, proveedor = 'Microsoft 365') => ({
   matricula, correoInstitucional: correo, correoProveedor: proveedor,
-  nombre: 'Rosa', apellidoPaterno: 'Prueba', curp: `${(++identidad).toString(26).padStart(4,'0').split('').map(c=>String.fromCharCode(65+parseInt(c,26))).join('')}010101MDFRRR09`, plantelId: '1',
+  nombre: 'Rosa', apellidoPaterno: 'Prueba', apellidoMaterno: 'Ficticia', curp: `${(++identidad).toString(26).padStart(4,'0').split('').map(c=>String.fromCharCode(65+parseInt(c,26))).join('')}010101MDFRRR09`, plantelId: '1',
 });
 function catalogos() {
   return {

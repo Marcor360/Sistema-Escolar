@@ -16,7 +16,7 @@ const service = new ImportacionesService(
 const preparar = (fila: Record<string, string>) => service['preparar']('ALUMNOS', fila);
 
 const alumno = {
-  nombre: 'Rosa', apellidoPaterno: 'Pérez', matricula: '0000094',
+  nombre: 'Rosa', apellidoPaterno: 'Pérez', apellidoMaterno: 'Ficticia', matricula: '0000094',
   plantelId: '1', curp: 'AAAA010101MDFRRR09',
 };
 
@@ -85,7 +85,8 @@ describe('Correo dual en importación de alumnos', () => {
       ...alumno, segundoNombre: 'Isabel', correoInstitucional: 'alumna@example.test', correoProveedor: 'Microsoft 365',
     }));
     expect(sinSegundo.nombre).toBe('Rosa');
-    expect(conSegundo.nombre).toBe('Rosa Isabel');
+    expect(conSegundo.nombre).toBe('Rosa');
+    expect(conSegundo.segundoNombre).toBe('Isabel');
     expect(await validate(sinSegundo)).toHaveLength(0);
     expect(await validate(conSegundo)).toHaveLength(0);
   });
