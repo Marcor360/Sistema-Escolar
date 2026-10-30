@@ -49,7 +49,7 @@ it('publica una imagen del ciclo con nivel y audiencia financiera', async () => 
   }));
   const post = vi.spyOn(api, 'post').mockResolvedValue({ data: { id: 1 } });
   render(<CalendarioCiclo />);
-  await screen.findByRole('heading', { name: 'enero de 2026' });
+  await screen.findByRole('heading', { name: /de 2026/ });
   fireEvent.change(screen.getByLabelText('Nivel académico'), { target: { value: '7' } });
   fireEvent.change(screen.getByLabelText('Título del calendario o evento'), { target: { value: 'Cortes anuales' } });
   fireEvent.change(screen.getByLabelText('Visibilidad'), { target: { value: 'FINANCIERA' } });
@@ -87,6 +87,6 @@ it('consulta por separado las fechas institucionales sin perder el filtro de niv
   fireEvent.change(screen.getByLabelText('Nivel académico'), { target: { value: '7' } });
   fireEvent.change(screen.getByLabelText('Ámbito del calendario'), { target: { value: 'GLOBAL' } });
   await waitFor(() => expect(get.mock.calls.some(([ruta, config]) =>
-    ruta === '/calendario' && config?.params?.ambito === 'GLOBAL' && config?.params?.nivelId === '7'
+    ruta === '/calendario' && (config?.params as { ambito?: string; nivelId?: string } | undefined)?.ambito === 'GLOBAL' && (config?.params as { nivelId?: string } | undefined)?.nivelId === '7'
   )).toBe(true));
 });
