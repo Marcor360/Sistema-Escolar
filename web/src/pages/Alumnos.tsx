@@ -89,7 +89,7 @@ export default function AlumnosPage() {
     try {
       const { data } = await api.get(`/alumnos/${alumno.id}`);
       setForm({ ...FORM_INICIAL, matricula: data.matricula, plantelId: String(data.plantelId),
-        nombre: data.usuario.nombre, apellidoPaterno: data.usuario.apellidoPaterno, apellidoMaterno: data.usuario.apellidoMaterno ?? '', telefono: data.usuario.telefono ?? '', email: data.usuario.email ?? '', correoPersonal: data.usuario.correoPersonal ?? '', correoProveedor: data.usuario.correoProveedor ?? 'MICROSOFT365', curp: data.curp ?? '', fechaNacimiento: data.fechaNacimiento ?? '', direccion: data.direccion ?? '',
+        nombre: data.usuario.nombre, segundoNombre: data.usuario.segundoNombre ?? '', apellidoPaterno: data.usuario.apellidoPaterno, apellidoMaterno: data.usuario.apellidoMaterno ?? '', telefono: data.usuario.telefono ?? '', email: data.usuario.email ?? '', correoPersonal: data.usuario.correoPersonal ?? '', correoProveedor: data.usuario.correoProveedor ?? 'MICROSOFT365', curp: data.curp ?? '', fechaNacimiento: data.fechaNacimiento ?? '', direccion: data.direccion ?? '',
         tutorNombre: data.tutorNombre ?? '', tutorTelefono: data.tutorTelefono ?? '' });
       setEditando(alumno.id);
       if (modo !== 'legado') trabajo.ir('editar', alumno.id);
@@ -157,14 +157,15 @@ export default function AlumnosPage() {
     try {
       if (editando) {
         await api.patch(`/alumnos/${editando}`, {
-          nombre: form.nombre, apellidoPaterno: form.apellidoPaterno, apellidoMaterno: form.apellidoMaterno,
+          nombre: form.nombre, segundoNombre: form.segundoNombre.trim() || null, apellidoPaterno: form.apellidoPaterno, apellidoMaterno: form.apellidoMaterno,
           telefono: form.telefono, correoPersonal: form.correoPersonal || null, correoProveedor: form.correoProveedor, fechaNacimiento: form.fechaNacimiento || null, direccion: form.direccion, curp: form.curp, tutorNombre: form.tutorNombre, tutorTelefono: form.tutorTelefono,
         });
       } else await api.post('/alumnos', {
         ...form,
         correoPersonal: form.correoPersonal || undefined,
         plantelId: Number(form.plantelId),
-        apellidoMaterno: form.apellidoMaterno || undefined,
+        segundoNombre: form.segundoNombre.trim() || undefined,
+        apellidoMaterno: form.apellidoMaterno,
         curp: form.curp, telefono: form.telefono || undefined, fechaNacimiento: form.fechaNacimiento || undefined, direccion: form.direccion || undefined,
         tutorNombre: form.tutorNombre || undefined,
         tutorTelefono: form.tutorTelefono || undefined,
@@ -249,7 +250,7 @@ export default function AlumnosPage() {
           {resultado.datos.map((a) => (
             <tr key={a.id}>
               <td data-etiqueta="Matrícula">{a.matricula}</td>
-              <td data-etiqueta="Nombre">{a.usuario.nombre} {a.usuario.apellidoPaterno} {a.usuario.apellidoMaterno ?? ''}</td>
+              <td data-etiqueta="Nombre">{[a.usuario.nombre, a.usuario.segundoNombre, a.usuario.apellidoPaterno, a.usuario.apellidoMaterno].filter(Boolean).join(' ')}</td>
               <td data-etiqueta="Plantel">{a.plantel?.nombre ?? <span className="sello neutro">Sin plantel</span>}</td>
               <td data-etiqueta="Correo">{a.usuario.email === null ? 'Sin correo institucional' : a.usuario.email ?? 'Restringido'}</td>
               <td data-etiqueta="Estatus"><span className={`sello ${a.estatus === 'ACTIVO' ? 'ok' : 'neutro'}`}>{a.estatus}</span></td>
