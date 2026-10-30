@@ -266,7 +266,13 @@ describe('Integración de flujos críticos (base aislada)', () => {
         && !Array.isArray(opciones.body)
         && !Object.prototype.hasOwnProperty.call(opciones.body, 'apellidoMaterno')
           ? { ...opciones.body, apellidoMaterno: 'Pruebas' } : opciones.body;
-      body = JSON.stringify(datos);
+      const aperturaValida = ruta.startsWith('/cartera/integral/')
+        && datos !== null && typeof datos === 'object' && !Array.isArray(datos)
+        && 'nuevoAlumno' in datos && datos.nuevoAlumno !== null
+        && typeof datos.nuevoAlumno === 'object' && !Array.isArray(datos.nuevoAlumno)
+        && !Object.prototype.hasOwnProperty.call(datos.nuevoAlumno, 'apellidoMaterno')
+          ? { ...datos, nuevoAlumno: { ...datos.nuevoAlumno, apellidoMaterno: 'Pruebas' } } : datos;
+      body = JSON.stringify(aperturaValida);
     }
     const response = await fetch(`${baseUrl}${ruta}`, { method: opciones.method ?? 'GET', headers, body });
     const texto = await response.text();
