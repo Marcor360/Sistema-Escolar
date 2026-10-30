@@ -59,7 +59,8 @@
         "migracion_historial_roles_usuario.sql",
         "migracion_cartera_integral.sql",
         "migracion_boletas_firmadas_portales.sql",
-        "migracion_boleta_atenciones.sql"
+        "migracion_boleta_atenciones.sql",
+        "migracion_segundo_nombre_usuario.sql"
       ]
     },
     "sqlserver": {
@@ -119,7 +120,8 @@
         "migracion_historial_roles_usuario.sql",
         "migracion_cartera_integral.sql",
         "migracion_boletas_firmadas_portales.sql",
-        "migracion_boleta_atenciones.sql"
+        "migracion_boleta_atenciones.sql",
+        "migracion_segundo_nombre_usuario.sql"
       ]
     }
   }
