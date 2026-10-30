@@ -20,6 +20,7 @@ CREATE TABLE usuarios (
   email NVARCHAR(120) NULL,
   password_hash NVARCHAR(100) NOT NULL,
   nombre NVARCHAR(80) NOT NULL,
+  segundo_nombre NVARCHAR(80) NULL,
   apellido_paterno NVARCHAR(80) NOT NULL,
   apellido_materno NVARCHAR(80) NULL,
   telefono NVARCHAR(20) NULL,
