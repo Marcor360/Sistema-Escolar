@@ -6,6 +6,7 @@ import { crearControlLectura } from "../api/lectura-vigente";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  View,
   Platform,
   AppState,
   Alert,
