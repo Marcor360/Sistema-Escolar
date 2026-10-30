@@ -191,6 +191,7 @@ export default function InicioScreen() {
         </TouchableOpacity>
       ))}
       </View>
+      <CalendarioCiclo />
       {cargaInicialCompleta && <Text style={estilos.subtitulo}>Avisos</Text>}
       {cargaInicialCompleta && avisos === null && (
         <Text style={base.secundario}>
@@ -247,7 +248,7 @@ export default function InicioScreen() {
             </Text>
           </Tarjeta>
         ))}
-      <SeguimientoAlumno/><CalendarioCiclo />
+      <SeguimientoAlumno/>
       <View style={{ height: 24 }} />
     </ScrollView>
   );
