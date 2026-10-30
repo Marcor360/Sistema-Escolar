@@ -258,7 +258,15 @@ describe('Integración de flujos críticos (base aislada)', () => {
     if (opciones.body instanceof FormData) body = opciones.body;
     else if (opciones.body !== undefined) {
       headers['content-type'] = 'application/json';
-      body = JSON.stringify(opciones.body);
+      // Fixtures históricos de altas válidas: usar dos apellidos ficticios, sin
+      // alterar solicitudes que envían explícitamente un apellido inválido.
+      const esAlta = (opciones.method ?? 'GET').toUpperCase() === 'POST'
+        && ['/alumnos', '/docentes', '/usuarios'].includes(ruta);
+      const datos = esAlta && opciones.body !== null && typeof opciones.body === 'object'
+        && !Array.isArray(opciones.body)
+        && !Object.prototype.hasOwnProperty.call(opciones.body, 'apellidoMaterno')
+          ? { ...opciones.body, apellidoMaterno: 'Pruebas' } : opciones.body;
+      body = JSON.stringify(datos);
     }
     const response = await fetch(`${baseUrl}${ruta}`, { method: opciones.method ?? 'GET', headers, body });
     const texto = await response.text();
