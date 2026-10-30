@@ -1,6 +1,6 @@
 {
-  "version": "1.35.0",
-  "alcance": "Candidata 1.35.0: bandeja de boletas pendientes, filtros por contexto, atención con responsable e historial, avisos internos al alumno y constancias privadas de aceptación. Sin despliegue ni aceptación institucional acreditados.",
+  "version": "1.35.1",
+  "alcance": "Candidata 1.35.1: publicación aislada Expo Web para alumno; mantiene bandeja de boletas pendientes, filtros por contexto, atención con responsable e historial, avisos internos al alumno y constancias privadas de aceptación. Sin despliegue ni aceptación institucional acreditados.",
   "escenarios": [
     {
       "id": "UAT-01",
