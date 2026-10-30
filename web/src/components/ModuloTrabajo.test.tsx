@@ -60,3 +60,14 @@ it('admite consulta inicial directa solo en módulos que la solicitan', async ()
   expect(await screen.findByText('Modo actual: consulta')).toBeTruthy();
   expect(screen.queryByRole('heading',{name:'Gestión de calendario'})).toBeNull();
 });
+
+
+it('permite volver a opciones y registrar desde un módulo con consulta inicial', async () => {
+  function Pagina() { return <p>Modo actual: {useModuloTrabajo().modo}</p>; }
+  const router = createMemoryRouter([{path:'/calendario',element:<ModuloTrabajo titulo="Calendario" acciones={acciones} vistaInicial="consulta"><Pagina /></ModuloTrabajo>}],{initialEntries:['/calendario']});
+  render(<RouterProvider router={router}/>);
+  fireEvent.click(await screen.findByRole('button', { name: 'Volver a opciones' }));
+  expect(await screen.findByRole('heading', { name: 'Gestión de calendario' })).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: /Registrar/ }));
+  expect(await screen.findByText('Modo actual: nuevo')).toBeTruthy();
+});
