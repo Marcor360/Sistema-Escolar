@@ -111,15 +111,8 @@ export class CalendarioController {
 
   @Get()
   @Roles('ALUMNO', 'MAESTRO', 'ADMINISTRATIVO', 'FINANZAS')
-  listar(
-    @CurrentUser() user: JwtUser,
-    @Query('desde') desde?: string,
-    @Query('hasta') hasta?: string,
-    @Query('plantelId', new ParseIntPipe({ optional: true })) plantelId?: number,
-    @Query('cicloId', new ParseIntPipe({ optional: true })) cicloId?: number,
-    @Query('nivelId', new ParseIntPipe({ optional: true })) nivelId?: number,
-  ) {
-    return this.service.listar(user, desde, hasta, plantelId, cicloId, nivelId);
+  listar(@CurrentUser() user: JwtUser, @Query() filtros: ConsultarEventosDto) {
+    return this.service.listar(user, filtros.desde, filtros.hasta, filtros.plantelId, filtros.cicloId, filtros.nivelId, filtros.ambito);
   }
 
   @Post()

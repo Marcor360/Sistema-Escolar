@@ -1,8 +1,9 @@
 import { EditorMarcadores } from './EditorMarcadores';
-import { LaminaCalendario, MarcadorCalendario } from './LaminaCalendario';
+import { LaminaCalendario, MarcadorCalendario, diaCalendario } from './LaminaCalendario';
 import { ImportarCalendario } from './ImportarCalendario';
 import { useConfirmacion } from './useConfirmacion';
 import { exportarIcs } from '../utils/calendario-ics';
+import { diaLocal } from '../utils/formato';
 import { FormEvent, useEffect, useState, useRef } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
@@ -33,14 +34,8 @@ interface Evento {
   imagenNombre: string | null;
   audiencia: string;
 }
-const dia = (v: string) =>
-  new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Mexico_City',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date(v));
-async function cargarEventosCiclo(ciclo: Ciclo, nivelId: string) {
+const dia = diaCalendario;
+async function cargarEventosCiclo(ciclo: Ciclo, nivelId: string, ambito: 'CONSOLIDADO' | 'GLOBAL') {
   const eventos = new Map<number, Evento>();
   const fin = new Date(ciclo.fechaFin + 'T23:59:59-06:00').getTime();
   let inicio = new Date(ciclo.fechaInicio + 'T00:00:00-06:00').getTime();
@@ -50,6 +45,7 @@ async function cargarEventosCiclo(ciclo: Ciclo, nivelId: string) {
       params: {
         cicloId: ciclo.id,
         nivelId: nivelId || undefined,
+        ambito,
         desde: new Date(inicio).toISOString(),
         hasta: new Date(hasta).toISOString(),
       },
@@ -103,12 +99,14 @@ export function CalendarioCiclo() {
   const [cargandoOpciones, setCargandoOpciones] = useState(true);
   const [opcionesRevision, setOpcionesRevision] = useState(0);
   const formulario = useRef<HTMLDetailsElement>(null);
+  const panelGestion = useRef<HTMLDetailsElement>(null);
   const entradaArchivo = useRef<HTMLInputElement>(null);
   const gestionar = !!sesion?.roles.some((r) => ['SUPERADMIN', 'ADMINISTRATIVO', 'FINANZAS'].includes(r));
   const [opciones, setOpciones] = useState<{ ciclos: Ciclo[]; niveles: Nivel[] }>({ ciclos: [], niveles: [] });
   const [cicloId, setCicloId] = useState(''),
     [nivelId, setNivelId] = useState(''),
-    [vista, setVista] = useState('ciclo'),
+    [ambito, setAmbito] = useState<'CONSOLIDADO' | 'GLOBAL'>('CONSOLIDADO'),
+    [vista, setVista] = useState('mes'),
     [mes, setMes] = useState('');
   const [eventos, setEventos] = useState<Evento[]>([]),
     [error, setError] = useState(''),
@@ -167,16 +165,17 @@ export function CalendarioCiclo() {
   const ciclo = opciones.ciclos.find((c) => String(c.id) === cicloId);
   useEffect(() => {
     if (!ciclo) return;
-    setMes((prev) =>
-      prev >= ciclo.fechaInicio.slice(0, 7) && prev <= ciclo.fechaFin.slice(0, 7)
-        ? prev
-        : ciclo.fechaInicio.slice(0, 7),
-    );
+    setMes((prev) => {
+      const inicio = ciclo.fechaInicio.slice(0, 7);
+      const fin = ciclo.fechaFin.slice(0, 7);
+      const mesActual = diaLocal().slice(0, 7);
+      return prev >= inicio && prev <= fin ? prev : mesActual >= inicio && mesActual <= fin ? mesActual : inicio;
+    });
     let activo = true;
     setError('');
     setEventos([]);
     setCargando(true);
-    cargarEventosCiclo(ciclo, nivelId)
+    cargarEventosCiclo(ciclo, nivelId, ambito)
       .then((data) => {
         if (activo) {
           setEventos(data);
@@ -192,7 +191,7 @@ export function CalendarioCiclo() {
     return () => {
       activo = false;
     };
-  }, [ciclo, nivelId, revision]);
+  }, [ciclo, nivelId, ambito, revision]);
   if (!opciones.ciclos.length)
     return (
       <section>
@@ -292,6 +291,13 @@ export function CalendarioCiclo() {
           </select>
         </label>
         <label>
+          Ámbito del calendario
+          <select value={ambito} onChange={(e) => setAmbito(e.target.value as 'CONSOLIDADO' | 'GLOBAL')}>
+            <option value="CONSOLIDADO">Globales y planteles autorizados</option>
+            <option value="GLOBAL">Solo institucionales (globales)</option>
+          </select>
+        </label>
+        <label>
           Vista
           <select value={vista} onChange={(e) => setVista(e.target.value)}>
             <option value="ciclo">Ciclo completo / anual</option>
@@ -311,7 +317,7 @@ export function CalendarioCiclo() {
           </label>
         )}
       </div>
-      <p className="texto-ayuda">Ciclo completo muestra colores y flechas con su leyenda. Usa Mes o Agenda accesible para consultar los títulos completos.</p>
+      <p className="texto-ayuda">Mes facilita la consulta diaria; Ciclo completo sirve para planificación e impresión. Los eventos institucionales aparecen junto a los de tus planteles autorizados.</p>
       {error && <p role="alert">{error}</p>}
       {cargando && <p role="status">Cargando calendario…</p>}
       <button type="button" disabled={cargando || ocupado} onClick={() => setRevision((r) => r + 1)}>
@@ -322,9 +328,10 @@ export function CalendarioCiclo() {
       </button>
       {ciclo && !cargando && (vista === 'ciclo' || vista === 'mes') && <button type="button" disabled={!!error || !!errorMarcadores} onClick={() => window.print()}>Imprimir / Guardar PDF</button>}
       {errorMarcadores && <p role="alert">No se pudo cargar la leyenda: {errorMarcadores}. Usa Actualizar calendario para reintentar.</p>}
-      {gestionar && plantelMarcadores && !errorMarcadores && <EditorMarcadores key={plantelMarcadores} plantelId={plantelMarcadores} marcadores={marcadores} guardado={() => { setRevision(r => r + 1); window.dispatchEvent(new Event('calendario-cambio')); }} />}
-      {gestionar && !plantelMarcadores && <p>Selecciona un nivel académico para configurar los marcadores de su plantel.</p>}
-      {gestionar && (
+      {gestionar && <details className="calendario-gestion" ref={panelGestion}><summary>Administrar calendario: publicar, importar y configurar</summary>
+      {plantelMarcadores && !errorMarcadores && <EditorMarcadores key={plantelMarcadores} plantelId={plantelMarcadores} marcadores={marcadores} guardado={() => { setRevision(r => r + 1); window.dispatchEvent(new Event('calendario-cambio')); }} />}
+      {!plantelMarcadores && <p>Selecciona un nivel académico para configurar los marcadores de su plantel.</p>}
+      {(
         <label>
           Evento para gestionar
           <select
@@ -392,7 +399,7 @@ export function CalendarioCiclo() {
         </>
       )}
 
-      {gestionar && ciclo && (
+      {ciclo && (
         <ImportarCalendario
           key={cicloId + ':' + nivelId + ':' + audiencia}
           cicloId={ciclo.id}
@@ -424,7 +431,7 @@ export function CalendarioCiclo() {
           </ul>
         </>
       )}
-      {gestionar && (
+      {(
         <details ref={formulario}>
           <summary>Publicar evento o imagen del ciclo</summary>
           <form onSubmit={guardar} className="fila">
@@ -495,6 +502,7 @@ export function CalendarioCiclo() {
           </form>
         </details>
       )}
+      </details>}
       {vista === 'imagen' ? (
         <>
           {eventos
@@ -518,7 +526,7 @@ export function CalendarioCiclo() {
       ) : (
         ciclo && <LaminaCalendario meses={(vista === 'mes' ? [mes] : meses).filter(Boolean)} eventos={eventos} marcadores={marcadores}
           compacto={vista !== 'mes'} ciclo={ciclo} nivel={opciones.niveles.find(n => String(n.id) === nivelId)?.nombre} gestionar={gestionar}
-          seleccionar={fecha => { setEditando(null); setTitulo(''); setFecha(fecha); setFechaFin(''); if (formulario.current) { formulario.current.open = true; formulario.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } }} />
+          seleccionar={fecha => { setEditando(null); setTitulo(''); setFecha(fecha); setFechaFin(''); if (panelGestion.current) panelGestion.current.open = true; if (formulario.current) { formulario.current.open = true; formulario.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } }} />
       )}
     </section>
   );

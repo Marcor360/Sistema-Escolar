@@ -50,6 +50,7 @@ export class ConsultarEventosDto extends PaginacionDto {
   @IsOptional() @IsDateString({ strict: true }) hasta?: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) plantelId?: number;
   @IsOptional() @IsString() @MaxLength(150) buscar?: string;
+  @IsOptional() @IsIn(['CONSOLIDADO', 'GLOBAL']) ambito?: 'CONSOLIDADO' | 'GLOBAL';
 }
 
 export class ImportarCalendarioDto {

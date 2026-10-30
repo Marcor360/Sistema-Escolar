@@ -248,3 +248,31 @@ describe('Consulta de calendario por nivel', () => {
     expect(qb.andWhere).toHaveBeenCalledWith('e.nivel_id IS NULL', { niveles: [] });
   });
 });
+
+describe('Alcance institucional del calendario', () => {
+  it.each(['listar', 'consultar'] as const)('filtra solo eventos globales mediante %s sin ampliar permisos', async (metodo) => {
+    const qb = {
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      addOrderBy: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      take: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue([]),
+      getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
+    };
+    const service = new CalendarioService(
+      { createQueryBuilder: () => qb } as never,
+      {} as never,
+      { find: jest.fn().mockResolvedValue([]) } as never,
+      {} as never,
+      {} as never,
+      { findOne: jest.fn().mockResolvedValue({ id: 5 }) } as never,
+      {} as never,
+    );
+    if (metodo === 'listar') await service.listar(maestro, undefined, undefined, undefined, undefined, undefined, 'GLOBAL');
+    else await service.consultar({ pagina: 1, porPagina: 10, ambito: 'GLOBAL' }, maestro);
+    expect(qb.andWhere).toHaveBeenCalledWith('(e.plantel_id IS NULL AND e.grupo_id IS NULL)');
+    expect(qb.andWhere).toHaveBeenCalledWith('e.audiencia = :audiencia', { audiencia: 'ACADEMICA' });
+  });
+});

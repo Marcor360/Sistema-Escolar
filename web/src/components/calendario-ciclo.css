@@ -63,3 +63,23 @@
   .calendario-marcas-dia li > span:last-child { font-size:6pt; }
   .calendario-simbolo { width:4mm; height:3mm; }
 }
+
+/* Consulta mensual legible; la lámina completa conserva su distribución para imprimir. */
+@media screen {
+  .calendario-corto .calendario-meses:has(.calendario-mes:only-child) { grid-template-columns:minmax(0,1fr); }
+  .calendario-corto:has(.calendario-mes:only-child) .calendario-celda,
+  .calendario-corto:has(.calendario-mes:only-child) .calendario-hueco { min-height:88px; }
+  .calendario-corto:has(.calendario-mes:only-child) .calendario-marcas-dia li > span:last-child {
+    position:static; width:auto; height:auto; clip-path:none; white-space:normal; font-size:12px;
+  }
+  .calendario-gestion { margin:16px 0; padding:12px; border:1px solid var(--linea); border-radius:8px; }
+  .calendario-gestion > summary { cursor:pointer; font-weight:700; padding:10px; }
+  .calendario-gestion > summary:focus-visible { outline:3px solid #146884; outline-offset:2px; }
+}
+@media screen and (max-width:650px) {
+  .calendario-corto:has(.calendario-mes:only-child) .calendario-celda,
+  .calendario-corto:has(.calendario-mes:only-child) .calendario-hueco { min-height:50px; }
+  .calendario-corto:has(.calendario-mes:only-child) .calendario-marcas-dia li > span:last-child {
+    position:absolute; width:1px; height:1px; clip-path:inset(50%); white-space:nowrap;
+  }
+}

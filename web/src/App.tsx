@@ -80,7 +80,7 @@ export default function App() {
           </Route>
 
           <Route element={<RutaProtegida roles={['ALUMNO','MAESTRO','ADMINISTRATIVO','FINANZAS']} />}>
-            <Route path="/calendario" element={<ModuloTrabajo titulo="Calendario" acciones={[{titulo:'Consultar calendario',detalle:'Buscar eventos por intervalo y plantel',vista:'consulta'},{titulo:'Registrar evento',detalle:'Agregar un evento autorizado',vista:'nuevo',roles:['MAESTRO','ADMINISTRATIVO','FINANZAS']}]} vistas={['editar']}><CalendarioPage /></ModuloTrabajo>} />
+            <Route path="/calendario" element={<ModuloTrabajo titulo="Calendario" vistaInicial="consulta" acciones={[{titulo:'Consultar calendario',detalle:'Buscar eventos por intervalo y plantel',vista:'consulta'},{titulo:'Registrar evento',detalle:'Agregar un evento autorizado',vista:'nuevo',roles:['MAESTRO','ADMINISTRATIVO','FINANZAS']}]} vistas={['editar']}><CalendarioPage /></ModuloTrabajo>} />
           </Route>
           <Route element={<RutaProtegida roles={['ADMINISTRATIVO']} />}>
             <Route path="/biblioteca" element={<ModuloTrabajo titulo="Biblioteca" acciones={[{titulo:'Consultar biblioteca',detalle:'Consultar carpetas y archivos privados',vista:'consulta'},{titulo:'Crear carpeta',detalle:'Organizar documentos por plantel',vista:'carpeta-nueva'},{titulo:'Subir archivo',detalle:'Validar y guardar un archivo privado',vista:'archivo-nuevo'}]}><BibliotecaPage /></ModuloTrabajo>} />

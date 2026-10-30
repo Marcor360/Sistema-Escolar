@@ -52,3 +52,22 @@ it.each(['usuarios','grupos'])('guardar %s vuelve a consulta sin sobrescribir la
  await waitFor(()=>expect(post).toHaveBeenCalledTimes(1));await waitFor(()=>expect(router.state.location.search).toContain('vista=consulta'));expect(router.state.location.search).toContain('pagina=2');expect(router.state.location.search).toContain('buscar=criterio');expect(screen.queryByRole('dialog')).toBeNull();
  await waitFor(()=>expect(get.mock.calls.some(([url])=>url===(tipo==='usuarios'?'/usuarios/listado':'/academico/grupos'))).toBe(true));
 });
+
+it('admite consulta inicial directa solo en módulos que la solicitan', async () => {
+  function Pagina() { const trabajo = useModuloTrabajo(); return <p>Modo actual: {trabajo.modo}</p>; }
+  const router = createMemoryRouter([{path:'/calendario',element:<ModuloTrabajo titulo="Calendario" acciones={acciones} vistaInicial="consulta"><Pagina /></ModuloTrabajo>}],{initialEntries:['/calendario']});
+  render(<RouterProvider router={router}/>);
+  expect(await screen.findByText('Modo actual: consulta')).toBeTruthy();
+  expect(screen.queryByRole('heading',{name:'Gestión de calendario'})).toBeNull();
+});
+
+
+it('permite volver a opciones y registrar desde un módulo con consulta inicial', async () => {
+  function Pagina() { return <p>Modo actual: {useModuloTrabajo().modo}</p>; }
+  const router = createMemoryRouter([{path:'/calendario',element:<ModuloTrabajo titulo="Calendario" acciones={acciones} vistaInicial="consulta"><Pagina /></ModuloTrabajo>}],{initialEntries:['/calendario']});
+  render(<RouterProvider router={router}/>);
+  fireEvent.click(await screen.findByRole('button', { name: 'Volver a opciones' }));
+  expect(await screen.findByRole('heading', { name: 'Gestión de calendario' })).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: /Registrar/ }));
+  expect(await screen.findByText('Modo actual: nuevo')).toBeTruthy();
+});
