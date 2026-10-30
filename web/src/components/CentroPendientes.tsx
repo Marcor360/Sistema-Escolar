@@ -7,19 +7,23 @@ interface Pendiente {
   cantidad: number;
   ruta: string;
 }
-export function CentroPendientes() {
+export function CentroPendientes({ plantelIdExterno }: { plantelIdExterno?: string } = {}) {
   const { sesion } = useAuth();
   const puedeFiltrar = !!sesion?.roles.some((r) => ['SUPERADMIN', 'ADMINISTRATIVO', 'FINANZAS'].includes(r));
   const [planteles, setPlanteles] = useState<{ id: number; nombre: string }[]>([]);
-  const [plantelId, setPlantelId] = useState(''),
+  const [plantelIdInterno, setPlantelIdInterno] = useState(''),
     [datos, setDatos] = useState<Pendiente[]>([]),
     [error, setError] = useState(''),
     [errorPlanteles, setErrorPlanteles] = useState(''),
     [cargando, setCargando] = useState(true),
     [intento, setIntento] = useState(0);
   const selectorId = useId();
+  const plantelId = plantelIdExterno ?? plantelIdInterno;
+  const mostrarSelector = puedeFiltrar && plantelIdExterno === undefined;
+  const pendientesActivos = datos.filter((pendiente) => pendiente.cantidad > 0);
+  const categoriasAlDia = datos.filter((pendiente) => pendiente.cantidad === 0);
   useEffect(() => {
-    if (!puedeFiltrar) return;
+    if (!mostrarSelector) return;
     let vigente = true;
     setErrorPlanteles('');
     api
@@ -33,7 +37,7 @@ export function CentroPendientes() {
     return () => {
       vigente = false;
     };
-  }, [puedeFiltrar, intento]);
+  }, [mostrarSelector, intento]);
   useEffect(() => {
     let vigente = true;
     setDatos([]);
@@ -57,10 +61,10 @@ export function CentroPendientes() {
   return (
     <section className="panel" aria-label="Centro de pendientes">
       <h2>Mis pendientes</h2>
-      {puedeFiltrar && (
+      {mostrarSelector && (
         <div className="campo">
           <label htmlFor={selectorId}>Plantel de los pendientes</label>
-          <select id={selectorId} value={plantelId} onChange={(e) => setPlantelId(e.target.value)}>
+          <select id={selectorId} value={plantelId} onChange={(e) => setPlantelIdInterno(e.target.value)}>
             <option value="">Todos mis planteles autorizados</option>
             {planteles.map((p) => (
               <option key={p.id} value={p.id}>
@@ -73,8 +77,8 @@ export function CentroPendientes() {
       {cargando ? (
         <p role="status">Consultando pendientes…</p>
       ) : (
-        <ul className="pendientes-lista">
-          {datos.map((d) => (
+        <ul className="pendientes-lista pendientes-compactos">
+          {pendientesActivos.map((d) => (
             <li key={d.titulo}>
               <Link to={d.ruta}>
                 {d.titulo}: <strong>{d.cantidad}</strong>
@@ -84,6 +88,8 @@ export function CentroPendientes() {
         </ul>
       )}
       {!cargando && !error && !datos.length && <p>No hay categorías de pendientes para tu cuenta.</p>}
+      {!cargando && !error && datos.length > 0 && !pendientesActivos.length && <p role="status">Todo al día: no hay pendientes activos en este ámbito.</p>}
+      {!cargando && !error && categoriasAlDia.length > 0 && <details className="pendientes-sin-actividad"><summary>Ver categorías al día ({categoriasAlDia.length})</summary><ul>{categoriasAlDia.map((d) => <li key={d.titulo}>{d.titulo}: 0</li>)}</ul></details>}
       {(error || errorPlanteles) && <p role="alert">{error || errorPlanteles}</p>}
       <button onClick={() => setIntento((v) => v + 1)} disabled={cargando}>
         Actualizar pendientes
