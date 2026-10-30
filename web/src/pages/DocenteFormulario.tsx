@@ -5,12 +5,12 @@ import { SelectorProveedorCorreo, type ProveedorCorreo } from '../components/Sel
 import { useConfirmacion } from '../components/useConfirmacion';
 
 const FORM_INICIAL = {
-  numEmpleado: '', nombre: '', apellidoPaterno: '', apellidoMaterno: '', telefono: '',
+  numEmpleado: '', nombre: '', segundoNombre: '', apellidoPaterno: '', apellidoMaterno: '', telefono: '',
   cedulaProfesional: '', email: '', cedulaPendiente: false, especialidad: '', correoProveedor: 'GODADDY' as ProveedorCorreo,
 };
 interface Docente {
   numEmpleado: string; especialidad?: string; cedulaProfesional?: string;
-  usuario: { nombre: string; apellidoPaterno: string; apellidoMaterno?: string; telefono?: string; email: string; correoProveedor?: ProveedorCorreo };
+  usuario: { nombre: string; segundoNombre?: string | null; apellidoPaterno: string; apellidoMaterno?: string; telefono?: string; email: string; correoProveedor?: ProveedorCorreo };
 }
 
 export default function DocenteFormulario() {
@@ -50,7 +50,7 @@ export default function DocenteFormulario() {
         if (id) {
           const { data: d } = await api.get<Docente>(`/docentes/${id}`);
           if (!activo) return;
-          const datos = { ...FORM_INICIAL, numEmpleado: d.numEmpleado, nombre: d.usuario.nombre,
+          const datos = { ...FORM_INICIAL, numEmpleado: d.numEmpleado, nombre: d.usuario.nombre, segundoNombre: d.usuario.segundoNombre ?? '',
             apellidoPaterno: d.usuario.apellidoPaterno, apellidoMaterno: d.usuario.apellidoMaterno ?? '',
             telefono: d.usuario.telefono ?? '', email: d.usuario.email, especialidad: d.especialidad ?? '',
             cedulaProfesional: d.cedulaProfesional ?? '', cedulaPendiente: !d.cedulaProfesional, correoProveedor: d.usuario.correoProveedor ?? 'GODADDY' };
@@ -72,7 +72,7 @@ export default function DocenteFormulario() {
     if (mutando.current || cargando) return;
     mutando.current = true; setEnviando(true); setError('');
     try {
-      if (id) await api.patch(`/docentes/${id}`, { nombre: form.nombre, apellidoPaterno: form.apellidoPaterno,
+      if (id) await api.patch(`/docentes/${id}`, { nombre: form.nombre.trim(), segundoNombre: form.segundoNombre.trim() || null, apellidoPaterno: form.apellidoPaterno,
         apellidoMaterno: form.apellidoMaterno, telefono: form.telefono, correoProveedor: form.correoProveedor,
         cedulaProfesional: form.cedulaPendiente ? null : form.cedulaProfesional, especialidad: form.especialidad });
       else await api.post('/docentes', { ...form, plantelIds,
@@ -95,13 +95,14 @@ export default function DocenteFormulario() {
     {error && <p role="alert" className="mensaje-error">{error}</p>}
     {!cargando && falloCarga && <button type="button" disabled={enviando} onClick={() => setIntento((v) => v + 1)}>Reintentar carga</button>}
     {!cargando && <form id="form-docente" className="panel" onSubmit={guardar} aria-busy={enviando}>
-      <fieldset disabled={enviando || (editando && !form.numEmpleado)}><legend>Datos del docente</legend>
+      <fieldset disabled={enviando || (editando && !form.numEmpleado)}><legend>Datos del docente</legend><p className="texto-ayuda">Captura nombre, segundo nombre si existe, ambos apellidos y después el correo.</p>
         <div className="rejilla-formulario">
           <div className="campo"><label htmlFor="doc-empleado">Núm. empleado</label><input id="doc-empleado" disabled={editando} required maxLength={20} {...dar('numEmpleado')} /></div>
-          <div className="campo"><label htmlFor="doc-nombre">Nombre</label><input id="doc-nombre" required maxLength={80} {...dar('nombre')} /></div>
-          <div className="campo"><label htmlFor="doc-paterno">Primer apellido</label><input id="doc-paterno" required maxLength={80} {...dar('apellidoPaterno')} /></div>
-          <div className="campo"><label htmlFor="doc-materno">Segundo apellido</label><input id="doc-materno" maxLength={80} {...dar('apellidoMaterno')} /></div>
-          <div className="campo"><label htmlFor="doc-email">Correo</label><input id="doc-email" type="email" disabled={editando} required maxLength={120} {...dar('email')} /></div>
+          <div className="campo"><label htmlFor="doc-nombre">Nombre *</label><input id="doc-nombre" required maxLength={80} autoComplete="given-name" {...dar('nombre')} /></div>
+          <div className="campo"><label htmlFor="doc-segundo-nombre">Segundo nombre (opcional)</label><input id="doc-segundo-nombre" maxLength={80} {...dar('segundoNombre')} /></div>
+          <div className="campo"><label htmlFor="doc-paterno">Primer apellido *</label><input id="doc-paterno" required maxLength={80} {...dar('apellidoPaterno')} /></div>
+          <div className="campo"><label htmlFor="doc-materno">Segundo apellido *</label><input id="doc-materno" required maxLength={80} {...dar('apellidoMaterno')} /></div>
+          <div className="campo"><label htmlFor="doc-email">Correo institucional *</label><input id="doc-email" type="email" disabled={editando} required maxLength={120} {...dar('email')} /></div>
           <div className="campo"><label htmlFor="doc-telefono">Teléfono</label><input id="doc-telefono" type="tel" maxLength={20} {...dar('telefono')} /></div>
           <SelectorProveedorCorreo id="doc-correo-proveedor" value={form.correoProveedor} onChange={(correoProveedor) => setForm({ ...form, correoProveedor })} />
           <div className="campo"><label htmlFor="doc-especialidad">Especialidad</label><input id="doc-especialidad" maxLength={120} {...dar('especialidad')} /></div>
