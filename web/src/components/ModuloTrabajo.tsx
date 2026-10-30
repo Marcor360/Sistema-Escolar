@@ -24,10 +24,10 @@ function Guardia({ children }: { children: ReactNode }) {
 }
 export const esFormularioModulo = (vista: string) => ['nuevo', 'editar', 'adjuntar', 'actividad-nueva', 'actividad-editar', 'material-nuevo', 'material-editar', 'calificar-entrega', 'ciclo-nuevo', 'ciclo-editar', 'cargo-nuevo', 'pago-nuevo', 'colegiaturas', 'carpeta-nueva', 'archivo-nuevo', 'seguimiento', 'importar', 'promover', 'reinscribir'].includes(vista);
 
-export function ModuloTrabajo({ titulo, acciones, vistas = [], permisos = {}, children }: { titulo: string; acciones: Accion[]; vistas?: string[]; permisos?: Record<string,string[]>; children: ReactNode }) {
+export function ModuloTrabajo({ titulo, acciones, vistas = [], permisos = {}, vistaInicial, children }: { titulo: string; acciones: Accion[]; vistas?: string[]; permisos?: Record<string,string[]>; vistaInicial?: string; children: ReactNode }) {
   const { tieneRol } = useAuth(), [query, setQuery] = useSearchParams();
   const permitidas = acciones.filter(a => !a.roles || tieneRol(...a.roles));
-  const solicitada = query.get('vista') || '';
+  const solicitada = query.get('vista') || vistaInicial || '';
   const necesitaId = ['editar','ciclo-editar','contextos','detalle','adjuntar','actividad-editar','material-editar','calificar-entrega','administrar','seguimiento'].includes(solicitada);
   const idValido = Number.isSafeInteger(Number(query.get('id'))) && Number(query.get('id')) > 0;
   const autorizada = !permisos[solicitada] || tieneRol(...permisos[solicitada]);
