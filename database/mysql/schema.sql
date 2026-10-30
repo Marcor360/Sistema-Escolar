@@ -18,6 +18,7 @@ CREATE TABLE usuarios (
   email VARCHAR(120) NULL UNIQUE,
   password_hash VARCHAR(100) NOT NULL,
   nombre VARCHAR(80) NOT NULL,
+  segundo_nombre VARCHAR(80) NULL,
   apellido_paterno VARCHAR(80) NOT NULL,
   apellido_materno VARCHAR(80) NULL,
   telefono VARCHAR(20) NULL,
