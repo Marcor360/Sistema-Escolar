@@ -102,11 +102,17 @@ export default function DashboardPage() {
     () =>
       api
         .get('/calendario', {
-          params: { desde: hoy.toISOString(), hasta: en30dias.toISOString() },
+          params: { desde: hoy.toISOString(), hasta: en30dias.toISOString(), ...(plantelId ? { plantelId } : {}) },
         })
         .then((r) => r.data),
     [],
   );
+
+  const primerFiltroAgenda = useRef(true);
+  useEffect(() => {
+    if (primerFiltroAgenda.current) { primerFiltroAgenda.current = false; return; }
+    recargarEventos();
+  }, [plantelId, recargarEventos]);
 
   const metricas = resumen
     ? [
@@ -178,7 +184,6 @@ export default function DashboardPage() {
 
   return (
     <>
-      <CentroPendientes/>
       <div className="panel-bienvenida">
         <Link to="/calendario">Ver calendario del ciclo escolar</Link>
         <div>
@@ -238,7 +243,8 @@ export default function DashboardPage() {
         </section>
       )}
 
-      {tieneRol('FINANZAS') && <GraficaCobranza plantelId={plantelId} />}
+      <CentroPendientes plantelIdExterno={plantelId} />
+      {tieneRol('FINANZAS') && <GraficaCobranza plantelId={plantelId} />
 
       <div className="dashboard-columnas">
         <section className="panel panel-eventos" aria-labelledby="titulo-eventos">
