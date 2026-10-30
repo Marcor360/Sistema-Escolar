@@ -26,7 +26,7 @@ import { ListadoUsuariosDto } from './usuarios.dto';
 import { PaginacionDto } from '../common/paginacion.dto';
 
 type UsuarioPublico = Pick<
-  Usuario, 'id' | 'email' | 'nombre' | 'apellidoPaterno' | 'apellidoMaterno' | 'telefono' | 'activo' | 'roles' | 'nombreCompleto' | 'correoProveedor'
+  Usuario, 'id' | 'email' | 'nombre' | 'segundoNombre' | 'apellidoPaterno' | 'apellidoMaterno' | 'telefono' | 'activo' | 'roles' | 'nombreCompleto' | 'correoProveedor'
 >;
 
 @Injectable()
@@ -200,7 +200,7 @@ export class UsuariosService {
 
   private aplicarBusqueda<T extends object>(qb: SelectQueryBuilder<T>, buscar?: string, extra?: string) {
     if (!buscar?.trim()) return;
-    const campos = ['u.nombre', 'u.apellido_paterno', 'u.apellido_materno', 'u.email', ...(extra ? [extra] : [])];
+    const campos = ['u.nombre', 'u.segundo_nombre', 'u.apellido_paterno', 'u.apellido_materno', 'u.email', ...(extra ? [extra] : [])];
     qb.andWhere(`(${campos.map((campo) => `${campo} LIKE :buscar`).join(' OR ')})`, { buscar: `%${buscar.trim()}%` });
   }
 
@@ -350,6 +350,7 @@ export class UsuariosService {
       email: dto.email,
       passwordHash: await hashPasswordNueva(dto.password),
       nombre: dto.nombre,
+      segundoNombre: dto.segundoNombre ?? null,
       apellidoPaterno: dto.apellidoPaterno,
       apellidoMaterno: dto.apellidoMaterno ?? null,
       telefono: dto.telefono ?? null,
@@ -386,6 +387,7 @@ export class UsuariosService {
     }
     Object.assign(usuario, {
       nombre: dto.nombre ?? usuario.nombre,
+      segundoNombre: dto.segundoNombre === undefined ? usuario.segundoNombre : dto.segundoNombre,
       apellidoPaterno: dto.apellidoPaterno ?? usuario.apellidoPaterno,
       apellidoMaterno: dto.apellidoMaterno === undefined ? usuario.apellidoMaterno : dto.apellidoMaterno,
       telefono: dto.telefono === undefined ? usuario.telefono : dto.telefono,
@@ -414,6 +416,7 @@ export class UsuariosService {
       email: usuario.email,
       correoProveedor: usuario.correoProveedor ?? proveedorCorreoPredeterminado(usuario.roles?.map((r) => r.clave) ?? []),
       nombre: usuario.nombre,
+      segundoNombre: usuario.segundoNombre ?? null,
       apellidoPaterno: usuario.apellidoPaterno,
       apellidoMaterno: usuario.apellidoMaterno,
       telefono: usuario.telefono,
