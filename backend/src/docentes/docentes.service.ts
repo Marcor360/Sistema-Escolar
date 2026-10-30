@@ -130,6 +130,7 @@ export class DocentesService {
         email: dto.email,
         password: randomBytes(32).toString('base64url'),
         nombre: dto.nombre,
+        segundoNombre: dto.segundoNombre,
         apellidoPaterno: dto.apellidoPaterno,
         apellidoMaterno: dto.apellidoMaterno,
         telefono: dto.telefono,
@@ -159,9 +160,10 @@ export class DocentesService {
       const docente = await docentes.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!docente) throw new NotFoundException('Docente no encontrado');
       await this.validarAlcanceDocente(docente.usuarioId, user, true);
-      if ([dto.nombre, dto.apellidoPaterno, dto.apellidoMaterno, dto.telefono, dto.correoProveedor].some((v) => v !== undefined)) {
+      if ([dto.nombre, dto.segundoNombre, dto.apellidoPaterno, dto.apellidoMaterno, dto.telefono, dto.correoProveedor].some((v) => v !== undefined)) {
         await this.usuarios.actualizar(docente.usuarioId, {
           nombre: dto.nombre,
+        segundoNombre: dto.segundoNombre,
           apellidoPaterno: dto.apellidoPaterno,
           apellidoMaterno: dto.apellidoMaterno,
           telefono: dto.telefono,
@@ -236,6 +238,7 @@ export class DocentesService {
           email: docente.usuario.email,
           correoProveedor: docente.usuario.correoProveedor,
           nombre: docente.usuario.nombre,
+          segundoNombre: docente.usuario.segundoNombre ?? null,
           apellidoPaterno: docente.usuario.apellidoPaterno,
           apellidoMaterno: docente.usuario.apellidoMaterno,
           telefono: docente.usuario.telefono,
