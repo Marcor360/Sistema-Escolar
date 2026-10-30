@@ -163,7 +163,7 @@ export class DocentesService {
       if ([dto.nombre, dto.segundoNombre, dto.apellidoPaterno, dto.apellidoMaterno, dto.telefono, dto.correoProveedor].some((v) => v !== undefined)) {
         await this.usuarios.actualizar(docente.usuarioId, {
           nombre: dto.nombre,
-        segundoNombre: dto.segundoNombre,
+          segundoNombre: dto.segundoNombre,
           apellidoPaterno: dto.apellidoPaterno,
           apellidoMaterno: dto.apellidoMaterno,
           telefono: dto.telefono,
