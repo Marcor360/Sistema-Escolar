@@ -51,6 +51,10 @@ export default function RolesPersonalPage() {
     setMensaje(''); setError('');
   };
 
+  const puedeModificarCuenta = (cuenta: Cuenta) => cuenta.activo && cuenta.id !== sesion?.sub &&
+    !cuenta.roles.includes('SUPERADMIN') && (!cuenta.roles.includes('DIRECTOR') || esSuperadmin) &&
+    (!cuenta.roles.includes('ADMINISTRATIVO') || esSuperadmin || esDirector);
+
   const guardar = async () => {
     if (!seleccion || guardando) return;
     const conservados = seleccion.roles.filter((rol) => rol === 'MAESTRO');
@@ -76,16 +80,16 @@ export default function RolesPersonalPage() {
       <section className="panel" aria-label="Personal registrado">
         <h2>Personal institucional</h2>
         {resultado.datos.length === 0 ? <p>No se encontraron cuentas para consultar.</p> : (
-          <div className="tabla-scroll">
-            <table>
-              <thead><tr><th>Persona</th><th>Funciones</th><th>Planteles</th><th>Acción</th></tr></thead>
+          <div className="tabla-contenedor" role="region" aria-label="Personal institucional" tabIndex={0}>
+            <table className="tabla tabla-adaptable">
+              <thead><tr><th scope="col">Persona</th><th scope="col">Funciones</th><th scope="col">Planteles</th><th scope="col">Acción</th></tr></thead>
               <tbody>{resultado.datos.map((cuenta) => (
                 <tr key={cuenta.id}>
-                  <td>{cuenta.nombre}<div>{cuenta.correo}</div></td>
-                  <td>{cuenta.roles.join(', ')}</td>
-                  <td>{cuenta.planteles.join(', ') || 'Sin asignación'}</td>
-                  <td><button type="button" className="boton secundario chico"
-                    disabled={!cuenta.activo || cuenta.id === sesion?.sub || cuenta.roles.includes('SUPERADMIN') || cuenta.roles.includes('DIRECTOR') && !esSuperadmin || cuenta.roles.includes('ADMINISTRATIVO') && !esSuperadmin && !esDirector}
+                  <td data-etiqueta="Persona"><strong>{cuenta.nombre}</strong><div className="texto-ayuda">{cuenta.correo}</div></td>
+                  <td data-etiqueta="Funciones">{cuenta.roles.join(', ')}</td>
+                  <td data-etiqueta="Planteles">{cuenta.planteles.length ? <details className="roles-planteles"><summary>{cuenta.planteles.length} plantel(es) asignado(s)</summary><ul>{cuenta.planteles.map((nombre, indice) => <li key={indice}>{nombre}</li>)}</ul></details> : 'Sin asignación'}</td>
+                  <td data-etiqueta="Acción"><button type="button" className="boton secundario chico"
+                    disabled={!puedeModificarCuenta(cuenta)}
                     onClick={() => editar(cuenta)}>Modificar funciones</button></td>
                 </tr>
               ))}</tbody>
