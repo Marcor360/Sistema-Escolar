@@ -226,3 +226,12 @@ it('agrupa acciones sensibles sin ocultar la consulta principal del expediente',
   fireEvent.click(screen.getByText('Más acciones'));
   expect(screen.getByRole('button', { name: 'Dar de baja' })).toBeTruthy();
 });
+
+it('no presenta operaciones administrativas a una cuenta sin autorización', async () => {
+  contexto.gestionar = false;
+  vi.spyOn(api, 'get').mockImplementation(async ruta => ({ data: ruta === '/alumnos' ? resultado('QA-L') : [] }));
+  render(<MemoryRouter><AlumnosPage /></MemoryRouter>);
+  await screen.findByText('QA-L');
+  expect(screen.queryByText('Más acciones')).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Historial y boleta' })).toBeNull();
+});
