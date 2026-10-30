@@ -1,3 +1,4 @@
+import { validarIdentidadPersonal } from '../utils/identidad-personal';
 import { useModuloTrabajo } from '../components/ModuloTrabajo';
 import { EliminarRegistro } from '../components/EliminarRegistro';
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
@@ -99,6 +100,8 @@ export default function UsuariosPage() {
   const alternarRol = (rol: string) => setRolesElegidos((r) => r.includes(rol) ? r.filter((x) => x !== rol) : [...r, rol]);
   const crear = async (e: FormEvent) => {
     e.preventDefault(); if (enviando) return;
+    const errorIdentidad = validarIdentidadPersonal(form);
+    if (errorIdentidad) { setError(errorIdentidad); return; }
     if (!rolesElegidos.length || (!rolesElegidos.includes('SUPERADMIN') && !plantelIds.length)) { setError('Selecciona al menos un rol y un plantel para personal Administrativo o Finanzas.'); return; }
     setEnviando(true); setError(''); setMensaje('');
     try {
