@@ -244,7 +244,7 @@ export default function DashboardPage() {
       )}
 
       <CentroPendientes plantelIdExterno={plantelId} />
-      {tieneRol('FINANZAS') && <GraficaCobranza plantelId={plantelId} />
+      {tieneRol('FINANZAS') && <GraficaCobranza plantelId={plantelId} />}
 
       <div className="dashboard-columnas">
         <section className="panel panel-eventos" aria-labelledby="titulo-eventos">
