@@ -51,7 +51,7 @@ export function ModuloTrabajo({ titulo, acciones, vistas = [], permisos = {}, vi
     <Guardia><Bloqueo sucio={sucio} ocupado={ocupado} guardado={guardado} /></Guardia>
     <div className={esFormularioModulo(modo) ? 'trabajo-enfocado' : ''} onChangeCapture={() => { if (esFormularioModulo(modo)) { guardado.current = false; setSucio(true); } }}>
       <h2 ref={foco} tabIndex={-1} className="solo-lector">{titulo}: {esFormularioModulo(modo) ? 'Formulario' : 'Consulta'}</h2>
-      <button type="button" className="boton secundario" disabled={ocupadoVisible} onClick={() => ir(({ 'actividad-nueva': 'actividades', 'actividad-editar': 'actividades', 'material-nuevo': 'materiales', 'material-editar': 'materiales', 'calificar-entrega': 'entregas', 'cargo-nuevo': 'cargos', 'pago-nuevo': 'pagos', 'colegiaturas': 'cargos', 'ciclo-nuevo': 'ciclos', 'ciclo-editar': 'ciclos' } as Record<string, string>)[modo] || (esFormularioModulo(modo) ? 'consulta' : ''))}>{esFormularioModulo(modo) ? 'Cancelar y volver a consulta' : 'Volver a opciones'}</button>
+      <button type="button" className="boton secundario" disabled={ocupadoVisible} onClick={() => ir(({ 'actividad-nueva': 'actividades', 'actividad-editar': 'actividades', 'material-nuevo': 'materiales', 'material-editar': 'materiales', 'calificar-entrega': 'entregas', 'cargo-nuevo': 'cargos', 'pago-nuevo': 'pagos', 'colegiaturas': 'cargos', 'ciclo-nuevo': 'ciclos', 'ciclo-editar': 'ciclos' } as Record<string, string>)[modo] || (esFormularioModulo(modo) ? 'consulta' : vistaInicial ? 'opciones' : ''))}>{esFormularioModulo(modo) ? 'Cancelar y volver a consulta' : 'Volver a opciones'}</button>
       <Suspense fallback={<Cargando />}>{children}</Suspense>
     </div>
   </TrabajoContext.Provider>;
