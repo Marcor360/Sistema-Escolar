@@ -120,8 +120,10 @@ function ContenidoCalendario() {
     if (!ciclo) return;
     let vigente = true;
     const hoyEscolar = dia(new Date().toISOString());
-    setMes(mesInicialCalendario(ciclo.fechaInicio, ciclo.fechaFin, hoyEscolar));
-    setDiaSeleccionado(hoyEscolar >= ciclo.fechaInicio && hoyEscolar <= ciclo.fechaFin ? hoyEscolar : ciclo.fechaInicio);
+    setMes(anterior => anterior >= ciclo.fechaInicio.slice(0, 7) && anterior <= ciclo.fechaFin.slice(0, 7)
+      ? anterior : mesInicialCalendario(ciclo.fechaInicio, ciclo.fechaFin, hoyEscolar));
+    setDiaSeleccionado(anterior => anterior >= ciclo.fechaInicio && anterior <= ciclo.fechaFin
+      ? anterior : hoyEscolar >= ciclo.fechaInicio && hoyEscolar <= ciclo.fechaFin ? hoyEscolar : ciclo.fechaInicio);
     setError("");
     setCargando(true);
     setEventos([]);
