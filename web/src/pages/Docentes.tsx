@@ -13,7 +13,7 @@ interface Docente {
   numEmpleado: string;
   especialidad?: string; cedulaProfesional?: string;
   estatus: string;
-  usuario: { nombre: string; apellidoPaterno: string; apellidoMaterno?: string; telefono?: string; email: string };
+  usuario: { nombre: string; segundoNombre?: string | null; apellidoPaterno: string; apellidoMaterno?: string; telefono?: string; email: string };
   planteles: string[];
 }
 interface Plantel { id: number; nombre: string }
@@ -150,7 +150,7 @@ export default function DocentesPage() {
           {resultado.datos.map((d) => (
             <tr key={d.id}>
               <td data-etiqueta="Empleado">{d.numEmpleado}</td>
-              <td data-etiqueta="Nombre">{d.usuario.nombre} {d.usuario.apellidoPaterno}</td>
+              <td data-etiqueta="Nombre">{[d.usuario.nombre, d.usuario.segundoNombre, d.usuario.apellidoPaterno, d.usuario.apellidoMaterno].filter(Boolean).join(' ')}</td>
               <td data-etiqueta="Planteles">{d.planteles.join(', ') || '—'}</td>
               <td data-etiqueta="Especialidad">{d.especialidad ?? '—'}</td>
               <td data-etiqueta="Correo">{d.usuario.email}</td>
