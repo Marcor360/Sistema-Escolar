@@ -186,7 +186,7 @@ jobs:
           Get-ChildItem scripts/windows -Filter '*.ps1' | ForEach-Object {
             $tokens = $null; $errors = $null
             [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$errors) | Out-Null
-            foreach ($error in $errors) { Write-Error "$($_.Name): $error"; $failed = $true }
+            foreach ($parseError in $errors) { Write-Error "$($_.Name): $parseError"; $failed = $true }
           }
           if ($failed) { exit 1 }
       - name: Validar estructura de despliegue
