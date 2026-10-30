@@ -15,7 +15,7 @@ if ($currentEntry.LinkType -ne 'Junction') { throw 'current debe ser Junction de
 foreach ($name in @('index.html', 'web.config')) {
   if (-not (Test-Path -LiteralPath (Join-Path $webRoot $name))) { throw "Falta $name en $webRoot. Primero publica Expo Web." }
 }
-if (Get-Website -Name $SiteName -ErrorAction SilentlyContinue) { throw "Ya existe $SiteName: revisa el binding sin recrear el sitio." }
+if (Get-Website -Name $SiteName -ErrorAction SilentlyContinue) { throw "Ya existe ${SiteName}: revisa el binding sin recrear el sitio." }
 $collision = @(Get-WebBinding -Protocol https | Where-Object {
   $_.bindingInformation -match ('(?i):443:' + [regex]::Escape($PortalHost) + '$')
 })
