@@ -47,7 +47,7 @@ export class FormatosEscolaresService {
     ]);
     const porAlumno = new Map(notas.filter(n=>n.parcial===parcial).map(n => [n.alumnoId, n]));
     const filas = inscritos.map(i => ({ alumnoId: i.alumnoId, matricula: i.alumno.matricula,
-      nombre: [i.alumno.usuario.apellidoPaterno, i.alumno.usuario.apellidoMaterno, i.alumno.usuario.nombre].filter(Boolean).join(' '),
+      nombre: [i.alumno.usuario.apellidoPaterno, i.alumno.usuario.apellidoMaterno, i.alumno.usuario.nombre, i.alumno.usuario.segundoNombre].filter(Boolean).join(' '),
       calificacion: finalCalculada ? resultadoEvaluacion(notas.filter(n=>n.alumnoId===i.alumnoId),gm) : porAlumno.has(i.alumnoId) ? notaEnEscala(porAlumno.get(i.alumnoId)!, gm) : null,
       observaciones: porAlumno.get(i.alumnoId)?.observaciones ?? '',
     })).sort((a,b) => a.nombre.localeCompare(b.nombre, 'es') || a.matricula.localeCompare(b.matricula, 'es'));

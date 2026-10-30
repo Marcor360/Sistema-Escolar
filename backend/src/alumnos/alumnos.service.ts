@@ -229,6 +229,7 @@ export class AlumnosService {
         nombre: alumno.usuario.nombre,
         segundoNombre: alumno.usuario.segundoNombre ?? null,
         apellidoPaterno: alumno.usuario.apellidoPaterno,
+        apellidoMaterno: alumno.usuario.apellidoMaterno,
         nombreCompleto: alumno.usuario.nombreCompleto,
         email: alumno.usuario.email,
       },
@@ -351,7 +352,7 @@ export class AlumnosService {
           alumno.usuarioId,
           {
             nombre: dto.nombre,
-          segundoNombre: dto.segundoNombre,
+            segundoNombre: dto.segundoNombre,
             apellidoPaterno: dto.apellidoPaterno,
             apellidoMaterno: dto.apellidoMaterno,
             telefono: dto.telefono,

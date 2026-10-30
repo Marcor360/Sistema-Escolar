@@ -74,6 +74,7 @@ export async function recorridoWeb(d: Datos, tipo: 'academico' | 'financiero' | 
     await expect(page.getByRole('link', { name: 'Continuar con apertura de cartera', exact: true })).toBeVisible();
     let fila = page.locator('tr').filter({ hasText: matricula }); await expect(fila).toBeVisible();
     if (tipo === 'academico') {
+      await fila.getByText('Más acciones', { exact: true }).click();
       await fila.getByRole('button', { name: 'Editar', exact: true }).click(); await expect(form.getByRole('heading', { name: 'Editar expediente' })).toBeVisible(); await form.getByLabel('Nombre *', { exact: true }).fill('Corregido'); await form.getByRole('button', { name: 'Guardar cambios' }).click(); await expect(fila).toContainText('Corregido');
       await page.getByRole('link', { name: 'Grupos', exact: true }).click(); await page.getByRole('button',{name:/Registrar grupo/}).click(); const grupo = `Web-${d.sufijo}`;
       const crear = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Nuevo grupo', exact: true }) });
@@ -150,6 +151,7 @@ export async function recorridoWeb(d: Datos, tipo: 'academico' | 'financiero' | 
       await pago.getByLabel('Buscar alumno').fill(matricula); await expect(pago.getByLabel('Alumno', { exact: true }).locator('option').filter({ hasText: matricula })).toBeAttached(); await pago.getByLabel('Alumno', { exact: true }).selectOption({ label: await pago.getByLabel('Alumno', { exact: true }).locator('option').filter({ hasText: matricula }).innerText() }); await expect(pago.getByLabel('Cargo', { exact: true }).locator('option').filter({ hasText: `Pago corregible ${d.sufijo}` })).toBeAttached(); await pago.getByLabel('Cargo', { exact: true }).selectOption({ label: await pago.getByLabel('Cargo', { exact: true }).locator('option').filter({ hasText: `Pago corregible ${d.sufijo}` }).innerText() }); await pago.getByLabel('Monto', { exact: true }).fill('25'); await pago.getByRole('button', { name: 'Registrar pago', exact: true }).click();
       const registro = page.locator('tr').filter({ hasText: matricula }); await registro.getByRole('button', { name: 'Anular pago' }).click(); await page.getByRole('dialog').getByLabel('Motivo').fill('Corrección de importe'); await page.getByRole('dialog').getByRole('button', { name: 'Confirmar' }).click(); await expect(registro).toContainText('CANCELADO');
     } else {
+      await fila.getByText('Más acciones', { exact: true }).click();
       await fila.getByRole('button',{ name: 'Editar',exact: true }).click(); await expect(form.getByLabel('Fecha de nacimiento')).toHaveValue('2009-01-02'); await expect(form.getByLabel('Dirección')).toHaveValue('Calle escolar 12'); await form.getByLabel('Teléfono del alumno',{ exact: true }).fill(''); await form.getByRole('button',{ name: 'Guardar cambios' }).click();
       await page.getByRole('link',{ name: 'Docentes',exact: true }).click();
       await page.getByRole('button', { name: /Registrar docente/ }).click();

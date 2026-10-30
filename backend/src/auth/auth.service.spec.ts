@@ -72,7 +72,7 @@ describe('AuthService.login', () => {
     expect(jwt.sign).toHaveBeenCalledWith(expect.objectContaining({ roles: ['ADMINISTRATIVO'] }), { expiresIn: '15m' });
     expect(repo.findOne).toHaveBeenCalledWith(
       expect.objectContaining({
-        select: expect.arrayContaining(['passwordHash']),
+        select: expect.arrayContaining(['passwordHash', 'segundoNombre']),
       }),
     );
   });
