@@ -1,6 +1,6 @@
 {
-  "version": "1.35.2",
-  "alcance": "Candidata 1.35.2: calendario institucional como vista inicial, filtro global validado en API y consulta consolidada por permisos, con gestión secundaria y versión mensual legible. Sin migraciones ni despliegue acreditado; UAT por rol y plantel pendiente.",
+  "version": "1.35.3",
+  "alcance": "Candidata 1.35.3: dashboard con filtro único de plantel para indicadores, pendientes y agenda; pendientes sin actividad compactos, acciones de alumnos agrupadas y asignación de funciones legible y adaptable. Conserva permisos y lógica API; UAT sin acreditar.",
   "puertas": [
     {
       "id": "ci_ultimo_sha",

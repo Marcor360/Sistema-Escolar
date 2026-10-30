@@ -215,3 +215,23 @@ it('separa alumnos regulares de egresados al cambiar de sección', async () => {
   await screen.findByText('ACTIVO-01');
   expect(get).toHaveBeenLastCalledWith('/alumnos', { params: { pagina: 1, vista: 'REGULARES' } });
 });
+
+it('agrupa acciones sensibles sin ocultar la consulta principal del expediente', async () => {
+  contexto.gestionar = true;
+  vi.spyOn(api, 'get').mockImplementation(async (ruta) => ({ data: ruta === '/alumnos' ? resultado('QA1') : [] }));
+  render(<MemoryRouter><AlumnosPage /></MemoryRouter>);
+  await screen.findByText('QA1');
+  expect(screen.getByRole('button', { name: 'Historial y boleta' })).toBeTruthy();
+  expect(screen.getByText('Más acciones')).toBeTruthy();
+  fireEvent.click(screen.getByText('Más acciones'));
+  expect(screen.getByRole('button', { name: 'Dar de baja' })).toBeTruthy();
+});
+
+it('no presenta operaciones administrativas a una cuenta sin autorización', async () => {
+  contexto.gestionar = false;
+  vi.spyOn(api, 'get').mockImplementation(async ruta => ({ data: ruta === '/alumnos' ? resultado('QA-L') : [] }));
+  render(<MemoryRouter><AlumnosPage /></MemoryRouter>);
+  await screen.findByText('QA-L');
+  expect(screen.queryByText('Más acciones')).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Historial y boleta' })).toBeNull();
+});

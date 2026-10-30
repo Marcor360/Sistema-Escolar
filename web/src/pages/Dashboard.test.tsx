@@ -122,3 +122,22 @@ it('distingue una agenda sin respuesta de una agenda vacía y permite reintentar
   fireEvent.click(screen.getByRole('button', { name: 'Reintentar agenda' }));
   await screen.findByText('Tu agenda está despejada');
 });
+
+it('comparte el filtro de plantel con la agenda y el centro de pendientes', async () => {
+  contexto.roles = ['ADMINISTRATIVO'];
+  const get = vi.spyOn(api, 'get').mockImplementation(async (ruta) => ({
+    data: ruta === '/planteles/mios'
+      ? [{ id: 1, nombre: 'Primero' }, { id: 2, nombre: 'Segundo' }]
+      : ruta === '/reportes/resumen'
+        ? { alumnosActivos: 1, docentesActivos: 1, grupos: 0, saldoPendiente: 0, cargosConAdeudo: 0, cobradoMes: 0 }
+        : [],
+  }));
+  render(<MemoryRouter><DashboardPage /></MemoryRouter>);
+  const selector = await screen.findByLabelText('Plantel');
+  fireEvent.change(selector, { target: { value: '2' } });
+  await waitFor(() => expect(get).toHaveBeenCalledWith('/seguimiento/pendientes', { params: { plantelId: '2' } }));
+  await waitFor(() => expect(get.mock.calls.some(([ruta, config]) =>
+    ruta === '/calendario' && (config?.params as { plantelId?: string })?.plantelId === '2'
+  )).toBe(true));
+  expect(screen.queryByLabelText('Plantel de los pendientes')).toBeNull();
+});
