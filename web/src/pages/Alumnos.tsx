@@ -1,3 +1,4 @@
+import { validarIdentidadPersonal } from '../utils/identidad-personal';
 import { useModuloTrabajo } from '../components/ModuloTrabajo';
 import { Link } from 'react-router-dom';
 import { EliminarRegistro } from '../components/EliminarRegistro';
@@ -153,6 +154,8 @@ export default function AlumnosPage() {
   const crear = async (e: FormEvent) => {
     e.preventDefault();
     if (enviando) return;
+    const errorIdentidad = validarIdentidadPersonal(form);
+    if (errorIdentidad) { setError(errorIdentidad); return; }
     setEnviando(true); setError(''); setMensaje('');
     try {
       if (editando) {
