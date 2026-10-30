@@ -280,6 +280,7 @@ async function esperarServidor() {
     await page.locator('.tabla-contenedor').evaluate((el) => {
       el.scrollLeft = el.scrollWidth;
     });
+    await page.getByText('Más acciones', { exact: true }).click();
     await expect(page.getByRole('button', { name: 'Dar de baja', exact: true })).toBeInViewport();
     console.log('PASS forms/table ' + width);
   }
