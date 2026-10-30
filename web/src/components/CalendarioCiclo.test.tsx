@@ -50,6 +50,8 @@ it('publica una imagen del ciclo con nivel y audiencia financiera', async () => 
   const post = vi.spyOn(api, 'post').mockResolvedValue({ data: { id: 1 } });
   render(<CalendarioCiclo />);
   await screen.findByRole('heading', { name: /de 2026/ });
+  fireEvent.click(screen.getByText('Administrar calendario: publicar, importar y configurar'));
+  fireEvent.click(screen.getByText('Publicar evento o imagen del ciclo'));
   fireEvent.change(screen.getByLabelText('Nivel académico'), { target: { value: '7' } });
   fireEvent.change(screen.getByLabelText('Título del calendario o evento'), { target: { value: 'Cortes anuales' } });
   fireEvent.change(screen.getByLabelText('Visibilidad'), { target: { value: 'FINANCIERA' } });
