@@ -9,6 +9,7 @@ En `web/src/pages/Usuarios.tsx` la captura se presentaba como «Nombre → Prime
 - Ambos apellidos son requeridos en nuevas altas y correcciones; el segundo nombre se puede dejar vacío. Se valida en formularios y en NestJS.
 - Personal: el botón «Crear» queda tras roles y planteles.
 - Alumno: contexto (plantel/matrícula/CURP), identidad y después acceso. Docente: matrícula laboral, identidad y contacto.
+- Apertura integral de cartera: alta de alumno sin correo con segundo nombre opcional y dos apellidos requeridos; el backend conserva el dato de nombre adicional en la identidad transaccional.
 - Expo Android/iOS y Expo Web: consulta de nombre y apellidos en Perfil; los cambios de identidad solo se realizan mediante personal autorizado en web.
 - Al editar una cuenta histórica, el valor completo de `nombre` se mantiene, `segundoNombre` aparece vacío si no existe. No se dividen nombres compuestos automáticamente.
 
