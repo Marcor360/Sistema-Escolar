@@ -593,7 +593,7 @@ async function esperarServidor() {
     for (const ruta of ['/asistencias', '/seguimiento', '/cuenta', '/configuracion', '/conducta', '/calendario', '/avisos', '/finanzas', '/pago-completado', '/temarios?vista=consulta&clase=1', '/temarios?vista=nuevo&clase=1', '/temarios?vista=detalle&id=1', '/temarios?vista=adjuntar&id=1', '/ciclos/1', '/maestro?vista=clase&clase=1', '/maestro?vista=actividades&clase=1', '/maestro?vista=actividad-nueva&clase=1', '/maestro?vista=actividad-editar&clase=1&id=1', '/maestro?vista=materiales&clase=1', '/maestro?vista=material-nuevo&clase=1', '/maestro?vista=material-editar&clase=1&id=1', '/maestro?vista=entregas&clase=1&actividad=1', '/maestro?vista=calificar-entrega&clase=1&actividad=1&id=1']) {
       console.log('CHECK extended', ruta, width, height, escala);
       await page.goto(baseUrl + ruta);
-      const accion = {'/conducta':'Consultar incidencias','/calendario':'Consultar calendario','/avisos':'Redactar aviso'}[ruta];
+      const accion = {'/conducta':'Consultar incidencias','/avisos':'Redactar aviso'}[ruta];
       if(accion) await page.getByRole('button',{name:new RegExp(accion)}).click();
       try { await expect(page.locator('h1')).toBeVisible(); } catch (error) { console.log(await page.locator('body').innerText(), errors); throw error; }
       await page.evaluate(escala => { document.documentElement.style.fontSize = `${escala * 100}%`; }, escala);
