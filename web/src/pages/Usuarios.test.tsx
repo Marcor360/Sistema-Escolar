@@ -36,7 +36,7 @@ it('lleva el foco al formulario después de cargar una corrección de personal',
   fireEvent.click(await screen.findByRole('button', { name: 'Corregir cuenta' }));
   const titulo = await screen.findByRole('heading', { name: 'Corregir cuenta de personal' });
   await waitFor(() => expect(document.activeElement).toBe(titulo));
-  expect((screen.getByLabelText('Nombre') as HTMLInputElement).value).toBe('Personal');
+  expect((screen.getByLabelText('Nombre *') as HTMLInputElement).value).toBe('Personal');
 });
 
 it('filtra alumnos sin correo y asigna el institucional solicitando activación desde Usuarios',async()=>{
@@ -56,4 +56,23 @@ it('filtra alumnos sin correo y asigna el institucional solicitando activación 
   fireEvent.click(screen.getByRole('button',{name:'Asignar correo y solicitar activación'}));
   await screen.findByText('Correo asignado. Activación solicitada.');
   expect(post).toHaveBeenCalledWith('/usuarios/alumnos/9/correo-institucional',{email:'alumno@example.invalid',correoProveedor:'MICROSOFT365'});
+});
+
+it('captura nombre, segundo nombre opcional, dos apellidos y correo en ese orden', async () => {
+  const { fireEvent } = await import('@testing-library/react');
+  vi.spyOn(api, 'get').mockImplementation(async ruta => ({ data: ruta === '/planteles/mios' ? [{ id: 1, nombre: 'Centro' }] : { datos: [], total: 0, pagina: 1, porPagina: 10 } }));
+  const post = vi.spyOn(api, 'post').mockResolvedValue({ data: { id: 8 } });
+  render(<UsuariosPage />);
+  const orden = [...document.querySelectorAll<HTMLInputElement>('.identidad-formulario input')].map(campo => campo.id);
+  expect(orden.slice(0, 5)).toEqual(['personal-nombre', 'personal-segundo-nombre', 'personal-paterno', 'personal-materno', 'personal-correo']);
+  fireEvent.change(screen.getByLabelText('Nombre *'), { target: { value: 'Ana' } });
+  fireEvent.change(screen.getByLabelText('Segundo nombre (opcional)'), { target: { value: 'Lucía' } });
+  fireEvent.change(screen.getByLabelText('Primer apellido *'), { target: { value: 'Pérez' } });
+  fireEvent.change(screen.getByLabelText('Segundo apellido *'), { target: { value: 'García' } });
+  fireEvent.change(screen.getByLabelText('Correo institucional *'), { target: { value: 'ana@example.invalid' } });
+  fireEvent.click(await screen.findByLabelText('Centro'));
+  fireEvent.click(screen.getByRole('button', { name: 'Crear' }));
+  await waitFor(() => expect(post).toHaveBeenCalledWith('/usuarios', expect.objectContaining({
+    nombre: 'Ana', segundoNombre: 'Lucía', apellidoPaterno: 'Pérez', apellidoMaterno: 'García', email: 'ana@example.invalid',
+  })));
 });

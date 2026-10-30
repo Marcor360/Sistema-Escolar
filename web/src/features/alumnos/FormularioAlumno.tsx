@@ -34,7 +34,7 @@ export function FormularioAlumno({
         <div>
           <p className="sobrelinea">CONTROL ESCOLAR</p>
           <h2 id="titulo-form-alumno">{nuevo ? 'Registrar alumno' : 'Editar expediente'}</h2>
-          <p className="texto-ayuda">Paso 1: crea el expediente. Después Control Escolar realiza la apertura de cartera para asignar contexto, grupo y cargos. Completa los datos de identidad y contacto. Los campos marcados con * son obligatorios.</p>
+          <p className="texto-ayuda">Paso 1: crea el expediente. Identifica plantel, matrícula y CURP; después captura nombre, segundo nombre si existe y ambos apellidos. El correo institucional va después. Los campos con * son obligatorios. Control Escolar continuará con Apertura de cartera.</p>
         </div>
         <span className="sello neutro">{nuevo ? 'Alta individual' : 'Edición'}</span>
       </div>
@@ -42,7 +42,7 @@ export function FormularioAlumno({
       <form onSubmit={crear} aria-busy={enviando} aria-describedby={error ? 'error-alumno' : undefined}>
         <fieldset disabled={enviando} className="grupo-formulario">
           <legend>Identidad del alumno</legend>
-          <div className="rejilla-formulario">
+          <div className="rejilla-formulario identidad-formulario">
             <div className="campo">
               <label htmlFor="alumno-plantel">Plantel *</label>
               <select id="alumno-plantel" required disabled={!nuevo || enviando} value={form.plantelId}
@@ -58,18 +58,6 @@ export function FormularioAlumno({
               <small id="ayuda-matricula">Identificador único de hasta 20 caracteres.</small>
             </div>
             <div className="campo">
-              <label htmlFor="alumno-nombre">Nombre *</label>
-              <input id="alumno-nombre" required maxLength={80} autoComplete="given-name" {...dar('nombre')} />
-            </div>
-            <div className="campo">
-              <label htmlFor="alumno-paterno">Primer apellido *</label>
-              <input id="alumno-paterno" required maxLength={80} autoComplete="family-name" {...dar('apellidoPaterno')} />
-            </div>
-            <div className="campo">
-              <label htmlFor="alumno-materno">Segundo apellido</label>
-              <input id="alumno-materno" maxLength={80} {...dar('apellidoMaterno')} />
-            </div>
-            <div className="campo">
               <label htmlFor="alumno-curp">CURP {nuevo ? '*' : ''}</label>
               <input id="alumno-curp" required={nuevo} maxLength={18} minLength={18}
                 autoCapitalize="characters" autoComplete="off" {...dar('curp')}
@@ -78,6 +66,22 @@ export function FormularioAlumno({
               <small id="ayuda-curp" className={mostrarErrorCurp ? 'mensaje-error' : undefined}>
                 {mostrarErrorCurp ? 'Revisa el formato de los 18 caracteres de la CURP.' : '18 caracteres. Se convertirá a mayúsculas.'}
               </small>
+            </div>
+            <div className="campo">
+              <label htmlFor="alumno-nombre">Nombre *</label>
+              <input id="alumno-nombre" required maxLength={80} autoComplete="given-name" {...dar('nombre')} />
+            </div>
+            <div className="campo">
+              <label htmlFor="alumno-segundo-nombre">Segundo nombre (opcional)</label>
+              <input id="alumno-segundo-nombre" maxLength={80} {...dar('segundoNombre')} />
+            </div>
+            <div className="campo">
+              <label htmlFor="alumno-paterno">Primer apellido *</label>
+              <input id="alumno-paterno" required maxLength={80} autoComplete="family-name" {...dar('apellidoPaterno')} />
+            </div>
+            <div className="campo">
+              <label htmlFor="alumno-materno">Segundo apellido *</label>
+              <input id="alumno-materno" required maxLength={80} {...dar('apellidoMaterno')} />
             </div>
           </div>
         </fieldset>

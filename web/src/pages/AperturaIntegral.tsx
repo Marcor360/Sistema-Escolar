@@ -35,6 +35,7 @@ const cuotaVacia = (): Cuota => ({ conceptoId: '', periodo: '', fechaVencimiento
 const identidadVacia = {
   matricula: '',
   nombre: '',
+  segundoNombre: '',
   apellidoPaterno: '',
   apellidoMaterno: '',
   curp: '',
@@ -299,14 +300,15 @@ export default function AperturaIntegral() {
                     Se creará el expediente junto con la cartera. El correo institucional y la invitación de acceso se
                     gestionan después desde Usuarios.
                   </p>
-                  <div className="rejilla-formulario cartera-identidad">
+                  <div className="rejilla-formulario cartera-identidad identidad-formulario">
                     {(
                       [
                         ['matricula', 'Matrícula', true, 20],
-                        ['nombre', 'Nombre', true, 80],
-                        ['apellidoPaterno', 'Primer apellido', true, 80],
-                        ['apellidoMaterno', 'Segundo apellido', false, 80],
                         ['curp', 'CURP', true, 18],
+                         ['nombre', 'Nombre', true, 80],
+                         ['segundoNombre', 'Segundo nombre (opcional)', false, 80],
+                         ['apellidoPaterno', 'Primer apellido', true, 80],
+                         ['apellidoMaterno', 'Segundo apellido', true, 80],
                         ['correoPersonal', 'Correo personal (contacto opcional)', false, 120],
                         ['telefono', 'Teléfono', false, 20],
                         ['fechaNacimiento', 'Fecha de nacimiento', false, 10],

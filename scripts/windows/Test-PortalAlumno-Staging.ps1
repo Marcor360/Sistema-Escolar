@@ -23,5 +23,10 @@ foreach ($marker in @(
 foreach ($marker in @('CertificateThumbprint', 'AddSslCertificate', 'DnsNameList', 'ApplicationRequestRouting')) {
   if (-not $configure.Contains($marker)) { throw "Falta control de IIS: $marker" }
 }
+$canonicalHost = 'stagin-portal-alumno.iua.edu.mx'
+foreach ($scriptContent in @($deploy, $configure)) {
+  if (-not $scriptContent.Contains("[string]`$PortalHost = '$canonicalHost'")) { throw 'El portal debe usar exactamente el hostname institucional aprobado por defecto.' }
+  if ($scriptContent.Contains('stagin-portal-alumnoiua.edu.mx')) { throw 'El portal conserva una referencia al hostname incorrecto.' }
+}
 if ($deploy -match 'db:migrate|Stop-Service|Start-Service') { throw 'El despliegue del alumno no debe modificar la API ni la BD.' }
 Write-Host 'Portal Alumno: contrato IIS, publicación aislada y controles básicos válidos.'
