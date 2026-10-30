@@ -25,7 +25,7 @@ const DESCRIPCIONES: Record<TipoPlantilla, Record<string, string>> = {
     correoProveedor: 'Obligatorio por alumno. Selecciona Microsoft 365 o GoDaddy. En blanco se rechaza esa fila.',
     email: 'Columna heredada opcional para CSV antiguos; utiliza correoInstitucional en las plantillas nuevas.',
     nombre: 'Primer nombre obligatorio del alumno. Los archivos anteriores también pueden incluir aquí nombres compuestos.',
-    segundoNombre: 'Segundo nombre opcional. Si existe, se agrega al primer nombre para el expediente.',
+    segundoNombre: 'Segundo nombre opcional. Se guarda por separado, sin modificar el primer nombre.',
     apellidoPaterno: 'Primer apellido del alumno.',
     apellidoMaterno: 'Segundo apellido, si corresponde.',
     matricula: 'Matrícula única, solo identificador; conserva ceros iniciales. No es una contraseña. El alumno solicita un código privado de activación por correo y establece su propia contraseña; sin correo operativo el acceso permanece pendiente.',
