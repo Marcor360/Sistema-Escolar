@@ -1,27 +1,27 @@
 # Despliegue de Expo Web · Portal Alumno IUA (staging)
 
-**Candidata:** 1.35.1. **Dominio solicitado:** `https://stagin-portal-alumnoiua.edu.mx/`. Esta guía no acredita que el portal esté publicado ni que DNS/TLS estén configurados.
+**Candidata:** 1.35.1. **Dominio solicitado:** `https://stagin-portal-alumno.iua.edu.mx/`. Esta guía no acredita que el portal esté publicado ni que DNS/TLS estén configurados.
 
 ## Arquitectura y condición de seguridad
 
 El navegador recibe la app de `mobile/` exportada por Expo Web. No publica `web/`, reservado para personal. La API NestJS y MySQL existentes continúan siendo la única fuente de datos; no se crea una base ni un servicio Node adicional.
 
-**Importante:** `stagin-portal-alumnoiua.edu.mx` es un dominio distinto de `iua.edu.mx`. Por ello, consumir directamente `https://api-sistema-staging.iua.edu.mx/api` desde el navegador bloquearía el refresh cookie `SameSite=Strict`; CORS no corrige ese problema. `mobile/public/web.config` hace proxy inverso de `/api/*` y `/uploads/*` a `http://127.0.0.1:3000` (solo loopback) y conserva el resto como sitio estático. Expo se compila con **`EXPO_PUBLIC_API_URL=https://stagin-portal-alumnoiua.edu.mx/api`**. Así el navegador usa un origen único y la cookie HttpOnly conserva su diseño.
+**Importante:** `stagin-portal-alumno.iua.edu.mx` es un subdominio de `iua.edu.mx`, por lo que comparte el mismo sitio para efectos de `SameSite=Strict` cuando ambos utilizan HTTPS. Sin embargo, el portal y la API pública siguen siendo orígenes distintos. Para simplificar CORS y hacer que la autenticación del navegador consuma un único origen, `mobile/public/web.config` hace proxy inverso de `/api/*` y `/uploads/*` a `http://127.0.0.1:3000` (solo loopback) y conserva el resto como sitio estático. Expo se compila con **`EXPO_PUBLIC_API_URL=https://stagin-portal-alumno.iua.edu.mx/api`**. Así el navegador usa un origen único y la cookie HttpOnly conserva su diseño.
 
-El certificado debe cubrir **este nombre exacto**. Un comodín `*.iua.edu.mx` no lo cubre. El dominio ha de apuntar por DNS al VPS; no se verificó aquí su resolución pública.
+El certificado debe cubrir **este nombre exacto** (por SAN o un comodín válido `*.iua.edu.mx`, que sí cubre un subdominio de un nivel). Configurar en Cloudflare, dentro de la zona `iua.edu.mx`, un registro **A** con nombre `stagin-portal-alumno`, contenido `72.167.134.110` y estado `DNS only`; comprobar resolución antes de publicar. No se verificó aquí su resolución pública.
 
 ## Prerrequisitos
 
 - Merge del PR de publicación y CI verde en el SHA aprobado. Los tres workspaces, Expo y lockfiles deben marcar 1.35.1.
 - API institucional de staging **ya desplegada a 1.35.1**, `GET https://api-sistema-staging.iua.edu.mx/api/health/ready` con `status=ok` y `version=1.35.1`. Aplicar migraciones mediante el procedimiento existente con respaldo y restore aislado; **no desde este script**.
 - Windows Server 2019, IIS, URL Rewrite, ARR con proxy habilitado, Node 24, npm, certificado válido (clave privada) importado a `Cert:\LocalMachine\My`. API escucha en `127.0.0.1:3000`, no abierta a Internet.
-- `C:\SistemaEscolar\config\backend.env`: conservar todos los orígenes actuales y añadir **`https://stagin-portal-alumnoiua.edu.mx`** a `CORS_ORIGINS`, sin slash final. Es necesario para la validación explícita de `Origin` de `POST /api/auth/refresh`, incluso con el proxy de mismo origen. Reiniciar `SistemaEscolarApi` de forma controlada tras editar el archivo privado y verificar health.
-- DNS tipo A/AAAA válido hacia el VPS y TLS activo. No usar certificados de `iua.edu.mx` sin SAN adecuado para el nombre indicado. Mantener `NODE_ENV=production`, `APP_ENV=staging`, `DB_SYNC=false`.
+- `C:\SistemaEscolar\config\backend.env`: conservar todos los orígenes actuales y añadir **`https://stagin-portal-alumno.iua.edu.mx`** a `CORS_ORIGINS`, sin slash final. Es necesario para la validación explícita de `Origin` de `POST /api/auth/refresh`, incluso con el proxy de mismo origen. Reiniciar `SistemaEscolarApi` de forma controlada tras editar el archivo privado y verificar health.
+- DNS tipo A/AAAA válido hacia el VPS y TLS activo. No usar certificados de `iua.edu.mx` sin SAN o comodín válido que cubra el nombre indicado. Mantener `NODE_ENV=production`, `APP_ENV=staging`, `DB_SYNC=false`.
 
 ## Comprobaciones previas (PowerShell administrador del VPS)
 
 ```powershell
-$PortalHost = 'stagin-portal-alumnoiua.edu.mx'
+$PortalHost = 'stagin-portal-alumno.iua.edu.mx'
 Resolve-DnsName $PortalHost -Type A
 Get-Service SistemaEscolarApi
 Invoke-RestMethod 'https://api-sistema-staging.iua.edu.mx/api/health/ready'
@@ -45,7 +45,7 @@ git status --short
 .\scripts\windows\Deploy-PortalAlumno-Staging.ps1 `
   -Version '1.35.1' `
   -Source 'C:\Builds\sistema-escolar-mvp' `
-  -PortalHost 'stagin-portal-alumnoiua.edu.mx'
+  -PortalHost 'stagin-portal-alumno.iua.edu.mx'
 ```
 
 La publicación instala dependencias en `mobile/`, exporta `mobile/dist` con `APP_ENV=preview`, verifica API 1.35.1, crea una release **inmutable** en `C:\SistemaEscolar\portal-alumno\releases\1.35.1` y activa `current` como Junction. Copia `web.config` incluso si Metro no lo incluye en `dist`. No modifica `C:\SistemaEscolar\current`, servicio API, web administrativo, BD ni migraciones.
@@ -54,7 +54,7 @@ Cuando el archivo está publicado, crear **una sola vez** el sitio IIS y su bind
 
 ```powershell
 .\scripts\windows\Configure-IIS-PortalAlumno-Staging.ps1 `
-  -PortalHost 'stagin-portal-alumnoiua.edu.mx' `
+  -PortalHost 'stagin-portal-alumno.iua.edu.mx' `
   -CertificateThumbprint 'PEGAR_HUELLA_REAL_CERTIFICADO'
 ```
 
@@ -69,9 +69,9 @@ Los cambios del portal son estáticos. El rollback de esta publicación **no rev
 ## Verificación de aceptación
 
 ```powershell
-Invoke-WebRequest 'https://stagin-portal-alumnoiua.edu.mx/' -UseBasicParsing
-Invoke-RestMethod 'https://stagin-portal-alumnoiua.edu.mx/api/health/ready'
-Invoke-WebRequest 'https://stagin-portal-alumnoiua.edu.mx/ruta-inexistente' -UseBasicParsing
+Invoke-WebRequest 'https://stagin-portal-alumno.iua.edu.mx/' -UseBasicParsing
+Invoke-RestMethod 'https://stagin-portal-alumno.iua.edu.mx/api/health/ready'
+Invoke-WebRequest 'https://stagin-portal-alumno.iua.edu.mx/ruta-inexistente' -UseBasicParsing
 ```
 
 En navegador real (móvil y escritorio), comprobar acceso **exclusivo ALUMNO** por `POST /api/auth/login-alumno-web`, refresh con cookie HttpOnly y `SameSite=Strict`, salida, activación y recuperación por correo, materias, tareas, calificaciones, boletas/firmas, pagos, perfil y descargas autorizadas. Verificar carga del logo (`/uploads/`), tamaños de fuente, rutas profundas, ausencia de errores JS, certificado válido, `403` en datos ajenos y que las rutas administrativas no estén presentes en la interfaz.
