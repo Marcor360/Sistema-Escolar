@@ -21,6 +21,7 @@ export async function crearIdentidadApertura(m: EntityManager, plantelId: number
       email: null,
       correoPersonal: d.correoPersonal ?? null,
       nombre: d.nombre,
+      segundoNombre: d.segundoNombre ?? null,
       apellidoPaterno: d.apellidoPaterno,
       apellidoMaterno: d.apellidoMaterno ?? null,
       telefono: d.telefono ?? null,
