@@ -192,6 +192,9 @@ jobs:
       - name: Validar estructura de despliegue
         shell: pwsh
         run: ./scripts/windows/Test-StagingScripts.ps1
+      - name: Validar despliegue aislado del Portal Alumno
+        shell: pwsh
+        run: ./scripts/windows/Test-PortalAlumno-Staging.ps1
 
   web-e2e:
     runs-on: ubuntu-latest
