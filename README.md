@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.35.0`** · Boletas pendientes, atención con responsable e historial, avisos internos y constancias de aceptación. [Contrato y validación](docs/BOLETAS_ATENCION_1.35.0.md).
+**Versión candidata: `1.35.1`** · Boletas pendientes, atención con responsable e historial, avisos internos y constancias de aceptación. [Contrato y validación](docs/BOLETAS_ATENCION_1.35.0.md).
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -18,6 +18,9 @@ Sistema escolar multiplataforma para operación académica, administrativa y fin
 Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [índice documental](docs/README.md) e [historial de documentos retirados](docs/HISTORIAL.md).
 
 ### Cambios consolidados recientes
+
+- **1.35.1 (candidata):** publicación independiente de Expo Web en IIS para el alumno, proxy `/api` de mismo origen por cookie SameSite Strict, versión inmutable, rollback de Junction y pruebas de contrato. [Despliegue Portal Alumno](docs/DESPLIEGUE_PORTAL_ALUMNO_STAGING.md). No implica que el nuevo dominio esté publicado.
+
 
 - **1.32.0 (candidata):** [Estabilización y seguimiento](docs/ESTABILIZACION_1.32.0.md): Vite 6.4.5, recorrido de cartera en CI, detalle independiente y pendientes administrativos por plantel.
 
