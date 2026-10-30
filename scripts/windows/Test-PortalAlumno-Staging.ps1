@@ -23,5 +23,6 @@ foreach ($marker in @(
 foreach ($marker in @('CertificateThumbprint', 'AddSslCertificate', 'DnsNameList', 'ApplicationRequestRouting')) {
   if (-not $configure.Contains($marker)) { throw "Falta control de IIS: $marker" }
 }
+if ($deploy -notmatch "'stagin-portal-alumno\.iua\.edu\.mx'" -or $configure -notmatch "'stagin-portal-alumno\.iua\.edu\.mx'") { throw 'Dominio canónico del portal incorrecto: verificar subdominio de iua.edu.mx.' }
 if ($deploy -match 'db:migrate|Stop-Service|Start-Service') { throw 'El despliegue del alumno no debe modificar la API ni la BD.' }
 Write-Host 'Portal Alumno: contrato IIS, publicación aislada y controles básicos válidos.'
