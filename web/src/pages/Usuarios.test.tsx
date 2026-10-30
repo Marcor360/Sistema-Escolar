@@ -36,7 +36,7 @@ it('lleva el foco al formulario después de cargar una corrección de personal',
   fireEvent.click(await screen.findByRole('button', { name: 'Corregir cuenta' }));
   const titulo = await screen.findByRole('heading', { name: 'Corregir cuenta de personal' });
   await waitFor(() => expect(document.activeElement).toBe(titulo));
-  expect((screen.getByLabelText('Nombre') as HTMLInputElement).value).toBe('Personal');
+  expect((screen.getByLabelText('Nombre *') as HTMLInputElement).value).toBe('Personal');
 });
 
 it('filtra alumnos sin correo y asigna el institucional solicitando activación desde Usuarios',async()=>{
