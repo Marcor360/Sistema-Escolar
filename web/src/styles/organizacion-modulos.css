@@ -89,3 +89,20 @@
   .pendientes-sin-actividad ul { columns:1; }
   .pendientes-compactos a { align-items:flex-start; }
 }
+
+/* Identidad personal: secuencia de lectura única, controles de ancho consistente y reflow real. */
+.identidad-formulario {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  align-items:start;
+  gap:16px 18px;
+  margin:16px 0 20px;
+}
+.identidad-formulario .campo { min-width:0; }
+.identidad-formulario .campo > input { width:100%; min-width:0; box-sizing:border-box; }
+@media(max-width:1000px) {
+  .identidad-formulario { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media(max-width:650px) {
+  .identidad-formulario { grid-template-columns:minmax(0,1fr); }
+}

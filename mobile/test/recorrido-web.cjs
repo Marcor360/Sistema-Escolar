@@ -190,7 +190,10 @@ const server = http.createServer((req, res) => {
             curp: null,
             usuario: {
               nombre: "Alumna",
+              segundoNombre: "Elena",
               apellidoPaterno: "QA",
+              apellidoMaterno: "Escolar",
+              nombreCompleto: "Alumna Elena QA Escolar",
               email: "qa@example.invalid",
             },
           };
@@ -248,6 +251,10 @@ const server = http.createServer((req, res) => {
         await expect(tab).toBeVisible();
         await tab.click();
         await page.waitForTimeout(300);
+        if (name.test("perfil")) {
+          await expect(page.getByText("Segundo nombre: Elena", { exact: true })).toBeVisible();
+          await expect(page.getByText("Segundo apellido: Escolar", { exact: true })).toBeVisible();
+        }
         if (name.test("calificaciones")) {
           await page
             .getByRole("button", {
