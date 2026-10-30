@@ -3,6 +3,8 @@ import { Image, View, TouchableOpacity } from "react-native";
 import { Text } from "./Texto";
 import { api, archivosBase, mensajeDeError } from "../api/client";
 import { base } from "../screens/comunes";
+import { diaCalendarioEscolar, eventosDelDia, mesInicialCalendario } from "../utils/calendario-escolar";
+import { colores, radio, espacio } from "../theme";
 
 type Ciclo = {
   id: number;
@@ -18,13 +20,7 @@ type Evento = {
   fechaFin: string | null;
   imagenNombre: string | null;
 };
-const dia = (s: string) =>
-  new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Mexico_City",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date(s));
+const dia = diaCalendarioEscolar;
 function ImagenCiclo({ evento }: { evento: Evento }) {
   const [url, setUrl] = useState("");
   const [cargando,setCargando]=useState(true),[intento,setIntento]=useState(0);
@@ -77,8 +73,8 @@ export function CalendarioCiclo() {
       >
         <Text>
           {abierto
-            ? "Cerrar calendario del ciclo"
-            : "Ver calendario del ciclo escolar"}
+            ? "Ocultar calendario institucional"
+            : "Ver calendario institucional"}
         </Text>
       </TouchableOpacity>
       {abierto && <ContenidoCalendario />}
@@ -89,6 +85,8 @@ function ContenidoCalendario() {
   const [ciclos, setCiclos] = useState<Ciclo[]>([]);
   const [seleccion, setSeleccion] = useState(0);
   const [mes, setMes] = useState("");
+  const [diaSeleccionado, setDiaSeleccionado] = useState("");
+  const [ambito, setAmbito] = useState<"CONSOLIDADO" | "GLOBAL">("CONSOLIDADO");
   const [vista, setVista] = useState<"mes" | "ciclo" | "imagen" | "agenda">("mes");
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [error, setError] = useState("");
@@ -121,7 +119,9 @@ function ContenidoCalendario() {
   useEffect(() => {
     if (!ciclo) return;
     let vigente = true;
-    setMes(ciclo.fechaInicio.slice(0, 7));
+    const hoyEscolar = dia(new Date().toISOString());
+    setMes(mesInicialCalendario(ciclo.fechaInicio, ciclo.fechaFin, hoyEscolar));
+    setDiaSeleccionado(hoyEscolar >= ciclo.fechaInicio && hoyEscolar <= ciclo.fechaFin ? hoyEscolar : ciclo.fechaInicio);
     setError("");
     setCargando(true);
     setEventos([]);
@@ -134,6 +134,7 @@ function ContenidoCalendario() {
         const { data } = await api.get<Evento[]>("/calendario", {
           params: {
             cicloId: ciclo.id,
+            ambito,
             desde: new Date(desde).toISOString(),
             hasta: new Date(hasta).toISOString(),
           },
@@ -152,7 +153,7 @@ function ContenidoCalendario() {
     return () => {
       vigente = false;
     };
-  }, [ciclo, revision]);
+  }, [ciclo, revision, ambito]);
   const meses: string[] = [];
   if (ciclo) {
     let d = new Date(ciclo.fechaInicio.slice(0, 7) + "-01T12:00:00Z");
@@ -164,7 +165,8 @@ function ContenidoCalendario() {
   return (
     <View>
       <Text accessibilityRole="header">Calendario del ciclo escolar</Text>
-      {ciclos.map((c) => (
+      {ciclos.length === 1 && <Text>{ciclos[0].nombre}</Text>}
+      {ciclos.length > 1 && ciclos.map((c) => (
         <TouchableOpacity
           key={c.id}
           accessibilityRole="button"
@@ -178,6 +180,18 @@ function ContenidoCalendario() {
           </Text>
         </TouchableOpacity>
       ))}
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: espacio.sm, marginVertical: espacio.md }}>
+        {(["CONSOLIDADO", "GLOBAL"] as const).map((opcion) => (
+          <TouchableOpacity key={opcion} accessibilityRole="button"
+            accessibilityLabel={opcion === "CONSOLIDADO" ? "Eventos institucionales y de mi plantel" : "Solo eventos institucionales"}
+            accessibilityState={{ selected: ambito === opcion }}
+            style={[base.botonAccesible, { borderWidth: 1, borderColor: colores.linea, borderRadius: radio.sm, backgroundColor: ambito === opcion ? colores.papel : "#fff" }]}
+            onPress={() => setAmbito(opcion)}>
+            <Text>{opcion === "CONSOLIDADO" ? "Mi plantel e institucional" : "Solo institucional"}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: espacio.sm }}>
       {(["mes", "ciclo", "imagen", "agenda"] as const).map((v) => (
         <TouchableOpacity
           key={v}
@@ -195,6 +209,7 @@ function ContenidoCalendario() {
           </Text>
         </TouchableOpacity>
       ))}
+      </View>
       {cargando && <Text>Cargando calendario…</Text>}
       {!!error && (
         <View accessibilityRole="alert">
@@ -211,7 +226,7 @@ function ContenidoCalendario() {
       {!cargando && !ciclos.length && !error && (
         <Text>No hay ciclos escolares disponibles.</Text>
       )}
-      {vista === "imagen" ? (
+      {!cargando && !error && (vista === "imagen" ? (
         <>
           {eventos
             .filter((e) => e.imagenNombre)
@@ -222,7 +237,7 @@ function ContenidoCalendario() {
             <Text>No hay imagen publicada para tu nivel.</Text>
           )}
         </>
-      ) : vista === "agenda" ? <View>{eventos.filter(e => !e.imagenNombre).map(e => <Text key={e.id}>{dia(e.fechaInicio)}{e.fechaFin ? ' — ' + dia(e.fechaFin) : ''}: {e.titulo}</Text>)}</View> : (
+      ) : vista === "agenda" ? <View>{eventos.filter(e => !e.imagenNombre).length === 0 ? <Text>No hay eventos en la agenda de este ciclo.</Text> : eventos.filter(e => !e.imagenNombre).map(e => <View key={e.id} style={{ paddingVertical: espacio.md, borderBottomWidth: 1, borderColor: colores.linea }}><Text>{dia(e.fechaInicio)}{e.fechaFin ? ' — ' + dia(e.fechaFin) : ''}: {e.titulo}</Text></View>)}</View> : (
         <>
           {vista === "mes" && (
             <View
@@ -232,7 +247,7 @@ function ContenidoCalendario() {
                 accessibilityRole="button"
                 style={base.botonAccesible}
                 disabled={meses.indexOf(mes) <= 0}
-                onPress={() => setMes(meses[meses.indexOf(mes) - 1])}
+                onPress={() => {setMes(meses[meses.indexOf(mes) - 1]); setDiaSeleccionado("");}}
               >
                 <Text>Mes anterior</Text>
               </TouchableOpacity>
@@ -240,7 +255,7 @@ function ContenidoCalendario() {
                 accessibilityRole="button"
                 style={base.botonAccesible}
                 disabled={meses.indexOf(mes) >= meses.length - 1}
-                onPress={() => setMes(meses[meses.indexOf(mes) + 1])}
+                onPress={() => {setMes(meses[meses.indexOf(mes) + 1]); setDiaSeleccionado("");}}
               >
                 <Text>Mes siguiente</Text>
               </TouchableOpacity>
@@ -271,38 +286,39 @@ function ContenidoCalendario() {
                   ))}
                   {Array.from({ length: dias }, (_, i) => {
                     const fecha = m + "-" + String(i + 1).padStart(2, "0");
-                    const eventosDia = eventos.filter(
-                      (e) =>
-                        !e.imagenNombre &&
-                        dia(e.fechaInicio) <= fecha &&
-                        dia(e.fechaFin ?? e.fechaInicio) >= fecha,
-                    );
+                    const eventosDia = eventosDelDia(eventos, fecha);
                     return (
-                      <View
+                      <TouchableOpacity
                         key={fecha}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${fecha}: ${eventosDia.length} evento(s)`}
+                        accessibilityState={{ selected: diaSeleccionado === fecha }}
+                        onPress={() => setDiaSeleccionado(fecha)}
                         style={{
                           width: "14.28%",
-                          minHeight: 44,
-                          padding: 2,
-                          borderWidth: 0.5,
-                          borderColor: "#ccc",
+                          minHeight: 52,
+                          padding: 4,
+                          borderWidth: 1,
+                          borderColor: diaSeleccionado === fecha ? colores.pizarra : colores.linea,
+                          backgroundColor: diaSeleccionado === fecha ? colores.papel : "#fff",
                         }}
                       >
                         <Text>{i + 1}</Text>
-                        {eventosDia.map((e) => (
-                          <Text key={e.id} style={{ fontSize: 10 }}>
-                            {e.titulo}
-                          </Text>
-                        ))}
-                      </View>
+                        {eventosDia.length > 0 && <Text style={{ fontSize: 12, color: colores.pizarra }}>{eventosDia.length} evento(s)</Text>}
+                      </TouchableOpacity>
                     );
                   })}
                 </View>
+                {vista === "mes" && <View style={{ marginTop: espacio.md, padding: espacio.md, backgroundColor: "#fff", borderWidth: 1, borderColor: colores.linea, borderRadius: radio.sm }}>
+                  <Text accessibilityRole="header">{diaSeleccionado ? `Actividades del ${diaSeleccionado}` : "Selecciona un día para consultar sus actividades"}</Text>
+                  {diaSeleccionado && eventosDelDia(eventos, diaSeleccionado).length === 0 && <Text>Sin actividades publicadas para este día.</Text>}
+                  {diaSeleccionado && eventosDelDia(eventos, diaSeleccionado).map((e) => <Text key={e.id} style={{ paddingVertical: espacio.sm }}>{e.titulo}</Text>)}
+                </View>}
               </View>
             );
           })}
         </>
-      )}
+      ))}
     </View>
   );
 }
