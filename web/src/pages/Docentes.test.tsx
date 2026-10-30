@@ -34,7 +34,7 @@ const docentes = [1, 2].map((id) => ({
   numEmpleado: `EMP-${id}`,
   estatus: 'ACTIVO',
   planteles: ['Centro'],
-  usuario: { nombre: `Docente ${id}`, apellidoPaterno: 'Prueba', email: `docente${id}@example.test` },
+  usuario: { nombre: `Docente ${id}`, apellidoPaterno: 'Prueba', apellidoMaterno: 'Escolar', email: `docente${id}@example.test` },
 }));
 
 const respuesta = { datos: docentes, pagina: 1, porPagina: 10, total: 2 };

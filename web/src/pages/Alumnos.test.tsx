@@ -146,6 +146,9 @@ it('tras registrar un alumno ofrece continuar con apertura de cartera y no con G
   render(<MemoryRouter><AlumnosPage /></MemoryRouter>);
   await screen.findByText('IUA-001');
   fireEvent.change(screen.getByLabelText('Matrícula *'), { target: { value: 'IUA-002' } });
+  fireEvent.change(screen.getByLabelText('Nombre *'), { target: { value: 'Ana' } });
+  fireEvent.change(screen.getByLabelText('Primer apellido *'), { target: { value: 'Prueba' } });
+  fireEvent.change(screen.getByLabelText('Segundo apellido *'), { target: { value: 'Escolar' } });
   fireEvent.submit(screen.getByLabelText('Matrícula *').closest('form')!);
   const enlace = await screen.findByRole('link', { name: 'Continuar con apertura de cartera' });
   expect(enlace.getAttribute('href')).toBe('/apertura-cartera/nueva');
