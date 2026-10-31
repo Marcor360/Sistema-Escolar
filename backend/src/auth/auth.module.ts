@@ -39,6 +39,6 @@ import { ConfiguracionModule } from '../configuracion/configuracion.module';
   ],
   providers: [ConsentimientoInstitucionalService, CorreoAccesoOutboxService, AuthCorreoEventosService, AuthService, ActivacionService, JwtStrategy, SesionesLimpiezaService],
   controllers: [AuthController],
-  exports: [ConsentimientoInstitucionalService, ActivacionService, CorreoAccesoOutboxService],
+  exports: [ConsentimientoInstitucionalService, ActivacionService, CorreoAccesoOutboxService, AuthCorreoEventosService],
 })
 export class AuthModule {}
