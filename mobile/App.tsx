@@ -124,11 +124,24 @@ function AppInterna() {
   useEffect(() => {
     if (Platform.OS !== "web" || typeof document === "undefined") return;
     document.title = marca.nombrePortalAlumno || "Sistema Escolar Portal Alumno";
+    const enlaceActual = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
     if (marca.faviconAlumnoUrl) {
-      let icono = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-      if (!icono) { icono = document.createElement('link'); icono.rel = 'icon'; document.head.appendChild(icono); }
+      let icono = enlaceActual;
+      if (!icono) {
+        icono = document.createElement('link');
+        icono.rel = 'icon';
+        icono.dataset.escolarFaviconAgregado = 'true';
+        document.head.appendChild(icono);
+      } else if (icono.dataset.escolarFaviconOriginal === undefined) {
+        icono.dataset.escolarFaviconOriginal = icono.getAttribute('href') ?? '';
+      }
       icono.type = 'image/png';
       icono.href = archivosBase + marca.faviconAlumnoUrl;
+    } else if (enlaceActual?.dataset.escolarFaviconAgregado === 'true') {
+      enlaceActual.remove();
+    } else if (enlaceActual?.dataset.escolarFaviconOriginal !== undefined) {
+      enlaceActual.setAttribute('href', enlaceActual.dataset.escolarFaviconOriginal);
+      delete enlaceActual.dataset.escolarFaviconOriginal;
     }
   }, [marca.nombrePortalAlumno, marca.faviconAlumnoUrl]);
   const consultaMarca = useRef<Promise<void> | null>(null);
