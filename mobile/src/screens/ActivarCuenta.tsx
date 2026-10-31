@@ -378,13 +378,17 @@ export default function ActivarCuentaScreen({
             </TouchableOpacity>
           )}
           <TouchableOpacity
-            style={styles.enlace}
+            style={terminado
+              ? [styles.boton, { backgroundColor: marca.colorPrimario, marginTop: espacio.md }]
+              : styles.enlace}
             disabled={enviando}
             onPress={volver}
             accessibilityRole="button"
             accessibilityLabel="Volver a iniciar sesión"
           >
-            <Text>Volver a iniciar sesión</Text>
+            <Text style={terminado ? { color: textoSobreFondo(marca.colorPrimario), fontWeight: '700' } : undefined}>
+              Volver a iniciar sesión
+            </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
