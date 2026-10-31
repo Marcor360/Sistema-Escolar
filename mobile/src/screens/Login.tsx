@@ -62,13 +62,15 @@ export default function LoginScreen({ aviso = "" }: { aviso?: string } = {}) {
       >
         <View style={[estilos.caja, { borderTopColor: marca.colorAcento, padding:diseno.compacto?16:24 }]}>
           {marca.logoUrl && !logoFallo ? (
-            <Image
-              source={{ uri: archivosBase + marca.logoUrl }}
-              style={estilos.logo}
-              resizeMode="contain"
-              onError={() => setLogoFallo(true)}
-              accessibilityLabel={marca.nombreInstitucion}
-            />
+            <View style={[estilos.logoFondo, { backgroundColor: marca.colorPrimario }]}>
+              <Image
+                source={{ uri: archivosBase + marca.logoUrl }}
+                style={estilos.logo}
+                resizeMode="contain"
+                onError={() => setLogoFallo(true)}
+                accessibilityLabel={marca.nombreInstitucion}
+              />
+            </View>
           ) : (
             <View
               style={[estilos.monograma, { borderColor: marca.colorPrimario }]}
@@ -193,7 +195,8 @@ const estilos = StyleSheet.create({
     marginBottom: 10,
   },
   monogramaTexto: { fontSize: 18, color: colores.pizarra, fontWeight: "600" },
-  logo: { width: 160, height: 72, alignSelf: "center", marginBottom: 10 },
+  logo: { width: 160, height: 72, alignSelf: "center" },
+  logoFondo: { borderRadius: 12, padding: 12, marginBottom: 14, alignSelf: "center" },
   titulo: {
     fontSize: tipografia.titulo,
     textAlign: "center",
