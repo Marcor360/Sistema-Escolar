@@ -1,5 +1,5 @@
 import { AsignarCorreoAlumnoDto } from './usuarios.dto';
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { UsuariosService } from './usuarios.service';
@@ -40,6 +40,7 @@ export class UsuariosController {
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   async promocionarAlumno(@Body() dto: VincularAlumnoPersonalDto, @CurrentUser() actor: JwtUser) {
     const resultado = await this.service.vincularAlumnoPersonal(dto, actor);
+    if (!resultado.email) throw new BadRequestException('La cuenta laboral no tiene correo institucional');
     await this.activacion.solicitar(resultado.email);
     return resultado;
   }
