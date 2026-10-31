@@ -141,7 +141,7 @@ export function RecorridoAlumno({
           </Text>
           <View accessibilityLabel={`Progreso: paso ${actual + 1} de ${pasosAlumno.length}`}
             style={{ height: 5, borderRadius: 3, backgroundColor: colores.linea, marginTop: 10 }}>
-            <View style={{ width: `${((actual + 1) / pasosAlumno.length) * 100}%`, height: 5, borderRadius: 3, backgroundColor: marca.colorPrimario }} />
+            <View style={{ width: `${((actual + 1) / pasosAlumno.length) * 100}%` as const, height: 5, borderRadius: 3, backgroundColor: marca.colorPrimario }} />
           </View>
           <Text
             accessibilityRole="header"
