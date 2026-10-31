@@ -1,3 +1,4 @@
+import { CampoPassword } from '../components/CampoPassword';
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
@@ -18,6 +19,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [token, setToken] = useState('');
   const [nueva, setNueva] = useState('');
+  const [confirmacion, setConfirmacion] = useState('');
   const [error, setError] = useState('');
   const [aviso, setAviso] = useState(() => {
     const mensaje = (location.state as { aviso?: unknown } | null)?.aviso;
@@ -67,6 +69,7 @@ export default function LoginPage() {
   const restablecer = async (e: FormEvent) => {
     e.preventDefault();
     if (solicitudEnCurso.current) return;
+    if (nueva !== confirmacion) { setError('Las contraseñas no coinciden.'); return; }
     solicitudEnCurso.current = true;
     limpiar();
     setEnviando(true);
@@ -100,11 +103,12 @@ export default function LoginPage() {
   const activarCuenta = async (e: FormEvent) => {
     e.preventDefault();
     if (activacionEnCurso.current) return;
+    if (nueva !== confirmacion) { setError('Las contraseñas no coinciden.'); return; }
     activacionEnCurso.current = true;
     limpiar(); setEnviando(true);
     try {
       const { data } = await api.post<{ mensaje: string }>('/auth/activar-cuenta', { token: token.trim(), password: nueva });
-      setAviso(data.mensaje); setToken(''); setNueva(''); setPassword(''); setModo('entrar');
+      setAviso(data.mensaje); setToken(''); setNueva(''); setConfirmacion(''); setPassword(''); setModo('entrar');
     } catch (err) { setError(mensajeDeError(err)); }
     finally { activacionEnCurso.current = false; setEnviando(false); }
   };
@@ -129,7 +133,7 @@ export default function LoginPage() {
             </div>
             <div className="campo">
               <label htmlFor="password">Contraseña</label>
-              <input disabled={enviando} id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <CampoPassword disabled={enviando} id="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
             </div>
             {error && <p className="mensaje-error" role="alert">{error}</p>}
             {aviso && <p className="mensaje-ok" role="status">{aviso}</p>}
@@ -187,10 +191,14 @@ export default function LoginPage() {
             </div>
             <div className="campo">
               <label htmlFor="activar-pass">Nueva contraseña (mínimo 8 caracteres)</label>
-              <input disabled={enviando} id="activar-pass" type="password" autoComplete="new-password" value={nueva} onChange={(e) => setNueva(e.target.value)} minLength={8} required />
+              <CampoPassword disabled={enviando} id="activar-pass" autoComplete="new-password" value={nueva} onChange={(e) => setNueva(e.target.value)} minLength={8} required />
+            </div>
+            <div className="campo">
+              <label htmlFor="activar-confirmar">Confirmar nueva contraseña</label>
+              <CampoPassword disabled={enviando} id="activar-confirmar" etiquetaControl="confirmación de contraseña" autoComplete="new-password" value={confirmacion} onChange={(e) => setConfirmacion(e.target.value)} required />
             </div>
             {error && <p role="alert" className="mensaje-error">{error}</p>}
-            <button className="boton" disabled={enviando || token.length !== 64}>{enviando ? 'Activando…' : 'Activar mi cuenta'}</button>
+            <button className="boton" disabled={enviando || token.length !== 64 || nueva !== confirmacion}>{enviando ? 'Activando…' : 'Activar mi cuenta'}</button>
             <button type="button" className="enlace" disabled={enviando} onClick={() => { limpiar(); setToken(''); setNueva(''); setModo('activar-solicitar'); }}>Solicitar otro código</button>
             <button type="button" className="enlace" disabled={enviando} onClick={() => { limpiar(); setToken(''); setNueva(''); setModo('entrar'); }}>Volver al inicio</button>
           </fieldset></form>
@@ -207,10 +215,14 @@ export default function LoginPage() {
             </div>
             <div className="campo">
               <label htmlFor="nueva">Nueva contraseña (mínimo 8)</label>
-              <input disabled={enviando} id="nueva" type="password" autoComplete="new-password" minLength={8} value={nueva} onChange={(e) => setNueva(e.target.value)} required />
+              <CampoPassword disabled={enviando} id="nueva" autoComplete="new-password" minLength={8} value={nueva} onChange={(e) => setNueva(e.target.value)} required />
+            </div>
+            <div className="campo">
+              <label htmlFor="rec-confirmar">Confirmar nueva contraseña</label>
+              <CampoPassword disabled={enviando} id="rec-confirmar" etiquetaControl="confirmación de contraseña" autoComplete="new-password" value={confirmacion} onChange={(e) => setConfirmacion(e.target.value)} required />
             </div>
             {error && <p className="mensaje-error" role="alert">{error}</p>}
-            <button className="boton" style={{ width: '100%' }} disabled={enviando}>
+            <button className="boton" style={{ width: '100%' }} disabled={enviando || nueva !== confirmacion}>
               {enviando ? 'Guardando…' : 'Restablecer contraseña'}
             </button>
             <button type="button" className="enlace" disabled={enviando} onClick={() => { limpiar(); setToken(''); setNueva(''); setModo('entrar'); }}>
