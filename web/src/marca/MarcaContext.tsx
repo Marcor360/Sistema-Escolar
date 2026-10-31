@@ -102,11 +102,24 @@ function aplicarMarca(marca: Marca) {
   raiz.setProperty('--texto-sobre-pizarra', textoAccesible(marca.colorPrimario));
   raiz.setProperty('--texto-sobre-pizarra-2', textoAccesible(marca.colorPrimarioOscuro));
   raiz.setProperty('--texto-sobre-dorado', textoAccesible(marca.colorAcento));
+  const enlaceActual = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
   if (marca.faviconAdministrativoUrl) {
-    let enlace = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-    if (!enlace) { enlace = document.createElement('link'); enlace.rel = 'icon'; document.head.appendChild(enlace); }
+    let enlace = enlaceActual;
+    if (!enlace) {
+      enlace = document.createElement('link');
+      enlace.rel = 'icon';
+      enlace.dataset.escolarFaviconAgregado = 'true';
+      document.head.appendChild(enlace);
+    } else if (enlace.dataset.escolarFaviconOriginal === undefined) {
+      enlace.dataset.escolarFaviconOriginal = enlace.getAttribute('href') ?? '';
+    }
     enlace.type = 'image/png';
     enlace.href = archivosBase + marca.faviconAdministrativoUrl;
+  } else if (enlaceActual?.dataset.escolarFaviconAgregado === 'true') {
+    enlaceActual.remove();
+  } else if (enlaceActual?.dataset.escolarFaviconOriginal !== undefined) {
+    enlaceActual.setAttribute('href', enlaceActual.dataset.escolarFaviconOriginal);
+    delete enlaceActual.dataset.escolarFaviconOriginal;
   }
   document.title = document.querySelector('[data-portal-sistema="ALUMNO"]') ? marca.nombrePortalAlumno || 'Sistema Escolar Portal Alumno' : marca.nombreAdministrativo || 'Sistema Escolar Administrativo';
 }
