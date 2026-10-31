@@ -77,7 +77,7 @@ export default function LoginPage() {
       await api.post('/auth/reset-password', { token: token.trim(), password: nueva });
       setAviso('Contraseña restablecida. Ya puedes iniciar sesión.');
       setModo('entrar');
-      setPassword(''); setToken(''); setNueva('');
+      setPassword(''); setToken(''); setNueva(''); setConfirmacion('');
     } catch (err) {
       setError(mensajeDeError(err));
     } finally {
@@ -140,7 +140,7 @@ export default function LoginPage() {
             <button className="boton" style={{ width: '100%' }} disabled={enviando}>
               {enviando ? 'Verificando…' : 'Entrar'}
             </button>
-            <button type="button" className="enlace" disabled={enviando} onClick={() => { limpiar(); setToken(''); setNueva(''); setModo('solicitar'); }}>
+            <button type="button" className="enlace" disabled={enviando} onClick={() => { limpiar(); setToken(''); setNueva(''); setConfirmacion(''); setModo('solicitar'); }}>
               ¿Olvidaste tu contraseña?
             </button>
             <button type="button" className="enlace" disabled={enviando} onClick={() => { limpiar(); setModo('activar-solicitar'); }}>
@@ -163,7 +163,7 @@ export default function LoginPage() {
             <button className="boton" style={{ width: '100%' }} disabled={enviando}>
               {enviando ? 'Enviando…' : 'Enviar código'}
             </button>
-            <button type="button" className="enlace" disabled={enviando} onClick={() => { limpiar(); setToken(''); setNueva(''); setModo('entrar'); }}>
+            <button type="button" className="enlace" disabled={enviando} onClick={() => { limpiar(); setToken(''); setNueva(''); setConfirmacion(''); setModo('entrar'); }}>
               Volver a iniciar sesión
             </button>
           </form>
@@ -178,7 +178,7 @@ export default function LoginPage() {
             </div>
             {error && <p role="alert" className="mensaje-error">{error}</p>}
             <button className="boton" disabled={enviando}>{enviando ? 'Solicitando…' : 'Solicitar código de activación'}</button>
-            <button type="button" className="enlace" disabled={enviando} onClick={() => { limpiar(); setToken(''); setNueva(''); setModo('entrar'); }}>Volver al inicio</button>
+            <button type="button" className="enlace" disabled={enviando} onClick={() => { limpiar(); setToken(''); setNueva(''); setConfirmacion(''); setModo('entrar'); }}>Volver al inicio</button>
           </fieldset></form>
         )}
         {modo === 'activar-codigo' && (
@@ -199,8 +199,8 @@ export default function LoginPage() {
             </div>
             {error && <p role="alert" className="mensaje-error">{error}</p>}
             <button className="boton" disabled={enviando || token.length !== 64 || nueva !== confirmacion}>{enviando ? 'Activando…' : 'Activar mi cuenta'}</button>
-            <button type="button" className="enlace" disabled={enviando} onClick={() => { limpiar(); setToken(''); setNueva(''); setModo('activar-solicitar'); }}>Solicitar otro código</button>
-            <button type="button" className="enlace" disabled={enviando} onClick={() => { limpiar(); setToken(''); setNueva(''); setModo('entrar'); }}>Volver al inicio</button>
+            <button type="button" className="enlace" disabled={enviando} onClick={() => { limpiar(); setToken(''); setNueva(''); setConfirmacion(''); setModo('activar-solicitar'); }}>Solicitar otro código</button>
+            <button type="button" className="enlace" disabled={enviando} onClick={() => { limpiar(); setToken(''); setNueva(''); setConfirmacion(''); setModo('entrar'); }}>Volver al inicio</button>
           </fieldset></form>
         )}
 
@@ -225,7 +225,7 @@ export default function LoginPage() {
             <button className="boton" style={{ width: '100%' }} disabled={enviando || nueva !== confirmacion}>
               {enviando ? 'Guardando…' : 'Restablecer contraseña'}
             </button>
-            <button type="button" className="enlace" disabled={enviando} onClick={() => { limpiar(); setToken(''); setNueva(''); setModo('entrar'); }}>
+            <button type="button" className="enlace" disabled={enviando} onClick={() => { limpiar(); setToken(''); setNueva(''); setConfirmacion(''); setModo('entrar'); }}>
               Volver a iniciar sesión
             </button>
           </form>
