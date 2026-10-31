@@ -882,6 +882,22 @@
       "estado": "pendiente",
       "evidencias": [],
       "responsable": "Institución/QA (por designar)"
+    },
+    {
+      "id": "UAT-64",
+      "rol": "SUPERADMIN",
+      "escenario": "Configurar favicon PNG del administrativo y del Portal Alumno, verificar tamaño, cabeceras y persistencia, sustituirlo y retirarlo; subir logo alumno distinto del institucional; comprobar fallback, navegación, accesibilidad y protección de archivos privados.",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver",
+        "android",
+        "ios"
+      ],
+      "estado": "pendiente",
+      "responsable": "Institución/QA (por designar)",
+      "evidencias": []
     }
   ],
   "confirmacionesSolicitante": {
