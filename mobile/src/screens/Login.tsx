@@ -28,7 +28,7 @@ export default function LoginScreen({ aviso = "" }: { aviso?: string } = {}) {
   const enCurso = useRef(false);
   const [mostrarPassword, setMostrarPassword] = useState(false);
   const [logoFallo, setLogoFallo] = useState(false);
-  useEffect(() => setLogoFallo(false), [marca.logoUrl]);
+  useEffect(() => setLogoFallo(false), [marca.logoUrl, marca.logoAlumnoUrl]);
   const [activacionVisible, setActivacionVisible] = useState(false);
   const [recuperacionVisible, setRecuperacionVisible] = useState(false);
   const passwordRef = useRef<TextInput>(null);
@@ -61,9 +61,9 @@ export default function LoginScreen({ aviso = "" }: { aviso?: string } = {}) {
         keyboardShouldPersistTaps="handled"
       >
         <View style={[estilos.caja, { borderTopColor: marca.colorAcento, padding:diseno.compacto?16:24 }]}>
-          {marca.logoUrl && !logoFallo ? (
+          {(marca.logoAlumnoUrl || marca.logoUrl) && !logoFallo ? (
             <Image
-              source={{ uri: archivosBase + marca.logoUrl }}
+              source={{ uri: archivosBase + (marca.logoAlumnoUrl || marca.logoUrl) }}
               style={estilos.logo}
               resizeMode="contain"
               onError={() => setLogoFallo(true)}

@@ -1,5 +1,5 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { api } from '../api/client';
+import { api, archivosBase } from '../api/client';
 
 export type Marca = {
   nombreAdministrativo?: string;
@@ -7,6 +7,9 @@ export type Marca = {
   nombreInstitucion: string;
   nombreCorto: string;
   logoUrl: string | null;
+  faviconAdministrativoUrl?: string | null;
+  faviconAlumnoUrl?: string | null;
+  logoAlumnoUrl?: string | null;
   colorPrimario: string;
   colorPrimarioOscuro: string;
   colorAcento: string;
@@ -17,7 +20,7 @@ export type Marca = {
 
 export const MARCA_POR_DEFECTO: Marca = {
   nombreAdministrativo: 'Sistema Escolar Administrativo', nombrePortalAlumno: 'Sistema Escolar Portal Alumno',
-  nombreInstitucion: 'Sistema Escolar', nombreCorto: 'SE', logoUrl: null,
+  nombreInstitucion: 'Sistema Escolar', nombreCorto: 'SE', logoUrl: null, faviconAdministrativoUrl: null, faviconAlumnoUrl: null, logoAlumnoUrl: null,
   colorPrimario: '#14343B', colorPrimarioOscuro: '#0E262B', colorAcento: '#C79A3C', mensajeBienvenida: '', tamanoLogo: 'NORMAL', actualizadoEn: '',
 };
 
@@ -55,6 +58,9 @@ export function esMarcaWebValida(valor: unknown): valor is Marca {
     )
     && (datos.logoUrl === null || (typeof datos.logoUrl === 'string'
       && /^\/uploads\/marca-logo-[0-9a-f-]+\.(png|jpe?g|webp)$/i.test(datos.logoUrl)))
+    && [datos.faviconAdministrativoUrl, datos.faviconAlumnoUrl, datos.logoAlumnoUrl].every(
+      (url) => url === undefined || url === null || (typeof url === 'string' &&
+        /^\/uploads\/marca-(?:favicon-administrativo|favicon-alumno|logo-alumno)-[0-9a-f-]+\.(?:png|webp)$/i.test(url)))
     && (datos.mensajeBienvenida === undefined || typeof datos.mensajeBienvenida === 'string')
     && (datos.tamanoLogo === undefined || ['NORMAL', 'GRANDE'].includes(datos.tamanoLogo))
     && typeof datos.actualizadoEn === 'string';
@@ -75,6 +81,9 @@ function marcaIgual(anterior: Marca, siguiente: Marca): boolean {
     && anterior.nombreInstitucion === siguiente.nombreInstitucion
     && anterior.nombreCorto === siguiente.nombreCorto
     && anterior.logoUrl === siguiente.logoUrl
+    && anterior.faviconAdministrativoUrl === siguiente.faviconAdministrativoUrl
+    && anterior.faviconAlumnoUrl === siguiente.faviconAlumnoUrl
+    && anterior.logoAlumnoUrl === siguiente.logoAlumnoUrl
     && anterior.colorPrimario === siguiente.colorPrimario
     && anterior.colorPrimarioOscuro === siguiente.colorPrimarioOscuro
     && anterior.colorAcento === siguiente.colorAcento
@@ -93,6 +102,12 @@ function aplicarMarca(marca: Marca) {
   raiz.setProperty('--texto-sobre-pizarra', textoAccesible(marca.colorPrimario));
   raiz.setProperty('--texto-sobre-pizarra-2', textoAccesible(marca.colorPrimarioOscuro));
   raiz.setProperty('--texto-sobre-dorado', textoAccesible(marca.colorAcento));
+  if (marca.faviconAdministrativoUrl) {
+    let enlace = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    if (!enlace) { enlace = document.createElement('link'); enlace.rel = 'icon'; document.head.appendChild(enlace); }
+    enlace.type = 'image/png';
+    enlace.href = archivosBase + marca.faviconAdministrativoUrl;
+  }
   document.title = document.querySelector('[data-portal-sistema="ALUMNO"]') ? marca.nombrePortalAlumno || 'Sistema Escolar Portal Alumno' : marca.nombreAdministrativo || 'Sistema Escolar Administrativo';
 }
 

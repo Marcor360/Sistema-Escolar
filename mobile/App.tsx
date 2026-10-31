@@ -121,7 +121,16 @@ function AppInterna() {
   const [listo, setListo] = useState(false);
   const [marca, setMarca] = useState<Marca>(MARCA_POR_DEFECTO);
   const marcaActual = useRef<Marca>(MARCA_POR_DEFECTO);
-  useEffect(() => { if (Platform.OS === "web" && typeof document !== "undefined") document.title = marca.nombrePortalAlumno || "Sistema Escolar Portal Alumno"; }, [marca.nombrePortalAlumno]);
+  useEffect(() => {
+    if (Platform.OS !== "web" || typeof document === "undefined") return;
+    document.title = marca.nombrePortalAlumno || "Sistema Escolar Portal Alumno";
+    if (marca.faviconAlumnoUrl) {
+      let icono = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+      if (!icono) { icono = document.createElement('link'); icono.rel = 'icon'; document.head.appendChild(icono); }
+      icono.type = 'image/png';
+      icono.href = archivosBase + marca.faviconAlumnoUrl;
+    }
+  }, [marca.nombrePortalAlumno, marca.faviconAlumnoUrl]);
   const consultaMarca = useRef<Promise<void> | null>(null);
   const [marcaLista, setMarcaLista] = useState(false);
   const [errorInicio, setErrorInicio] = useState("");
