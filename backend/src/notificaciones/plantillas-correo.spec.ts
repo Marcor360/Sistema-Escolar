@@ -44,7 +44,7 @@ it('distingue activación de recuperación y explica los pasos, caducidad y soli
   expect(html).toContain('solo se puede usar una vez');
   expect(html).toContain('Tu contraseña todavía no ha cambiado');
   expect(html).toContain('No lo pegues en Activar cuenta');
-  expect(html).toContain('no amplía su plazo');
+  expect(html).toContain('el anterior dejará de funcionar');
   expect(plantillaInvitacion('a'.repeat(64))).toContain('64 caracteres');
 });
 
