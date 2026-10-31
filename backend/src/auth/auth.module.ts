@@ -11,6 +11,7 @@ import { BitacoraActividad } from '../entities/bitacora-actividad.entity';
 import { Alumno } from '../entities/alumno.entity';
 import { Docente } from '../entities/docente.entity';
 import { CorreoAccesoOutboxService } from './correo-acceso-outbox.service';
+import { AuthCorreoEventosService } from './auth-correo-eventos.service';
 import { AuthService } from './auth.service';
 import { ActivacionService } from './activacion.service';
 import { AuthController } from './auth.controller';
@@ -36,7 +37,7 @@ import { ConfiguracionModule } from '../configuracion/configuracion.module';
       },
     }),
   ],
-  providers: [ConsentimientoInstitucionalService, CorreoAccesoOutboxService, AuthService, ActivacionService, JwtStrategy, SesionesLimpiezaService],
+  providers: [ConsentimientoInstitucionalService, CorreoAccesoOutboxService, AuthCorreoEventosService, AuthService, ActivacionService, JwtStrategy, SesionesLimpiezaService],
   controllers: [AuthController],
   exports: [ConsentimientoInstitucionalService, ActivacionService, CorreoAccesoOutboxService],
 })

@@ -274,3 +274,27 @@ describe('AuthService.logout', () => {
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 });
+
+describe('Correo de seguridad tras inicio de sesión', () => {
+  it('encola un aviso por sesión y no bloquea el acceso si la cola falla', async () => {
+    const cuenta = {
+      id: 8, email: 'prueba@example.test', nombreCompleto: 'Prueba',
+      passwordHash: await bcrypt.hash('Segura123', 4), roles: [{ clave: 'ADMINISTRATIVO' }],
+    };
+    const sesiones = { create: jest.fn((valor: unknown) => valor), save: jest.fn().mockResolvedValue(undefined) };
+    const avisos = { encolar: jest.fn().mockRejectedValue(new Error('cola desconectada')) };
+    const service = new AuthService(
+      stub<Repository<Usuario>>({ findOne: jest.fn().mockResolvedValue(cuenta) }),
+      stub<Repository<PasswordResetToken>>({}),
+      stub<Repository<BitacoraActividad>>({}),
+      stub<JwtService>({ sign: jest.fn().mockReturnValue('token') }),
+      stub<CorreoAccesoOutboxService>({}),
+      stub<ConfigService>({}),
+      stub<DataSource>({ getRepository: jest.fn(() => sesiones) }),
+      avisos as never,
+    );
+    const resultado = await service.login('prueba@example.test', 'Segura123', 'WEB');
+    expect(resultado.accessToken).toBe('token');
+    expect(avisos.encolar).toHaveBeenCalledWith(8, 'INGRESO', expect.any(String));
+  });
+});

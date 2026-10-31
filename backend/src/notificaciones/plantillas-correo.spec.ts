@@ -1,4 +1,4 @@
-import { plantillaInvitacion, plantillaRecuperacion, plantillaApoyoAcceso } from './plantillas-correo';
+import { plantillaInvitacion, plantillaRecuperacion, plantillaApoyoAcceso, plantillaEventoSeguridad } from './plantillas-correo';
 
 describe('Plantillas institucionales de correo', () => {
   it('incluye contenido accesible y código de activación de un solo uso', () => {
@@ -49,3 +49,13 @@ it('distingue activación de recuperación y explica los pasos, caducidad y soli
 });
 
 it('el aviso de apoyo escapa la cuenta y evita pedir cambios automáticos',()=>{const html=plantillaApoyoAcceso('<img src=x>');expect(html).toContain('&lt;img');expect(html).not.toContain('<img');expect(html).toContain('no requiere que cambies');expect(html).toContain('verifica su identidad');});
+
+it('notifica ingreso y cambios, con aviso para reportar operaciones no solicitadas', () => {
+  const ingreso = plantillaEventoSeguridad('INGRESO');
+  const recuperacion = plantillaEventoSeguridad('RECUPERACION_EXITOSA');
+  const cambio = plantillaEventoSeguridad('CAMBIO_PASSWORD');
+  expect(ingreso.html).toContain('Bienvenido');
+  expect(recuperacion.html).toContain('Sistemas de IUA');
+  expect(cambio.html).toContain('coordinador académico');
+  expect(ingreso.html).not.toContain('contraseña actual');
+});
