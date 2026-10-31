@@ -1,9 +1,9 @@
+import { CampoPassword } from '../components/CampoPassword';
 import { useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  TextInput,
   TouchableOpacity,
 } from "react-native";
 import { Text } from "../components/Texto";
@@ -73,10 +73,9 @@ export default function CambioPasswordInicial({
             tendrás que ingresar de nuevo con tu nueva contraseña.
           </Text>
           <Text>Contraseña temporal</Text>
-          <TextInput
+          <CampoPassword
             style={input}
             accessibilityLabel="Contraseña temporal"
-            secureTextEntry
             value={actual}
             onChangeText={setActual}
             editable={!cambiando}
@@ -85,10 +84,9 @@ export default function CambioPasswordInicial({
             autoComplete="current-password"
           />
           <Text>Nueva contraseña (mínimo 8 caracteres)</Text>
-          <TextInput
+          <CampoPassword
             style={input}
             accessibilityLabel="Nueva contraseña"
-            secureTextEntry
             value={nueva}
             onChangeText={setNueva}
             editable={!cambiando}
@@ -97,10 +95,9 @@ export default function CambioPasswordInicial({
             autoComplete="new-password"
           />
           <Text>Confirmar nueva contraseña</Text>
-          <TextInput
+          <CampoPassword
             style={input}
             accessibilityLabel="Confirmar nueva contraseña"
-            secureTextEntry
             value={confirmacion}
             onChangeText={setConfirmacion}
             editable={!cambiando}

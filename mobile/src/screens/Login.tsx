@@ -1,3 +1,4 @@
+import { CampoPassword } from '../components/CampoPassword';
 import { useDisenoAlumno } from "../use-diseno-alumno";
 import { useRef, useEffect, useState } from "react";
 import {
@@ -26,7 +27,6 @@ export default function LoginScreen({ aviso = "" }: { aviso?: string } = {}) {
   const [error, setError] = useState("");
   const [enviando, setEnviando] = useState(false);
   const enCurso = useRef(false);
-  const [mostrarPassword, setMostrarPassword] = useState(false);
   const [logoFallo, setLogoFallo] = useState(false);
   useEffect(() => setLogoFallo(false), [marca.logoUrl]);
   const [activacionVisible, setActivacionVisible] = useState(false);
@@ -103,10 +103,9 @@ export default function LoginScreen({ aviso = "" }: { aviso?: string } = {}) {
             onSubmitEditing={() => passwordRef.current?.focus()}
           />
           <Text style={estilos.etiqueta}>Contraseña</Text>
-          <TextInput
+          <CampoPassword
             style={estilos.input}
             ref={passwordRef}
-            secureTextEntry={!mostrarPassword}
             value={password}
             onChangeText={setPassword}
             accessibilityLabel="Contraseña"
@@ -119,19 +118,6 @@ export default function LoginScreen({ aviso = "" }: { aviso?: string } = {}) {
               void entrar();
             }}
           />
-          <TouchableOpacity
-            style={estilos.controlPassword}
-            onPress={() => setMostrarPassword((v) => !v)}
-            accessibilityRole="button"
-            accessibilityLabel={
-              mostrarPassword ? "Ocultar contraseña" : "Mostrar contraseña"
-            }
-            accessibilityState={{ expanded: mostrarPassword }}
-          >
-            <Text>
-              {mostrarPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-            </Text>
-          </TouchableOpacity>
           {error !== "" && (
             <Text style={estilos.error} accessibilityRole="alert">
               {error}

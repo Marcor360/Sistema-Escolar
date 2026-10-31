@@ -1,3 +1,4 @@
+import { CampoPassword } from '../components/CampoPassword';
 import { useDisenoAlumno } from "../use-diseno-alumno";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -33,7 +34,6 @@ export default function ActivarCuentaScreen({
     ? "escolar_recuperacion_reenvio"
     : CLAVE_REENVIO;
   const longitud = recuperacion ? 32 : 64;
-  const [visible, setVisible] = useState(false);
   const [paso, setPaso] = useState<"correo" | "codigo" | "password">("correo");
   const [email, setEmail] = useState(correoInicial);
   const [token, setToken] = useState("");
@@ -138,7 +138,6 @@ export default function ActivarCuentaScreen({
           ? "Tu contraseña se actualizó. Vuelve a iniciar sesión con la nueva contraseña."
           : data.mensaje,
       );
-      setVisible(false);
       setToken("");
       setPassword("");
       setConfirmacion("");
@@ -206,7 +205,7 @@ export default function ActivarCuentaScreen({
                   ? "Escribe tu correo institucional. Si la cuenta permite recuperar el acceso, recibirás instrucciones para cambiar tu contraseña."
                   : "Ingresa tu correo institucional para comenzar a activar tu cuenta."
                 : paso === "codigo"
-                  ? `Copia el código de ${longitud} caracteres del correo de ${recuperacion ? "recuperación" : "activación"}. Revisa también Correo no deseado. Vence en una hora desde la solicitud.`
+                  ? `Copia el código de ${longitud} caracteres del correo de ${recuperacion ? "recuperación" : "activación"}. Revisa también Correo no deseado. Vence en una hora desde la solicitud. Solicitar uno nuevo invalida el anterior.`
                   : "Escribe una contraseña personal de al menos 8 caracteres y repítela. El código se comprobará al guardar."}
             </Text>
           )}
@@ -283,45 +282,30 @@ export default function ActivarCuentaScreen({
               <Text style={styles.etiqueta}>
                 Nueva contraseña (mínimo 8 caracteres)
               </Text>
-              <TextInput
+              <CampoPassword
                 accessibilityLabel="Nueva contraseña"
                 style={styles.input}
+                etiquetaControl="contraseña nueva"
                 value={password}
                 onChangeText={setPassword}
-                secureTextEntry={!visible}
                 autoComplete="new-password"
                 autoCapitalize="none"
                 autoCorrect={false}
                 editable={!enviando}
               />
               <Text style={styles.etiqueta}>Confirmar nueva contraseña</Text>
-              <TextInput
+              <CampoPassword
                 accessibilityLabel="Confirmar nueva contraseña"
                 style={styles.input}
+                etiquetaControl="confirmación de contraseña"
                 value={confirmacion}
                 onChangeText={setConfirmacion}
-                secureTextEntry={!visible}
                 autoComplete="new-password"
                 autoCapitalize="none"
                 autoCorrect={false}
                 editable={!enviando}
               />
             </>
-          )}
-          {!terminado && paso === "password" && (
-            <TouchableOpacity
-              style={styles.enlace}
-              disabled={enviando}
-              onPress={() => setVisible((v) => !v)}
-              accessibilityRole="button"
-              accessibilityLabel={
-                visible ? "Ocultar contraseñas" : "Mostrar contraseñas"
-              }
-            >
-              <Text>
-                {visible ? "Ocultar contraseñas" : "Mostrar contraseñas"}
-              </Text>
-            </TouchableOpacity>
           )}
           {!terminado && paso === "correo" && (
             <TouchableOpacity
