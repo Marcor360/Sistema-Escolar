@@ -2,7 +2,7 @@
   "expo": {
     "name": "Sistema Escolar Portal Alumno",
     "slug": "sistema-escolar",
-    "version": "1.35.12",
+    "version": "1.35.13",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "ios": {
