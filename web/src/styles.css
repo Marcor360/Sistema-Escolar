@@ -1148,3 +1148,16 @@ dialog :is(.boton.secundario, button.secundario) {
 dialog :is(.boton, button):focus-visible { outline: 3px solid var(--dorado); outline-offset: 3px; }
 
 .recorrido-areas {display:grid;gap:10px;max-height:45vh;overflow:auto;padding:3px}.recorrido-areas .boton {display:grid;white-space:normal;text-align:left;gap:5px;min-width:0}.recorrido-areas span{font-size:.85rem;font-weight:400}.recorrido-comprobar{border-left:3px solid var(--acento);padding-left:12px;line-height:1.6}.recorrido-panel{max-height:85dvh;overflow:auto;overscroll-behavior:contain}.recorrido-panel:focus{outline:2px solid var(--acento);outline-offset:3px}
+
+/* Campos de contraseña compartidos: botón accesible, área táctil de 44px. */
+.campo-password { position: relative; display: block; width: 100%; min-width: 0; }
+.campo-password > input { display: block; width: 100%; min-width: 0; padding-right: 56px; }
+.campo-password-ojo {
+  position: absolute; top: 50%; right: 3px; transform: translateY(-50%);
+  width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
+  padding: 0; border: 0; border-radius: 10px; background: transparent;
+  color: var(--tinta); cursor: pointer;
+}
+.campo-password-ojo:hover { background: rgba(25,39,44,.08); }
+.campo-password-ojo:disabled { cursor: not-allowed; opacity: .45; }
+.campo-password-ojo:focus-visible { outline: 3px solid var(--dorado); outline-offset: 2px; }
