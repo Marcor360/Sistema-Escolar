@@ -4,7 +4,7 @@ import { randomBytes } from 'crypto';
 import { hashPasswordNueva } from '../common/password-bcrypt';
 import { esMaestroRestringido } from '../common/politica-acceso';
 import { validarCambioRolesPersonal } from '../common/jerarquia-roles';
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, In, Repository, SelectQueryBuilder } from 'typeorm';
 import { Usuario } from '../entities/usuario.entity';
@@ -21,6 +21,7 @@ import { ActivacionToken } from '../entities/activacion-token.entity';
 import { BitacoraActividad } from '../entities/bitacora-actividad.entity';
 import { HistorialRolesUsuario } from '../entities/historial-roles-usuario.entity';
 import { JwtUser } from '../common/current-user.decorator';
+import { AuthCorreoEventosService } from '../auth/auth-correo-eventos.service';
 import { ScopeService } from '../planteles/scope.service';
 import { ListadoUsuariosDto } from './usuarios.dto';
 import { PaginacionDto } from '../common/paginacion.dto';
@@ -38,6 +39,7 @@ export class UsuariosService {
     @InjectRepository(Docente) private readonly docentes: Repository<Docente>,
     @InjectRepository(UsuarioPlantel) private readonly asignaciones: Repository<UsuarioPlantel>,
     private readonly scope: ScopeService,
+    @Optional() private readonly avisos?: AuthCorreoEventosService,
   ) {}
 
   /** Solo administradores del plantel y superadministradores pueden restablecer credenciales. */
@@ -78,6 +80,7 @@ export class UsuariosService {
       await usuarios.save(usuario);
       await manager.getRepository(PasswordResetToken).update({ usuarioId: id, usado: false }, { usado: true });
       await manager.getRepository(ActivacionToken).update({ usuarioId: id, usado: false }, { usado: true });
+      await this.avisos?.encolarEnTransaccion(manager, id, 'CAMBIO_PASSWORD');
       await manager.getRepository(BitacoraActividad).insert({ usuarioId: actor.sub, metodo: 'POST', ruta: '/api/usuarios/:id/restablecer-password', entidad: 'Usuario', entidadId: id, resultado: 'EXITO', statusCode: 201 });
       return { mensaje: 'Contraseña restablecida. El usuario deberá cambiarla al iniciar sesión.' };
     });
