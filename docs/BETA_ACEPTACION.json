@@ -1,6 +1,6 @@
 {
-  "version": "1.35.7",
-  "alcance": "Candidata 1.35.7: corrige el dominio del Portal Alumno a stagin-portal-alumno.iua.edu.mx y conserva identidad estructurada y formularios 1.35.5/1.35.6. Requiere migración incremental de segundo nombre. Sin despliegue ni UAT institucional acreditados.",
+  "version": "1.35.10",
+  "alcance": "Candidata 1.35.10: comunicados administrativos del alumno por plantel con borradores, previsualización, envío atómico y registro de entregas internas. Sin programación automática externa. UAT pendiente.",
   "puertas": [
     {
       "id": "ci_ultimo_sha",

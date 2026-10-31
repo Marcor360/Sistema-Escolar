@@ -60,7 +60,8 @@
         "migracion_cartera_integral.sql",
         "migracion_boletas_firmadas_portales.sql",
         "migracion_boleta_atenciones.sql",
-        "migracion_segundo_nombre_usuario.sql"
+        "migracion_segundo_nombre_usuario.sql",
+        "migracion_comunicados_alumnos.sql"
       ]
     },
     "sqlserver": {
@@ -121,7 +122,8 @@
         "migracion_cartera_integral.sql",
         "migracion_boletas_firmadas_portales.sql",
         "migracion_boleta_atenciones.sql",
-        "migracion_segundo_nombre_usuario.sql"
+        "migracion_segundo_nombre_usuario.sql",
+        "migracion_comunicados_alumnos.sql"
       ]
     }
   }
