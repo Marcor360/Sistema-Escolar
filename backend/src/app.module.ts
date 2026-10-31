@@ -1,3 +1,4 @@
+import { TitulacionModule } from './titulacion/titulacion.module';
 import { SeguimientoModule } from './seguimiento/seguimiento.module';
 import { TemariosModule } from './temarios/temarios.module';
 import { RecursamientosModule } from './recursamientos/recursamientos.module';
@@ -37,7 +38,7 @@ import { HealthModule } from './health/health.module';
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     TypeOrmModule.forRootAsync({ inject: [ConfigService], useFactory: typeOrmConfig }),
     TypeOrmModule.forFeature([BitacoraActividad]),
-    AuthModule, EliminacionModule, SeguimientoModule,
+    AuthModule, EliminacionModule, SeguimientoModule, TitulacionModule,
     UsuariosModule,
     AlumnosModule,
     DocentesModule,
