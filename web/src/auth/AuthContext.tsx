@@ -1,3 +1,4 @@
+import { CampoPassword } from '../components/CampoPassword';
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
 import { api, establecerToken, obtenerTokenSesion, renovarSesion, mensajeDeError, registrarSesionExpirada } from '../api/client';
 import { CLAVE_ACTIVIDAD, CLAVE_CIERRE, LIMITE_INACTIVIDAD_MS, cierreLocalActivo, guardarUltimaActividad, iniciarActividadAutenticada, inactividadVencida, leerUltimaActividad, registrarCierreLocal } from './inactividad';
@@ -215,8 +216,8 @@ function CambiarTemporal({ alCambiar }: { alCambiar: () => void }) {
       try { await api.post('/auth/cambiar-password', { actual, nueva }); alCambiar(); }
       catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); }
     }}>
-      <label htmlFor="temporal">Contraseña temporal</label><input id="temporal" type="password" required autoComplete="current-password" value={actual} onChange={(e) => setActual(e.target.value)} />
-      <label htmlFor="nueva">Nueva contraseña</label><input id="nueva" type="password" required minLength={8} autoComplete="new-password" value={nueva} onChange={(e) => setNueva(e.target.value)} />
+      <label htmlFor="temporal">Contraseña temporal</label><CampoPassword id="temporal" required autoComplete="current-password" value={actual} onChange={(e) => setActual(e.target.value)} />
+      <label htmlFor="nueva">Nueva contraseña</label><CampoPassword id="nueva" required minLength={8} autoComplete="new-password" value={nueva} onChange={(e) => setNueva(e.target.value)} />
       <button disabled={enviando}>Cambiar contraseña y volver a iniciar sesión</button>{error && <p role="alert">{error}</p>}
     </form></main>;
 }
