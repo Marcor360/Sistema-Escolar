@@ -669,9 +669,16 @@ async function esperarServidor() {
     await page.getByRole('button', { name: 'Solicitar código de activación', exact: true }).click();
     await page.getByLabel('Código de activación (64 caracteres)').fill('a'.repeat(64));
     await page.getByLabel('Nueva contraseña (mínimo 8 caracteres)').fill('Nueva_Segura_42!');
+    const confirmar = page.getByLabel('Confirmar nueva contraseña', { exact: true });
+    const activar = page.getByRole('button', { name: 'Activar mi cuenta', exact: true });
+    await expect(activar).toBeDisabled();
+    await confirmar.fill('Otra_Segura_42!');
+    await expect(activar).toBeDisabled();
+    await confirmar.fill('Nueva_Segura_42!');
+    await expect(activar).toBeEnabled();
     const activacion = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, width: innerWidth }));
     if (activacion.scroll > activacion.width + 1) throw Error('Activation overflow ' + JSON.stringify(activacion));
-    await page.getByRole('button', { name: 'Activar mi cuenta', exact: true }).click();
+    await activar.click();
     await expect(page.getByRole('button', { name: 'Entrar', exact: true })).toBeVisible();
     await expect(page.getByRole('status')).toContainText('Cuenta activada');
     console.log('PASS activation ' + width + 'x' + height);

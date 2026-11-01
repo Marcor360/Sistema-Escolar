@@ -17,6 +17,13 @@ it('solicita activación sin acreditar entrega, conserva errores y vuelve al log
   expect(screen.getByRole('status').textContent).toContain('Si está pendiente');
   fireEvent.change(screen.getByLabelText('Código de activación (64 caracteres)'), { target: { value: 'A'.repeat(64) } });
   fireEvent.change(screen.getByLabelText('Nueva contraseña (mínimo 8 caracteres)'), { target: { value: 'Nueva_Segura_42!' } });
+  const activar = screen.getByRole('button', { name: 'Activar mi cuenta' }) as HTMLButtonElement;
+  expect(activar.disabled).toBe(true);
+  fireEvent.change(screen.getByLabelText('Confirmar nueva contraseña'), { target: { value: 'Distinta_Segura_42!' } });
+  expect(activar.disabled).toBe(true);
+  expect(post).toHaveBeenCalledTimes(1);
+  fireEvent.change(screen.getByLabelText('Confirmar nueva contraseña'), { target: { value: 'Nueva_Segura_42!' } });
+  expect(activar.disabled).toBe(false);
   post.mockRejectedValueOnce(new Error('Código vencido'));
   fireEvent.click(screen.getByRole('button', { name: 'Activar mi cuenta' }));
   await screen.findByRole('alert');
@@ -37,6 +44,13 @@ it('guía la recuperación, normaliza el código y borra los secretos al termina
   expect(screen.getByText(/Copia los 32 caracteres/)).toBeTruthy();
   fireEvent.change(screen.getByLabelText('Código de recuperación'),{target:{value:' '+ 'A'.repeat(32)+' '}});
   fireEvent.change(screen.getByLabelText('Nueva contraseña (mínimo 8)'),{target:{value:'Nueva_Segura_42!'}});
+  const restablecer = screen.getByRole('button', { name: 'Restablecer contraseña' }) as HTMLButtonElement;
+  expect(restablecer.disabled).toBe(true);
+  fireEvent.change(screen.getByLabelText('Confirmar nueva contraseña'), { target: { value: 'Distinta_Segura_42!' } });
+  expect(restablecer.disabled).toBe(true);
+  expect(post).toHaveBeenCalledTimes(1);
+  fireEvent.change(screen.getByLabelText('Confirmar nueva contraseña'), { target: { value: 'Nueva_Segura_42!' } });
+  expect(restablecer.disabled).toBe(false);
   post.mockResolvedValueOnce({data:{mensaje:'Guardado'}});
   fireEvent.click(screen.getByRole('button',{name:'Restablecer contraseña'}));
   await screen.findByRole('button',{name:'Entrar'});

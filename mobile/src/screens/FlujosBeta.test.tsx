@@ -25,6 +25,7 @@ import {
   Linking,
   ScrollView,
   Text,
+  TextInput,
   TouchableOpacity,
 } from "react-native";
 import * as SecureStore from "expo-secure-store";
@@ -178,9 +179,11 @@ it("login bloquea doble toque incluso antes de renderizar el estado", async () =
 it("login oculta la contraseña inicialmente y permite verla sin cambiar el valor", async () => {
   await montar(<Login />);
   await escribir("Contraseña", "secreto");
+  const input = () => vista.root.findAllByType(TextInput).find(
+    node => node.props.accessibilityLabel === "Contraseña",
+  )!;
   expect(
-    vista.root.findByProps({ accessibilityLabel: "Contraseña" }).props
-      .secureTextEntry,
+    input().props.secureTextEntry,
   ).toBe(true);
   await act(async () =>
     vista.root
@@ -188,11 +191,10 @@ it("login oculta la contraseña inicialmente y permite verla sin cambiar el valo
       .props.onPress(),
   );
   expect(
-    vista.root.findByProps({ accessibilityLabel: "Contraseña" }).props
-      .secureTextEntry,
+    input().props.secureTextEntry,
   ).toBe(false);
   expect(
-    vista.root.findByProps({ accessibilityLabel: "Contraseña" }).props.value,
+    input().props.value,
   ).toBe("secreto");
 });
 it("cambio inicial no envía contraseñas distintas y permite corregir", async () => {
