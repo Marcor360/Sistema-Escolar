@@ -49,6 +49,12 @@
       "estado": "pendiente",
       "responsable": "Responsables de planteles",
       "evidencias": []
+    },
+    {
+      "id": "main_protegida",
+      "estado": "pendiente",
+      "responsable": "Administración del repositorio",
+      "evidencias": []
     }
   ],
   "confirmacionesSolicitante": {

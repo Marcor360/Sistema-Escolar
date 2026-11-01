@@ -4,7 +4,7 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const gates = JSON.parse(fs.readFileSync(path.join(root, 'docs/BETA_ACEPTACION.json'), 'utf8'));
 const version = JSON.parse(fs.readFileSync(path.join(root, 'backend/package.json'), 'utf8')).version;
-const required = ['ci_ultimo_sha', 'web_api_motores', 'android_fisico', 'ios_fisico', 'smtp_staging', 'antivirus_real', 'restore_operativo', 'uat_roles'];
+const required = ['ci_ultimo_sha', 'web_api_motores', 'android_fisico', 'ios_fisico', 'smtp_staging', 'antivirus_real', 'restore_operativo', 'uat_roles', 'main_protegida'];
 if (gates.version !== version || required.some((id) => !gates.puertas.some((g) => g.id === id))) throw Error('Puertas de beta incompletas o versión divergente');
 for (const g of gates.puertas) {
   if (!['pendiente', 'aprobada'].includes(g.estado) || !g.responsable || !Array.isArray(g.evidencias)) throw Error(`Puerta inválida: ${g.id}`);

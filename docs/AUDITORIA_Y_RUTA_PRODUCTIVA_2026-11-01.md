@@ -60,6 +60,17 @@ a expedientes o cobro. Eso no sustituye una auditoría independiente ni equivale
 a declarar seguro todo el repositorio. Los riesgos de entorno y de nuevas
 dependencias requieren seguimiento continuo.
 
+## Hallazgo pendiente de configuración externa
+
+**H07, alta operativa: main sin protección efectiva.** En la consulta de solo
+lectura de 1/nov/2026, GitHub devolvió HTTP 200 con `protected=false` para
+`branches/main` y lista vacía para `rules/branches/main`. Los tests de la política
+no configuran esas reglas. Antes de promover a producción: exigir CI vigente,
+revisión independiente, bloquear force-push/borrado y verificar la política
+real sin excepciones administrativas. El seguimiento #158 ya identificaba esta
+necesidad; ahora se registra como puerta `main_protegida` pendiente en el control
+de release. No se cambió la configuración del repositorio ni se acreditó su cierre.
+
 ## Actualización simplificada
 
 `Update-Staging.ps1` concentra configuración pública sin credenciales, deriva la
@@ -77,7 +88,7 @@ rollback transaccional de todo el sistema. Releases existentes no se sobrescribe
 Congelar nuevas funciones, elegir una candidata y un plantel piloto, y cerrar
 estas puertas con evidencia, responsables y el SHA servido:
 
-1. **Operación:** comprobar versión real/host, almacenamiento, TLS, ACL, cuenta de
+1. **Gobierno y operación:** proteger main y acreditar CI/revisión efectiva; comprobar versión real/host, almacenamiento, TLS, ACL, cuenta de
    servicio, antivirus y monitoreo. Ensayar actualización completa y fallo parcial.
 2. **Recuperación:** restaurar BD y uploads en un entorno aislado, comprobar
    integridad y medir RPO/RTO. Tener rollback de código y recuperación de DDL separados.
