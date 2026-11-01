@@ -16,6 +16,6 @@ export class AuthCorreoEvento {
   @Column({ type: 'int', default: 0 }) intentos!: number;
   @Column({ type: Date }) proximoIntento!: Date;
   @Column({ type: Date, nullable: true }) leaseHasta!: Date | null;
-  @Column({ type: String, length: 36, nullable: true }) claim!: string | null;
+  @Column({ type: 'varchar', length: 36, nullable: true }) claim!: string | null;
   @CreateDateColumn() createdAt!: Date;
 }
