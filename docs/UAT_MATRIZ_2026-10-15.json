@@ -885,6 +885,36 @@
     },
     {
       "id": "UAT-64",
+      "rol": "DIRECTOR",
+      "escenario": "Crear borrador de titulación de un egresado del mismo plantel, rechazar otro plantel y ausencia de egreso, registrar firmante pendiente sin clave privada; vincular alumno a cuenta laboral separada sin alterar matrícula ni historial; impedir autoasignación y roles desde Expo.",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver"
+      ],
+      "estado": "pendiente",
+      "responsable": "Institución/QA (por designar)",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-65",
+      "rol": "SUPERADMIN",
+      "escenario": "Configurar favicon PNG del administrativo y del Portal Alumno, verificar tamaño, cabeceras y persistencia, sustituirlo y retirarlo; subir logo alumno distinto del institucional; comprobar fallback, navegación, accesibilidad y protección de archivos privados.",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver",
+        "android",
+        "ios"
+      ],
+      "estado": "pendiente",
+      "responsable": "Institución/QA (por designar)",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-66",
       "rol": "ADMINISTRATIVO",
       "escenario": "Crear y editar borrador de comunicado, previsualizar alumnos activos, publicar solo en su plantel sin duplicados al repetir y revisar historial; confirmar rechazo para otro plantel, alumno inactivo, dispositivos sin sesión y ausencia de entrega externa simulada.",
       "canales": [

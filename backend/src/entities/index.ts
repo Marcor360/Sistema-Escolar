@@ -84,3 +84,6 @@ export * from './historial-roles-usuario.entity';
 export * from './boleta-respuesta.entity';
 
 export { BoletaAtencion } from './boleta-atencion.entity';
+export * from './titulacion-expediente.entity';
+export * from './titulacion-firmante.entity';
+export * from './usuario-vinculo-persona.entity';

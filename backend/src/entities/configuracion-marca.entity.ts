@@ -9,6 +9,9 @@ export class ConfiguracionMarca {
   @Column({ length: 150, default: 'Sistema Escolar Portal Alumno' }) nombrePortalAlumno!: string;
   @Column({ length: 10 }) nombreCorto!: string;
   @Column({ type: String, length: 255, nullable: true }) logoUrl!: string | null;
+  @Column({ name: 'favicon_administrativo_url', type: String, length: 255, nullable: true }) faviconAdministrativoUrl!: string | null;
+  @Column({ name: 'favicon_alumno_url', type: String, length: 255, nullable: true }) faviconAlumnoUrl!: string | null;
+  @Column({ name: 'logo_alumno_url', type: String, length: 255, nullable: true }) logoAlumnoUrl!: string | null;
   @Column({ type: 'char', length: 7 }) colorPrimario!: string;
   @Column({ type: 'char', length: 7 }) colorAcento!: string;
   @Column({ length: 180, default: '' }) mensajeBienvenida!: string;

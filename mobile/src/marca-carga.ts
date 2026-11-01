@@ -14,6 +14,8 @@ export function esMarcaValida(valor: unknown): valor is Marca {
     (m.logoUrl === null ||
       (typeof m.logoUrl === "string" &&
         /^\/uploads\/[a-z0-9_-]+\.(png|jpg|jpeg|webp)$/i.test(m.logoUrl))) &&
+    [m.faviconAlumnoUrl, m.logoAlumnoUrl].every((url) => url === undefined || url === null ||
+      (typeof url === 'string' && /^\/uploads\/marca-(?:favicon-alumno|logo-alumno)-[0-9a-f-]+\.(?:png|webp)$/i.test(url))) &&
     typeof m.actualizadoEn === "string"
   );
 }
@@ -65,6 +67,8 @@ export function mismaMarca(a: Marca, b: Marca): boolean {
   return a.nombreAdministrativo === b.nombreAdministrativo && a.nombrePortalAlumno === b.nombrePortalAlumno && a.nombreInstitucion === b.nombreInstitucion
     && a.nombreCorto === b.nombreCorto
     && a.logoUrl === b.logoUrl
+    && a.faviconAlumnoUrl === b.faviconAlumnoUrl
+    && a.logoAlumnoUrl === b.logoAlumnoUrl
     && a.colorPrimario === b.colorPrimario
     && a.colorPrimarioOscuro === b.colorPrimarioOscuro
     && a.colorAcento === b.colorAcento
