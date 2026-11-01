@@ -26,6 +26,7 @@ import { useFonts } from "expo-font";
 import * as SecureStore from "./src/almacen-seguro";
 import {
   api,
+  archivosBase,
   mensajeDeError,
   registrarSesionExpirada,
   TOKEN_KEY,
