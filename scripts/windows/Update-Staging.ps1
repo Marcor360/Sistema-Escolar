@@ -40,6 +40,12 @@ function Get-StagingUpdatePlan {
   foreach ($key in @('Root', 'PortalRoot', 'MysqlDump')) {
     if (-not [IO.Path]::IsPathRooted($settings.$key)) { throw "$key debe ser una ruta absoluta." }
   }
+  foreach ($key in @('Root', 'PortalRoot')) {
+    $full = [IO.Path]::GetFullPath($settings.$key)
+    if ($full.TrimEnd('\', '/') -eq [IO.Path]::GetPathRoot($full).TrimEnd('\', '/')) {
+      throw "$key debe ser una carpeta de instalación, no la raíz de un volumen."
+    }
+  }
   $systemRoot = [IO.Path]::GetFullPath($settings.Root).TrimEnd('\', '/')
   $portalRoot = [IO.Path]::GetFullPath($settings.PortalRoot).TrimEnd('\', '/')
   if ($systemRoot -eq $portalRoot) { throw 'Root y PortalRoot deben ser distintos.' }

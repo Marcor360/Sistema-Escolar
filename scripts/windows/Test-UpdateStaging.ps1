@@ -46,6 +46,9 @@ try {
   $settings.ApiBaseUrl='https://api.example.invalid/api'; $settings.PortalRoot=Join-Path $systemRoot 'releases/portal'; Save-Settings
   Assert-Fails { Get-StagingUpdatePlan $sourceRoot $config 'Todo' '' } '*no puede estar dentro*'
   $settings.PortalRoot=Join-Path $systemRoot 'portal-alumno'; Save-Settings
+  $settings.Root=[IO.Path]::GetPathRoot($systemRoot); Save-Settings
+  Assert-Fails { Get-StagingUpdatePlan $sourceRoot $config 'Todo' '' } '*raíz de un volumen*'
+  $settings.Root=$systemRoot; Save-Settings
   Set-Content -LiteralPath $envPath -Value @('PORT=3000','PORT=3100')
   Assert-Fails { Get-StagingUpdatePlan $sourceRoot $config 'Todo' '' } '*duplicado*'
   Set-Content -LiteralPath $envPath -Value 'PORT=3100'
