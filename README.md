@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.35.13`** · Boletas pendientes, atención con responsable e historial, avisos internos y constancias de aceptación. [Contrato y validación](docs/BOLETAS_ATENCION_1.35.0.md).
+**Versión candidata: `1.35.13`** · Titulación y vinculación laboral, marca independiente por portal, comunicados a alumnos, rotación de códigos, avisos de seguridad y controles de contraseña. Validación automatizada de la integración y UAT institucional documentadas por separado.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 

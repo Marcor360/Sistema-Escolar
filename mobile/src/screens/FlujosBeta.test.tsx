@@ -21,6 +21,7 @@ import Perfil from "./Perfil";
 import { api } from "../api/client";
 import {
   Alert,
+  Image,
   AppState,
   Linking,
   ScrollView,
@@ -48,16 +49,16 @@ vi.mock("../api/client", () => ({
   archivosBase: "https://e.test",
   mensajeDeError: () => "No se pudo completar",
 }));
-vi.mock("../marca", () => ({
-  useMarca: () => ({
-    marca: {
+const marcaPrueba = vi.hoisted(() => ({
       nombreInstitucion: "Escuela",
       nombreCorto: "E",
-      logoUrl: null,
+      logoUrl: null as string | null,
+      logoAlumnoUrl: null as string | null,
       colorPrimario: "#14343B",
       colorAcento: "#C79A3C",
-    },
-  }),
+}));
+vi.mock("../marca", () => ({
+  useMarca: () => ({ marca: marcaPrueba }),
 }));
 vi.mock("../push", () => ({ activarPush: vi.fn(), desactivarPush: vi.fn() }));
 vi.mock("expo-secure-store", () => ({
@@ -122,6 +123,8 @@ vi.mock("react-native", async () => {
 });
 let vista: ReactTestRenderer;
 beforeEach(() => {
+  marcaPrueba.logoUrl = null;
+  marcaPrueba.logoAlumnoUrl = null;
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.clearAllMocks();
   sesion.sub = 1;
@@ -153,6 +156,15 @@ const escribir = async (label: string, value: string) => {
   );
 };
 const texto = () => JSON.stringify(vista.toJSON());
+it("login conserva la preferencia del logo alumno y el fallback institucional al integrar los controles de contraseña", async () => {
+  marcaPrueba.logoUrl = '/uploads/institucional.webp';
+  marcaPrueba.logoAlumnoUrl = '/uploads/alumno.webp';
+  await montar(<Login />);
+  expect(vista.root.findByType(Image).props.source.uri).toBe('https://e.test/uploads/alumno.webp');
+  marcaPrueba.logoAlumnoUrl = null;
+  await act(async () => vista.update(<Login />));
+  expect(vista.root.findByType(Image).props.source.uri).toBe('https://e.test/uploads/institucional.webp');
+});
 it("login bloquea doble toque incluso antes de renderizar el estado", async () => {
   let resolver!: () => void;
   sesion.iniciar.mockReturnValue(

@@ -1,6 +1,6 @@
 {
   "version": "1.35.13",
-  "alcance": "Candidata 1.35.13: botones accesibles de visibilidad de contraseña en portal web y Expo, y confirmación de contraseñas en acceso web. UAT físico pendiente.",
+  "alcance": "Candidata 1.35.13 integrada: titulación/vinculación laboral, marca por portal, comunicados, rotación de códigos, alertas y controles de contraseña. CI por SHA; UAT institucional y despliegue pendientes.",
   "puertas": [
     {
       "id": "ci_ultimo_sha",

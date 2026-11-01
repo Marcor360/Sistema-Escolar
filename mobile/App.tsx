@@ -26,6 +26,7 @@ import { useFonts } from "expo-font";
 import * as SecureStore from "./src/almacen-seguro";
 import {
   api,
+  archivosBase,
   mensajeDeError,
   registrarSesionExpirada,
   TOKEN_KEY,
@@ -121,7 +122,29 @@ function AppInterna() {
   const [listo, setListo] = useState(false);
   const [marca, setMarca] = useState<Marca>(MARCA_POR_DEFECTO);
   const marcaActual = useRef<Marca>(MARCA_POR_DEFECTO);
-  useEffect(() => { if (Platform.OS === "web" && typeof document !== "undefined") document.title = marca.nombrePortalAlumno || "Sistema Escolar Portal Alumno"; }, [marca.nombrePortalAlumno]);
+  useEffect(() => {
+    if (Platform.OS !== "web" || typeof document === "undefined") return;
+    document.title = marca.nombrePortalAlumno || "Sistema Escolar Portal Alumno";
+    const enlaceActual = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    if (marca.faviconAlumnoUrl) {
+      let icono = enlaceActual;
+      if (!icono) {
+        icono = document.createElement('link');
+        icono.rel = 'icon';
+        icono.dataset.escolarFaviconAgregado = 'true';
+        document.head.appendChild(icono);
+      } else if (icono.dataset.escolarFaviconOriginal === undefined) {
+        icono.dataset.escolarFaviconOriginal = icono.getAttribute('href') ?? '';
+      }
+      icono.type = 'image/png';
+      icono.href = archivosBase + marca.faviconAlumnoUrl;
+    } else if (enlaceActual?.dataset.escolarFaviconAgregado === 'true') {
+      enlaceActual.remove();
+    } else if (enlaceActual?.dataset.escolarFaviconOriginal !== undefined) {
+      enlaceActual.setAttribute('href', enlaceActual.dataset.escolarFaviconOriginal);
+      delete enlaceActual.dataset.escolarFaviconOriginal;
+    }
+  }, [marca.nombrePortalAlumno, marca.faviconAlumnoUrl]);
   const consultaMarca = useRef<Promise<void> | null>(null);
   const [marcaLista, setMarcaLista] = useState(false);
   const [errorInicio, setErrorInicio] = useState("");

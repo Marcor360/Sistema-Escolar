@@ -1,4 +1,8 @@
-# Estado de implementación — candidata 1.35.0
+# Estado de implementación — candidata 1.35.13
+
+Integración de #232, #233, #234 y #237–#239: borradores de titulación y firmantes, vinculación laboral separada, marca por portal, comunicados de alumnos, rotación de códigos, avisos de seguridad y visibilidad/confirmación de contraseñas. Migraciones incrementales espejo MySQL/SQL Server; aplicar antes de actualizar la API. CI se acredita por SHA, sin despliegue ni UAT institucional de esta candidata.
+
+## Corte anterior — candidata 1.35.0
 
 Bandeja de boletas publicadas sin respuesta, filtros por alumno y contexto, gestión de revisión por Administración/Dirección con responsable y eventos inmutables, avisos internos y constancias históricas privadas. [Contrato](BOLETAS_ATENCION_1.35.0.md). Pruebas locales aprobadas según el contrato; CI por SHA de entrega y UAT institucional se acreditan por separado. Sin publicación.
 
