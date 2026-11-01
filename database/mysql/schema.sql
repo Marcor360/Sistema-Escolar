@@ -1125,3 +1125,8 @@ CREATE TABLE boleta_atenciones (
  CONSTRAINT ck_boleta_atencion_estado CHECK(estado IN ('PENDIENTE','EN_ATENCION','RESUELTA'))
 );
 CREATE INDEX idx_boleta_atencion_respuesta ON boleta_atenciones(respuesta_id,id);
+
+ALTER TABLE configuracion_marca
+  ADD COLUMN favicon_administrativo_url VARCHAR(255) NULL,
+  ADD COLUMN favicon_alumno_url VARCHAR(255) NULL,
+  ADD COLUMN logo_alumno_url VARCHAR(255) NULL;
