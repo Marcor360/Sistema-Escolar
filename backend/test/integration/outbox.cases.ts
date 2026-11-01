@@ -36,31 +36,51 @@ export function registrarOutbox(ctx: ContextoIntegracion) {
     } finally { correo.mockRestore(); }
   });
 
-  it('outbox: activación reenvía tras 60 segundos sin duplicar ni renovar código o caducidad', async () => {
-    const usuario = await nuevo('reenvio60');
-    const correo = jest.spyOn(ctx.app.get(NotificacionesService), 'enviarEmail').mockResolvedValue({ simulado: false });
-    try {
-      const servicio = ctx.app.get(ActivacionService);
-      await servicio.solicitar(usuario.email);
-      await drenar();
-      const original = await repo().findOneByOrFail({ usuarioId: usuario.id });
-      expect(original.estado).toBe('ACEPTADO');
-      await servicio.solicitar(usuario.email);
-      expect((await repo().findOneByOrFail({ id: original.id })).estado).toBe('ACEPTADO');
-      await repo().update(original.id, { proximoIntento: new Date(Date.now() - 61_000) });
-      await Promise.all(Array.from({ length: 5 }, () => servicio.solicitar(usuario.email)));
-      expect(await repo().countBy({ usuarioId: usuario.id })).toBe(1);
-      const reenviado = await repo().findOneByOrFail({ id: original.id });
-      expect(reenviado.estado).toBe('PENDIENTE');
-      expect(reenviado.tokenHash).toBe(original.tokenHash);
-      expect(reenviado.expiraEn.getTime()).toBe(original.expiraEn.getTime());
-      await anticipar(original.id);
-      await drenar();
-      expect(correo).toHaveBeenCalledTimes(2);
-      expect(correo.mock.calls[1]).toEqual(correo.mock.calls[0]);
-      expect(await ctx.dataSource.getRepository(ActivacionToken).countBy({ usuarioId: usuario.id })).toBe(1);
-    } finally { correo.mockRestore(); }
-  });
+  for (const tipo of ['ACTIVACION', 'RECUPERACION'] as const) {
+    it(`outbox: ${tipo} rota tras 60 segundos e invalida el código anterior con solicitudes concurrentes`, async () => {
+      const usuario = await nuevo('rotacion60_' + tipo, tipo === 'ACTIVACION');
+      const correo = jest.spyOn(ctx.app.get(NotificacionesService), 'enviarEmail').mockResolvedValue({ simulado: false });
+      const solicitar = () => tipo === 'ACTIVACION'
+        ? ctx.app.get(ActivacionService).solicitar(usuario.email)
+        : ctx.app.get(AuthService).forgotPassword(usuario.email);
+      const tokens = () => tipo === 'ACTIVACION'
+        ? ctx.dataSource.getRepository(ActivacionToken)
+        : ctx.dataSource.getRepository(PasswordResetToken);
+      const codigo = (html: string) => html.match(/<strong[^>]*>([a-f0-9]{32,64})<\/strong>/)![1];
+      try {
+        await solicitar();
+        await drenar();
+        const original = await repo().findOneByOrFail({ usuarioId: usuario.id });
+        const codigoAnterior = codigo(correo.mock.calls[0][2]);
+        expect(original.estado).toBe('ACEPTADO');
+        await solicitar();
+        expect(await repo().countBy({ usuarioId: usuario.id })).toBe(1);
+        expect((await repo().findOneByOrFail({ id: original.id })).estado).toBe('ACEPTADO');
+        await repo().update(original.id, { proximoIntento: new Date(Date.now() - 61_000) });
+        await Promise.all(Array.from({ length: 5 }, solicitar));
+        expect(await repo().countBy({ usuarioId: usuario.id })).toBe(2);
+        expect((await repo().findOneByOrFail({ id: original.id })).estado).toBe('CANCELADO');
+        // El código recibido deja de ser válido antes de enviar el reemplazo.
+        expect(await tokens().countBy({ usuarioId: usuario.id, usado: false })).toBe(0);
+        if (tipo === 'ACTIVACION') {
+          await expect(ctx.app.get(ActivacionService).activar(codigoAnterior, 'Outbox_Rotada_42!')).rejects.toThrow();
+        } else {
+          await expect(ctx.app.get(AuthService).resetPassword(codigoAnterior, 'Outbox_Rotada_42!')).rejects.toThrow();
+        }
+        const reemplazo = await repo().findOneByOrFail({ usuarioId: usuario.id, estado: 'PENDIENTE' });
+        expect(reemplazo.id).not.toBe(original.id);
+        expect(reemplazo.tokenHash).toBeNull();
+        await anticipar(reemplazo.id);
+        await drenar();
+        expect(correo).toHaveBeenCalledTimes(2);
+        expect(codigo(correo.mock.calls[1][2])).not.toBe(codigoAnterior);
+        const enviado = await repo().findOneByOrFail({ id: reemplazo.id });
+        expect(enviado.estado).toBe('ACEPTADO');
+        expect(enviado.tokenHash).not.toBe(original.tokenHash);
+        expect(await tokens().countBy({ usuarioId: usuario.id, usado: false })).toBe(1);
+      } finally { correo.mockRestore(); }
+    });
+  }
 
   it('outbox: fallo SMTP y reinicio conservan el mismo código, hash y Message-ID; dos workers no lo envían a la vez', async () => {
     const usuario = await nuevo('reintento');
