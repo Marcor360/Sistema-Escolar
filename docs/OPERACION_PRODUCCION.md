@@ -1,5 +1,7 @@
 # Preparación de operación productiva
 
+Actualización 1.35.14: [diagnóstico y ruta a producción](AUDITORIA_Y_RUTA_PRODUCTIVA_2026-11-01.md) y [actualizador coordinado de staging](ACTUALIZACION_INTEGRAL_1.35.14.md). Este último usa respaldo MySQL; no acredita despliegue productivo ni un procedimiento operativo de SQL Server.
+
 Este documento separa lo configurable en el repositorio de lo que depende del hosting, dominio, institución o proveedor. La configuración local actual no es una instalación productiva.
 
 ## Alcance y punto de partida
@@ -106,6 +108,6 @@ Puertas y evidencia institucional: [BETA_ACEPTACION.json](BETA_ACEPTACION.json).
 
 ### Evidencia UAT y límites del diagnóstico
 
-`node scripts/check-uat-matrix.cjs` valida la estructura de los doce escenarios institucionales, roles y canales. Para una aprobación se exigen responsable designado, aprobadoPor, fecha UTC ISO exacta no futura, SHA completo del build y referencias de evidencia no vacías. El validador no autentica la identidad del firmante ni verifica el contenido de esas referencias: esa revisión corresponde a la institución. `--release` rechaza escenarios pendientes; ejecutar también `node scripts/check-beta-gates.cjs --release`. Los doce escenarios permanecen pendientes.
+`node scripts/check-uat-matrix.cjs` valida la estructura de los escenarios institucionales vigentes, roles y canales. Para una aprobación se exigen responsable designado, aprobadoPor, fecha UTC ISO exacta no futura, SHA completo del build y referencias de evidencia no vacías. El validador no autentica la identidad del firmante ni verifica el contenido de esas referencias: esa revisión corresponde a la institución. `--release` rechaza escenarios pendientes; ejecutar también `node scripts/check-beta-gates.cjs --release`. Los escenarios permanecen pendientes hasta contar con evidencia de la candidata.
 
 `Test-PilotReadiness.ps1` verifica el contrato JSON de live/ready, la versión de ambos endpoints cuando se indica ExpectedVersion y los indicadores database/schema/storage. No sigue redirecciones y admite únicamente el origen o /api; HTTP solo se permite en loopback para pruebas locales. Un informe se crea de forma exclusiva y nunca sobrescribe uno existente. Las pruebas Windows usan transporte simulado, no acreditan disponibilidad institucional.

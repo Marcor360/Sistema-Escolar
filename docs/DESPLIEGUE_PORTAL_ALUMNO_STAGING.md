@@ -1,5 +1,7 @@
 # Despliegue de Expo Web · Portal Alumno IUA (staging)
 
+Para actualizaciones desde 1.35.14 usar la [guía coordinada de sistema y portal](ACTUALIZACION_INTEGRAL_1.35.14.md). El procedimiento siguiente conserva el ejemplo de primera publicación de 1.35.7; no usar esa versión como candidata actual.
+
 **Candidata:** 1.35.7. **Dominio solicitado:** `https://stagin-portal-alumno.iua.edu.mx/`. Esta guía no acredita que el portal esté publicado ni que DNS/TLS estén configurados.
 
 ## Arquitectura y condición de seguridad

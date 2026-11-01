@@ -10,7 +10,7 @@ La página oficial de referencia de reglamentos es https://iua.edu.mx/comunidad/
 
 En backend.env: CONSENTIMIENTO_INSTITUCIONAL_HABILITADO=true, REGLAMENTO_ACADEMICO_URL, REGLAMENTO_ACADEMICO_VERSION, POLITICAS_INSTITUCIONALES_URL y POLITICAS_INSTITUCIONALES_VERSION, tras aprobación. Cada cambio de versión documental obliga a aceptar nuevamente.
 
-GET /api/auth/consentimiento devuelve estado y URLs HTTPS; POST /api/auth/consentimiento persiste ambos registros en una transacción, con fecha de servidor. Mientras falte cualquiera, los endpoints protegidos del alumno en MOVIL responden 403, salvo /auth/me, /auth/actividad, /auth/logout y el propio consentimiento. La app no presenta las pestañas principales antes de consultar el estado y comprueba al reanudarse. Si se sale sin aceptar, vuelve a pedir aceptación en el siguiente inicio. No se almacena aceptación jurídica en el cliente.
+GET /api/auth/consentimiento devuelve estado y URLs HTTPS; POST /api/auth/consentimiento persiste ambos registros en una transacción, con fecha de servidor. Cuando la función está habilitada, mientras falte cualquiera, los endpoints protegidos del alumno en MOVIL y WEB responden 403, salvo /auth/me, /auth/actividad, /auth/logout, el cambio de contraseña requerido y el propio consentimiento. El Portal Alumno web usa la misma política que la app nativa; la elección de portal no permite eludirla. La app no presenta las pestañas principales antes de consultar el estado y comprueba al reanudarse. Si se sale sin aceptar, vuelve a pedir aceptación en el siguiente inicio. No se almacena aceptación jurídica en el cliente. La corrección de 1.35.14 no habilita la función ni acredita aceptación institucional.
 
 ### Puertas de entrada para staging
 

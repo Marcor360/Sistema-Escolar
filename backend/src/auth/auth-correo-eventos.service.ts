@@ -52,6 +52,12 @@ export class AuthCorreoEventosService implements OnModuleInit, OnModuleDestroy {
   private async ciclo(): Promise<number> {
     const repo = this.ds.getRepository(AuthCorreoEvento), ahora = new Date();
     await repo.delete({ estado: 'ENVIADO', createdAt: LessThan(new Date(ahora.getTime() - 30 * 86400000)) });
+    // Un proceso puede morir después de reclamar su último intento. No dejar
+    // ese evento PROCESANDO para siempre ni reclamar un lease todavía vigente.
+    await repo.createQueryBuilder().update().set({ estado: 'FALLIDO', claim: null, leaseHasta: null })
+      .where('estado = :estado AND lease_hasta <= :ahora AND intentos >= :max', {
+        estado: 'PROCESANDO', ahora, max: MAX_INTENTOS,
+      }).execute();
     const candidatos = await repo.createQueryBuilder('e')
       .where('(e.estado = :pendiente OR (e.estado = :procesando AND e.lease_hasta <= :ahora))', {
         pendiente: 'PENDIENTE', procesando: 'PROCESANDO', ahora,

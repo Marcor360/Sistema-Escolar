@@ -1,4 +1,8 @@
-# Estado de implementación — candidata 1.35.13
+# Estado de implementación — candidata 1.35.14
+
+Estabilización de avisos de seguridad y actualizador coordinado de staging para sistema y Portal Alumno, con validación de versión, planificación, puerto de proxy configurable y tratamiento explícito de fallos de migración. No hay nuevas migraciones, despliegue ni aceptación institucional acreditados. [Diagnóstico y ruta productiva](AUDITORIA_Y_RUTA_PRODUCTIVA_2026-11-01.md).
+
+## Corte anterior — candidata 1.35.13
 
 Integración de #232, #233, #234 y #237–#239: borradores de titulación y firmantes, vinculación laboral separada, marca por portal, comunicados de alumnos, rotación de códigos, avisos de seguridad y visibilidad/confirmación de contraseñas. Migraciones incrementales espejo MySQL/SQL Server; aplicar antes de actualizar la API. CI se acredita por SHA, sin despliegue ni UAT institucional de esta candidata.
 

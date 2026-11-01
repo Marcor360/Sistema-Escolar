@@ -12,6 +12,12 @@
 $ErrorActionPreference = 'Stop'
 if ($Version -notmatch '^\d+\.\d+\.\d+([-.][A-Za-z0-9.-]+)?$') { throw 'Version debe ser semver, por ejemplo 1.9.4.' }
 $Source = (Resolve-Path -LiteralPath $Source).Path
+# Validar la versión antes de crear releases, respaldar o detener servicios.
+foreach ($workspace in @('backend', 'web')) {
+  $packagePath = Join-Path $Source "$workspace\package.json"
+  $sourceVersion = (Get-Content -LiteralPath $packagePath -Raw | ConvertFrom-Json).version
+  if ($sourceVersion -ne $Version) { throw "$workspace/package.json ($sourceVersion) no coincide con $Version." }
+}
 $configFile = Join-Path $Root 'config\backend.env'
 $backupConfigFile = Join-Path $Root 'config\backup.env'
 $release = Join-Path $Root "releases\$Version"
@@ -40,6 +46,7 @@ foreach ($line in Get-Content -LiteralPath $configFile) {
 if ($env:NODE_ENV -ne 'production' -or $env:APP_ENV -ne 'staging' -or $env:DB_SYNC -ne 'false' -or $env:DB_NAME -ne $DatabaseName) {
   throw "El archivo de entorno debe declarar NODE_ENV=production, APP_ENV=staging, DB_SYNC=false y DB_NAME=$DatabaseName."
 }
+if ($env:DB_TYPE -and $env:DB_TYPE -ne 'mysql') { throw 'Este procedimiento de respaldo usa MySQL. Para SQL Server utiliza un procedimiento de respaldo/restauración específico y validado.' }
 if (-not $env:DB_PASS -or $env:DB_PASS -like 'REEMPLAZAR*' -or -not $env:JWT_SECRET -or $env:JWT_SECRET -like 'REEMPLAZAR*') {
   throw 'Completa DB_PASS y JWT_SECRET con secretos propios de staging.'
 }
@@ -134,14 +141,19 @@ try {
 
 # El runner aplica únicamente las entradas pendientes del manifest y exige DB_SYNC=false.
 Push-Location (Join-Path $release 'backend')
+$migrationStarted = $false
 try {
   npm run db:migrate:status
   if ($LASTEXITCODE -ne 0) { throw 'No se pudo consultar el estado de migraciones.' }
+  $migrationStarted = $true
   npm run db:migrate
   if ($LASTEXITCODE -ne 0) { throw 'Migración fallida. La release activa no se cambió; inspecciona la base antes de reintentar.' }
 } catch {
-  Start-Service -Name $ServiceName -ErrorAction SilentlyContinue
-  throw
+  if (-not $migrationStarted) {
+    Start-Service -Name $ServiceName -ErrorAction SilentlyContinue
+    throw
+  }
+  throw "Migración interrumpida: la API permanece detenida. Inspecciona el historial y la base antes de reanudar; no se revierte DDL automáticamente. Detalle: $($_.Exception.Message)"
 } finally { Pop-Location }
 
 # cmd /c rmdir, sin /s, elimina exclusivamente el enlace de tipo Junction.

@@ -1,0 +1,10 @@
+{
+  "Root": "C:\\SistemaEscolar",
+  "PortalRoot": "C:\\SistemaEscolar\\portal-alumno",
+  "ServiceName": "SistemaEscolarApi",
+  "DatabaseName": "escolar_staging",
+  "MysqlDump": "C:\\Program Files\\MySQL\\MySQL Server 8.4\\bin\\mysqldump.exe",
+  "ApiBaseUrl": "https://api-sistema-staging.iua.edu.mx/api",
+  "PortalHost": "stagin-portal-alumno.iua.edu.mx",
+  "SiteName": "SistemaEscolar-Staging-PortalAlumno"
+}

@@ -1,4 +1,4 @@
-# Ejecuta los bloques reales con dobles de servicio/junction: nunca toca el host.
+﻿# Ejecuta los bloques reales con dobles de servicio/junction: nunca toca el host.
 $ErrorActionPreference = 'Stop'
 $tokens = $null; $errors = $null
 $ast = [System.Management.Automation.Language.Parser]::ParseFile(
@@ -84,3 +84,41 @@ try {
 }
 } finally { $env:PORT = $originalPort }
 Write-Host 'Deploy: preflight y recuperacion ante fallos correctos.'
+
+# Ejecutar el bloque real de migración con dobles: solo es seguro reiniciar la
+# API anterior si falló la consulta de estado, antes de iniciar cualquier DDL.
+& {
+  $migration = $ast.FindAll({ param($n)
+    $n -is [System.Management.Automation.Language.TryStatementAst] -and
+    $n.Body.Extent.Text.Contains('npm run db:migrate:status')
+  }, $true) | Select-Object -First 1
+  if (-not $migration) { throw 'Falta el bloque de migración.' }
+  $restarts = [Collections.Generic.List[string]]::new()
+  function Start-Service { param($Name, $ErrorAction) $restarts.Add($Name) }
+  function Pop-Location {}
+  function npm {
+    param($verb, $command)
+    $code = if (($scenario -eq 'status-fails' -and $command -eq 'db:migrate:status') -or
+      ($scenario -eq 'migration-fails' -and $command -eq 'db:migrate')) { 1 } else { 0 }
+    Set-Variable -Name LASTEXITCODE -Value $code -Scope 1
+  }
+  $ServiceName='Fixture'
+  foreach ($scenario in @('status-fails', 'migration-fails', 'success')) {
+    $restarts.Clear(); $migrationStarted=$false; $failure=$null
+    try { . ([scriptblock]::Create($migration.Extent.Text)) } catch { $failure=$_.Exception.Message }
+    if ($scenario -eq 'status-fails' -and (-not $failure -or $restarts.Count -ne 1)) { throw 'No se recuperó la API tras fallar solo la consulta de estado.' }
+    if ($scenario -eq 'migration-fails' -and ($failure -notlike '*API permanece detenida*' -or $restarts.Count)) { throw 'Se reinició la API sobre una migración posiblemente parcial.' }
+    if ($scenario -eq 'success' -and ($failure -or $restarts.Count)) { throw 'Se alteró la ruta de migración correcta.' }
+  }
+  $versionCheck = $ast.EndBlock.Statements | Where-Object {
+    $_ -is [System.Management.Automation.Language.ForEachStatementAst] -and $_.Variable.VariablePath.UserPath -eq 'workspace'
+  } | Select-Object -First 1
+  if (-not $versionCheck) { throw 'Falta validación de versión del checkout.' }
+  $Source='fixture'; $Version='1.2.3'
+  function Get-Content { param($LiteralPath,[switch]$Raw) return '{"version":"1.2.4"}' }
+  function Join-Path { param($Path,$ChildPath) return "$Path/$ChildPath" }
+  $failure=$null
+  try { . ([scriptblock]::Create($versionCheck.Extent.Text)) } catch { $failure=$_.Exception.Message }
+  if ($failure -notlike '*no coincide*') { throw 'Se aceptó una versión distinta del código.' }
+}
+Write-Host 'Deploy: versión inconsistente y DDL interrumpido rechazados sin activar código incompatible.'

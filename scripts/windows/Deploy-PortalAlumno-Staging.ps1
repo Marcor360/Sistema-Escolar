@@ -1,10 +1,11 @@
-param(
+﻿param(
   [Parameter(Mandatory = $true)][string]$Version,
   [Parameter(Mandatory = $true)][string]$Source,
   [string]$Root = 'C:\SistemaEscolar\portal-alumno',
   [string]$PortalHost = 'stagin-portal-alumno.iua.edu.mx',
   [string]$UpstreamApiBaseUrl = 'https://api-sistema-staging.iua.edu.mx/api',
-  [string]$SiteName = 'SistemaEscolar-Staging-PortalAlumno'
+  [string]$SiteName = 'SistemaEscolar-Staging-PortalAlumno',
+  [ValidateRange(1, 65535)][int]$ApiPort = 3000
 )
 
 $ErrorActionPreference = 'Stop'
@@ -15,6 +16,14 @@ function Remove-OnlyPortalJunction([string]$Path) {
   if ($item.LinkType -ne 'Junction') { throw "La ruta $Path no es Junction. No se modificará." }
   & cmd.exe /d /c "rmdir `"$Path`""
   if ($LASTEXITCODE -ne 0 -or (Test-Path -LiteralPath $Path)) { throw "No se pudo retirar la Junction $Path." }
+}
+
+function Set-PortalApiProxy([string]$ConfigPath, [ValidateRange(1, 65535)][int]$Port) {
+  [xml]$portalConfig = Get-Content -LiteralPath $ConfigPath -Raw
+  $proxy = @($portalConfig.configuration.'system.webServer'.rewrite.rules.rule | Where-Object { $_.match.url -eq '^(api|uploads)(/.*)?$' })
+  if ($proxy.Count -ne 1) { throw 'El web.config debe contener una única regla de proxy API y archivos.' }
+  $proxy[0].action.url = "http://127.0.0.1:$Port/{R:0}"
+  $portalConfig.Save($ConfigPath)
 }
 
 if ($Version -notmatch '^\d+\.\d+\.\d+([-.][A-Za-z0-9.-]+)?$') { throw 'Version debe ser semver.' }
@@ -35,6 +44,10 @@ if ($packageVersion -ne $Version) { throw "mobile/package.json ($packageVersion)
 $ready = Invoke-RestMethod -Uri "$UpstreamApiBaseUrl/health/ready" -TimeoutSec 15 -ErrorAction Stop
 if ($ready.status -ne 'ok' -or $ready.version -ne $Version) {
   throw "La API no está lista en versión $Version. Respuesta: status=$($ready.status), version=$($ready.version)."
+}
+$localReady = Invoke-RestMethod -Uri "http://127.0.0.1:$ApiPort/api/health/ready" -TimeoutSec 15 -ErrorAction Stop
+if ($localReady.status -ne 'ok' -or $localReady.version -ne $Version) {
+  throw "La API local del proxy no está lista en el puerto $ApiPort y versión $Version."
 }
 
 $releases = Join-Path $Root 'releases'
@@ -69,6 +82,7 @@ New-Item -ItemType Directory -Path $stagingRelease | Out-Null
 & robocopy.exe $dist $stagingRelease /E /NFL /NDL /NJH /NJS /NC /NS
 if ($LASTEXITCODE -ge 8) { throw "Robocopy falló ($LASTEXITCODE); no se cambió current." }
 Copy-Item -LiteralPath $webConfig -Destination (Join-Path $stagingRelease 'web.config') -Force
+Set-PortalApiProxy -ConfigPath (Join-Path $stagingRelease 'web.config') -Port $ApiPort
 if (-not (Test-Path -LiteralPath (Join-Path $stagingRelease 'index.html'))) { throw 'La release preparada no contiene index.html.' }
 Rename-Item -LiteralPath $stagingRelease -NewName $Version -ErrorAction Stop
 
