@@ -12,7 +12,8 @@
     "test": "vitest run --maxWorkers=1",
     "test:responsive": "node test/responsive.cjs",
     "test:cartera": "node test/cartera-integral.cjs",
-    "test:boletas": "node test/boletas-seguimiento.cjs"
+    "test:boletas": "node test/boletas-seguimiento.cjs",
+    "pretest": "node ../scripts/check-glob-dependencies.cjs web"
   },
   "dependencies": {
     "axios": "^1.7.9",
@@ -35,6 +36,15 @@
     "prettier": "^3.3.3",
     "typescript": "^5.7.2",
     "vite": "^6.4.5",
-    "vitest": "^4.1.12"
+    "vitest": "^4.1.12",
+    "minimatch-legacy3": "file:vendor/minimatch-3.1.5-escolar.0.tgz",
+    "glob-legacy7": "file:vendor/glob-7.2.3-escolar.0.tgz"
+  },
+  "overrides": {
+    "follow-redirects": "1.16.2",
+    "minimatch@>=9": "11.0.3",
+    "glob@>=9": "14.0.3",
+    "minimatch@3": "$minimatch-legacy3",
+    "glob@7": "$glob-legacy7"
   }
 }
