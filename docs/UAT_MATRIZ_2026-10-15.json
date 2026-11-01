@@ -1,6 +1,6 @@
 {
-  "version": "1.35.7",
-  "alcance": "Candidata 1.35.7: corrige el dominio del Portal Alumno a stagin-portal-alumno.iua.edu.mx y conserva identidad estructurada y formularios 1.35.5/1.35.6. Requiere migración incremental de segundo nombre. Sin despliegue ni UAT institucional acreditados.",
+  "version": "1.35.8",
+  "alcance": "Candidata 1.35.8: integración de titulaciones/firmantes/vinculación laboral. UAT y despliegue no acreditados.",
   "escenarios": [
     {
       "id": "UAT-01",
@@ -882,6 +882,20 @@
       "estado": "pendiente",
       "evidencias": [],
       "responsable": "Institución/QA (por designar)"
+    },
+    {
+      "id": "UAT-64",
+      "rol": "DIRECTOR",
+      "escenario": "Crear borrador de titulación de un egresado del mismo plantel, rechazar otro plantel y ausencia de egreso, registrar firmante pendiente sin clave privada; vincular alumno a cuenta laboral separada sin alterar matrícula ni historial; impedir autoasignación y roles desde Expo.",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver"
+      ],
+      "estado": "pendiente",
+      "responsable": "Institución/QA (por designar)",
+      "evidencias": []
     }
   ],
   "confirmacionesSolicitante": {

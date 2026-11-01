@@ -1,6 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const roles = ['SUPERADMIN', 'ADMINISTRATIVO', 'MAESTRO', 'ALUMNO', 'FINANZAS'];
+const roles = ['SUPERADMIN', 'DIRECTOR', 'ADMINISTRATIVO', 'MAESTRO', 'ALUMNO', 'FINANZAS'];
 const canales = ['web', 'api', 'mysql', 'sqlserver', 'smtp', 'android', 'ios', 'openpay', 'antivirus', 'windows', 'ux'];
 const texto = (valor) => typeof valor === 'string' && valor.trim().length > 0;
 

@@ -1,10 +1,10 @@
 import { AsignarCorreoAlumnoDto } from './usuarios.dto';
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { UsuariosService } from './usuarios.service';
 import { ActivacionService } from '../auth/activacion.service';
-import { ActualizarPersonalDto, ActualizarUsuarioDto, CrearPersonalDto, ListadoUsuariosDto, RestablecerPasswordAdministrativoDto, AsignarRolesPersonalDto } from './usuarios.dto';
+import { ActualizarPersonalDto, ActualizarUsuarioDto, CrearPersonalDto, ListadoUsuariosDto, RestablecerPasswordAdministrativoDto, AsignarRolesPersonalDto, VincularAlumnoPersonalDto } from './usuarios.dto';
 import { PaginacionDto } from '../common/paginacion.dto';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { RolesGuard } from '../common/roles.guard';
@@ -34,6 +34,17 @@ export class UsuariosController {
   listado(@Query() query: ListadoUsuariosDto, @CurrentUser() user: JwtUser) {
     return this.service.listado(query, user);
   }
+  @Post('promociones-alumno')
+  @Roles('SUPERADMIN', 'DIRECTOR', 'ADMINISTRATIVO')
+  @ApiOperation({ summary: 'Vincular una cuenta de personal separada sin modificar el expediente del alumno' })
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  async promocionarAlumno(@Body() dto: VincularAlumnoPersonalDto, @CurrentUser() actor: JwtUser) {
+    const resultado = await this.service.vincularAlumnoPersonal(dto, actor);
+    if (!resultado.email) throw new BadRequestException('La cuenta laboral no tiene correo institucional');
+    await this.activacion.solicitar(resultado.email);
+    return resultado;
+  }
+
   @Post(':id/restablecer-password')
   @Roles('ADMINISTRATIVO')
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
