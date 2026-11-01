@@ -1175,3 +1175,8 @@ CREATE TABLE usuario_vinculos_persona (
   CONSTRAINT fk_vinculo_personal_usuario FOREIGN KEY (personal_usuario_id) REFERENCES usuarios(id),
   CONSTRAINT fk_vinculo_autorizado_por FOREIGN KEY (autorizado_por_id) REFERENCES usuarios(id)
 );
+
+ALTER TABLE configuracion_marca
+  ADD COLUMN favicon_administrativo_url VARCHAR(255) NULL,
+  ADD COLUMN favicon_alumno_url VARCHAR(255) NULL,
+  ADD COLUMN logo_alumno_url VARCHAR(255) NULL;

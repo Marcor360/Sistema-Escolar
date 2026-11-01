@@ -63,7 +63,8 @@
         "migracion_segundo_nombre_usuario.sql",
         "migracion_titulacion_expedientes.sql",
         "migracion_titulacion_firmantes.sql",
-        "migracion_usuario_vinculos_persona.sql"
+        "migracion_usuario_vinculos_persona.sql",
+        "migracion_favicons_y_logo_alumno.sql"
       ]
     },
     "sqlserver": {
@@ -127,7 +128,8 @@
         "migracion_segundo_nombre_usuario.sql",
         "migracion_titulacion_expedientes.sql",
         "migracion_titulacion_firmantes.sql",
-        "migracion_usuario_vinculos_persona.sql"
+        "migracion_usuario_vinculos_persona.sql",
+        "migracion_favicons_y_logo_alumno.sql"
       ]
     }
   }

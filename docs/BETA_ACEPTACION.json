@@ -1,6 +1,6 @@
 {
-  "version": "1.35.8",
-  "alcance": "1.35.8: integración de los PR #219–#221, borradores de titulación, firmantes pendientes y vinculación laboral separada. Migraciones espejo. No hay firma SEP, ni despliegue ni UAT institucional acreditados.",
+  "version": "1.35.9",
+  "alcance": "1.35.9: favicon PNG por portal y logo específico del alumno, con fallback institucional. Migración espejo y UAT pendientes; sin despliegue acreditado.",
   "puertas": [
     {
       "id": "ci_ultimo_sha",
