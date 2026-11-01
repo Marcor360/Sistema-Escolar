@@ -1,6 +1,6 @@
 {
-  "version": "1.35.10",
-  "alcance": "Candidata 1.35.10: comunicados administrativos del alumno por plantel con borradores, previsualización, envío atómico y registro de entregas internas. Sin programación automática externa. UAT pendiente.",
+  "version": "1.35.11",
+  "alcance": "Candidata 1.35.11: códigos nuevos invalidan códigos anteriores del mismo tipo, sin migraciones; UAT de correo pendiente.",
   "puertas": [
     {
       "id": "ci_ultimo_sha",

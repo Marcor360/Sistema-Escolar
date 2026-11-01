@@ -1,6 +1,6 @@
 {
-  "version": "1.35.10",
-  "alcance": "Candidata 1.35.10: gestión administrativa de comunicados del alumno. UAT y despliegue no acreditados.",
+  "version": "1.35.11",
+  "alcance": "Candidata 1.35.11: códigos nuevos invalidan códigos anteriores del mismo tipo, sin migraciones; UAT de correo pendiente.",
   "escenarios": [
     {
       "id": "UAT-01",

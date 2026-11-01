@@ -45,24 +45,24 @@ export class CorreoAccesoOutboxService implements OnModuleInit, OnModuleDestroy 
       const actual = await manager.getRepository(Usuario).findOne({ where: { id: usuario.id, activo: true }, lock: { mode: 'pessimistic_write' } });
       if (!actual || (actual.sessionVersion ?? 0) !== (usuario.sessionVersion ?? 0) || actual.activacionPendiente !== (tipo === 'ACTIVACION')) return;
       const repo = manager.getRepository(AuthCorreoOutbox);
-      // Conservar el mismo código durante su vigencia; nunca generar múltiples correos simultáneos.
       const ahora = new Date();
-      const existente = await repo.findOne({ where: { usuarioId: actual.id, tipo, version: actual.sessionVersion ?? 0, expiraEn: MoreThan(ahora) } });
-      if (existente) {
-        if (tipo === 'ACTIVACION' && existente.estado === 'ACEPTADO'
-          && existente.proximoIntento.getTime() <= ahora.getTime() - 60_000) {
-          // El bloqueo por usuario y esta transición serializan los reenvíos incluso entre instancias.
-          // Se conserva tokenHash y claveId: no se invalida el código que el alumno ya recibió.
-          await repo.update({ id: existente.id, estado: 'ACEPTADO' }, {
-            estado: 'PENDIENTE', intentos: 0, proximoIntento: ahora, errorCodigo: null,
-          });
-        }
-        return;
-      }
-      await repo.insert({ id: randomUUID(), usuarioId: actual.id, tipo, version: actual.sessionVersion ?? 0,
-        // DATETIME sin fracciones puede redondear hacia el segundo siguiente en MySQL.
-        // Una solicitud nueva debe ser elegible desde el commit, sin retraso por redondeo.
-        estado: 'PENDIENTE', intentos: 0, proximoIntento: new Date(Math.floor(ahora.getTime() / 1000) * 1000), expiraEn: new Date(ahora.getTime() + VIGENCIA_MS),
+      // Cada código nuevo invalida al anterior; el bloqueo del usuario serializa solicitudes.
+      const existente = await repo.findOne({
+        where: { usuarioId: actual.id, tipo, version: actual.sessionVersion ?? 0,
+          expiraEn: MoreThan(ahora), estado: In(['PENDIENTE', 'PROCESANDO', 'ACEPTADO']) },
+      });
+      if (existente && (existente.estado !== 'ACEPTADO' ||
+        existente.proximoIntento.getTime() > ahora.getTime() - 60_000)) return;
+      await repo.update(
+        { usuarioId: actual.id, tipo, estado: In(['PENDIENTE', 'PROCESANDO', 'ACEPTADO']) },
+        { estado: 'CANCELADO', claim: null, leaseHasta: null },
+      );
+      await manager.getRepository(tipo === 'ACTIVACION' ? ActivacionToken : PasswordResetToken)
+        .update({ usuarioId: actual.id, usado: false }, { usado: true });
+      await repo.insert({ id: randomUUID(), usuarioId: actual.id, tipo,
+        version: actual.sessionVersion ?? 0, estado: 'PENDIENTE', intentos: 0,
+        proximoIntento: new Date(Math.floor(ahora.getTime() / 1000) * 1000),
+        expiraEn: new Date(ahora.getTime() + VIGENCIA_MS),
         claveId: null, tokenHash: null, claim: null, leaseHasta: null, errorCodigo: null });
     });
   }

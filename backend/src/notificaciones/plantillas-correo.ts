@@ -58,7 +58,7 @@ export function plantillaInvitacion(token: string, marca: MarcaCorreo = BASE): s
       parrafo('<strong>Tu código de activación</strong> · 64 caracteres') +
       codigo(token) +
       parrafo(
-        '<strong>Vence en 1 hora desde la solicitud y solo se puede usar una vez.</strong> Solicitarlo otra vez durante su vigencia no amplía el plazo.',
+        '<strong>Vence en 1 hora desde la solicitud y solo se puede usar una vez.</strong> Si solicitas un código nuevo, el anterior quedará invalidado.',
       ) +
       pasos([
         'Si eres alumno, abre la app del alumno o el portal institucional. Si eres personal, abre el portal web.',
@@ -84,7 +84,7 @@ export function plantillaRecuperacion(token: string, marca: MarcaCorreo = BASE):
       parrafo('<strong>Tu código de recuperación</strong> · 32 caracteres') +
       codigo(token) +
       parrafo(
-        '<strong>Vence en 1 hora desde la solicitud y solo se puede usar una vez.</strong> Si venció o ya lo utilizaste, vuelve a solicitar la recuperación; solicitarlo otra vez mientras siga vigente no amplía su plazo.',
+        '<strong>Vence en 1 hora desde la solicitud y solo se puede usar una vez.</strong> Si venció o ya lo utilizaste, vuelve a solicitar la recuperación; si solicitas uno nuevo, el anterior dejará de funcionar.',
       ) +
       pasos([
         'Regresa a la app del alumno o al portal institucional donde seleccionaste <strong>¿Olvidaste tu contraseña?</strong> (Olvidé mi contraseña).',
