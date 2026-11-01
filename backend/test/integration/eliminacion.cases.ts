@@ -1,6 +1,6 @@
 import { curpFicticia } from './identidad-ficticia';
 import { BitacoraFinanciera } from '../../src/entities/bitacora-financiera.entity';
-import { PushDispositivo, PushEnvio } from '../../src/entities';
+import { AuthCorreoEvento, PushDispositivo, PushEnvio } from '../../src/entities';
 import { randomUUID } from 'crypto';
 import { expect, it } from '@jest/globals';
 import { Alumno, Docente, Plantel, Usuario, UsuarioPlantel, Notificacion, Sesion } from '../../src/entities';
@@ -15,11 +15,13 @@ export function registrarEliminacion(ctx: ContextoIntegracion) {
     } });
     expect(personal.response.status).toBe(201);
     const sesion = await ctx.emitirToken(personal.data.email);
+    expect(await ctx.dataSource.getRepository(AuthCorreoEvento).countBy({ usuarioId: personal.data.id })).toBeGreaterThan(0);
     await ctx.dataSource.getRepository(Notificacion).save({ usuarioId: personal.data.id, titulo: 'Prueba', mensaje: 'Prueba' });
     const borrar = (ruta: string) => ctx.api(ruta, { method: 'DELETE', token: root, body: { confirmacion: 'ELIMINAR' } });
     expect((await borrar(`/usuarios/${personal.data.id}/permanente`)).response.status).toBe(200);
     expect(await ctx.dataSource.getRepository(Usuario).findOne({ where: { id: personal.data.id }, withDeleted: true })).toBeNull();
     expect(await ctx.dataSource.getRepository(Sesion).countBy({ usuarioId: personal.data.id })).toBe(0);
+    expect(await ctx.dataSource.getRepository(AuthCorreoEvento).countBy({ usuarioId: personal.data.id })).toBe(0);
     expect(await ctx.dataSource.getRepository(UsuarioPlantel).countBy({ usuarioId: personal.data.id })).toBe(0);
     expect((await ctx.api('/auth/me', { token: sesion })).response.status).toBe(401);
 
@@ -86,9 +88,11 @@ export function registrarEliminacion(ctx: ContextoIntegracion) {
     expect((await borrar()).response.status).toBe(409);
     expect(await ctx.dataSource.getRepository(PushDispositivo).findOneBy({ id: propia.id })).not.toBeNull();
     expect(await ctx.dataSource.getRepository(Notificacion).findOneBy({ id: aviso.id })).not.toBeNull();
+    expect(await ctx.dataSource.getRepository(AuthCorreoEvento).countBy({ usuarioId: id })).toBeGreaterThan(0);
     expect((await ctx.api('/auth/me', { token })).response.status).toBe(200);
     await ctx.dataSource.getRepository(PushEnvio).delete(envio.id);
     expect((await borrar()).response.status).toBe(200);
+    expect(await ctx.dataSource.getRepository(AuthCorreoEvento).countBy({ usuarioId: id })).toBe(0);
   });
 
 }

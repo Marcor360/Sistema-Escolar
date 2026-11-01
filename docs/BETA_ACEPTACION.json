@@ -1,6 +1,6 @@
 {
-  "version": "1.35.11",
-  "alcance": "Candidata 1.35.11: códigos nuevos invalidan códigos anteriores del mismo tipo, sin migraciones; UAT de correo pendiente.",
+  "version": "1.35.12",
+  "alcance": "Candidata 1.35.12: correos por ingreso y cambios de contraseña, con cola persistente y migración espejo; UAT de entrega externa pendiente.",
   "puertas": [
     {
       "id": "ci_ultimo_sha",

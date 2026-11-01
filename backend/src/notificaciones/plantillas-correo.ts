@@ -117,3 +117,29 @@ export function plantillaApoyoAcceso(cuenta: string, marca: MarcaCorreo = BASE):
     marca,
   );
 }
+
+/** Alertas transaccionales sin claves, códigos o enlaces sensibles. */
+export function plantillaEventoSeguridad(tipo: import('../entities/auth-correo-evento.entity').TipoEventoSeguridad, marca: MarcaCorreo = BASE): { asunto: string; html: string } {
+  if (tipo === 'INGRESO') {
+    const asunto = 'Bienvenido a la plataforma escolar IUA';
+    return { asunto, html: marco(
+      'Bienvenido a tu plataforma escolar',
+      'Tu cuenta acaba de iniciar sesión correctamente.',
+      parrafo('Se registró un nuevo ingreso a la plataforma escolar con tu cuenta institucional.') +
+      parrafo('Ya puedes consultar los servicios disponibles según tu perfil. Si no reconoces este acceso, cambia tu contraseña y comunícate con el equipo de Sistemas de IUA o con tu coordinador académico.'),
+      marca,
+    ) };
+  }
+  const recuperacion = tipo === 'RECUPERACION_EXITOSA';
+  const asunto = recuperacion ? 'Contraseña recuperada · IUA' : 'Tu contraseña cambió · IUA';
+  return { asunto, html: marco(
+    recuperacion ? 'Recuperación completada' : 'Contraseña actualizada',
+    'Se modificó la contraseña de tu cuenta institucional.',
+    parrafo(recuperacion
+      ? 'La recuperación de contraseña finalizó correctamente. Por seguridad, las sesiones anteriores dejaron de ser válidas.'
+      : 'Tu contraseña fue modificada correctamente. Por seguridad, vuelve a iniciar sesión con la nueva contraseña.') +
+    parrafo('<strong>Si no solicitaste esta operación, comunícate con el equipo de Sistemas de IUA o con tu coordinador académico de inmediato.</strong>') +
+    parrafo('Este mensaje es informativo: nunca te solicitaremos tu contraseña por correo.'),
+    marca,
+  ) };
+}

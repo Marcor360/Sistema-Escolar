@@ -65,7 +65,8 @@
         "migracion_titulacion_firmantes.sql",
         "migracion_usuario_vinculos_persona.sql",
         "migracion_favicons_y_logo_alumno.sql",
-        "migracion_comunicados_alumnos.sql"
+        "migracion_comunicados_alumnos.sql",
+        "migracion_auth_eventos_seguridad.sql"
       ]
     },
     "sqlserver": {
@@ -131,7 +132,8 @@
         "migracion_titulacion_firmantes.sql",
         "migracion_usuario_vinculos_persona.sql",
         "migracion_favicons_y_logo_alumno.sql",
-        "migracion_comunicados_alumnos.sql"
+        "migracion_comunicados_alumnos.sql",
+        "migracion_auth_eventos_seguridad.sql"
       ]
     }
   }

@@ -1,6 +1,6 @@
 import { dispositivoSesion } from './dispositivo-sesion';
 import { compararPassword, hashPasswordNueva } from '../common/password-bcrypt';
-import { BadRequestException, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Logger, Optional, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -14,11 +14,13 @@ import { Usuario } from '../entities/usuario.entity';
 import { PasswordResetToken } from '../entities/password-reset-token.entity';
 import { BitacoraActividad } from '../entities/bitacora-actividad.entity';
 import { CorreoAccesoOutboxService } from './correo-acceso-outbox.service';
+import { AuthCorreoEventosService } from './auth-correo-eventos.service';
 import { JwtUser } from '../common/current-user.decorator';
 import { MENSAJES_PORTAL, Portal, ROLES_POR_PORTAL } from '../common/portales';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   constructor(
     @InjectRepository(Usuario) private readonly usuarios: Repository<Usuario>,
     @InjectRepository(PasswordResetToken) private readonly tokens: Repository<PasswordResetToken>,
@@ -27,6 +29,7 @@ export class AuthService {
     private readonly outbox: CorreoAccesoOutboxService,
     private readonly config: ConfigService,
     private readonly dataSource: DataSource,
+    @Optional() private readonly avisos?: AuthCorreoEventosService,
   ) {}
 
   async login(email: string, password: string, portal: Portal = 'WEB', ip?: string, agente?:string, alumnoWeb = false) {
@@ -51,6 +54,8 @@ export class AuthService {
       ultimaActividadEn: instanteActividad(), revocada: false });
     const resultado = this.emitir(usuario, sesion);
     await sesiones.save(sesion);
+    // El acceso autorizado no se bloquea por una caída del proveedor de correo.
+    await this.avisos?.encolar(usuario.id, 'INGRESO', sesion.id).catch(() => this.logger.warn('Aviso de ingreso pendiente por error de cola'));
     return resultado;
   }
 
@@ -173,6 +178,7 @@ export class AuthService {
       await manager.getRepository(PasswordResetToken).update(
         { usuarioId, usado: false }, { usado: true },
       );
+      await this.avisos?.encolarEnTransaccion(manager, usuarioId, 'CAMBIO_PASSWORD');
     });
     return { mensaje: 'Contraseña actualizada' };
   }
@@ -212,6 +218,7 @@ export class AuthService {
       });
       if (actualizado.affected !== 1) throw new UnauthorizedException('La cuenta ya no está activa');
       await tokens.update({ usuarioId: registro.usuarioId, usado: false }, { usado: true });
+      await this.avisos?.encolarEnTransaccion(manager, registro.usuarioId, 'RECUPERACION_EXITOSA');
     });
     return { mensaje: 'Contraseña actualizada' };
   }
