@@ -32,11 +32,11 @@ export class AuthCorreoEventosService implements OnModuleInit, OnModuleDestroy {
   }
 
   /** No almacena correos, contraseñas, códigos ni datos sensibles en la cola. */
-  async encolar(usuarioId: number, tipo: TipoEventoSeguridad, id = randomUUID()) {
+  async encolar(usuarioId: number, tipo: TipoEventoSeguridad, id: string = randomUUID()) {
     await this.encolarEnTransaccion(this.ds.manager, usuarioId, tipo, id);
   }
 
-  async encolarEnTransaccion(manager: EntityManager, usuarioId: number, tipo: TipoEventoSeguridad, id = randomUUID()) {
+  async encolarEnTransaccion(manager: EntityManager, usuarioId: number, tipo: TipoEventoSeguridad, id: string = randomUUID()) {
     await manager.getRepository(AuthCorreoEvento).insert({
       id, usuarioId, tipo, estado: 'PENDIENTE', intentos: 0,
       proximoIntento: new Date(Math.floor(Date.now() / 1000) * 1000), leaseHasta: null, claim: null,
