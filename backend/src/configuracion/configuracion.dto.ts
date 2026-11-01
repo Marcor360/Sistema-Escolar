@@ -31,6 +31,9 @@ export interface MarcaPublicaDto {
   nombreInstitucion: string;
   nombreCorto: string;
   logoUrl: string | null;
+  faviconAdministrativoUrl: string | null;
+  faviconAlumnoUrl: string | null;
+  logoAlumnoUrl: string | null;
   colorPrimario: string;
   colorPrimarioOscuro: string;
   colorAcento: string;

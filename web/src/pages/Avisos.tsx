@@ -1,6 +1,7 @@
 import { useModuloTrabajo } from '../components/ModuloTrabajo';
 import { FormEvent, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
+import { GestionComunicadosAlumno } from '../components/GestionComunicadosAlumno';
 import { Encabezado } from '../components/Encabezado';
 
 const FORM_INICIAL = { titulo: '', mensaje: '', rol: 'ALUMNO' };
@@ -60,6 +61,7 @@ export default function AvisosPage() {
         {error && <p className="mensaje-error" role="alert">{error}</p>}
         {exito && <p className="mensaje-ok" role="status">{exito}</p>}
       </section>
+      <GestionComunicadosAlumno />
     </>
   );
 }

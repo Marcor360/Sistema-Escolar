@@ -1,3 +1,4 @@
+import { ComunicadosAlumnosService } from './comunicados-alumnos.service';
 import { PushService } from './push.service';
 import { PushController } from './push.controller';
 import { Module } from '@nestjs/common';
@@ -13,7 +14,7 @@ import { NotificacionesController } from './notificaciones.controller';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Notificacion, Usuario, Alumno, UsuarioPlantel]), PlantelesModule],
-  providers: [NotificacionesService, PushService, CorreoMicrosoftService],
+  providers: [NotificacionesService, ComunicadosAlumnosService, PushService, CorreoMicrosoftService],
   controllers: [NotificacionesController, PushController],
   exports: [NotificacionesService],
 })
