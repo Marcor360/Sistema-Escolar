@@ -1,3 +1,4 @@
+import { CampoPassword } from '../components/CampoPassword';
 import { useDisenoAlumno } from "../use-diseno-alumno";
 import { useRef, useEffect, useState } from "react";
 import {
@@ -26,7 +27,6 @@ export default function LoginScreen({ aviso = "" }: { aviso?: string } = {}) {
   const [error, setError] = useState("");
   const [enviando, setEnviando] = useState(false);
   const enCurso = useRef(false);
-  const [mostrarPassword, setMostrarPassword] = useState(false);
   const [logoFallo, setLogoFallo] = useState(false);
   useEffect(() => setLogoFallo(false), [marca.logoUrl, marca.logoAlumnoUrl]);
   const [activacionVisible, setActivacionVisible] = useState(false);
@@ -62,13 +62,15 @@ export default function LoginScreen({ aviso = "" }: { aviso?: string } = {}) {
       >
         <View style={[estilos.caja, { borderTopColor: marca.colorAcento, padding:diseno.compacto?16:24 }]}>
           {(marca.logoAlumnoUrl || marca.logoUrl) && !logoFallo ? (
-            <Image
-              source={{ uri: archivosBase + (marca.logoAlumnoUrl || marca.logoUrl) }}
-              style={estilos.logo}
-              resizeMode="contain"
-              onError={() => setLogoFallo(true)}
-              accessibilityLabel={marca.nombreInstitucion}
-            />
+            <View style={[estilos.logoFondo, { backgroundColor: marca.colorPrimario }]}>
+              <Image
+                source={{ uri: archivosBase + (marca.logoAlumnoUrl || marca.logoUrl) }}
+                style={estilos.logo}
+                resizeMode="contain"
+                onError={() => setLogoFallo(true)}
+                accessibilityLabel={marca.nombreInstitucion}
+              />
+            </View>
           ) : (
             <View
               style={[estilos.monograma, { borderColor: marca.colorPrimario }]}
@@ -103,10 +105,9 @@ export default function LoginScreen({ aviso = "" }: { aviso?: string } = {}) {
             onSubmitEditing={() => passwordRef.current?.focus()}
           />
           <Text style={estilos.etiqueta}>Contraseña</Text>
-          <TextInput
+          <CampoPassword
             style={estilos.input}
             ref={passwordRef}
-            secureTextEntry={!mostrarPassword}
             value={password}
             onChangeText={setPassword}
             accessibilityLabel="Contraseña"
@@ -119,19 +120,6 @@ export default function LoginScreen({ aviso = "" }: { aviso?: string } = {}) {
               void entrar();
             }}
           />
-          <TouchableOpacity
-            style={estilos.controlPassword}
-            onPress={() => setMostrarPassword((v) => !v)}
-            accessibilityRole="button"
-            accessibilityLabel={
-              mostrarPassword ? "Ocultar contraseña" : "Mostrar contraseña"
-            }
-            accessibilityState={{ expanded: mostrarPassword }}
-          >
-            <Text>
-              {mostrarPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-            </Text>
-          </TouchableOpacity>
           {error !== "" && (
             <Text style={estilos.error} accessibilityRole="alert">
               {error}
@@ -207,7 +195,8 @@ const estilos = StyleSheet.create({
     marginBottom: 10,
   },
   monogramaTexto: { fontSize: 18, color: colores.pizarra, fontWeight: "600" },
-  logo: { width: 160, height: 72, alignSelf: "center", marginBottom: 10 },
+  logo: { width: 160, height: 72, alignSelf: "center" },
+  logoFondo: { borderRadius: 12, padding: 12, marginBottom: 14, alignSelf: "center" },
   titulo: {
     fontSize: tipografia.titulo,
     textAlign: "center",

@@ -1,3 +1,4 @@
+import { CampoPassword } from '../components/CampoPassword';
 import { useDisenoAlumno } from "../use-diseno-alumno";
 import { repetirRecorridoAlumno } from '../recorrido-alumno';
 import { activarPush, desactivarPush } from "../push";
@@ -332,9 +333,8 @@ export default function PerfilScreen({ abrirDocumentos }: { abrirDocumentos?: ()
           sesión y tendrás que volver a ingresar.
         </Text>
         <Text style={estilos.etiqueta}>Contraseña actual</Text>
-        <TextInput
+        <CampoPassword
           style={estilos.input}
-          secureTextEntry
           value={actual}
           onChangeText={setActual}
           accessibilityLabel="Contraseña actual"
@@ -344,9 +344,8 @@ export default function PerfilScreen({ abrirDocumentos }: { abrirDocumentos?: ()
           editable={!cambiandoPassword}
         />
         <Text style={estilos.etiqueta}>Nueva contraseña (mínimo 8)</Text>
-        <TextInput
+        <CampoPassword
           style={estilos.input}
-          secureTextEntry
           value={nueva}
           onChangeText={setNueva}
           accessibilityLabel="Nueva contraseña, mínimo 8 caracteres"
@@ -356,9 +355,8 @@ export default function PerfilScreen({ abrirDocumentos }: { abrirDocumentos?: ()
           editable={!cambiandoPassword}
         />
         <Text style={estilos.etiqueta}>Confirmar nueva contraseña</Text>
-        <TextInput
+        <CampoPassword
           style={estilos.input}
-          secureTextEntry
           value={confirmacion}
           onChangeText={setConfirmacion}
           accessibilityLabel="Confirmar nueva contraseña"

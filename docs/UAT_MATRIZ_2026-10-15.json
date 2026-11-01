@@ -1,6 +1,6 @@
 {
-  "version": "1.35.12",
-  "alcance": "Candidata 1.35.12: correos por ingreso y cambios de contraseña, con cola persistente y migración espejo; UAT de entrega externa pendiente.",
+  "version": "1.35.13",
+  "alcance": "Candidata 1.35.13 integrada: titulación/vinculación laboral, marca por portal, comunicados, rotación de códigos, alertas y controles de contraseña. CI por SHA; UAT institucional y despliegue pendientes.",
   "escenarios": [
     {
       "id": "UAT-01",
@@ -924,6 +924,24 @@
         "sqlserver",
         "android",
         "ios"
+      ],
+      "estado": "pendiente",
+      "responsable": "Institución/QA (por designar)",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-67",
+      "rol": "ALUMNO",
+      "escenario": "Verificar activación y recuperación con rotación tras cooldown e invalidación del código anterior, correos de seguridad, visibilidad y confirmación de contraseñas, logo del alumno y fallback al institucional en web y Expo.",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver",
+        "smtp",
+        "android",
+        "ios",
+        "ux"
       ],
       "estado": "pendiente",
       "responsable": "Institución/QA (por designar)",

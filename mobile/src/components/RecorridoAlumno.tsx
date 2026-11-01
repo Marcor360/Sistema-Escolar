@@ -8,7 +8,7 @@ import {
   pasosAlumno,
 } from "../recorrido-alumno";
 import { useMarca } from "../marca";
-import { textoSobreFondo } from "../theme";
+import { colores, textoSobreFondo } from "../theme";
 export function RecorridoAlumno({
   usuarioId,
   navegar,
@@ -90,7 +90,7 @@ export function RecorridoAlumno({
         </TouchableOpacity>
       </View>
     );
-  const boton = (texto: string, accion: () => void) => (
+  const boton = (texto: string, accion: () => void, secundario = false) => (
     <TouchableOpacity
       accessibilityRole="button"
       onPress={accion}
@@ -99,13 +99,17 @@ export function RecorridoAlumno({
         padding: 12,
         marginVertical: 4,
         borderRadius: 12,
-        backgroundColor: marca.colorPrimario,
+        backgroundColor: secundario ? "#fff" : marca.colorPrimario,
+        borderWidth: secundario ? 1 : 0,
+        borderColor: colores.linea,
+        alignItems: "center",
+        justifyContent: "center",
       }}
     >
       <Text
         style={{
-          color: textoSobreFondo(marca.colorPrimario),
-          fontWeight: "700",
+          color: secundario ? colores.tinta : textoSobreFondo(marca.colorPrimario),
+          fontWeight: secundario ? '500' : '700',
         }}
       >
         {texto}
@@ -132,9 +136,13 @@ export function RecorridoAlumno({
           }}
           contentContainerStyle={{ paddingBottom: 24 }}
         >
-          <Text>
-            Guía del alumno · {actual + 1} de {pasosAlumno.length}
+          <Text style={{ color: colores.gris, fontSize: 14 }}>
+            Guía del alumno · Paso {actual + 1} de {pasosAlumno.length}
           </Text>
+          <View accessibilityLabel={`Progreso: paso ${actual + 1} de ${pasosAlumno.length}`}
+            style={{ height: 5, borderRadius: 3, backgroundColor: colores.linea, marginTop: 10 }}>
+            <View style={{ width: `${((actual + 1) / pasosAlumno.length) * 100}%` as const, height: 5, borderRadius: 3, backgroundColor: marca.colorPrimario }} />
+          </View>
           <Text
             accessibilityRole="header"
             style={{ fontSize: 23, fontWeight: "700", marginVertical: 12 }}
@@ -144,21 +152,20 @@ export function RecorridoAlumno({
           <Text style={{ fontSize: 16, lineHeight: 25 }}>
             {paso.descripcion}
           </Text>
-          <Text style={{ fontSize: 15, lineHeight: 24, marginVertical: 12 }}>
+          <Text style={{ fontSize: 14, lineHeight: 22, color: colores.gris, marginVertical: 12 }}>
             {paso.comprobar}
           </Text>
           {!!error && <Text accessibilityRole="alert">{error}</Text>}
           {boton("Ver esta pantalla", () => {
             navegar(paso.pantalla);
             setPausado(true);
-          })}
-          <Text>
-            Puedes repetir la guía desde Perfil. Ningún paso guarda ni confirma
-            operaciones.
+          }, true)}
+          <Text style={{ color: colores.gris, fontSize: 13, marginVertical: 8 }}>
+            Esta guía no cambia tus datos. Puedes repetirla desde Perfil.
           </Text>
           <View>
             {actual > 0 &&
-              boton("Anterior", () => setActual((a) => (a ?? 1) - 1))}
+              boton("Anterior", () => setActual((a) => (a ?? 1) - 1), true)}
             {boton(
               actual === pasosAlumno.length - 1
                 ? "Finalizar recorrido"
@@ -168,7 +175,7 @@ export function RecorridoAlumno({
                   ? cerrar()
                   : setActual((a) => (a ?? 0) + 1),
             )}
-            {boton("Omitir recorrido", cerrar)}
+            {boton("Omitir recorrido", cerrar, true)}
           </View>
         </ScrollView>
       </View>

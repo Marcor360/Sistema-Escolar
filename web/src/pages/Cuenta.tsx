@@ -1,3 +1,4 @@
+import { CampoPassword } from '../components/CampoPassword';
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, mensajeDeError } from '../api/client';
@@ -96,15 +97,15 @@ export default function CuentaPage() {
           <fieldset disabled={enviando} style={{ border: 0, margin: 0, padding: 0, minWidth: 0 }}>
             <div className="campo" style={{ marginBottom: 10 }}>
               <label htmlFor="cuenta-password-actual">Contraseña actual</label>
-              <input id="cuenta-password-actual" type="password" required autoComplete="current-password" value={actual} onChange={(e) => setActual(e.target.value)} />
+              <CampoPassword id="cuenta-password-actual" required autoComplete="current-password" value={actual} onChange={(e) => setActual(e.target.value)} />
             </div>
             <div className="campo" style={{ marginBottom: 10 }}>
               <label htmlFor="cuenta-password-nueva">Nueva contraseña (mínimo 8 caracteres)</label>
-              <input id="cuenta-password-nueva" type="password" required minLength={8} autoComplete="new-password" value={nueva} onChange={(e) => setNueva(e.target.value)} />
+              <CampoPassword id="cuenta-password-nueva" required minLength={8} autoComplete="new-password" value={nueva} onChange={(e) => setNueva(e.target.value)} />
             </div>
             <div className="campo" style={{ marginBottom: 14 }}>
               <label htmlFor="cuenta-password-confirmar">Confirmar nueva contraseña</label>
-              <input id="cuenta-password-confirmar" type="password" required autoComplete="new-password" value={confirmar} onChange={(e) => setConfirmar(e.target.value)} />
+              <CampoPassword id="cuenta-password-confirmar" required autoComplete="new-password" value={confirmar} onChange={(e) => setConfirmar(e.target.value)} />
             </div>
             {error && <p className="mensaje-error" role="alert">{error}</p>}
             <button className="boton" disabled={enviando}>{enviando ? 'Actualizando…' : 'Actualizar contraseña'}</button>
