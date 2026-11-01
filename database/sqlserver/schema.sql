@@ -1148,3 +1148,81 @@ CREATE TABLE boleta_atenciones (
  CONSTRAINT ck_boleta_atencion_estado CHECK(estado IN ('PENDIENTE','EN_ATENCION','RESUELTA'))
 );
 CREATE INDEX idx_boleta_atencion_respuesta ON boleta_atenciones(respuesta_id,id);
+
+-- Borradores institucionales: no se generan ni transmiten títulos SEP.
+CREATE TABLE titulacion_expedientes (
+  id INT IDENTITY(1,1) PRIMARY KEY,
+  egreso_id INT NOT NULL,
+  carrera_plan_id INT NOT NULL,
+  creado_por_id INT NOT NULL,
+  estado NVARCHAR(20) NOT NULL CONSTRAINT df_titulacion_estado DEFAULT N'BORRADOR',
+  modalidad_rvoe NVARCHAR(20) NOT NULL CONSTRAINT df_titulacion_rvoe DEFAULT N'SIN_DETERMINAR',
+  created_at DATETIME2(6) NOT NULL CONSTRAINT df_titulacion_created DEFAULT SYSUTCDATETIME(),
+  updated_at DATETIME2(6) NOT NULL CONSTRAINT df_titulacion_updated DEFAULT SYSUTCDATETIME(),
+  CONSTRAINT uq_titulacion_egreso_plan UNIQUE (egreso_id, carrera_plan_id),
+  CONSTRAINT fk_titulacion_egreso FOREIGN KEY (egreso_id) REFERENCES egresos_alumnos(id),
+  CONSTRAINT fk_titulacion_carrera FOREIGN KEY (carrera_plan_id) REFERENCES carreras_planes(id),
+  CONSTRAINT fk_titulacion_actor FOREIGN KEY (creado_por_id) REFERENCES usuarios(id)
+);
+GO
+CREATE INDEX idx_titulacion_estado ON titulacion_expedientes(estado, created_at);
+GO
+
+-- Solo metadatos de firmantes; NUNCA almacenar claves privadas ni contraseñas aquí.
+CREATE TABLE titulacion_firmantes (
+  id INT IDENTITY(1,1) PRIMARY KEY,
+  plantel_id INT NOT NULL,
+  nombre NVARCHAR(160) NOT NULL,
+  cargo NVARCHAR(100) NOT NULL,
+  curp NVARCHAR(18) NOT NULL,
+  vigente_desde DATE NOT NULL,
+  vigente_hasta DATE NULL,
+  certificado_sha256 NVARCHAR(64) NULL,
+  estado NVARCHAR(25) NOT NULL CONSTRAINT df_titulacion_firmante_estado DEFAULT N'PENDIENTE_VALIDACION',
+  registrado_por_id INT NOT NULL,
+  created_at DATETIME2(6) NOT NULL CONSTRAINT df_titulacion_firmante_created DEFAULT SYSUTCDATETIME(),
+  CONSTRAINT fk_titulacion_firmante_plantel FOREIGN KEY (plantel_id) REFERENCES planteles(id),
+  CONSTRAINT fk_titulacion_firmante_actor FOREIGN KEY (registrado_por_id) REFERENCES usuarios(id)
+);
+GO
+CREATE INDEX idx_titulacion_firmantes_plantel ON titulacion_firmantes(plantel_id, estado);
+GO
+
+-- Identidades de acceso separadas de una persona que estudia y trabaja; sin mover expedientes.
+CREATE TABLE usuario_vinculos_persona (
+  id INT IDENTITY(1,1) PRIMARY KEY,
+  alumno_usuario_id INT NOT NULL,
+  personal_usuario_id INT NOT NULL,
+  autorizado_por_id INT NOT NULL,
+  motivo NVARCHAR(200) NOT NULL,
+  created_at DATETIME2(6) NOT NULL CONSTRAINT df_vinculo_created DEFAULT SYSUTCDATETIME(),
+  CONSTRAINT uq_vinculo_alumno_usuario UNIQUE (alumno_usuario_id),
+  CONSTRAINT uq_vinculo_personal_usuario UNIQUE (personal_usuario_id),
+  CONSTRAINT fk_vinculo_alumno_usuario FOREIGN KEY (alumno_usuario_id) REFERENCES usuarios(id),
+  CONSTRAINT fk_vinculo_personal_usuario FOREIGN KEY (personal_usuario_id) REFERENCES usuarios(id),
+  CONSTRAINT fk_vinculo_autorizado_por FOREIGN KEY (autorizado_por_id) REFERENCES usuarios(id)
+);
+GO
+
+ALTER TABLE configuracion_marca
+  ADD favicon_administrativo_url NVARCHAR(255) NULL,
+      favicon_alumno_url NVARCHAR(255) NULL,
+      logo_alumno_url NVARCHAR(255) NULL;
+GO
+
+CREATE TABLE comunicados_alumnos (
+  id INT IDENTITY(1,1) PRIMARY KEY,
+  plantel_id INT NOT NULL,
+  creado_por_id INT NOT NULL,
+  titulo NVARCHAR(150) NOT NULL,
+  mensaje NVARCHAR(600) NOT NULL,
+  estado NVARCHAR(20) NOT NULL CONSTRAINT df_comunicados_estado DEFAULT 'BORRADOR',
+  destinatarios INT NOT NULL CONSTRAINT df_comunicados_destinatarios DEFAULT 0,
+  enviado_en DATETIME2(6) NULL,
+  created_at DATETIME2(6) NOT NULL CONSTRAINT df_comunicados_created DEFAULT SYSUTCDATETIME(),
+  updated_at DATETIME2(6) NOT NULL CONSTRAINT df_comunicados_updated DEFAULT SYSUTCDATETIME(),
+  CONSTRAINT fk_comunicados_plantel FOREIGN KEY (plantel_id) REFERENCES planteles(id),
+  CONSTRAINT fk_comunicados_creador FOREIGN KEY (creado_por_id) REFERENCES usuarios(id)
+);
+CREATE INDEX idx_comunicados_plantel_fecha ON comunicados_alumnos (plantel_id, created_at);
+GO

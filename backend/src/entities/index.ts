@@ -19,6 +19,7 @@ export * from './periodo-calificacion.entity';
 export * from './historial-calificacion.entity';
 export * from './evento-calendario.entity';
 export * from './notificacion.entity';
+export * from './comunicado-alumno.entity';
 export * from './concepto-pago.entity';
 export * from './cargo.entity';
 export * from './orden-pago.entity';
@@ -83,3 +84,6 @@ export * from './historial-roles-usuario.entity';
 export * from './boleta-respuesta.entity';
 
 export { BoletaAtencion } from './boleta-atencion.entity';
+export * from './titulacion-expediente.entity';
+export * from './titulacion-firmante.entity';
+export * from './usuario-vinculo-persona.entity';

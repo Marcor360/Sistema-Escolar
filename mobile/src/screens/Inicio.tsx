@@ -33,7 +33,7 @@ export default function InicioScreen() {
   const diseno = useDisenoAlumno();
   const { marca } = useMarca();
   const [logoFallo, setLogoFallo] = useState(false);
-  useEffect(() => setLogoFallo(false), [marca.logoUrl]);
+  useEffect(() => setLogoFallo(false), [marca.logoUrl, marca.logoAlumnoUrl]);
   const { sesion } = useSesion();
   const navigation = useNavigation();
   const [saldo, setSaldo] = useState<number | null>(null);
@@ -109,8 +109,8 @@ export default function InicioScreen() {
     >
       <View style={[estilos.encabezado, { backgroundColor: marca.colorPrimario, borderBottomColor: marca.colorAcento }]}>
         <View style={estilos.identidad}>
-          {marca.logoUrl && !logoFallo
-            ? <Image source={{ uri: archivosBase + marca.logoUrl }} style={estilos.logoInstitucional}
+          {(marca.logoAlumnoUrl || marca.logoUrl) && !logoFallo
+            ? <Image source={{ uri: archivosBase + (marca.logoAlumnoUrl || marca.logoUrl) }} style={estilos.logoInstitucional}
                 resizeMode="contain" accessibilityLabel={`Logo de ${marca.nombreInstitucion}`}
                 onError={() => setLogoFallo(true)} />
             : <Text style={[estilos.monograma, { color: textoSobreFondo(marca.colorPrimario) }]}>{marca.nombreCorto}</Text>}

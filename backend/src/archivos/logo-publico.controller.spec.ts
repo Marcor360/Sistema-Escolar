@@ -13,11 +13,13 @@ describe('Logo público con cabeceras de seguridad reales', () => {
   let base: string;
   const anterior = process.env.UPLOADS_DIR;
   const nombre = 'marca-logo-1234abcd.png';
+  const favicon = 'marca-favicon-alumno-1234abcd.png';
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64');
   beforeAll(async () => {
     directorio = await mkdtemp(join(tmpdir(), 'logo-publico-'));
     process.env.UPLOADS_DIR = directorio;
     await writeFile(join(directorio, nombre), png);
+    await writeFile(join(directorio, favicon), png);
     await writeFile(join(directorio, 'privado.pdf'), 'privado');
     const app = express();
     app.use(helmet({ contentSecurityPolicy: false }));
@@ -45,6 +47,13 @@ describe('Logo público con cabeceras de seguridad reales', () => {
     expect(respuesta.headers.get('x-content-type-options')).toBe('nosniff');
     expect(respuesta.headers.get('cache-control')).toContain('immutable');
     expect(Buffer.from(await respuesta.arrayBuffer())).toEqual(png);
+  });
+  it('publica solo favicons de marca y conserva documentos privados', async () => {
+    const respuesta = await fetch(`${base}/uploads/${favicon}`);
+    expect(respuesta.status).toBe(200);
+    expect(respuesta.headers.get('content-type')).toMatch(/^image\/png/);
+    const falso = await fetch(`${base}/uploads/favicon-temporal-1234.png`);
+    expect(falso.status).toBe(400);
   });
   it('mantiene la política restrictiva y la protección de documentos privados', async () => {
     const documento = await fetch(`${base}/uploads/privado.pdf`);

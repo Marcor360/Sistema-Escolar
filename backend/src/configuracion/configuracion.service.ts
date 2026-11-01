@@ -23,6 +23,9 @@ const VALORES_INICIALES = {
   nombrePortalAlumno: 'Sistema Escolar Portal Alumno',
   nombreCorto: 'SE',
   logoUrl: null as string | null,
+  faviconAdministrativoUrl: null as string | null,
+  faviconAlumnoUrl: null as string | null,
+  logoAlumnoUrl: null as string | null,
   colorPrimario: '#14343B',
   colorAcento: '#C79A3C',
   mensajeBienvenida: '',
@@ -72,6 +75,48 @@ export class ConfiguracionService {
     }
   }
 
+  async guardarRecurso(file: Express.Multer.File, campo: 'faviconAdministrativoUrl' | 'faviconAlumnoUrl' | 'logoAlumnoUrl'): Promise<MarcaPublicaDto> {
+    const esFavicon = campo !== 'logoAlumnoUrl';
+    let nombre = '';
+    let publicado = false;
+    try {
+      await validarContenidoArchivo(file);
+      if (esFavicon) {
+        if (file.size > 512 * 1024) throw new BadRequestException('El favicon supera los 512 KiB');
+        const cabecera = Buffer.alloc(24);
+        const descriptor = await fs.open(file.path, 'r');
+        try {
+          const { bytesRead } = await descriptor.read(cabecera, 0, 24, 0);
+          if (bytesRead !== 24) throw new BadRequestException('PNG incompleto');
+        } finally { await descriptor.close(); }
+        const png = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+        const ancho = cabecera.readUInt32BE(16);
+        const alto = cabecera.readUInt32BE(20);
+        if (!cabecera.subarray(0, 8).equals(png) || cabecera.toString('ascii', 12, 16) !== 'IHDR' ||
+            ancho !== alto || ancho < 16 || ancho > 512) {
+          throw new BadRequestException('El favicon debe ser PNG cuadrado de 16 a 512 píxeles');
+        }
+      } else if (!file.originalname.toLowerCase().endsWith('.webp')) {
+        throw new BadRequestException('El logo de alumno debe optimizarse a WebP');
+      }
+      const prefijo = campo === 'logoAlumnoUrl' ? 'marca-logo-alumno' :
+        campo === 'faviconAlumnoUrl' ? 'marca-favicon-alumno' : 'marca-favicon-administrativo';
+      nombre = `${prefijo}-${randomUUID()}.${esFavicon ? 'png' : 'webp'}`;
+      const destino = join(uploadsPath(), nombre);
+      await fs.rename(file.path, destino);
+      publicado = true;
+      await fs.access(destino, constants.R_OK);
+      return await this.modificar((marca) => { marca[campo] = `/uploads/${nombre}`; });
+    } catch (error) {
+      if (publicado) await fs.unlink(join(uploadsPath(), nombre)).catch(() => undefined);
+      throw error;
+    } finally { await fs.unlink(file.path).catch(() => undefined); }
+  }
+
+  async quitarRecurso(campo: 'faviconAdministrativoUrl' | 'faviconAlumnoUrl' | 'logoAlumnoUrl'): Promise<MarcaPublicaDto> {
+    return this.modificar((marca) => { marca[campo] = null; });
+  }
+
   async guardarLogoPdf(file: Express.Multer.File, logoUrl?: string) {
     try {
       const nombre = nombreLogoPdf(logoUrl ?? '');
@@ -113,8 +158,13 @@ export class ConfiguracionService {
       const repo = manager.getRepository(ConfiguracionMarca);
       const marca = await repo.findOneOrFail({ where: { id: 1 }, lock: { mode: 'pessimistic_write' } });
       const anterior = marca.logoUrl;
+      const recursosAnteriores = [marca.faviconAdministrativoUrl, marca.faviconAlumnoUrl, marca.logoAlumnoUrl];
       cambio(marca);
       const guardada = await repo.save(marca);
+      const recursosActuales = [guardada.faviconAdministrativoUrl, guardada.faviconAlumnoUrl, guardada.logoAlumnoUrl];
+      for (const [indice, recurso] of recursosAnteriores.entries()) {
+        if (recurso && recurso !== recursosActuales[indice]) await programarLimpieza(manager, recurso);
+      }
       if (anterior && anterior !== guardada.logoUrl) {
         await programarLimpieza(manager, anterior);
         if (/^\/uploads\/marca-logo-[0-9a-f-]+\.webp$/i.test(anterior)) {
@@ -132,6 +182,9 @@ export class ConfiguracionService {
       nombrePortalAlumno: marca.nombrePortalAlumno || 'Sistema Escolar Portal Alumno',
       nombreCorto: marca.nombreCorto,
       logoUrl: marca.logoUrl,
+      faviconAdministrativoUrl: marca.faviconAdministrativoUrl ?? null,
+      faviconAlumnoUrl: marca.faviconAlumnoUrl ?? null,
+      logoAlumnoUrl: marca.logoAlumnoUrl ?? null,
       colorPrimario: marca.colorPrimario,
       colorPrimarioOscuro: this.oscurecer(marca.colorPrimario),
       colorAcento: marca.colorAcento,

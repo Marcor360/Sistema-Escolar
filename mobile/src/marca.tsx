@@ -7,6 +7,8 @@ export type Marca = {
   nombreInstitucion: string;
   nombreCorto: string;
   logoUrl: string | null;
+  faviconAlumnoUrl?: string | null;
+  logoAlumnoUrl?: string | null;
   colorPrimario: string;
   colorPrimarioOscuro: string;
   colorAcento: string;
@@ -16,7 +18,7 @@ export type Marca = {
 export const MARCA_CACHE_KEY = 'escolar_marca';
 export const MARCA_POR_DEFECTO: Marca = {
   nombreAdministrativo: 'Sistema Escolar Administrativo', nombrePortalAlumno: 'Sistema Escolar Portal Alumno',
-  nombreInstitucion: 'Sistema Escolar', nombreCorto: 'SE', logoUrl: null,
+  nombreInstitucion: 'Sistema Escolar', nombreCorto: 'SE', logoUrl: null, faviconAlumnoUrl: null, logoAlumnoUrl: null,
   colorPrimario: '#14343B', colorPrimarioOscuro: '#0E262B', colorAcento: '#C79A3C', actualizadoEn: '',
 };
 
