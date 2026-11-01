@@ -1,0 +1,29 @@
+[
+  {
+    "name": "minimatch",
+    "upstreamVersion": "3.1.5",
+    "version": "3.1.5-escolar.0",
+    "archive": "minimatch-3.1.5-escolar.0.tgz",
+    "upstreamIntegrity": "sha512-VgjWUsnnT6n+NUk6eZq77zeFdpW2LWDzP6zFGrCbHXiYNul5Dzqk2HHQ5uFH2DNW5Xbp8+jVzaeNt94ssEEl4w==",
+    "integrity": "sha512-2SnXKBcLZPb4sXllhjVPMrLY9FvWiVOgqJcUXyr6bL4fEbveRnGn6OgPVYJLj9w3rKauP3e0xM8huvMsfy9vbw==",
+    "sourceChanges": "package.json: version only; runtime and license identical to upstream"
+  },
+  {
+    "name": "minimatch",
+    "upstreamVersion": "5.1.9",
+    "version": "5.1.9-escolar.0",
+    "archive": "minimatch-5.1.9-escolar.0.tgz",
+    "upstreamIntegrity": "sha512-7o1wEA2RyMP7Iu7GNba9vc0RWWGACJOCZBJX2GJWip0ikV+wcOsgVuY9uE8CPiyQhkGFSlhuSkZPavN7u1c2Fw==",
+    "integrity": "sha512-x6O60AndgALQguTHMNg4Co/sP21gxBs1sGiVzxAwd2IV7jyVYY2OjGdMq7gsMLquTIFOynLXej/Tvpstz0h0RQ==",
+    "sourceChanges": "package.json: version only; runtime and license identical to upstream"
+  },
+  {
+    "name": "glob",
+    "upstreamVersion": "7.2.3",
+    "version": "7.2.3-escolar.0",
+    "archive": "glob-7.2.3-escolar.0.tgz",
+    "upstreamIntegrity": "sha512-nFR0zLpU2YCaRxwoCJvL6UvCH2JFyFVIvwTLsIf21AuHlMskA1hhTdk+LlYJtOlYt9v6dvszD2BGRqBL+iQK9Q==",
+    "integrity": "sha512-OoR12qb2gua9tvtj0N3FqESRldF55cZW3GTBd13oRcmYunNRHdNn6Y8sG6VdQP9YGcsDeW5kFqtjJpMdvSJb9Q==",
+    "sourceChanges": "package.json: version only; runtime and license identical to upstream"
+  }
+]
