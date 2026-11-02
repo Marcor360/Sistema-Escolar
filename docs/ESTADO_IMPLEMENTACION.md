@@ -1,53 +1,10 @@
-# Estado de implementación — candidata 1.35.14
+# Estado de implementación — candidata 1.35.15
 
-Estabilización de avisos de seguridad y actualizador coordinado de staging para sistema y Portal Alumno, con validación de versión, planificación, puerto de proxy configurable y tratamiento explícito de fallos de migración. No hay nuevas migraciones, despliegue ni aceptación institucional acreditados. [Diagnóstico y ruta productiva](AUDITORIA_Y_RUTA_PRODUCTIVA_2026-11-01.md).
+Corte 2/nov/2026 sobre main 1.35.14 (`c10da9a`). Revisión del ciclo de alumnos, códigos tras baja/reactivación y documentación vigente. [Recorridos y resultados](BARRIDO_Y_CICLO_ALUMNOS_2026-11-02.md) y [preparación del piloto](PILOTO_PRODUCCION.md).
 
-## Corte anterior — candidata 1.35.13
+La actualización coordinada de sistema y Portal Alumno está integrada en main mediante #240. Su CI aprobada corresponde al SHA `74ab0d5`; no acredita ejecución en IIS ni despliegue institucional. Esta candidata no añade migraciones. [Guía de actualización](ACTUALIZACION_INTEGRAL_1.35.14.md).
 
-Integración de #232, #233, #234 y #237–#239: borradores de titulación y firmantes, vinculación laboral separada, marca por portal, comunicados de alumnos, rotación de códigos, avisos de seguridad y visibilidad/confirmación de contraseñas. Migraciones incrementales espejo MySQL/SQL Server; aplicar antes de actualizar la API. CI se acredita por SHA, sin despliegue ni UAT institucional de esta candidata.
-
-## Corte anterior — candidata 1.35.0
-
-Bandeja de boletas publicadas sin respuesta, filtros por alumno y contexto, gestión de revisión por Administración/Dirección con responsable y eventos inmutables, avisos internos y constancias históricas privadas. [Contrato](BOLETAS_ATENCION_1.35.0.md). Pruebas locales aprobadas según el contrato; CI por SHA de entrega y UAT institucional se acreditan por separado. Sin publicación.
-
-## Corte anterior — candidata 1.34.0
-
-Accesos web de alumno/Director corregidos y separados. Nombres independientes para administración y portal del alumno, seguimiento de boletas por versión, firma nominal de alumno/tutor declarado y comentarios docentes por materia. [Contrato](BOLETAS_FIRMADAS_1.34.0.md). Requiere migración incremental espejo. Sin despliegue ni UAT institucional acreditados.
-
-## Corte anterior — candidata 1.33.0
-
-Expo Web para alumnos con la misma app React Native, cookie HttpOnly en navegador, adaptación de diálogos y capacidades nativas, actualizaciones compatibles. [Contrato](APP_WEB_1.33.0.md). No desplegada ni certificada en dispositivos físicos.
-
-## Corte anterior — candidata 1.32.0
-
-Vite 6.4.5, recorrido de cartera incorporado a CI, detalle de apertura en página propia, separación de calendarios/confirmaciones y validaciones, estilos de tablas centralizados y pendientes de inscripción filtrados por plantel. [Alcance y validación](ESTABILIZACION_1.32.0.md). Sin despliegue ni aceptación UAT acreditados.
-
-## Corte anterior — candidata 1.31.1
-
-Reorganización de formularios, cuotas, selectores y resúmenes; corrección de valores ocultos en tablas móviles de Usuarios, foco de asignación de correo y guías de Control Escolar. [Revisión UX](REVISION_UX_1.31.1.md). Sin cambios de reglas financieras, API o esquema respecto de la candidata 1.31.0. Sin despliegue ni aceptación UAT acreditados.
-
-## Corte anterior — candidata 1.31.0
-
-Alta conjunta de alumno y cartera, expediente sin correo institucional, asignación de acceso posterior desde Usuarios, pausa sin cargos y total/cuotas de periodo. CURP única en alta, corrección, importación y base de datos. [Contrato](CARTERA_INTEGRAL_1.31.0.md). Implementado en esta candidata; sin despliegue ni UAT acreditados.
-
-## Corte anterior — candidata 1.30.3
-
-1.30.3 corrige la espera de confirmaciones en el E2E académico tras detectar un fallo intermitente en CI de main 9d7ea9e. También evita que renovar el token de la misma sesión cancele la consulta académica reintentada; un cambio real de sesión conserva la cancelación. Sin cambios de reglas de negocio, API ni esquema. Conserva calendario institucional 1.30.0.
-
-Calendario institucional: logo de marca, lámina anual/mensual, leyenda, marcadores configurables por plantel, rangos y PDF por impresión. [Contrato 1.30.0](CALENDARIO_INSTITUCIONAL_1.30.0.md). Candidata sin despliegue ni UAT institucional acreditados. Los párrafos siguientes conservan la evidencia de versiones anteriores.
-
-Reinscripción por periodo con autorización financiera, cuotas congeladas e historial conservado; altas ordinarias solo por cartera. [Contrato](REINSCRIPCIONES_SEGURAS_1.29.0.md). Candidata entregada en [PR #211](https://github.com/Marcor360/Sistema-Escolar/pull/211) para #152/#177. Las regresiones de integración MySQL/SQL Server y navegador del primer SHA publicado pasaron; el PR conserva la evidencia por SHA y la repetición tras ajustar una expectativa de prueba de permisos. No desplegada ni aceptada en UAT. #158 sigue bloqueado por HTTP 403 al aplicar protección de main.
-
-## Base 1.28.0 integrada en #209
-
-La candidata 1.28.0 adapta evaluaciones a cuatro parciales, escala 0–10, criterios ponderados, propuesta automática con aprobación explícita y Final manual. Conserva notas originales e históricos. Asistencias informativas ya existentes; no bloquean examen. [Contrato vigente](EVALUACIONES_1.28.0.md). Las confirmaciones del solicitante de logo, correo, Android y permisos cerraron #106/#107/#140/#141; no acreditan UAT de esta candidata. Los párrafos de versiones anteriores conservan su corte histórico.
-
-
-La candidata 1.27.59 añade entregas de hasta 100 MiB o texto de 3000 caracteres, inventario de conservación y conciliación documental de egresos anteriores. No activa eliminación ni PAUSA. [Contrato](ENTREGAS_CONSERVACION_1.27.59.md). Requiere migración espejo, actualización del cliente y validación de IIS.
-
-La candidata 1.27.58 aborda deuda de tipos en pruebas, efectos de React y aislamiento HTTP de Vitest. [Alcance y validaciones](DEUDA_TECNICA_1.27.58.md). Mantiene pendientes institucionales y no acredita despliegue.
-
-Corte documental: 26 de octubre de 2026. Base main 1.27.55, con #203 y #204 fusionados. La candidata 1.27.56 incorpora [diseño adaptable de Expo](APP_RESPONSIVE_1.27.56.md): ancho de lectura, áreas seguras, accesos de Inicio, formularios, títulos y paginación. Conserva recorridos, comparativas, correos y recuperación de la base. No acredita instalación física, UAT ni despliegue. Las reglas académicas y financieras no cambian.
+Los cortes anteriores se consultan en el [historial de entregas](HISTORIAL_VERSIONES.md), sus contratos y Git. Las confirmaciones generales de logo, correo, Android y permisos se conservan; no equivalen a aceptar esta candidata.
 
 ## Clasificación
 
@@ -59,7 +16,7 @@ Marca en #163: entrada web PNG/JPEG/WebP ≤20 MiB, salida/API WebP ≤10 MiB, m
 
 | Área | Implementado y localización | Pendiente |
 |---|---|---|
-| Identidad y acceso | Expedientes, baja/egreso/transferencia/reactivación; permisos por plantel y clase; auth y ScopeService | Altas nuevas sin contraseña predecible, pendientes hasta activación por código privado; recepción SMTP confirmada por el solicitante para ambos proveedores; nueva candidata sin UAT |
+| Identidad y acceso | Expedientes, baja/egreso/transferencia/reactivación; permisos por plantel y clase; auth y ScopeService | Recepción SMTP confirmada por el solicitante para ambos proveedores; validar alta/activación y baja/retorno de esta candidata con responsables |
 | Sesiones | Access 15 minutos, refresh rotativo de hasta 30 días, hash, revocación, cookie HttpOnly web y SecureStore móvil | Ensayo HTTPS, expiración y cambio de cuenta en entornos/dispositivos objetivo |
 | Academia | Ciclos en preparación/activo/cierre, grupos, asignaciones, inscripción y promoción transaccional | Validación institucional de cierre/promoción y datos representativos |
 | Calificaciones | Candidata P1–P4/0–10, criterios y Final manual; histórico P1–P3/0–100 conservado; auditoría, cierres y preview de importación | Decimales y aprobación manual confirmados; validar UAT vigente y formatos oficiales |
@@ -78,7 +35,7 @@ Marca en #163: entrada web PNG/JPEG/WebP ≤20 MiB, salida/API WebP ≤10 MiB, m
 | Push | Opt-in, dispositivo/sesión, cola y recibos; deshabilitado por defecto | EAS/FCM/APNs y entrega física |
 | Base | Baseline v1 y migraciones incrementales espejo según el manifiesto vigente; DB_SYNC=false, runner y pruebas de ambos motores | Estado del servidor real y ensayo en copia histórica |
 | ETL | Planteles/alumnos, dry-run y siete pruebas | Esquema certweb sanitizado, TLS/mapeos/conciliación; no apto para migración general |
-| Operación | Scripts Windows/IIS, despliegue manual, health live/ready, rollback de código; README informa staging 1.27.17 | Verificar versión efectiva del host, alertas, respaldo cifrado externo y restore con RPO/RTO observado |
+| Operación | Scripts Windows/IIS, despliegue manual, health live/ready, rollback de código; actualizador coordinado de sistema/Portal Alumno con planificación y bloqueo exclusivo | Verificar versión efectiva del host, alertas, respaldo cifrado externo y restore con RPO/RTO observado |
 
 ## Cambios consolidados y evidencia técnica
 
@@ -95,4 +52,4 @@ Marca en #163: entrada web PNG/JPEG/WebP ≤20 MiB, salida/API WebP ≤10 MiB, m
 - #158: protección de main. #179: proveedor y consentimiento para WhatsApp/llamadas.
 - Operación: comprobar versión desplegada, restore aislado, antivirus y conciliación de datos históricos.
 
-Logo (#106), correo (#107), permisos (#140) y aceptación de Android (#141) fueron confirmados por el solicitante y cerrados en GitHub. No convertir estas confirmaciones generales en aprobación de todos los casos UAT ni de iOS. Las matrices conservan pendientes por versión y añaden UAT-63 para atención de boletas en esta candidata. No se ha desplegado ni aplicado migraciones institucionales desde este trabajo.
+Logo (#106), correo (#107), permisos (#140) y aceptación de Android (#141) fueron confirmados por el solicitante y cerrados en GitHub. No convertir estas confirmaciones generales en aprobación de todos los casos UAT ni de iOS. Las matrices conservan los escenarios y pendientes por versión; las pruebas automatizadas no los aprueban por sí solas. No se ha desplegado ni aplicado migraciones institucionales desde este trabajo.

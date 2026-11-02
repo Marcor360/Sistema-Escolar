@@ -1,6 +1,6 @@
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
-import { CrearAlumnoDto } from './alumnos.dto';
+import { CrearAlumnoDto, ReactivarAlumnoDto } from './alumnos.dto';
 
 const valido = {
   email: 'ALUMNO@INSTITUCION.EDU.MX',
@@ -30,5 +30,16 @@ describe('CrearAlumnoDto: identidad institucional', () => {
   it('rechaza un campo password enviado manualmente si se usa whitelist estricta', () => {
     const dto = plainToInstance(CrearAlumnoDto, { ...valido, password: 'manual' });
     expect(validateSync(dto, { whitelist: true, forbidNonWhitelisted: true }).map((error) => error.property)).toContain('password');
+  });
+});
+
+describe('ReactivarAlumnoDto: motivo auditable', () => {
+  it.each(['   ', '\t\n', ' a '])('rechaza un motivo vacío o demasiado corto: %j', (motivo) => {
+    expect(validateSync(plainToInstance(ReactivarAlumnoDto, { motivo })).map(e => e.property)).toContain('motivo');
+  });
+  it('conserva el motivo sin espacios exteriores', () => {
+    const dto = plainToInstance(ReactivarAlumnoDto, { motivo: '  Retorno autorizado  ' });
+    expect(validateSync(dto)).toHaveLength(0);
+    expect(dto.motivo).toBe('Retorno autorizado');
   });
 });

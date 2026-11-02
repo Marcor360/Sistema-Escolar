@@ -1,5 +1,7 @@
 # Preparación de operación productiva
 
+Preparación actual: [piloto de producción](PILOTO_PRODUCCION.md) y [recorrido de alumnos](BARRIDO_Y_CICLO_ALUMNOS_2026-11-02.md). No se ha activado un piloto desde esta revisión.
+
 Actualización 1.35.14: [diagnóstico y ruta a producción](AUDITORIA_Y_RUTA_PRODUCTIVA_2026-11-01.md) y [actualizador coordinado de staging](ACTUALIZACION_INTEGRAL_1.35.14.md). Este último usa respaldo MySQL; no acredita despliegue productivo ni un procedimiento operativo de SQL Server.
 
 Este documento separa lo configurable en el repositorio de lo que depende del hosting, dominio, institución o proveedor. La configuración local actual no es una instalación productiva.

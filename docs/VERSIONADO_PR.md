@@ -1,6 +1,6 @@
 # Política de versiones por pull request
 
-**Corte 28/oct/2026:** candidata 1.29.0 sobre main 1.28.0 (#209, c2d2dc9). Implementa #152/#177 con autorización explícita del solicitante; conserva evaluación con aprobación de Final. #158 sigue abierto por HTTP 403 de la integración al aplicar protección de main.
+La versión candidata se consulta en el README y los manifiestos; las entregas anteriores se conservan en [Historial](HISTORIAL_VERSIONES.md). El estado de protección de main se comprueba en GitHub, no se deduce de esta política.
 
 ## Numeración
 

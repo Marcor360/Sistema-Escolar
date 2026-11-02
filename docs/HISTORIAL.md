@@ -33,3 +33,13 @@ Ocho resúmenes de implementación de 1.15–1.18 se retiran de la documentació
 | BARRIDO_1.18.2.md | [Consultar en Git](https://github.com/Marcor360/Sistema-Escolar/blob/e4b815eb1b5fa797f69853720fc412703e503c23/docs/BARRIDO_1.18.2.md) |
 | BARRIDO_GENERAL_1.18.3.md | [Consultar en Git](https://github.com/Marcor360/Sistema-Escolar/blob/e4b815eb1b5fa797f69853720fc412703e503c23/docs/BARRIDO_GENERAL_1.18.3.md) |
 | REBARRIDO_1.18.4.md | [Consultar en Git](https://github.com/Marcor360/Sistema-Escolar/blob/e4b815eb1b5fa797f69853720fc412703e503c23/docs/REBARRIDO_1.18.4.md) |
+
+## Retirada documental en 1.35.15 · 2/nov/2026
+
+Se retiran tres propuestas sustituidas por contratos implementados. Sus requisitos y decisiones se conservan en Git; las guías actuales enlazan a los contratos vigentes. No se retiran migraciones ni evidencias de aceptación.
+
+| Documento retirado | Sustituto vigente |
+| --- | --- |
+| [PLAN_CALIFICACIONES_ACTAS_1.28.0.md](https://github.com/Marcor360/Sistema-Escolar/blob/c10da9ab884404bebfd439c336ff92f197392da5/docs/PLAN_CALIFICACIONES_ACTAS_1.28.0.md) | [EVALUACIONES_1.28.0.md](EVALUACIONES_1.28.0.md) |
+| [IMPLEMENTACION_EVALUACIONES_1.28.0.md](https://github.com/Marcor360/Sistema-Escolar/blob/c10da9ab884404bebfd439c336ff92f197392da5/docs/IMPLEMENTACION_EVALUACIONES_1.28.0.md) | [EVALUACIONES_1.28.0.md](EVALUACIONES_1.28.0.md) |
+| [REINSCRIPCION_PERIODOS_Y_CARGOS_CONTRATO.md](https://github.com/Marcor360/Sistema-Escolar/blob/c10da9ab884404bebfd439c336ff92f197392da5/docs/REINSCRIPCION_PERIODOS_Y_CARGOS_CONTRATO.md) | [REINSCRIPCIONES_SEGURAS_1.29.0.md](REINSCRIPCIONES_SEGURAS_1.29.0.md) |

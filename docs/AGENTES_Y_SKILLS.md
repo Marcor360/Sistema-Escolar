@@ -1,6 +1,6 @@
 # Agentes y skills para el Sistema Escolar IUA
 
-**Corte:** 25/oct/2026 · propuesta 1.27.43. Estas herramientas estructuran el trabajo de Codex y agentes compatibles; **no conceden acceso a cuentas reales ni ejecutan cambios en servidores**.
+**Revisión:** 2/nov/2026 · herramientas integradas. Estas herramientas estructuran el trabajo de Codex y agentes compatibles; **no conceden acceso a cuentas reales ni ejecutan cambios en servidores**.
 
 ## Modo de uso
 
@@ -32,8 +32,8 @@
 | [anthropics/skills](https://github.com/anthropics/skills) | Formato SKILL.md, recursos por tarea, divulgación progresiva | Skills propias, con el contrato escolar; no copiar licencias ni scripts externos |
 | [vercel-labs/agent-skills](https://github.com/vercel-labs/agent-skills) | Rendimiento React/React Native, composición y guías UX | Priorizar revisiones React/Expo; recomendaciones no sustituyen tests locales |
 | [microsoft/playwright-mcp](https://github.com/microsoft/playwright-mcp) | Exploración guiada del navegador y árbol de accesibilidad | Opcional en equipo local aislado; la automatización de CI usa Playwright ya instalado |
-| [dequelabs/axe-core](https://github.com/dequelabs/axe-core) | Detección automática de ciertos fallos WCAG | Candidato a PR posterior con baseline y falsos negativos manuales |
-| [GoogleChrome/lighthouse-ci](https://github.com/GoogleChrome/lighthouse-ci) | Umbrales de accesibilidad, rendimiento y regresiones | Candidato posterior tras establecer presupuestos y página autenticada de prueba |
+| [dequelabs/axe-core](https://github.com/dequelabs/axe-core) | Detección automática de ciertos fallos WCAG | Integrado: controles axe con API simulada; requiere revisión manual de lo no detectable |
+| [GoogleChrome/lighthouse-ci](https://github.com/GoogleChrome/lighthouse-ci) | Umbrales de accesibilidad, rendimiento y regresiones | Integrado: presupuestos para login; no acredita rendimiento de todas las pantallas |
 | [github/awesome-copilot](https://github.com/github/awesome-copilot) | Catálogo de skills de revisión y auditoría de seguridad | Selección manual; revisar comandos, licencias y riesgo de instrucciones externas |
 | [openai/skills](https://github.com/openai/skills) | Antecedentes de skill para Codex; catálogo señalado como obsoleto en su README | Preferir [documentación actual](https://learn.chatgpt.com/docs/build-skills) para autoría |
 

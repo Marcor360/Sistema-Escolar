@@ -460,7 +460,15 @@ export class UsuariosService {
       activo: dto.activo ?? usuario.activo,
       correoProveedor: dto.correoProveedor ?? usuario.correoProveedor,
     });
-    return this.proyectar(await usuarios.save(usuario));
+    const guardado = await usuarios.save(usuario);
+    if (dto.password || cambiaEstado || dto.roles !== undefined) {
+      // Los códigos ya emitidos no llevan sessionVersion. Revocarlos en la misma
+      // transacción evita que una baja/reactivación o un cambio de credenciales
+      // devuelva validez a un enlace anterior. El outbox valida su propia versión.
+      await manager.getRepository(ActivacionToken).update({ usuarioId: id, usado: false }, { usado: true });
+      await manager.getRepository(PasswordResetToken).update({ usuarioId: id, usado: false }, { usado: true });
+    }
+    return this.proyectar(guardado);
   }
 
   async desactivar(id: number) {

@@ -25,6 +25,7 @@ import { registrarProgramasEspeciales } from './integration/programas-especiales
 import { registrarCatalogos } from './integration/catalogos.cases';
 import { registrarBusquedaUsuarios } from './integration/usuarios-busqueda.cases';
 import { registrarEliminacion } from './integration/eliminacion.cases';
+import { registrarCicloAlumno } from './integration/ciclo-alumno.cases';
 import { registrarBeta } from './integration/beta.cases';
 import { registrarRebarrido } from './integration/rebarrido.cases';
 import { registrarBarrido } from './integration/barrido.cases';
@@ -521,6 +522,7 @@ Object.keys(casos).map(Number).sort((a,b) => a-b).forEach((id) => casos[id](cont
   registrarAgrupacion(contexto);
   registrarRecursamientos(contexto);
   registrarEliminacion(contexto);
+  registrarCicloAlumno(contexto);
   registrarTemarios(contexto);
   registrarMaestroPaginado(contexto);
 

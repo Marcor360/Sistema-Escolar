@@ -97,6 +97,7 @@ export class ActualizarAlumnoDto {
 }
 
 export class ReactivarAlumnoDto {
+  @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsString() @LongitudMinima(3) @MaxLength(500) motivo!: string;
 }
 

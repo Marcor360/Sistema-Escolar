@@ -10,6 +10,8 @@ import type { PaginacionDto } from '../common/paginacion.dto';
 import { stub } from '../test-utils/stub';
 import { UsuariosService } from './usuarios.service';
 import { JwtUser } from '../common/current-user.decorator';
+import { ActivacionToken } from '../entities/activacion-token.entity';
+import { PasswordResetToken } from '../entities/password-reset-token.entity';
 
 function crearQb() {
   const qb: Record<string, jest.Mock> = {};
@@ -86,7 +88,10 @@ describe('UsuariosService.actualizar revoca sesiones', () => {
       findOne: jest.fn().mockResolvedValue(cuenta),
       save: jest.fn(async (usuario) => usuario),
     };
-    const manager = { getRepository: jest.fn(() => usuarios) };
+    const activaciones = { update: jest.fn().mockResolvedValue({ affected: 1 }) };
+    const recuperaciones = { update: jest.fn().mockResolvedValue({ affected: 1 }) };
+    const manager = { getRepository: jest.fn((entidad: unknown) =>
+      entidad === ActivacionToken ? activaciones : entidad === PasswordResetToken ? recuperaciones : usuarios) };
     Object.assign(usuarios, { manager: { transaction: jest.fn(async (cb) => cb(manager)) } });
     const service = new UsuariosService(
       stub<Repository<Usuario>>(usuarios),
@@ -101,6 +106,8 @@ describe('UsuariosService.actualizar revoca sesiones', () => {
 
     expect(resultado.activo).toBe(true);
     expect(usuarios.save).toHaveBeenCalledWith(expect.objectContaining({ sessionVersion: 3 }));
+    expect(activaciones.update).toHaveBeenCalledWith({ usuarioId: 1, usado: false }, { usado: true });
+    expect(recuperaciones.update).toHaveBeenCalledWith({ usuarioId: 1, usado: false }, { usado: true });
     expect(resultado).not.toHaveProperty('sessionVersion');
     expect(resultado).not.toHaveProperty('passwordHash');
   });
