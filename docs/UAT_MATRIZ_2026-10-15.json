@@ -1,6 +1,6 @@
 {
-  "version": "1.35.13",
-  "alcance": "Candidata 1.35.13 integrada: titulación/vinculación laboral, marca por portal, comunicados, rotación de códigos, alertas y controles de contraseña. CI por SHA; UAT institucional y despliegue pendientes.",
+  "version": "1.35.14",
+  "alcance": "Candidata 1.35.14: auditoría de estabilización, recuperación de avisos abandonados y actualización coordinada de sistema/Portal Alumno. Sin despliegue ni aceptación institucional de esta candidata.",
   "escenarios": [
     {
       "id": "UAT-01",
@@ -932,7 +932,7 @@
     {
       "id": "UAT-67",
       "rol": "ALUMNO",
-      "escenario": "Verificar activación y recuperación con rotación tras cooldown e invalidación del código anterior, correos de seguridad, visibilidad y confirmación de contraseñas, logo del alumno y fallback al institucional en web y Expo.",
+      "escenario": "Verificar activación y recuperación con rotación tras cooldown e invalidación del código anterior, correos de seguridad, visibilidad y confirmación de contraseñas, logo del alumno y fallback al institucional en web y Expo. En un entorno de ensayo con consentimiento habilitado, comprobar bloqueo de recursos del alumno WEB y MOVIL pendientes; con la función deshabilitada, conservar acceso.",
       "canales": [
         "web",
         "api",
@@ -945,6 +945,20 @@
       ],
       "estado": "pendiente",
       "responsable": "Institución/QA (por designar)",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-68",
+      "rol": "SUPERADMIN",
+      "escenario": "Ensayar actualización integral con checkout y versiones coincidentes, plan sin cambios, API antes del portal, puerto del proxy, fallo de migración sin reinicio incompatible y recuperación documentada ante fallo parcial.",
+      "canales": [
+        "windows",
+        "api",
+        "web",
+        "mysql"
+      ],
+      "estado": "pendiente",
+      "responsable": "Operación/QA (por designar)",
       "evidencias": []
     }
   ],

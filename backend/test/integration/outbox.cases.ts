@@ -1,13 +1,14 @@
 import { it, expect, jest } from '@jest/globals';
 import { ConfigService } from '@nestjs/config';
 import { ConfiguracionService } from '../../src/configuracion/configuracion.service';
-import { createHash } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import { In } from 'typeorm';
 import { CorreoAccesoOutboxService } from '../../src/auth/correo-acceso-outbox.service';
 import { ActivacionService } from '../../src/auth/activacion.service';
 import { AuthService } from '../../src/auth/auth.service';
+import { AuthCorreoEventosService } from '../../src/auth/auth-correo-eventos.service';
 import { NotificacionesService } from '../../src/notificaciones/notificaciones.service';
-import { ActivacionToken, AuthCorreoOutbox, PasswordResetToken, Usuario } from '../../src/entities';
+import { ActivacionToken, AuthCorreoEvento, AuthCorreoOutbox, PasswordResetToken, Usuario } from '../../src/entities';
 import { ContextoIntegracion } from './contexto';
 
 export function registrarOutbox(ctx: ContextoIntegracion) {
@@ -19,6 +20,27 @@ export function registrarOutbox(ctx: ContextoIntegracion) {
   const repo = () => ctx.dataSource.getRepository(AuthCorreoOutbox);
   const drenar = () => ctx.app.get(CorreoAccesoOutboxService).procesar();
   const anticipar = async (id: string) => repo().update(id, { proximoIntento: new Date(Date.now() - 1000) });
+
+  it('avisos: finaliza el último intento abandonado sin robar leases vigentes y recupera el penúltimo', async () => {
+    const usuario = await nuevo('lease_eventos', false);
+    const eventos = ctx.dataSource.getRepository(AuthCorreoEvento);
+    const ids = [randomUUID(), randomUUID(), randomUUID()];
+    const vencida = new Date('2010-01-01T00:00:00Z');
+    const vigente = new Date(Date.now() + 120_000);
+    await eventos.save(ids.map((id, i) => ({
+      id, usuarioId: usuario.id, tipo: 'INGRESO' as const, estado: 'PROCESANDO' as const,
+      intentos: i === 2 ? 4 : 5, proximoIntento: vencida,
+      leaseHasta: i === 1 ? vigente : vencida, claim: id,
+    })));
+    const correo = jest.spyOn(ctx.app.get(NotificacionesService), 'enviarEmail').mockResolvedValue({ simulado: false });
+    try {
+      await ctx.app.get(AuthCorreoEventosService).procesar();
+      expect(await eventos.findOneByOrFail({ id: ids[0] })).toMatchObject({ estado: 'FALLIDO', intentos: 5, claim: null, leaseHasta: null });
+      expect(await eventos.findOneByOrFail({ id: ids[1] })).toMatchObject({ estado: 'PROCESANDO', intentos: 5, claim: ids[1] });
+      expect(await eventos.findOneByOrFail({ id: ids[2] })).toMatchObject({ estado: 'ENVIADO', intentos: 5, claim: null });
+      expect(correo.mock.calls.filter(([destino]) => destino === usuario.email)).toHaveLength(1);
+    } finally { correo.mockRestore(); }
+  });
 
   it('outbox: 110 solicitudes concurrentes se confirman y coalescen sin SMTP ni pérdida por reinicio', async () => {
     const usuario = await nuevo('coalescer');

@@ -195,6 +195,9 @@ jobs:
       - name: Validar despliegue aislado del Portal Alumno
         shell: pwsh
         run: ./scripts/windows/Test-PortalAlumno-Staging.ps1
+      - name: Validar planificación y coordinación de la actualización integral
+        shell: pwsh
+        run: ./scripts/windows/Test-UpdateStaging.ps1
 
   web-e2e:
     runs-on: ubuntu-latest
