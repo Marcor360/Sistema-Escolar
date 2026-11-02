@@ -1,4 +1,4 @@
-// Contrasta archivos reales: versiones, migraciones espejo, enlaces README y rutas de clientes/API.
+// Contrasta versiones, migraciones espejo, enlaces documentales y rutas de clientes/API.
 const fs = require('node:fs');
 const path = require('node:path');
 const ts = require('../backend/node_modules/typescript');
@@ -30,9 +30,20 @@ for (const motor of ['mysql', 'sqlserver']) {
   exigir(fs.existsSync(path.join(root, configuracion.archivo)), `${motor}: baseline inexistente`);
 }
 for (const campo of ['incluye', 'pendientes']) exigir(JSON.stringify(manifest.motores.mysql[campo]) === JSON.stringify(manifest.motores.sqlserver[campo]), `Migraciones espejo: ${campo} divergente`);
-for (const enlace of leer('README.md').matchAll(/\]\(([^\s)]+)(?:\s+[^)]*)?\)/g)) {
-  const destino = enlace[1].split('#')[0];
-  if (destino && !/^(https?:|mailto:|app:|\/)/.test(destino)) exigir(fs.existsSync(path.resolve(root, destino)), `README: enlace inexistente ${destino}`);
+function documentos(dir) {
+  return fs.readdirSync(path.join(root, dir), { withFileTypes: true }).flatMap(f =>
+    f.isDirectory() ? documentos(path.join(dir, f.name)) : f.name.endsWith('.md') ? [path.join(dir, f.name)] : []);
+}
+const guias = ['README.md', ...['docs', 'mobile/docs', '.agents/skills'].flatMap(documentos)];
+for (const guia of guias) {
+  // Los ejemplos de código no son enlaces de navegación.
+  const contenido = leer(guia).replace(/```[\s\S]*?```/g, '');
+  for (const enlace of contenido.matchAll(/\]\(([^\s)]+)(?:\s+[^)]*)?\)/g)) {
+    const destino = enlace[1].split('#')[0];
+    if (destino && !/^([a-z][a-z0-9+.-]*:|\/)/i.test(destino)) {
+      exigir(fs.existsSync(path.resolve(root, path.dirname(guia), destino)), `${guia}: enlace inexistente ${destino}`);
+    }
+  }
 }
 function archivos(dir) { return fs.readdirSync(dir, { withFileTypes: true }).flatMap((f) => f.isDirectory() ? archivos(path.join(dir, f.name)) : /\.[jt]sx?$/.test(f.name) ? [path.join(dir, f.name)] : []); }
 const decoradores = (n) => ts.canHaveDecorators(n) ? ts.getDecorators(n) || [] : [];
@@ -79,4 +90,4 @@ for (const f of [...archivos(path.join(root, 'web/src')), ...archivos(path.join(
   visitar(source);
 }
 if (errores.length) { console.error(errores.join('\n')); process.exitCode = 1; }
-else console.log(`Consistencia ${version}: versiones, baseline/migraciones espejo, enlaces README y ${consultas} consultas de cliente contrastadas con ${rutas.length} rutas API.`);
+else console.log(`Consistencia ${version}: versiones, baseline/migraciones espejo, enlaces de ${guias.length} documentos y ${consultas} consultas de cliente contrastadas con ${rutas.length} rutas API.`);

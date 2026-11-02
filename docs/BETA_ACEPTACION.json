@@ -1,6 +1,6 @@
 {
-  "version": "1.35.14",
-  "alcance": "Candidata 1.35.14: auditoría de estabilización, recuperación de avisos abandonados y actualización coordinada de sistema/Portal Alumno. Sin despliegue ni aceptación institucional de esta candidata.",
+  "version": "1.35.15",
+  "alcance": "Candidata 1.35.15: barrido documental y ciclo de alumnos; revocación de códigos tras baja/reactivación y motivo normalizado. Sin despliegue ni aceptación institucional de esta candidata.",
   "puertas": [
     {
       "id": "ci_ultimo_sha",

@@ -1,6 +1,6 @@
 # API — Sistema Escolar
 
-Contrato de referencia para la candidata 1.27.19, revisión del 21/oct/2026. Los apartados con número de PR identifican la incorporación de cada contrato.
+Guía de referencia acumulativa; revisión del ciclo de alumnos el 2/nov/2026 para 1.35.15. Los apartados con número de PR conservan su corte. Los controladores/DTO y contratos de módulo prevalecen ante una descripción histórica; el checker contrasta las rutas reales de clientes/API, no certifica exhaustividad de este documento.
 
 Base: `http://localhost:3000/api` · Autenticación: `Authorization: Bearer <token>` ·
 Documentación interactiva: `/api/docs` (Swagger), solo fuera de producción. Los DTO anotados con validadores generan sus esquemas al compilar mediante el plugin oficial `@nestjs/swagger`. `SUPERADMIN` accede a todo.
@@ -69,10 +69,21 @@ CRUD en `/usuarios`. Regla de dominio: `ALUMNO` no se combina con roles de perso
 | Método | Ruta | Rol |
 |---|---|---|
 | GET | /alumnos?buscar=&plantelId=&pagina=&porPagina= | ADMINISTRATIVO, FINANZAS, MAESTRO |
-| POST /PATCH /DELETE | /alumnos[/:id] | ADMINISTRATIVO |
-| GET | /alumnos/me/perfil · /alumnos/me/materias · /alumnos/me/tareas | ALUMNO |
+| POST | /alumnos | FINANZAS (SUPERADMIN global) |
+| PATCH | /alumnos/:id | ADMINISTRATIVO; solo datos, no estado ni plantel |
+| POST | /alumnos/:id/baja · /egreso · /transferencia · /reactivacion | ADMINISTRATIVO; transiciones explícitas dentro del alcance |
+| DELETE | /alumnos/:id | ADMINISTRATIVO; alias de baja, no eliminación física |
+| DELETE | /alumnos/:id/permanente | SUPERADMIN; confirmación ELIMINAR y sin registros vinculados |
+| GET/PATCH | /alumnos/me/perfil | ALUMNO; contacto propio, identidad inmutable |
+| GET | /alumnos/me/materias · /alumnos/me/materias/listado | ALUMNO |
 
 `GET /alumnos` está paginado (ver [Paginación](#paginación)).
+La apertura integral de alumno **sin correo y cartera** es un flujo distinto,
+`POST /cartera/integral/previsualizar` y `/confirmar`, reservado a Control Escolar
+(ADMINISTRATIVO/SUPERADMIN). Ver [contrato](CARTERA_INTEGRAL_1.31.0.md).
+La baja revoca acceso y códigos pendientes; la reactivación exige motivo no vacío,
+no restaura inscripciones ni sesiones y requiere solicitar un código nuevo si
+la activación o recuperación estaban pendientes. [Reglas de eliminación](ELIMINACION-REGISTROS.md).
 
 ## Docentes (ADMINISTRATIVO)
 CRUD en `/docentes`. `GET /docentes?plantelId=&pagina=&porPagina=` está paginado.
@@ -256,7 +267,7 @@ Solo SUPERADMIN/ADMINISTRATIVO con alcance del plantel: `GET /cartera`, `GET /ca
 
 `POST /recursamientos` exige alumnoId, grupoMateriaId, cupoTotalManual explícito, UUID idempotencia y confirmado=true; solo Control Escolar dentro del plantel. Se conserva la inscripción principal y cada intento tiene identificador propio. `GET /recursamientos` y `GET /recursamientos/clases/:id` admiten paginación de diez; el maestro solo consulta sus clases. `GET /recursamientos/me` devuelve exclusivamente los intentos del alumno autenticado. `GET /recursamientos/:id` incluye sus notas independientes y valida propietario, docente asignado o gestión del plantel.
 
-`POST /recursamientos/:id/calificaciones` acepta parcial 0–3 y calificacion 0–100 con motivo y confirmación; lo usan Control Escolar o el docente asignado, respetando cierre del parcial. `POST /:id/baja`, `POST /:id/finalizar` y `PATCH /clases/:id/cupo` requieren motivo y confirmación de Control Escolar. El cupo total cuenta regulares y recursantes y no aplica la excepción automática 51–54. `GET /:id/acta` descarga CSV mediante cliente autenticado, sin URL pública; los materiales mantienen sus enlaces firmados y autorización por clase exacta. No se reemplazan notas originales ni se generan cargos de recursamiento.
+`POST /recursamientos/:id/calificaciones` aplica el régimen de la clase: P1–P4/Final y 0–10 en el nuevo, P1–P3/Final y 0–100 en el legado, con motivo y confirmación; lo usan Control Escolar o el docente asignado, respetando cierre del parcial. `POST /:id/baja`, `POST /:id/finalizar` y `PATCH /clases/:id/cupo` requieren motivo y confirmación de Control Escolar. El cupo total cuenta regulares y recursantes y no aplica la excepción automática 51–54. `GET /:id/acta` descarga CSV mediante cliente autenticado, sin URL pública; los materiales mantienen sus enlaces firmados y autorización por clase exacta. No se reemplazan notas originales ni se generan cargos de recursamiento.
 
 Aplicar migraciones incrementales de agrupación ordinaria, apertura de cartera y recursamiento conforme al manifiesto, con DB_SYNC=false; no ejecutar schema.sql sobre bases existentes. Ver contratos y límites operativos en [cartera](prs/02-APERTURA-CARTERA.md), [agrupación](prs/03-AGRUPACION-TRANSACCIONAL.md) y [recursamiento](prs/04-RECURSAMIENTO-MATERIA.md).
 

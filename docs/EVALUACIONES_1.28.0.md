@@ -21,7 +21,7 @@ Requisitos confirmados por el solicitante en #139 el 28/oct/2026. Incluye #208 (
 
 El API expone `calificacionOriginal`, `escalaOriginal`, `escalaMaxima` y `regimenEvaluacion`. Las plantillas CSV/XLSX nuevas incluyen `escalaMaxima` y el importador exige 10 explícito en el régimen nuevo; un archivo anterior se rechaza hasta usar la plantilla actual. Los clientes nuevos envían `escalaMaxima=10` al capturar en el régimen nuevo. Un cliente antiguo no puede guardar silenciosamente un 8 interpretado en otra escala: recibe 409 y debe actualizarse. API, web y app deben liberarse coordinadamente.
 
-## Redondeo pendiente
+## Decimales y aprobación manual confirmados
 
 Regla vigente confirmada por el solicitante el 29/oct/2026: conservar los decimales y la aprobación manual del docente. No se activa redondeo automático ni se recalculan históricos. La propuesta mantiene la precisión implementada y la Final requiere aprobación o captura manual. Esta decisión sustituye la indefinición de los ejemplos anteriores; no se necesita una tabla automática de redondeo para este alcance.
 

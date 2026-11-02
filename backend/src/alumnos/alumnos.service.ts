@@ -331,7 +331,6 @@ export class AlumnosService {
       if (!alumno) throw new NotFoundException('Alumno no encontrado');
       if (user) {
         await this.scope.validarGestion(user, alumno.plantelId);
-        if (dto.plantelId) await this.scope.validarGestion(user, dto.plantelId);
       }
       if (dto.curp !== undefined) {
         await this.validarCurp(manager, dto.curp, id);
@@ -460,7 +459,7 @@ export class AlumnosService {
           .insert({
             usuarioId: user.sub,
             plantelId: alumno.plantelId,
-            accion: alumno.estatus === 'EGRESADO' ? 'ALUMNO_EGRESADO' : 'ALUMNO_BAJA',
+            accion: 'ALUMNO_EGRESADO',
             entidadId: id,
             detalle: 'Transición explícita: cuenta e inscripciones desactivadas',
             fecha: new Date(),

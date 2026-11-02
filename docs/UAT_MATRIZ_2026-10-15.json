@@ -1,6 +1,6 @@
 {
-  "version": "1.35.14",
-  "alcance": "Candidata 1.35.14: auditoría de estabilización, recuperación de avisos abandonados y actualización coordinada de sistema/Portal Alumno. Sin despliegue ni aceptación institucional de esta candidata.",
+  "version": "1.35.15",
+  "alcance": "Candidata 1.35.15: barrido documental y ciclo de alumnos; revocación de códigos tras baja/reactivación y motivo normalizado. Sin despliegue ni aceptación institucional de esta candidata.",
   "escenarios": [
     {
       "id": "UAT-01",
@@ -959,6 +959,20 @@
       ],
       "estado": "pendiente",
       "responsable": "Operación/QA (por designar)",
+      "evidencias": []
+    },
+    {
+      "id": "UAT-69",
+      "rol": "ADMINISTRATIVO",
+      "escenario": "Con identidades ficticias: alta/duplicados, corrección, transferencia entre planteles autorizados, baja y reactivación con motivo real; sesiones y códigos anteriores no vuelven a funcionar, historial/pagos conservados. Egreso solo con ciclo cerrado; SUPERADMIN elimina únicamente expediente sin vínculos y con confirmación. Contrastar web y API.",
+      "canales": [
+        "web",
+        "api",
+        "mysql",
+        "sqlserver"
+      ],
+      "estado": "pendiente",
+      "responsable": "Responsable institucional por designar",
       "evidencias": []
     }
   ],
