@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.35.15`** · Estabilización del ciclo de alumnos y depuración documental. Pruebas técnicas, aceptación institucional y despliegue se acreditan por separado.
+**Versión candidata: `1.35.16`** · Aislamiento de la configuración en pruebas de correo y claves de acceso. Pruebas técnicas, aceptación institucional y despliegue se acreditan por separado.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -19,7 +19,7 @@ Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [ín
 
 ### Entrega actual
 
-La candidata **1.35.15** revisa el ciclo de vida de alumnos y depura documentación sustituida. La base 1.35.14 está integrada en main; el nuevo trabajo requiere sus propias comprobaciones y ensayo operativo.
+La candidata **1.35.16** aísla las pruebas de correo SMTP y claves de acceso de las variables heredadas del servidor. La base 1.35.15 está integrada en main; esta corrección solo modifica pruebas y metadatos de entrega. Las comprobaciones técnicas y el ensayo operativo se acreditan por separado.
 
 - [Barrido y recorrido de alumnos](docs/BARRIDO_Y_CICLO_ALUMNOS_2026-11-02.md): escenarios, resultados, correcciones y límites.
 - [Actualización coordinada](docs/ACTUALIZACION_INTEGRAL_1.35.14.md): API, administrativo y Portal Alumno.
