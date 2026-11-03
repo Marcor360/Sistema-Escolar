@@ -25,10 +25,10 @@ it('desarrollo local entrega correo al simulador SMTP sin STARTTLS y declara sim
   const port = (servidor.address() as { port: number }).port;
   try {
     const usuarios = { findOne: jest.fn().mockResolvedValue(null) } as unknown as Repository<Usuario>;
-    const service = new NotificacionesService({} as never, usuarios, {} as never, {} as never, {} as never, new ConfigService({ NODE_ENV: 'development', APP_ENV: 'development', SMTP_HOST: '127.0.0.1', SMTP_PORT: String(port), SMTP_FROM: 'prueba@example.invalid' }));
+    const service = new NotificacionesService({} as never, usuarios, {} as never, {} as never, {} as never, new ConfigService({ NODE_ENV: 'development', APP_ENV: 'development', SMTP_HOST: '127.0.0.1', SMTP_PORT: String(port), SMTP_FROM: 'prueba@example.invalid' }, { skipProcessEnv: true }));
     expect(await service.enviarEmail('alumno@example.invalid', 'Recuperación simulada', '<p>Token de prueba</p>')).toEqual({ simulado: false });
     expect(contenido).toContain('Token de prueba'); expect(contenido).toContain('alumno@example.invalid');
-    const sinSmtp = new NotificacionesService({} as never, usuarios, {} as never, {} as never, {} as never, new ConfigService({ NODE_ENV: 'development', APP_ENV: 'development' }));
+    const sinSmtp = new NotificacionesService({} as never, usuarios, {} as never, {} as never, {} as never, new ConfigService({ NODE_ENV: 'development', APP_ENV: 'development' }, { skipProcessEnv: true }));
     expect(await sinSmtp.enviarEmail('alumno@example.invalid', 'Prueba', '<p>Sin envío</p>')).toEqual({ simulado: true });
   } finally { conexiones.forEach((socket) => socket.destroy()); await new Promise<void>((resolve) => servidor.close(() => resolve())); }
 });
