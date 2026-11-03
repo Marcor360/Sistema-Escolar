@@ -1,6 +1,6 @@
 {
-  "version": "1.35.15",
-  "alcance": "Candidata 1.35.15: barrido documental y ciclo de alumnos; revocación de códigos tras baja/reactivación y motivo normalizado. Sin despliegue ni aceptación institucional de esta candidata.",
+  "version": "1.35.16",
+  "alcance": "Candidata 1.35.16: aislamiento de la configuración de las pruebas de correo SMTP y claves de acceso frente a variables heredadas del servidor. Sin cambios de producción, migraciones, despliegue ni aceptación institucional de esta candidata.",
   "escenarios": [
     {
       "id": "UAT-01",

@@ -1,6 +1,6 @@
-# Estado de implementación — candidata 1.35.15
+# Estado de implementación — candidata 1.35.16
 
-Corte 2/nov/2026 sobre main 1.35.14 (`c10da9a`). Revisión del ciclo de alumnos, códigos tras baja/reactivación y documentación vigente. [Recorridos y resultados](BARRIDO_Y_CICLO_ALUMNOS_2026-11-02.md) y [preparación del piloto](PILOTO_PRODUCCION.md).
+Corte 3/nov/2026 sobre main 1.35.15 (`891ef82`). La candidata 1.35.16 aísla la configuración de las pruebas de correo y claves de acceso frente a variables heredadas del servidor; no modifica código de producción ni añade migraciones. La base conserva la revisión del ciclo de alumnos, códigos tras baja/reactivación y documentación vigente. [Recorridos y resultados](BARRIDO_Y_CICLO_ALUMNOS_2026-11-02.md) y [preparación del piloto](PILOTO_PRODUCCION.md).
 
 La actualización coordinada de sistema y Portal Alumno está integrada en main mediante #240. Su CI aprobada corresponde al SHA `74ab0d5`; no acredita ejecución en IIS ni despliegue institucional. Esta candidata no añade migraciones. [Guía de actualización](ACTUALIZACION_INTEGRAL_1.35.14.md).
 
