@@ -1,7 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { ClavesCorreoAcceso } from './correo-acceso-claves';
 
-const config = (values: Record<string, string>) => new ConfigService(values);
+const config = (values: Record<string, string>) => new ConfigService(values, { skipProcessEnv: true });
 describe('ClavesCorreoAcceso', () => {
   const trabajo = { id: 'random-job-id', usuarioId: 5, tipo: 'ACTIVACION' as const, version: 0, claveId: 'v1' };
   const claves = { v1: 'a4'.repeat(32), v2: '7b'.repeat(32) };
