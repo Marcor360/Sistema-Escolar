@@ -16,6 +16,14 @@ describe('Matriz de autorización de importaciones', () => {
   });
   it.each([
     ['FINANZAS', 'ALUMNOS', true],
+    ['FINANZAS', 'MATERIAS', false],
+    ['FINANZAS', 'GRUPOS', false],
+    ['ADMINISTRATIVO', 'MATERIAS', true],
+    ['ADMINISTRATIVO', 'GRUPOS', true],
+    ['SUPERADMIN', 'MATERIAS', true],
+    ['SUPERADMIN', 'GRUPOS', true],
+    ['ALUMNO', 'GRUPOS', false],
+    ['MAESTRO', 'MATERIAS', false],
     ['FINANZAS', 'DOCENTES', false],
     ['FINANZAS', 'INSCRIPCIONES', false],
     ['FINANZAS', 'PERSONAL', false],

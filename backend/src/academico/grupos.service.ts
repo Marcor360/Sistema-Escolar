@@ -1,3 +1,4 @@
+import { preparacionDeGrupos } from './preparacion-grupos';
 import { ParticipacionAsignatura, CupoRecursamiento } from '../entities/participacion-asignatura.entity';
 import { validarContextoGrupo } from '../catalogos-academicos/contexto-grupo';
 import { exigirCambios } from '../common/exigir-cambios';
@@ -67,6 +68,12 @@ async listarGrupos(user: JwtUser, query: ListarGruposDto) {
     });
     return { datos, total, pagina, porPagina };
   }
+
+async listarPreparacion(user: JwtUser, query: ListarGruposDto) {
+  const pagina = await this.listarGrupos(user,query);
+  const resumen = await preparacionDeGrupos(this.dataSource.manager,pagina.datos);
+  return {...pagina,datos:pagina.datos.map(g=>({...g,preparacion:resumen.get(g.id)!}))};
+}
 
 async obtenerGrupo(id: number, user: JwtUser) {
  const grupo = await this.grupos.findOne({where:{id,tipo:'REGULAR'}});

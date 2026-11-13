@@ -7,6 +7,8 @@ import { useConfirmacion } from '../components/useConfirmacion';
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 
+import { Link } from 'react-router-dom';
+import { ResumenPreparacionGrupo } from '../features/grupos/ResumenPreparacionGrupo';
 import { Encabezado } from '../components/Encabezado';
 import { Paginador } from '../components/Paginador';
 
@@ -77,7 +79,7 @@ export default function GruposPage() {
     setCargandoListado(true);
     setError('');
     try {
-      const { data } = await api.get<ResultadoGrupos>('/academico/grupos', {
+      const { data } = await api.get<ResultadoGrupos>(legado ? '/academico/grupos' : '/academico/grupos/preparacion', {
         params: { pagina, ...(legado ? {} : {porPagina:10}), ...(buscarQuery ? {buscar:buscarQuery} : {}), ...(filtroContexto.nivelId ? { nivelId: filtroContexto.nivelId } : {}), ...(filtroContexto.carreraId ? { carreraId: filtroContexto.carreraId } : {}), ...(filtroContexto.periodoAcademicoId ? { periodoAcademicoId: filtroContexto.periodoAcademicoId } : {}), ...(filtroCiclo ? { cicloId: filtroCiclo, inactivos: true } : {}), ...(plantelId ? { plantelId } : {}) },
       });
       if (actual === consultaListado.current) setResultado(data);
@@ -101,18 +103,18 @@ export default function GruposPage() {
       const [ciclosR, plantelesR, materiasR] = await Promise.all([
       api.get<Ciclo[]>('/academico/ciclos'),
       api.get<Plantel[]>('/planteles/mios'),
-      api.get<Materia[]>('/academico/materias'),
+      legado ? api.get<Materia[]>('/academico/materias') : null,
       ]);
       if (actual !== consultaCatalogos.current) return;
       setCiclos(ciclosR.data);
       setPlanteles(plantelesR.data);
-      setMaterias(materiasR.data);
+      if(materiasR) setMaterias(materiasR.data);
     } catch (err) {
       if (actual === consultaCatalogos.current) setErrorCatalogos(mensajeDeError(err));
     } finally {
       if (actual === consultaCatalogos.current) setCargandoCatalogos(false);
     }
-  }, []);
+  }, [legado]);
   useEffect(() => {
     void cargarCatalogos();
     return () => { consultaCatalogos.current += 1; consultaGrupo.current += 1; };
@@ -121,6 +123,20 @@ export default function GruposPage() {
     if(consultaVisible) void consultar(paginaQuery, plantelAplicado);
     return () => { consultaListado.current += 1; };
   }, [consultar, plantelAplicado,consultaVisible,paginaQuery]);
+
+  const [cargandoMaterias,setCargandoMaterias]=useState(false), [errorMaterias,setErrorMaterias]=useState('');
+  const consultaMaterias=useRef(0);
+  const cargarMaterias=useCallback(async()=>{
+    const actual=++consultaMaterias.current;setCargandoMaterias(true);setErrorMaterias('');setMaterias([]);
+    try {const {data}=await api.get<Materia[]>('/academico/materias');if(actual===consultaMaterias.current)setMaterias(data);}
+    catch(e){if(actual===consultaMaterias.current)setErrorMaterias(mensajeDeError(e));}
+    finally{if(actual===consultaMaterias.current)setCargandoMaterias(false);}
+  },[]);
+  const invalidarMaterias=useCallback(()=>{consultaMaterias.current++;},[]);
+  useEffect(()=>{
+    if(!legado&&seleccionado?.id)void cargarMaterias();
+    return invalidarMaterias;
+  },[legado,seleccionado?.id,cargarMaterias,invalidarMaterias]);
 
   const abrirGrupo = async (grupo: Grupo) => {
     const actual = ++consultaGrupo.current;
@@ -217,6 +233,7 @@ export default function GruposPage() {
   return (
     <>{confirmacion.elemento}
       <Encabezado titulo="Grupos" detalle="Grupos por ciclo, materias asignadas e inscripciones" />
+      <p><Link className="boton secundario" to="/operaciones?vista=importar&tipo=GRUPOS">Importar grupos desde CSV o Excel</Link></p>
       <p className="texto-ayuda">Orden recomendado: prepara el ciclo y las materias, registra docentes y alumnos. Para una inscripción ordinaria con cargos usa Apertura de cartera; Grupos permite consultar clases y corregir inscripciones existentes según la política institucional, sin generar cargos.</p>
       {error && <p role="alert" className="mensaje-error">{error}</p>}{mensaje && <p role="status" className="mensaje-ok">{mensaje}</p>}
       {cargandoCatalogos && <p role="status">Cargando catálogos…</p>}
@@ -276,7 +293,7 @@ export default function GruposPage() {
       <div className="tabla-contenedor" role="region" aria-label="Listado de grupos" tabIndex={0}>
       <table className="tabla tabla-adaptable" aria-busy={cargandoListado}>
         <caption className="solo-lector">ID de importación, grupo, plantel, ciclo, grado, turno y acciones</caption>
-        <thead><tr><th scope="col">ID</th><th scope="col">Grupo</th><th scope="col">Plantel</th><th scope="col">Ciclo</th><th scope="col">Grado</th><th scope="col">Turno</th><th scope="col">Acciones</th></tr></thead>
+        <thead><tr><th scope="col">ID</th><th scope="col">Grupo</th><th scope="col">Plantel</th><th scope="col">Ciclo</th><th scope="col">Grado</th><th scope="col">Turno</th>{!legado && <th scope="col">Preparación</th>}<th scope="col">Acciones</th></tr></thead>
         <tbody>
           {resultado.datos.map((g) => (
             <tr key={g.id}>
@@ -286,6 +303,7 @@ export default function GruposPage() {
               <td data-etiqueta="Ciclo">{g.ciclo?.clave}</td>
               <td data-etiqueta="Grado">{g.grado ?? '—'}</td>
               <td data-etiqueta="Turno">{g.turno ?? '—'}</td>
+              <>{!legado && <td data-etiqueta="Preparación"><ResumenPreparacionGrupo resumen={g.preparacion} /></td>}</>
               <td data-etiqueta="Acciones" className="derecha">
                 <span className="acciones-fila">
                   <button className="boton secundario chico" disabled={enviando} onClick={() => {if(legado) void abrirGrupo(g); else trabajo.ir('administrar',g.id);}}>Administrar</button>
@@ -295,8 +313,8 @@ export default function GruposPage() {
               </td>
             </tr>
           ))}
-          {!cargandoListado && resultado.datos.length === 0 && <tr><td className="vacio" colSpan={7}>No hay grupos para este ciclo y plantel.</td></tr>}
-          {cargandoListado && resultado.datos.length === 0 && <tr><td className="vacio" colSpan={7}>Consultando grupos…</td></tr>}
+          {!cargandoListado && resultado.datos.length === 0 && <tr><td className="vacio" colSpan={legado?7:8}>No hay grupos para este ciclo y plantel.</td></tr>}
+          {cargandoListado && resultado.datos.length === 0 && <tr><td className="vacio" colSpan={legado?7:8}>Consultando grupos…</td></tr>}
         </tbody>
       </table></div>
       <Paginador total={resultado.total} pagina={resultado.pagina} porPagina={resultado.porPagina} deshabilitado={cargandoListado} onCambio={(pagina) => cargar(pagina, plantelAplicado)} />
@@ -317,9 +335,11 @@ export default function GruposPage() {
             {asignaciones.length === 0 ? <p role="status">Preparación pendiente: registra las materias y sus docentes desde este panel.</p>
               : asignaciones.some((a) => !a.docente) ? <p role="status">Preparación pendiente: asigna los profesores que faltan antes de impartir clases.</p>
               : inscritos.length === 0 ? <p role="status">Materias y profesores asignados; todavía no hay alumnos inscritos.</p>
-              : <p role="status">Asignaciones académicas completas en este grupo. Verifica por separado ciclo vigente, cartera y documentación institucional.</p>}
+              : <p role="status">Las materias registradas tienen docente y alumnos. Revisa también las materias del periodo en el resumen del listado, el ciclo vigente y la cartera.</p>}
           </section>
-          <MateriasGrupo seleccionado={seleccionado} reasignando={reasignando} nuevoDocente={nuevoDocente} setNuevoDocente={setNuevoDocente} enviando={enviando} operar={operar} setReasignando={setReasignando} asignarMateria={asignarMateria} materiaId={materiaId} setMateriaId={setMateriaId} materias={materias} docenteId={docenteId} setDocenteId={setDocenteId} asignaciones={asignaciones} />
+          {cargandoMaterias && <p role="status">Cargando materias para asignar…</p>}
+          {errorMaterias && <div role="alert"><p>{errorMaterias}</p><button onClick={()=>void cargarMaterias()}>Reintentar catálogo de materias</button></div>}
+          <MateriasGrupo seleccionado={seleccionado} reasignando={reasignando} nuevoDocente={nuevoDocente} setNuevoDocente={setNuevoDocente} enviando={enviando || cargandoMaterias || !!errorMaterias} operar={operar} setReasignando={setReasignando} asignarMateria={asignarMateria} materiaId={materiaId} setMateriaId={setMateriaId} materias={materias} docenteId={docenteId} setDocenteId={setDocenteId} asignaciones={asignaciones} />
 
           <InscripcionesGrupo seleccionado={seleccionado} motivo={motivoReactivar} setMotivo={setMotivoReactivar} documento={documentoReactivar} setDocumento={setDocumentoReactivar} inscribir={inscribir} alumnoId={alumnoId} setAlumnoId={setAlumnoId} enviando={enviando} inscritos={inscritos} operar={operar} />
         </>

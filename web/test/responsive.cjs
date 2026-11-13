@@ -92,8 +92,8 @@ async function esperarServidor() {
       if (path.endsWith('/recursamientos')) data = { datos: [], total: 0, pagina: 1, porPagina: 10 };
       if (path.endsWith('/programas-especiales')) data = { datos: [], total: 0, pagina: 1, porPagina: 10 };
       if (/\/academico\/catalogos\/(niveles|carreras|periodos)$/.test(path)) data = { datos: [{ id: 1, clave: 'NIV-QA', nombre: 'Catálogo institucional de prueba', activo: true }], total: 1, pagina: 1, porPagina: 10 };
-      if (path.endsWith('/academico/grupos'))
-        data = { datos: [{ id: 1, nombre: 'GR-QA-001', grado: 'Primero', turno: 'MATUTINO',
+      if (path.endsWith('/academico/grupos') || path.endsWith('/academico/grupos/preparacion'))
+        data = { datos: [{ id: 1, nombre: 'GR-QA-001', preparacion: { asignadas: 0, sinDocente: 0, inscritos: 0, esperadas: null, pendientes: null }, grado: 'Primero', turno: 'MATUTINO',
           ciclo: { id: 1, clave: '2026-2027', activo: true, estado: 'VIGENTE' },
           plantel: { id: 1, nombre: 'Plantel de Grupos con un Nombre Extenso de Prueba' } }],
           total: 1, pagina: 1, porPagina: 10 };

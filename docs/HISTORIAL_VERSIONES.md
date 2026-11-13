@@ -2,7 +2,11 @@
 
 Los números de entrega describen código; no acreditan despliegue ni aceptación institucional. Los pendientes citados pertenecen a cada corte histórico.
 
-## Candidata 1.36.0 · 13/nov/2026
+## Candidata 1.37.0 · 13/nov/2026
+
+Importación masiva de materias y grupos, plantillas y previsualización con duplicados. Resumen por grupo y carga diferida del catálogo de materias. [Alcance y mediciones](CARGA_MASIVA_1.37.0.md). Sin migraciones nuevas. Publicación y UAT pendientes.
+
+## Base de código 1.36.0 · 13/nov/2026
 
 Portal del alumno renovado; navegación adaptable; tareas accesibles y entrega de archivos desde web; detección de acceso previo; carga académica guiada y recorridos por tarea y rol. Sin migraciones nuevas. Publicación y UAT pendientes. Los manifiestos de API, web y Expo comparten la misma versión.
 

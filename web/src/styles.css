@@ -1174,3 +1174,5 @@ dialog :is(.boton, button):focus-visible { outline: 3px solid var(--dorado); out
 .recorrido-elegir-paso { display: grid; gap: 6px; font-size: .85rem; margin: 12px 0; }
 .recorrido-elegir-paso select { max-width: 100%; width: 100%; }
 .recorrido-reducido { position: fixed; bottom: 16px; right: 16px; z-index: 90; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--linea); border-radius: 12px; background: white; color: var(--pizarra); box-shadow: 0 4px 18px #0002; max-width: calc(100vw - 32px); }
+.preparacion-grupo { display: grid; gap: 6px; min-width: 170px; font-size: .85rem; }
+.preparacion-grupo .sello { white-space: normal; }

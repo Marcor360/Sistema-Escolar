@@ -3,10 +3,12 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { api } from '../api/client';
 import OperacionesPage from './Operaciones';
 
-vi.mock('../auth/AuthContext', () => ({ useAuth: () => ({ tieneRol: () => true }) }));
+const permisos = vi.hoisted(() => ({ roles: ['SUPERADMIN'] }));
+vi.mock('../auth/AuthContext', () => ({ useAuth: () => ({ tieneRol: (...roles: string[]) => permisos.roles.includes('SUPERADMIN') || roles.some(r=>permisos.roles.includes(r)) }) }));
 vi.mock('../components/BitacoraAcademica', () => ({ BitacoraAcademica: () => null }));
 afterEach(() => {
   cleanup();
+  permisos.roles=['SUPERADMIN'];
   vi.restoreAllMocks();
 });
 
@@ -63,7 +65,7 @@ it('presenta por separado los válidos, existentes e inválidos de la importaci�
 });
 
  it('descarta el resultado anterior si falla una nueva previsualización', async () => {
-  vi.spyOn(api, 'get').mockResolvedValue({ data: [] });
+  vi.spyOn(api, 'get').mockImplementation(async ruta => ({ data: ruta === '/academico/ciclos' ? [] : { datos: [], total: 0 } }));
   const post = vi.spyOn(api, 'post').mockResolvedValueOnce({ data: {
     previewId: 'anterior', registros: 1, validos: 1, duplicados: [], errores: [], regla: '', identificadores: [],
   } }).mockRejectedValueOnce(new Error('Sin conexión'));
@@ -84,7 +86,7 @@ it('bloquea archivo y tipo mientras se confirma y permite cancelar sin importar'
   Object.defineProperty(HTMLDialogElement.prototype, 'close', { configurable: true, writable: true, value() {} });
   vi.spyOn(HTMLDialogElement.prototype, 'showModal').mockImplementation(function (this: HTMLDialogElement) { this.setAttribute('open', ''); });
   vi.spyOn(HTMLDialogElement.prototype, 'close').mockImplementation(function (this: HTMLDialogElement) { this.removeAttribute('open'); });
-  vi.spyOn(api, 'get').mockResolvedValue({ data: [] });
+  vi.spyOn(api, 'get').mockImplementation(async ruta => ({ data: ruta === '/academico/ciclos' ? [] : { datos: [], total: 0 } }));
   const post = vi.spyOn(api, 'post').mockResolvedValue({ data: {
     previewId: 'lote', registros: 1, validos: 1, duplicados: [], errores: [], regla: '', identificadores: [],
   } });
@@ -99,4 +101,32 @@ it('bloquea archivo y tipo mientras se confirma y permite cancelar sin importar'
   await waitFor(() => expect((screen.getByLabelText('Tipo') as HTMLSelectElement).disabled).toBe(false));
   expect(post).toHaveBeenCalledTimes(1);
   expect(post).toHaveBeenCalledWith('/importaciones/preview', expect.any(FormData));
+});
+
+it.each(['MATERIAS','GRUPOS'])('previsualiza %s con duplicados sin tratarlo como alumnos', async tipo => {
+  vi.spyOn(api,'get').mockImplementation(async ruta => ({ data: ruta === '/academico/ciclos' ? [] : { datos: [], total: 0 } }));
+  const post=vi.spyOn(api,'post').mockResolvedValue({data:{previewId:'academica',registros:3,validos:1,duplicados:[{fila:3,mensaje:'Ya registrado'}],errores:[{fila:4,mensaje:'Campo inválido'}],regla:'Corregir errores antes de confirmar',identificadores:[{fila:2,identificador:'MAT01'}]}});
+  render(<OperacionesPage/>);
+  fireEvent.change(screen.getByLabelText('Tipo'),{target:{value:tipo}});
+  fireEvent.change(screen.getByLabelText('Archivo'),{target:{files:[new File(['datos'],'academico.csv')]}});
+  fireEvent.submit(screen.getByRole('button',{name:'Previsualizar archivo'}).closest('form')!);
+  await screen.findByText('Fila 4: Campo inválido');
+  expect((post.mock.calls[0][1] as FormData).get('tipo')).toBe(tipo);
+  expect(screen.queryByRole('button',{name:'Descargar únicamente alumnos por corregir'})).toBeNull();
+  expect((screen.getByRole('button',{name:'Importar 1 registros'}) as HTMLButtonElement).disabled).toBe(true);
+});
+
+it.each([
+  { roles: ['FINANZAS'], alumnos: true, academico: false },
+  { roles: ['ADMINISTRATIVO'], alumnos: false, academico: true },
+  { roles: ['ADMINISTRATIVO', 'FINANZAS'], alumnos: true, academico: true },
+])('muestra la combinación autorizada de tipos para $roles', ({ roles, alumnos, academico })=>{
+  permisos.roles=roles;
+  vi.spyOn(api,'get').mockImplementation(async ruta => ({ data: ruta === '/academico/ciclos' ? [] : { datos: [], total: 0 } }));
+  render(<OperacionesPage/>);
+  const tipos=Array.from((screen.getByLabelText('Tipo') as HTMLSelectElement).options).map(o=>o.value);
+  expect(tipos.includes('ALUMNOS')).toBe(alumnos);
+  expect(tipos.includes('MATERIAS')).toBe(academico);
+  expect(tipos.includes('GRUPOS')).toBe(academico);
+  expect(tipos.includes('PERSONAL')).toBe(false);
 });

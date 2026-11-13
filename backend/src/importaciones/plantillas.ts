@@ -9,6 +9,8 @@ export const COLUMNAS_PLANTILLA: Record<TipoPlantilla, string[]> = {
   DOCENTES: CABECERAS.DOCENTES,
   PERSONAL: CABECERAS.PERSONAL,
   INSCRIPCIONES: CABECERAS.INSCRIPCIONES,
+  MATERIAS: CABECERAS.MATERIAS,
+  GRUPOS: CABECERAS.GRUPOS,
 };
 
 const OBLIGATORIOS: Record<TipoPlantilla, readonly string[]> = {
@@ -16,9 +18,23 @@ const OBLIGATORIOS: Record<TipoPlantilla, readonly string[]> = {
   DOCENTES: ['email', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'numEmpleado', 'plantelIds'],
   PERSONAL: ['email', 'nombre', 'apellidoPaterno', 'apellidoMaterno', 'roles', 'plantelIds'],
   INSCRIPCIONES: ['matricula', 'grupoId'],
+  MATERIAS: ['clave', 'nombre'],
+  GRUPOS: ['plantelId', 'cicloId', 'nombre'],
 };
 
 const DESCRIPCIONES: Record<TipoPlantilla, Record<string, string>> = {
+  MATERIAS: {
+    clave: 'Clave única del catálogo. Las claves existentes, incluidas las inactivas, se omiten sin modificarse.',
+    nombre: 'Nombre de la materia, máximo 120 caracteres.', creditos: 'Entero mayor o igual a cero; vacío utiliza cero.',
+    tipo: 'Opcional: OBLIGATORIA, OPTATIVA, ADICIONAL o COMPLEMENTARIA.', descripcion: 'Descripción opcional de hasta 300 caracteres.',
+  },
+  GRUPOS: {
+    plantelId: 'ID de plantel activo autorizado para tu cuenta.', cicloId: 'ID de ciclo en preparación o activo.',
+    nombre: 'Nombre del grupo, máximo 40 caracteres; único por plantel y ciclo, incluidos grupos inactivos.',
+    grado: 'Grado opcional, máximo 20 caracteres.', turno: 'MATUTINO o VESPERTINO; vacío conserva el valor sin especificar.',
+    nivelId: 'Opcional. Si completas el contexto, debes proporcionar también carreraId y periodoAcademicoId.',
+    carreraId: 'ID de carrera o plan activo del mismo nivel y plantel.', periodoAcademicoId: 'ID de periodo activo del mismo plan, plantel y ciclo. La carga no asigna materias ni inscribe alumnos.',
+  },
   ALUMNOS: {
     correoInstitucional: 'Obligatorio. Correo único para ingresar al sistema y recibir activación. En archivos antiguos también se admite la cabecera email.',
     correoPersonal: 'Opcional. Correo personal de contacto, separado del institucional. No se usa para iniciar sesión ni recibir códigos de acceso.',
@@ -68,6 +84,7 @@ const DESCRIPCIONES: Record<TipoPlantilla, Record<string, string>> = {
 const CAMPOS_TEXTO = new Set([
   'email', 'correoInstitucional', 'correoPersonal', 'correoProveedor', 'nombre', 'segundoNombre', 'apellidoPaterno', 'apellidoMaterno', 'matricula', 'curp',
   'fechaNacimiento', 'telefono', 'tutorNombre', 'tutorTelefono', 'direccion',
+  'clave', 'grado', 'turno', 'descripcion', 'tipo',
   'numEmpleado', 'plantelIds', 'cedulaProfesional', 'especialidad', 'roles',
 ]);
 
@@ -117,7 +134,7 @@ export function crearPlantillaImportacion(tipo: TipoPlantilla): ExcelJS.Workbook
   } else if (tipo === 'DOCENTES' || tipo === 'PERSONAL') {
     guia.addRow(['5. correoProveedor opcional: Microsoft 365 o GoDaddy; vacío utiliza GoDaddy.']);
   }
-  const filaEncabezadoGuia = tipo === 'ALUMNOS' ? 8 : tipo === 'INSCRIPCIONES' ? 6 : 7;
+  const filaEncabezadoGuia = tipo === 'ALUMNOS' ? 8 : ['INSCRIPCIONES','MATERIAS','GRUPOS'].includes(tipo) ? 6 : 7;
   guia.addRow(['Campo técnico', 'Requerido', 'Cómo completarlo']);
   guia.getRow(1).font = { bold: true, size: 14, color: { argb: 'FF14343B' } };
   guia.getRow(filaEncabezadoGuia).font = { bold: true, color: { argb: 'FFFFFFFF' } };

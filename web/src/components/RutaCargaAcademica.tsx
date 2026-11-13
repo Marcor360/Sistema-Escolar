@@ -9,8 +9,8 @@ export function RutaCargaAcademica() {
   const pasos = [
     ...(control ? [
       { titulo: 'Preparar ciclo y oferta', detalle: 'Revisa plantel, fechas del ciclo, nivel, carrera o plan y periodo académico. Crear el ciclo no crea grupos.', enlaces: [['Revisar ciclos', '/materias?vista=ciclos'], ['Revisar oferta académica', '/catalogos-academicos']] },
-      { titulo: 'Registrar materias', detalle: 'Crea cada materia una sola vez con su clave y créditos. En Consultar materias, vincúlala con los planes y periodos donde se impartirá.', enlaces: [['Registrar materia', '/materias?vista=nuevo'], ['Consultar y vincular materias', '/materias?vista=consulta']] },
-      { titulo: 'Preparar docentes y grupos', detalle: 'Revisa que los docentes pertenezcan al plantel. Crea el grupo con plantel, ciclo y turno; usa el contexto académico que corresponda.', enlaces: [['Consultar docentes', '/docentes'], ['Crear grupo', '/grupos?vista=nuevo']] },
+      { titulo: 'Registrar materias', detalle: 'Crea cada materia una sola vez con su clave y créditos. En Consultar materias, vincúlala con los planes y periodos donde se impartirá.', enlaces: [['Registrar materia', '/materias?vista=nuevo'], ['Importar materias', '/operaciones?vista=importar&tipo=MATERIAS'], ['Consultar y vincular materias', '/materias?vista=consulta']] },
+      { titulo: 'Preparar docentes y grupos', detalle: 'Revisa que los docentes pertenezcan al plantel. Crea el grupo con plantel, ciclo y turno; usa el contexto académico que corresponda.', enlaces: [['Consultar docentes', '/docentes'], ['Crear grupo', '/grupos?vista=nuevo'], ['Importar grupos', '/operaciones?vista=importar&tipo=GRUPOS']] },
       { titulo: 'Asignar materias al grupo', detalle: 'Busca el grupo y pulsa Administrar. Asigna cada materia y su docente. Revisa las materias sin profesor antes de comenzar clases.', enlaces: [['Consultar grupos y asignar materias', '/grupos?vista=consulta']] },
     ] : []),
     { titulo: 'Revisar expedientes de alumnos', detalle: alumnos ? 'Descarga la plantilla de alumnos, completa los datos y previsualiza. Los alumnos nuevos válidos se importan; los existentes se omiten y los errores se corrigen por separado.' : 'Consulta los expedientes existentes. El alta y la importación de alumnos requieren Finanzas o Superadmin; coordina esa carga antes de inscribir.', enlaces: [['Consultar alumnos', '/alumnos?vista=consulta'], ...(alumnos ? [['Importar alumnos', '/operaciones?vista=importar&tipo=ALUMNOS']] : [])] },
@@ -25,6 +25,6 @@ export function RutaCargaAcademica() {
         <div className="ruta-carga-enlaces">{paso.enlaces.map(([titulo, destino]) => <Link key={destino} className="boton secundario" to={destino}>{titulo}</Link>)}</div>
       </div>
     </li>)}</ol>
-    <details><summary>¿Qué puedo importar con CSV o Excel?</summary><p>Importaciones admite alumnos, docentes, personal e inscripciones según tu rol, hasta 500 filas y 5 MB. Materias y grupos se registran en sus módulos; no utilices la plantilla de alumnos para cargarlos. Las calificaciones tienen su propia importación.</p></details>
+    <details><summary>¿Qué puedo importar con CSV o Excel?</summary><p>Importaciones admite alumnos, docentes, personal, inscripciones, materias y grupos según tu rol, hasta 500 filas y 5 MB. Descarga la plantilla específica de materias o grupos; no utilices la plantilla de alumnos para cargarlos. Las calificaciones tienen su propia importación.</p></details>
   </section>;
 }

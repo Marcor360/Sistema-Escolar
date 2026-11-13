@@ -74,7 +74,7 @@ const catalogo: (AreaRecorrido & { roles: string[] })[] = [
       paso('2. Preparar ciclo y oferta', '/materias?vista=ciclos', 'Revisa fechas y estado del ciclo. La oferta académica relaciona nivel, plan y periodo.', 'Crear un ciclo no crea materias, grupos o inscripciones.'),
       paso('3. Registrar y vincular materias', '/materias?vista=consulta', 'Busca la clave para evitar duplicados. Registra las materias que falten y vincúlalas con sus planes y periodos.', 'Una materia del catálogo se asigna después a cada grupo.'),
       paso('4. Asignar materias y docentes', '/grupos?vista=consulta', 'Crea el grupo si falta. En Administrar, asigna materias y revisa los profesores pendientes.', 'Comprueba plantel, ciclo, turno y contexto académico del grupo.'),
-      paso('5. Revisar la importación', '/operaciones?vista=importar', 'Descarga la plantilla del tipo autorizado, complétala y previsualiza el archivo. Revisa errores y duplicados antes de confirmar.', 'Materias y grupos se registran en sus módulos; no admiten esta plantilla de expedientes.'),
+      paso('5. Revisar la importación', '/operaciones?vista=importar', 'Descarga la plantilla del tipo autorizado, complétala y previsualiza el archivo. Revisa errores y duplicados antes de confirmar.', 'Materias y grupos tienen sus propias plantillas. Selecciona el tipo correcto antes de cargar el archivo.'),
       paso('6. Verificar e inscribir', '/apertura-cartera', 'Para una inscripción ordinaria revisa el expediente existente y la previsualización de cartera antes de confirmar.', 'La importación académica de inscripciones no genera cargos por sí sola.'),
     ],
   },

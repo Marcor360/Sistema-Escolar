@@ -1,6 +1,6 @@
 {
-  "version": "1.36.0",
-  "alcance": "Candidata 1.36.0: rediseño del portal del alumno y navegación adaptable, acceso visible a tareas y entrega web de archivos, detección de acceso previo entre app y web, carga académica guiada y recorridos por tarea y rol. Sin migraciones nuevas. Publicación, CI por SHA y aceptación institucional pendientes de acreditar.",
+  "version": "1.37.0",
+  "alcance": "Candidata 1.37.0: importación masiva de materias y grupos con plantillas, previsualización cifrada, duplicados y confirmación atómica; resumen de preparación por grupo y carga diferida del catálogo de materias basada en mediciones. Sin migraciones nuevas; publicación y aceptación institucional pendientes.",
   "escenarios": [
     {
       "id": "UAT-01",
