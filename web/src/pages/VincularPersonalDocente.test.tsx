@@ -1,0 +1,20 @@
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, expect, it, vi } from 'vitest';
+import { api } from '../api/client';
+import { VincularPersonalDocente } from './VincularPersonalDocente';
+afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+it('vincula por ID la cuenta elegida sin pedir otra identidad ni contraseña', async () => {
+  vi.spyOn(api, 'get').mockResolvedValue({ data: { datos: [{ id: 8, nombre: 'Elena Prueba', correo: 'qa@example.invalid', roles: ['FINANZAS'] }], total: 1 } });
+  const post = vi.spyOn(api, 'post').mockResolvedValue({ data: { id: 9 } });
+  const terminado = vi.fn(), ocupacion = vi.fn();
+  render(<VincularPersonalDocente terminado={terminado} ocupacion={ocupacion} />);
+  await screen.findByRole('option', { name: /Elena Prueba/ });
+  fireEvent.change(screen.getByLabelText('Cuenta de personal'), { target: { value: '8' } });
+  fireEvent.change(screen.getByLabelText('Núm. empleado'), { target: { value: 'DOC8' } });
+  fireEvent.click(screen.getByLabelText('Cédula pendiente de capturar'));
+  fireEvent.submit(screen.getByRole('button', { name: 'Vincular expediente docente' }).closest('form')!);
+  await waitFor(() => expect(terminado).toHaveBeenCalledOnce());
+  expect(post).toHaveBeenCalledWith('/docentes/vincular-personal', { usuarioId: 8, numEmpleado: 'DOC8', cedulaPendiente: true });
+  expect(screen.queryByLabelText(/Contraseña/)).toBeNull();
+  expect(ocupacion.mock.calls).toEqual([[true], [false]]);
+});

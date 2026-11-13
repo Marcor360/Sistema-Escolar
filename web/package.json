@@ -1,6 +1,6 @@
 {
   "name": "escolar-web",
-  "version": "1.37.0",
+  "version": "1.38.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -13,7 +13,8 @@
     "test:responsive": "node test/responsive.cjs",
     "test:cartera": "node test/cartera-integral.cjs",
     "test:boletas": "node test/boletas-seguimiento.cjs",
-    "pretest": "node ../scripts/check-glob-dependencies.cjs web"
+    "pretest": "node ../scripts/check-glob-dependencies.cjs web",
+    "test:apertura-flexible": "node test/apertura-flexible.cjs"
   },
   "dependencies": {
     "axios": "^1.7.9",

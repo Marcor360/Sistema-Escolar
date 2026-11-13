@@ -1,3 +1,4 @@
+import { VincularPersonalDocente } from './VincularPersonalDocente';
 import { validarIdentidadPersonal } from '../utils/identidad-personal';
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useBeforeUnload, useBlocker, useLocation, useNavigate, useParams } from 'react-router-dom';
@@ -17,6 +18,7 @@ interface Docente {
 export default function DocenteFormulario() {
   const { id } = useParams();
   const editando = Boolean(id);
+  const [vincular, setVincular] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const [form, setForm] = useState(FORM_INICIAL), [base, setBase] = useState(FORM_INICIAL);
@@ -28,7 +30,7 @@ export default function DocenteFormulario() {
   const mutando = useRef(false), guardado = useRef(false), titulo = useRef<HTMLHeadingElement>(null);
   const confirmacion = useConfirmacion();
   const solicitar = useRef(confirmacion.solicitar); solicitar.current = confirmacion.solicitar;
-  const sucio = JSON.stringify(form) !== JSON.stringify(base) || (!editando && plantelIds.length > 0);
+  const sucio = vincular || JSON.stringify(form) !== JSON.stringify(base) || (!editando && plantelIds.length > 0);
   const bloqueo = useBlocker(() => !guardado.current && (sucio || mutando.current));
   useBeforeUnload(useCallback((evento) => {
     if (!guardado.current && (sucio || mutando.current)) { evento.preventDefault(); evento.returnValue = ''; }
@@ -97,7 +99,9 @@ export default function DocenteFormulario() {
     {cargando && <p role="status">Cargando expediente…</p>}
     {error && <p role="alert" className="mensaje-error">{error}</p>}
     {!cargando && falloCarga && <button type="button" disabled={enviando} onClick={() => setIntento((v) => v + 1)}>Reintentar carga</button>}
-    {!cargando && <form id="form-docente" className="panel" onSubmit={guardar} aria-busy={enviando}>
+    {!editando && <label className="casilla"><input type="checkbox" checked={vincular} disabled={enviando} onChange={e => setVincular(e.target.checked)} />La persona ya tiene una cuenta de personal</label>}
+    {vincular && <VincularPersonalDocente ocupacion={valor => { mutando.current = valor; setEnviando(valor); }} terminado={() => { guardado.current = true; navigate('/docentes?vista=consulta', { replace: true, state: { mensaje: 'Expediente docente vinculado. Se conservaron las demás funciones de la cuenta.' } }); }} />}
+    {!vincular && !cargando && <form id="form-docente" className="panel" onSubmit={guardar} aria-busy={enviando}>
       <fieldset disabled={enviando || (editando && !form.numEmpleado)}><legend>Datos del docente</legend><p className="texto-ayuda">Captura nombre, segundo nombre si existe, ambos apellidos y después el correo.</p>
         <div className="rejilla-formulario">
           <div className="campo"><label htmlFor="doc-empleado">Núm. empleado</label><input id="doc-empleado" disabled={editando} required maxLength={20} {...dar('numEmpleado')} /></div>

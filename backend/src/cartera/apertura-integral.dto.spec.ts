@@ -35,3 +35,10 @@ describe('Contrato de apertura integral', () => {
     expect(errors[0].children?.map((e) => e.property)).toEqual(expect.arrayContaining(['email', 'password']));
   });
 });
+
+it('permite plan y periodo pendientes, pero sigue exigiendo nivel e IDs positivos', () => {
+  const parcial = { ...valido, carreraId: undefined, periodoAcademicoId: undefined };
+  expect(validateSync(plainToInstance(AperturaIntegralDto, parcial))).toHaveLength(0);
+  expect(validateSync(plainToInstance(AperturaIntegralDto, { ...parcial, nivelId: undefined })).map(e => e.property)).toContain('nivelId');
+  expect(validateSync(plainToInstance(AperturaIntegralDto, { ...parcial, carreraId: 0 })).map(e => e.property)).toContain('carreraId');
+});

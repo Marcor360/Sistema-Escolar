@@ -1,3 +1,4 @@
+import { registrarAperturaFlexible } from './integration/apertura-flexible.cases';
 import { registrarCargaAcademica } from './integration/carga-academica.cases';
 import { registrarBoletasFirmas } from './integration/boletas-firmas.cases';
 import { registrarPendientesInscripcion } from './integration/pendientes-inscripcion.cases';
@@ -554,4 +555,5 @@ Object.keys(casos).map(Number).sort((a,b) => a-b).forEach((id) => casos[id](cont
   registrarSeguimiento(contexto);
   registrarEvaluaciones(contexto);
   registrarCicloOperativo(contexto);
+  registrarAperturaFlexible(contexto);
 });
