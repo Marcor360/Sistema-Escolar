@@ -22,6 +22,7 @@ interface Concepto {
 interface Cotizacion {
   cotizacion: string;
   total: number;
+  avisos?: string[];
   conceptos: { conceptoId: number; nombre: string; periodo: string; fechaVencimiento: string; monto: number }[];
 }
 interface Resultado {
@@ -30,6 +31,7 @@ interface Resultado {
   estado: string;
   grupoId: number | null;
   total: number;
+  avisos?: string[];
 }
 const cuotaVacia = (): Cuota => ({ conceptoId: '', periodo: '', fechaVencimiento: '', monto: '' });
 const identidadVacia = {
@@ -62,7 +64,7 @@ export default function AperturaIntegral() {
     alumnoId: '',
     turno: 'MATUTINO',
     grupoId: '',
-    asignacion: 'PAUSA',
+    asignacion: 'AUTOMATICA',
     total: '',
   });
   const [cuotas, setCuotas] = useState<Cuota[]>([cuotaVacia()]);
@@ -140,8 +142,8 @@ export default function AperturaIntegral() {
     plantelId: Number(f.plantelId),
     cicloId: Number(f.cicloId),
     nivelId: Number(contexto.nivelId),
-    carreraId: Number(contexto.carreraId),
-    periodoAcademicoId: Number(contexto.periodoAcademicoId),
+    ...(contexto.carreraId ? { carreraId: Number(contexto.carreraId) } : {}),
+    ...(contexto.periodoAcademicoId ? { periodoAcademicoId: Number(contexto.periodoAcademicoId) } : {}),
     turno: f.turno,
     asignacion: f.asignacion,
     ...(f.asignacion === 'GRUPO' ? { grupoId: Number(f.grupoId) } : {}),
@@ -226,6 +228,8 @@ export default function AperturaIntegral() {
             Apertura #{resultado.id} · Alumno #{resultado.alumnoId}. {estadoApertura(resultado.estado).descripcion}
           </p>
           <p>Total contratado: {montoMXN(resultado.total)}</p>
+          {resultado.avisos?.map(aviso => <p key={aviso}>{aviso}</p>)}
+          <Link to={`/apertura-cartera/${resultado.id}`}>Revisar pendientes de esta apertura</Link>
           {modo === 'NUEVO' && (
             <p>
               Alumno registrado sin correo institucional. Control Escolar podrá asignarlo desde Usuarios para solicitar
@@ -373,7 +377,9 @@ export default function AperturaIntegral() {
                     corresponder a la ventana del periodo académico.
                   </p>
                 )}
+                <p>Elige el nivel que corresponde: Secundaria, Bachillerato, Licenciatura, Maestría, Doctorado o Posgrado, según los niveles habilitados en el plantel. Puedes completar carrera/plan y periodo después.</p>
                 <ContextoAcademicoSelector
+                  planOpcional
                   plantelId={f.plantelId}
                   cicloId={f.cicloId}
                   valor={contexto}
@@ -430,8 +436,10 @@ export default function AperturaIntegral() {
               >
                 Previsualizar apertura
               </button>
+              {(!contexto.carreraId || !contexto.periodoAcademicoId) && <p role="status">Falta completar carrera/plan y periodo. Puedes registrar la apertura: quedará en pausa, sin grupo ni cargos, hasta completar el contexto.</p>}
+              {cotizacion?.avisos?.map(aviso => <p key={aviso} role="status">{aviso}</p>)}
               {cotizacion && vigente && (
-                <ConfirmacionApertura tituloRef={resumenRef} nuevo={modo === 'NUEVO'} pausa={f.asignacion === 'PAUSA'} ocupada={ocupada} cotizacion={cotizacion} confirmar={() => void confirmar()} />
+                <ConfirmacionApertura tituloRef={resumenRef} nuevo={modo === 'NUEVO'} pausa={f.asignacion === 'PAUSA' || !contexto.carreraId || !contexto.periodoAcademicoId} ocupada={ocupada} cotizacion={cotizacion} confirmar={() => void confirmar()} />
               )}
             </fieldset>
           </form>

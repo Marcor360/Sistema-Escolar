@@ -1,6 +1,6 @@
-# Estado de implementación — candidata 1.37.0
+# Estado de implementación — candidata 1.38.0
 
-Corte 13/nov/2026 sobre la base 1.36.0 (`2870152`). La candidata 1.37.0 añade [importación masiva de materias y grupos, resumen de preparación y mediciones de carga](CARGA_MASIVA_1.37.0.md). Conserva el rediseño del portal del alumno y los recorridos de la base. No añade migraciones. La candidata no acredita publicación, CI por SHA ni aceptación institucional.
+Corte 13/nov/2026 sobre la candidata 1.37.0 del PR #244 (`d38a513`). La candidata 1.38.0 añade [apertura flexible por nivel, avisos académicos y personal con varias funciones](APERTURA_FLEXIBLE_Y_PERSONAL_1.38.0.md). Conserva las importaciones y la preparación académica de 1.37.0. Sin migraciones nuevas. La candidata no acredita publicación ni aceptación institucional; CI debe comprobarse por SHA.
 
 La actualización coordinada de sistema y Portal Alumno está integrada en main mediante #240. Su CI aprobada corresponde al SHA `74ab0d5`; no acredita ejecución en IIS ni despliegue institucional. Esta candidata no añade migraciones. [Guía de actualización](ACTUALIZACION_INTEGRAL_1.35.14.md).
 
