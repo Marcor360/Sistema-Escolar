@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.35.16`** · Aislamiento de la configuración en pruebas de correo y claves de acceso. Pruebas técnicas, aceptación institucional y despliegue se acreditan por separado.
+**Versión candidata: `1.36.0`** · Portal del alumno renovado, carga académica guiada y recorridos por tarea y rol. Pruebas técnicas, aceptación institucional y despliegue se acreditan por separado.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -19,7 +19,11 @@ Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [ín
 
 ### Entrega actual
 
-La candidata **1.35.16** aísla las pruebas de correo SMTP y claves de acceso de las variables heredadas del servidor. La base 1.35.15 está integrada en main; esta corrección solo modifica pruebas y metadatos de entrega. Las comprobaciones técnicas y el ensayo operativo se acreditan por separado.
+La candidata **1.36.0** reúne el rediseño del portal del alumno, la navegación adaptable y los accesos a tareas, calendario y trámites. Incorpora la entrega web de archivos, la detección de acceso previo para evitar repetir la guía, la preparación académica por pasos y los recorridos administrativos por tarea y rol. No añade migraciones. Las pruebas locales y las exportaciones no acreditan publicación ni aceptación institucional.
+
+- [Portal del alumno](docs/PORTAL_ALUMNO_REFERENCIA_UTC.md): diseño y navegación.
+- [Carga académica guiada](docs/CARGA_ACADEMICA_GUIADA.md): orden para materias, grupos y alumnos.
+- [Recorridos por tarea](docs/RECORRIDOS_POR_TAREA.md): guías administrativas y del alumno.
 
 - [Barrido y recorrido de alumnos](docs/BARRIDO_Y_CICLO_ALUMNOS_2026-11-02.md): escenarios, resultados, correcciones y límites.
 - [Actualización coordinada](docs/ACTUALIZACION_INTEGRAL_1.35.14.md): API, administrativo y Portal Alumno.

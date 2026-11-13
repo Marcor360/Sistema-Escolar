@@ -4,7 +4,7 @@ import { BadRequestException, ForbiddenException, Injectable, Logger, Optional, 
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, Not, Repository } from 'typeorm';
 import { createHash, randomUUID } from 'crypto';
 import { Sesion } from '../entities/sesion.entity';
 import { LIMITE_INACTIVIDAD_MS, sesionInactiva, instanteActividad } from './sesion-inactividad';
@@ -132,6 +132,10 @@ export class AuthService {
     if (!usuario) throw new UnauthorizedException();
     return {
       id: usuario.id,
+      // Incluye sesiones vencidas o cerradas de cualquier portal.
+      accesoPrevio: await this.dataSource.getRepository(Sesion).exists({
+        where: { usuarioId: user.sub, ...(user.sid ? { id: Not(user.sid) } : {}) },
+      }),
       email: usuario.email,
       nombre: usuario.nombre,
       apellidoPaterno: usuario.apellidoPaterno,

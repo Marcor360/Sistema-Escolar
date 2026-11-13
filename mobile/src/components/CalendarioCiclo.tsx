@@ -61,8 +61,8 @@ function ImagenCiclo({ evento }: { evento: Evento }) {
     </View>
   );
 }
-export function CalendarioCiclo() {
-  const [abierto, setAbierto] = useState(false);
+export function CalendarioCiclo({ abiertoInicial = false }: { abiertoInicial?: boolean } = {}) {
+  const [abierto, setAbierto] = useState(abiertoInicial);
   return (
     <View>
       <TouchableOpacity

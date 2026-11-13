@@ -30,8 +30,8 @@ const hoy = () =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "America/Mexico_City" }).format(
     new Date(),
   );
-export function SeguimientoAlumno() {
-  const [abierto, setAbierto] = useState(false);
+export function SeguimientoAlumno({ abiertoInicial = false, vistaInicial = 'pendientes' }: { abiertoInicial?: boolean; vistaInicial?: string } = {}) {
+  const [abierto, setAbierto] = useState(abiertoInicial);
   return (
     <View>
       <TouchableOpacity
@@ -46,12 +46,12 @@ export function SeguimientoAlumno() {
             : "Mis asistencias, trámites y pendientes"}
         </Text>
       </TouchableOpacity>
-      {abierto && <Contenido />}
+      {abierto && <Contenido vistaInicial={vistaInicial} />}
     </View>
   );
 }
-function Contenido() {
-  const [vista, setVista] = useState("pendientes"),
+function Contenido({ vistaInicial }: { vistaInicial: string }) {
+  const [vista, setVista] = useState(vistaInicial),
     [revision, setRevision] = useState(0),
     [pagina, setPagina] = useState(1),
     [desde, setDesde] = useState(hoy().slice(0, 7) + "-01"),

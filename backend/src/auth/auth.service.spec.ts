@@ -1,3 +1,4 @@
+import { Not } from 'typeorm';
 import type { Repository, DataSource } from 'typeorm';
 import type { Usuario } from '../entities/usuario.entity';
 import type { PasswordResetToken } from '../entities/password-reset-token.entity';
@@ -26,6 +27,7 @@ describe('AuthService.login', () => {
     const jwt = { sign: jest.fn().mockReturnValue('token') };
     const config = { get: jest.fn((key: string) => (key === 'JWT_EXPIRES_MOVIL' ? '30d' : '8h')) };
     const sessions = {
+      exists: jest.fn().mockResolvedValue(false),
       create: jest.fn().mockImplementation((s: Record<string, unknown>) => s),
       save: jest.fn(async (s) => s),
       findOne: jest.fn().mockResolvedValue({ id: 1 }),
@@ -42,6 +44,14 @@ describe('AuthService.login', () => {
     );
     return { service, jwt, bitacora, repo, sessions };
   };
+
+  it.each([true, false])('informa acceso previo sin filtrar portal o vigencia: %s', async (accesoPrevio) => {
+    const { service, sessions } = await crear(['ALUMNO']);
+    sessions.exists.mockResolvedValue(accesoPrevio);
+    expect(await service.me({ sub: 1, sid: 'actual', email: 'demo@escuela.mx', nombre: 'Demo', roles: ['ALUMNO'] }))
+      .toMatchObject({ accesoPrevio });
+    expect(sessions.exists).toHaveBeenCalledWith({ where: { usuarioId: 1, id: Not('actual') } });
+  });
 
   it('rechaza alumno en portal WEB', async () => {
     const { service } = await crear(['ALUMNO']);
@@ -137,7 +147,7 @@ describe('AuthService.login', () => {
       stub<JwtService>({}),
       stub<CorreoAccesoOutboxService>({}),
       stub<ConfigService>({}),
-      stub<DataSource>({}),
+      stub<DataSource>({ getRepository: jest.fn(() => ({ exists: jest.fn().mockResolvedValue(false) })) }),
     );
 
     const respuesta = await service.me({

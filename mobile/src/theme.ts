@@ -2,19 +2,19 @@
 export const colores = {
   pizarra: '#14343B',
   pizarraOscuro: '#0E262B',
-  papel: '#F7F8F6',
-  tinta: '#1C2528',
+  papel: '#F5F6F8',
+  tinta: '#20313D',
   dorado: '#C79A3C',
   avisoTexto: '#76510A',
-  linea: '#D8DCD6',
+  linea: '#E1E6EA',
   exito: '#2E7D5B',
   peligro: '#B4452F',
-  gris: '#5C6A66',
+  gris: '#60717C',
 };
 
 /** Tokens visuales compartidos por componentes del alumno. */
 export const espacio = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const;
-export const radio = { sm: 10, md: 16, lg: 22 } as const;
+export const radio = { sm: 8, md: 12, lg: 20 } as const;
 export const tipografia = {
   titulo: 25,
   subtitulo: 18,

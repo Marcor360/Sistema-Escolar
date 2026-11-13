@@ -19,7 +19,7 @@ import { colores, radio, espacio, tipografia, textoSobreFondo } from "../theme";
 import { pesos } from "../formato";
 import { useMarca } from "../marca";
 import {
-  GuiaPantalla,
+  BannerAlumno,
   base,
   ErrorCarga,
   Sello,
@@ -195,16 +195,19 @@ export default function EstadoCuentaScreen() {
 
   return (
     <ScrollView
-      contentContainerStyle={base.contenidoLista}
-      style={[base.pantalla, diseno.pantalla]}
+      contentContainerStyle={[base.contenidoLista, diseno.contenidoScroll]}
+      style={[base.pantalla, diseno.pantallaScroll]}
       refreshControl={
         <RefreshControl refreshing={cargando} onRefresh={cargar} />
       }
     >
-      <GuiaPantalla
-        titulo="Estado de cuenta"
-        detalle="Consulta solo tus pagos pendientes. El saldo cambia cuando el servidor confirma el pago."
-      />
+      <BannerAlumno titulo="Mis finanzas" icono="wallet" detalle="Tu estado de cuenta, en un solo lugar. Revisa los cargos pendientes y consulta tus pagos registrados." />
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+        <Text style={base.tituloTarjeta}>Ventanilla de pagos</Text>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Actualizar estado de cuenta" disabled={cargando || pagando} style={base.botonAccesible} onPress={cargar}>
+          <Text style={{ color: marca.colorPrimario, fontWeight: '600', fontSize: 13 }}>{cargando ? 'Actualizando…' : 'Actualizar estado de cuenta'}</Text>
+        </TouchableOpacity>
+      </View>
       {error !== "" && <ErrorCarga mensaje={error} reintentar={cargar} />}
       {!estado && cargando && (
         <ActivityIndicator accessibilityLabel="Cargando estado de cuenta" />
@@ -221,11 +224,11 @@ export default function EstadoCuentaScreen() {
       )}
       {estado && (
         <>
-          <View style={[estilos.resumen, { backgroundColor: marca.colorPrimario, borderLeftColor: marca.colorAcento }]}>
+          <View style={estilos.resumen}>
             <Text
               style={[
                 estilos.resumenEtiqueta,
-                { color: textoSobreFondo(marca.colorPrimario) },
+                { color: colores.gris },
               ]}
             >
               Saldo pendiente
@@ -233,13 +236,15 @@ export default function EstadoCuentaScreen() {
             <Text
               style={[
                 estilos.resumenValor,
-                { color: textoSobreFondo(marca.colorPrimario) },
+                { color: colores.tinta },
               ]}
             >
               {pesos(estado.saldoTotal)}
             </Text>
+            <Text style={base.secundario}>El saldo se actualiza cuando se confirma la aplicación de un pago.</Text>
           </View>
 
+          <Text accessibilityRole="header" style={[base.tituloTarjeta, { marginVertical: 16 }]}>Cargos pendientes</Text>
           {estado.cargos.filter((c) => c.saldo > 0).length === 0 && (
             <Vacio mensaje="No tienes pagos pendientes." />
           )}
@@ -258,7 +263,7 @@ export default function EstadoCuentaScreen() {
                 <TouchableOpacity
                   disabled={pagando || !saldosVigentes}
                   accessibilityState={{ disabled: pagando || !saldosVigentes, busy: pagando }}
-                  style={[estilos.boton, { backgroundColor: marca.colorAcento }]}
+                  style={[estilos.boton, { backgroundColor: marca.colorPrimario }]}
                   onPress={() =>
                     Alert.alert(
                       "Confirmar pago en línea",
@@ -280,7 +285,7 @@ export default function EstadoCuentaScreen() {
                   <Text
                     style={[
                       estilos.botonTexto,
-                      { color: textoSobreFondo(marca.colorAcento) },
+                      { color: textoSobreFondo(marca.colorPrimario) },
                     ]}
                   >
                     Pagar en línea
@@ -289,8 +294,15 @@ export default function EstadoCuentaScreen() {
               )}
             </Tarjeta>
           ))}
-
-
+          <Text accessibilityRole="header" style={[base.tituloTarjeta, { marginVertical: 16 }]}>Pagos registrados</Text>
+          {estado.pagos.length === 0 && <Tarjeta><Text style={base.secundario}>Aún no hay pagos registrados en esta consulta.</Text></Tarjeta>}
+          {estado.pagos.map(pago => <Tarjeta key={pago.id}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <View><Text style={base.tituloTarjeta}>{pago.metodo}</Text><Text style={base.secundario}>{new Date(pago.fechaPago).toLocaleDateString('es-MX')}</Text></View>
+              <Text style={[base.monto, { fontSize: 20 }]}>{pesos(pago.monto)}</Text>
+            </View>
+            <Sello texto={pago.aplicado ? 'Aplicado' : pago.estatus} tono={pago.aplicado ? 'ok' : 'neutro'} />
+          </Tarjeta>)}
         </>
       )}
     </ScrollView>
@@ -299,12 +311,13 @@ export default function EstadoCuentaScreen() {
 
 const estilos = StyleSheet.create({
   resumen: {
-    backgroundColor: colores.pizarra,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: colores.linea,
     padding: espacio.xl,
     marginBottom: espacio.lg,
     borderRadius: radio.md,
-    borderLeftWidth: 4,
-    borderLeftColor: colores.dorado,
+
   },
   resumenEtiqueta: {
     color: "#C8D2CD",
@@ -314,7 +327,8 @@ const estilos = StyleSheet.create({
   },
   resumenValor: {
     color: "#fff",
-    fontSize: tipografia.dato,
+    fontSize: 38,
+    marginVertical: 12,
     fontVariant: ["tabular-nums"],
   },
   subtitulo: {

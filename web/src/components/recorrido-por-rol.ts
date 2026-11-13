@@ -52,6 +52,32 @@ const paso = (titulo: string, destino: string, descripcion: string, comprobar: s
   comprobar,
 });
 const catalogo: (AreaRecorrido & { roles: string[] })[] = [
+  { id: 'direccion', titulo: 'Dirección y revisión de boletas', roles: ['DIRECTOR'], resumen: 'Consultar revisiones académicas y funciones de personal dentro del plantel.', pasos: [
+    paso('Revisar boletas pendientes', '/boletas', 'Filtra boletas pendientes de aceptación o con comentarios y abre el expediente correspondiente.', 'Verifica ciclo, alumno y versión de la boleta antes de dar seguimiento.'),
+    paso('Consultar funciones del personal', '/roles-personal', 'Revisa las funciones y el alcance del personal del plantel. Los cambios se realizan solo mediante las acciones autorizadas.', 'Una función institucional y un permiso de acceso son conceptos distintos.'),
+  ] },
+  { id: 'servicios-academicos', titulo: 'Boletas, recursamientos y programas', roles: ['ADMINISTRATIVO'], resumen: 'Revisiones académicas y ofertas especiales conservando el historial.', pasos: [
+    paso('Revisar boletas', '/boletas', 'Filtra las boletas pendientes o con comentarios y abre la revisión del alumno.', 'Comprueba ciclo, alumno y versión antes de responder.'),
+    paso('Consultar recursamientos', '/recursamientos', 'Busca al alumno y revisa sus intentos y la materia inscrita antes de preparar otro recursamiento.', 'El grupo principal y las notas históricas se conservan.'),
+    paso('Revisar programas especiales', '/programas-especiales', 'Consulta el programa, sus grupos y participantes antes de registrar una oferta nueva.', 'Revisa las fechas y el plantel; no confundas este grupo con el grupo regular.'),
+  ] },
+  { id: 'comunidad', titulo: 'Biblioteca, calendario y avisos', roles: ['ADMINISTRATIVO'], resumen: 'Organizar documentos y preparar comunicaciones para la audiencia correcta.', pasos: [
+    paso('Consultar biblioteca', '/biblioteca?vista=consulta', 'Revisa las carpetas del plantel antes de crear otra. Para cargar un documento utiliza Subir archivo y comprueba su destino.', 'La biblioteca administrativa no publica documentos automáticamente al alumnado.'),
+    paso('Revisar calendario', '/calendario?vista=consulta', 'Consulta el ciclo y la audiencia. Registra un evento solo después de comprobar las fechas existentes.', 'Verifica quién verá el evento antes de guardar.'),
+    paso('Preparar un aviso', '/avisos?vista=nuevo', 'Redacta el aviso, selecciona el plantel y revisa los destinatarios antes de enviarlo.', 'Guardar un borrador y enviar el comunicado son acciones diferentes.'),
+  ] },
+  {
+    id: 'carga-academica', titulo: 'Cargar materias, grupos y alumnos', roles: ['ADMINISTRATIVO'],
+    resumen: 'Orden de preparación, asignación de materias e importaciones con revisión previa.',
+    pasos: [
+      paso('1. Revisar el orden de carga', '/operaciones?vista=preparar', 'Consulta la guía y ubica qué datos ya existen antes de crear otros.', 'Revisa tu plantel y coordina el alta de alumnos con el rol autorizado.'),
+      paso('2. Preparar ciclo y oferta', '/materias?vista=ciclos', 'Revisa fechas y estado del ciclo. La oferta académica relaciona nivel, plan y periodo.', 'Crear un ciclo no crea materias, grupos o inscripciones.'),
+      paso('3. Registrar y vincular materias', '/materias?vista=consulta', 'Busca la clave para evitar duplicados. Registra las materias que falten y vincúlalas con sus planes y periodos.', 'Una materia del catálogo se asigna después a cada grupo.'),
+      paso('4. Asignar materias y docentes', '/grupos?vista=consulta', 'Crea el grupo si falta. En Administrar, asigna materias y revisa los profesores pendientes.', 'Comprueba plantel, ciclo, turno y contexto académico del grupo.'),
+      paso('5. Revisar la importación', '/operaciones?vista=importar', 'Descarga la plantilla del tipo autorizado, complétala y previsualiza el archivo. Revisa errores y duplicados antes de confirmar.', 'Materias y grupos se registran en sus módulos; no admiten esta plantilla de expedientes.'),
+      paso('6. Verificar e inscribir', '/apertura-cartera', 'Para una inscripción ordinaria revisa el expediente existente y la previsualización de cartera antes de confirmar.', 'La importación académica de inscripciones no genera cargos por sí sola.'),
+    ],
+  },
   {
     id: 'finanzas',
     titulo: 'Finanzas y cobranza',
@@ -60,7 +86,7 @@ const catalogo: (AreaRecorrido & { roles: string[] })[] = [
     pasos: [
       paso(
         '1. Revisar pendientes financieros',
-        '/seguimiento',
+        '/seguimiento?seccion=pendientes',
         'Revisa cargos pendientes y movimientos por conciliar dentro de tus planteles. Un pendiente es una señal para revisar, no una autorización de cobro.',
         'Comprueba el plantel y la fecha antes de operar.',
       ),
@@ -90,7 +116,7 @@ const catalogo: (AreaRecorrido & { roles: string[] })[] = [
       ),
       paso(
         '6. Conciliar movimientos bancarios',
-        '/seguimiento',
+        '/seguimiento?seccion=conciliacion',
         'Carga el CSV normalizado, elige un alias estable de cuenta, previsualiza y confirma la importación. Después aplica cada movimiento al cargo cotejado.',
         'Un movimiento ASIGNADO permite reintentar el mismo cargo; evita crear otro pago manual.',
       ),
@@ -102,7 +128,7 @@ const catalogo: (AreaRecorrido & { roles: string[] })[] = [
       ),
       paso(
         '8. Comparar ingresos',
-        '/analitica',
+        '/analitica?vista=consulta',
         'Consulta gráficas separadas de cobros por plantel y carrera. Cambia entre barras y líneas, revisa valores exactos y periodo. Los ingresos no equivalen a utilidad.',
         'Los importes sin carrera identificada permanecen separados.',
       ),
@@ -116,7 +142,7 @@ const catalogo: (AreaRecorrido & { roles: string[] })[] = [
     pasos: [
       paso(
         '1. Revisar expedientes pendientes',
-        '/seguimiento',
+        '/seguimiento?seccion=calidad',
         'El diagnóstico señala datos faltantes, CURP repetida, grupos sin nivel e inscripciones inconsistentes. Revisa antes de corregir; no se fusionan expedientes automáticamente.',
         'Consulta la vista previa de la corrección y verifica el alumno.',
       ),
@@ -158,7 +184,7 @@ const catalogo: (AreaRecorrido & { roles: string[] })[] = [
       ),
       paso(
         '8. Atender trámites',
-        '/seguimiento',
+        '/seguimiento?seccion=tramites',
         'Consulta el folio, asígnate la revisión y registra un mensaje para el alumno. Resolver un trámite no emite por sí mismo una constancia oficial.',
         'El historial y el responsable deben permitir seguir cada solicitud.',
       ),
@@ -170,7 +196,7 @@ const catalogo: (AreaRecorrido & { roles: string[] })[] = [
       ),
       paso(
         '10. Analizar inscripciones',
-        '/analitica',
+        '/analitica?vista=consulta',
         'Consulta alumnos distintos por plantel/carrera y la evolución mensual. Una persona puede figurar en más de una carrera; los conteos no siempre se suman.',
         'Distingue inscripción vigente, participación histórica y nuevas inscripciones.',
       ),
@@ -214,13 +240,13 @@ const catalogo: (AreaRecorrido & { roles: string[] })[] = [
       ),
       paso(
         '6. Atender pendientes de clase',
-        '/seguimiento',
+        '/seguimiento?seccion=pendientes',
         'Revisa entregas sin calificar y vuelve a la clase correspondiente. Consulta alertas sin enviar mensajes ni modificar notas desde el recorrido.',
         'Comprueba lo que está pendiente frente al listado real.',
       ),
       paso(
         '7. Consultar avance',
-        '/analitica',
+        '/analitica?vista=consulta',
         'Consulta captura, promedios oficiales y entregas de tus clases. Tener también FINANZAS no amplía el acceso académico.',
         'Los indicadores no sustituyen el acta ni la revisión de cada alumno.',
       ),
@@ -252,13 +278,13 @@ const catalogo: (AreaRecorrido & { roles: string[] })[] = [
       ),
       paso(
         '4. Supervisar recuperación',
-        '/seguimiento',
+        '/seguimiento?seccion=respaldo',
         'Revisa antigüedad y resultado del respaldo. La instalación de tareas, copia externa y restore real requiere el procedimiento operativo de Windows.',
         'Un archivo generado o VERIFYONLY no acreditan recuperación institucional.',
       ),
       paso(
         '5. Comparar planteles y carreras',
-        '/analitica',
+        '/analitica?vista=consulta',
         'Compara ingresos y demanda en gráficas independientes. Revisa también la cobertura de cargos sin carrera y las tablas exactas.',
         'No interpretes ingresos como utilidad ni cero como un dato faltante.',
       ),
@@ -267,12 +293,12 @@ const catalogo: (AreaRecorrido & { roles: string[] })[] = [
   {
     id: 'cuenta',
     titulo: 'Mi cuenta, avisos y seguridad',
-    roles: ['ADMINISTRATIVO', 'FINANZAS', 'MAESTRO', 'SUPERADMIN', 'ALUMNO'],
+    roles: ['ADMINISTRATIVO', 'FINANZAS', 'MAESTRO', 'SUPERADMIN', 'ALUMNO', 'DIRECTOR'],
     resumen: 'Preferencias, sesiones propias y repetición de las guías.',
     pasos: [
       paso(
         'Preferencias y sesiones',
-        '/seguimiento',
+        '/seguimiento?seccion=preferencias',
         'Configura avisos opcionales y revisa tus sesiones abiertas. Puedes revocar otras sesiones; para salir de esta usa Cerrar sesión.',
         'Los avisos de activación y recuperación permanecen habilitados.',
       ),
@@ -297,7 +323,7 @@ export function recorridosPorArea(secciones: readonly Seccion[], roles: readonly
           ruta === '/cuenta' ||
           (!!seccion && (roles.includes('SUPERADMIN') || seccion.roles.some((r) => roles.includes(r))))
         );
-      }),
+      }).map((p, indice) => ({ ...p, titulo: `${indice + 1}. ${p.titulo.replace(/^\d+\.\s*/, '')}` })),
     }))
     .filter((a) => a.pasos.length);
 }

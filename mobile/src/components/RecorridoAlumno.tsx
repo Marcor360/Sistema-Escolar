@@ -6,7 +6,9 @@ import {
   CLAVE_GUIA_ALUMNO,
   escucharRecorridoAlumno,
   pasosAlumno,
+  type PasoAlumno,
 } from "../recorrido-alumno";
+import { api } from "../api/client";
 import { useMarca } from "../marca";
 import { colores, textoSobreFondo } from "../theme";
 export function RecorridoAlumno({
@@ -14,27 +16,32 @@ export function RecorridoAlumno({
   navegar,
 }: {
   usuarioId: number;
-  navegar: (pantalla: (typeof pasosAlumno)[number]["pantalla"]) => void;
+  navegar: (pantalla: PasoAlumno["pantalla"], paso?: PasoAlumno) => void;
 }) {
   const [actual, setActual] = useState<number | null>(null),
     [pausado, setPausado] = useState(false),
     [listo, setListo] = useState(false),
     [error, setError] = useState("");
+  const [indiceVisible, setIndiceVisible] = useState(false);
   const { marca } = useMarca();
   useEffect(() => {
     let vigente = true;
     setActual(null);
+    setPausado(false); setIndiceVisible(false);
     setListo(false);
-    void SecureStore.getItemAsync(CLAVE_GUIA_ALUMNO + usuarioId)
-      .then((v) => {
+    void Promise.all([
+      SecureStore.getItemAsync(CLAVE_GUIA_ALUMNO + usuarioId),
+      api.get<{ accesoPrevio: boolean }>("/auth/me"),
+    ])
+      .then(([v, { data }]) => {
         if (vigente) {
-          setActual(v === "1" ? null : 0);
+          setActual(v === "1" || data.accesoPrevio !== false ? null : 0);
           setListo(true);
         }
       })
       .catch(() => {
         if (vigente) {
-          setActual(0);
+          setActual(null);
           setListo(true);
         }
       });
@@ -48,6 +55,7 @@ export function RecorridoAlumno({
         setActual(0);
         setPausado(false);
         setListo(true);
+        setIndiceVisible(false);
         setError("");
       }),
     [usuarioId],
@@ -156,8 +164,14 @@ export function RecorridoAlumno({
             {paso.comprobar}
           </Text>
           {!!error && <Text accessibilityRole="alert">{error}</Text>}
+          {boton(indiceVisible ? "Ocultar pasos" : "Ver todos los pasos", () => setIndiceVisible(v => !v), true)}
+          {indiceVisible && <View accessibilityLabel="Pasos de la guía">{pasosAlumno.map((p, i) => <TouchableOpacity key={p.titulo} accessibilityRole="button"
+            accessibilityLabel={`Ir al paso ${i + 1}: ${p.titulo}`} accessibilityState={{ selected: actual === i }}
+            style={{ minHeight: 48, padding: 12, borderBottomWidth: 1, borderBottomColor: colores.linea }}
+            onPress={() => { setActual(i); setIndiceVisible(false); }}><Text>{i + 1}. {p.titulo}</Text></TouchableOpacity>)}</View>}
           {boton("Ver esta pantalla", () => {
-            navegar(paso.pantalla);
+            if (paso.subpantalla || paso.vista) navegar(paso.pantalla, paso);
+            else navegar(paso.pantalla);
             setPausado(true);
           }, true)}
           <Text style={{ color: colores.gris, fontSize: 13, marginVertical: 8 }}>

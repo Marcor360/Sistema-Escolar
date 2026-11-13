@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   FlatList,
   RefreshControl,
   StyleSheet,
@@ -183,16 +184,27 @@ export default function TareasScreen() {
           return;
         }
         const archivo = resultado.assets[0];
-        const problema = validarArchivoEntrega(archivo);
+        // En web usamos el File del selector, nunca una URL para descargar contenido.
+        const problema = validarArchivoEntrega(Platform.OS === 'web'
+          ? { name: archivo.name, size: archivo.file?.size ?? archivo.size }
+          : archivo);
         if (problema) {
           Alert.alert("Archivo no válido", problema);
           return;
         }
-        form.append("archivo", {
-          uri: archivo.uri,
-          name: archivo.name,
-          type: archivo.mimeType ?? "application/octet-stream",
-        } as unknown as Blob);
+        if (Platform.OS === 'web') {
+          if (!archivo.file) {
+            Alert.alert('Archivo no disponible', 'Vuelve a elegir el archivo desde este dispositivo.');
+            return;
+          }
+          form.append('archivo', archivo.file, archivo.name);
+        } else {
+          form.append("archivo", {
+            uri: archivo.uri,
+            name: archivo.name,
+            type: archivo.mimeType ?? "application/octet-stream",
+          } as unknown as Blob);
+        }
       }
 
       await api.post(`/actividades/${tarea.id}/entrega`, form, {

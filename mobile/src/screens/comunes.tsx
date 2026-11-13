@@ -2,6 +2,16 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "../components/Texto";
 import { colores, espacio, radio, tipografia, textoSobreFondo } from "../theme";
 import { useMarca } from "../marca";
+import { IconoAlumno, type NombreIconoAlumno } from '../components/IconoAlumno';
+
+export function BannerAlumno({ titulo, detalle, icono }: { titulo: string; detalle: string; icono: NombreIconoAlumno }) {
+  return <View style={{ backgroundColor: '#123744', borderRadius: 12, padding: 28, marginBottom: 24, flexDirection: 'row', alignItems: 'center', gap: 20 }}>
+    <View style={{ flex: 1, minWidth: 0 }}><Text style={{ fontSize: 10, letterSpacing: 1.5, color: '#C3D4DA', fontWeight: '700', marginBottom: 12 }}>SERVICIOS ESCOLARES</Text>
+      <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: '700', color: '#fff', marginBottom: 10 }}>{titulo}</Text>
+      <Text style={{ fontSize: 13, lineHeight: 21, color: '#DAE6E9' }}>{detalle}</Text></View>
+    <IconoAlumno nombre={icono} color="#C3D4DA" tamano={42} />
+  </View>;
+}
 
 export function GuiaPantalla({
   titulo,
@@ -11,7 +21,7 @@ export function GuiaPantalla({
   detalle: string;
 }) {
   return (
-    <View style={{ marginBottom: espacio.lg }}>
+    <View style={{ marginBottom: espacio.xl }}>
       <Text accessibilityRole="header" style={base.tituloPantalla}>
         {titulo}
       </Text>
@@ -89,10 +99,10 @@ export function ErrorCarga({
 }
 
 export const base = StyleSheet.create({
-  pantalla: { flex: 1, backgroundColor: colores.papel, padding: espacio.lg },
+  pantalla: { flex: 1, backgroundColor: colores.papel, padding: espacio.lg, paddingTop: espacio.xxl },
   contenidoLista: { paddingBottom: 32 },
   tituloPantalla: {
-    fontSize: 24,
+    fontSize: 30,
     fontWeight: "700",
     color: colores.tinta,
     marginBottom: 8,
@@ -103,12 +113,12 @@ export const base = StyleSheet.create({
     backgroundColor: "#fff",
     borderWidth: 1,
     borderColor: colores.linea,
-    padding: espacio.lg,
-    marginBottom: espacio.md,
+    padding: espacio.xl,
+    marginBottom: espacio.lg,
     borderRadius: radio.md,
   },
   tituloTarjeta: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: "700",
     flexShrink: 1,
     color: colores.tinta,
@@ -116,7 +126,7 @@ export const base = StyleSheet.create({
   },
   secundario: {
     fontSize: tipografia.secundaria,
-    lineHeight: 20,
+    lineHeight: 21,
     color: colores.gris,
     flexShrink: 1,
   },
@@ -141,8 +151,8 @@ export const base = StyleSheet.create({
     backgroundColor: "#fff",
     borderWidth: 1,
     borderColor: colores.peligro,
-    padding: espacio.lg,
-    marginBottom: espacio.md,
+    padding: espacio.xl,
+    marginBottom: espacio.lg,
     borderRadius: radio.md,
   },
   errorTexto: { color: colores.peligro, marginBottom: 8 },

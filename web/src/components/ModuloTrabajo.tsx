@@ -1,6 +1,6 @@
 import { Cargando } from './Cargando';
 import { createContext, ReactNode, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { UNSAFE_DataRouterContext, useSearchParams } from 'react-router-dom';
+import { UNSAFE_DataRouterContext, useSearchParams, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { Encabezado } from './Encabezado';
 import { PanelAccionesModulo } from './PanelAccionesModulo';
@@ -25,6 +25,7 @@ function Guardia({ children }: { children: ReactNode }) {
 export const esFormularioModulo = (vista: string) => ['nuevo', 'editar', 'adjuntar', 'actividad-nueva', 'actividad-editar', 'material-nuevo', 'material-editar', 'calificar-entrega', 'ciclo-nuevo', 'ciclo-editar', 'cargo-nuevo', 'pago-nuevo', 'colegiaturas', 'carpeta-nueva', 'archivo-nuevo', 'seguimiento', 'importar', 'promover', 'reinscribir'].includes(vista);
 
 export function ModuloTrabajo({ titulo, acciones, vistas = [], permisos = {}, vistaInicial, children }: { titulo: string; acciones: Accion[]; vistas?: string[]; permisos?: Record<string,string[]>; vistaInicial?: string; children: ReactNode }) {
+  const { pathname } = useLocation();
   const { tieneRol } = useAuth(), [query, setQuery] = useSearchParams();
   const permitidas = acciones.filter(a => !a.roles || tieneRol(...a.roles));
   const solicitada = query.get('vista') || vistaInicial || '';
@@ -46,8 +47,10 @@ export function ModuloTrabajo({ titulo, acciones, vistas = [], permisos = {}, vi
   useEffect(() => { guardado.current = false; setSucio(false); foco.current?.focus(); }, [modo, idSolicitado]);
   const id = Number(query.get('id'));
   const valor = useMemo(() => ({ modo, id: Number.isSafeInteger(id) && id > 0 ? id : null, query, ir, guardado: guardadoActual, ocupado: ocupadoActual, actualizar }), [modo, id, query, ir, guardadoActual, ocupadoActual, actualizar]);
-  if (!modo) return <><Encabezado titulo={titulo} detalle="Selecciona una operación para comenzar" /><PanelAccionesModulo titulo={`Gestión de ${titulo.toLowerCase()}`} acciones={permitidas.map(a => ({ ...a, ejecutar: () => ir(a.vista) }))} /></>;
+  const orientacion = ['/materias', '/grupos', '/alumnos', '/operaciones'].includes(pathname) ? <p className="texto-ayuda"><Link to="/operaciones?vista=preparar">Ver el orden de carga: materias, grupos y alumnos</Link></p> : null;
+  if (!modo) return <>{orientacion}<Encabezado titulo={titulo} detalle="Selecciona una operación para comenzar" /><PanelAccionesModulo titulo={`Gestión de ${titulo.toLowerCase()}`} acciones={permitidas.map(a => ({ ...a, ejecutar: () => ir(a.vista) }))} /></>;
   return <TrabajoContext.Provider value={valor}>
+    {orientacion}
     <Guardia><Bloqueo sucio={sucio} ocupado={ocupado} guardado={guardado} /></Guardia>
     <div className={esFormularioModulo(modo) ? 'trabajo-enfocado' : ''} onChangeCapture={() => { if (esFormularioModulo(modo)) { guardado.current = false; setSucio(true); } }}>
       <h2 ref={foco} tabIndex={-1} className="solo-lector">{titulo}: {esFormularioModulo(modo) ? 'Formulario' : 'Consulta'}</h2>

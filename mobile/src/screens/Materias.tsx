@@ -20,7 +20,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { api, archivosBase, mensajeDeError } from "../api/client";
 import { useSesion } from "../sesion";
 import { useMarca } from "../marca";
-import { colores, radio, espacio, tipografia } from "../theme";
+import { colores, radio, espacio, tipografia, textoSobreFondo } from "../theme";
 import {
   GuiaPantalla,
   base,
@@ -48,7 +48,7 @@ interface Material {
   tamanoKb: number;
 }
 
-export default function MateriasScreen() {
+export default function MateriasScreen({ abrirTareas }: { abrirTareas?: () => void }) {
   const diseno = useDisenoAlumno();
   const { marca } = useMarca();
   const { sesion } = useSesion();
@@ -235,9 +235,12 @@ export default function MateriasScreen() {
         ListHeaderComponent={
           <>
             <GuiaPantalla
-              titulo="Mis materias"
-              detalle="Toca una materia para ver al docente y abrir sus materiales de clase."
+              titulo="Mi aula"
+              detalle="Consulta materiales de clase. En Tareas y entregas puedes subir archivos o enviar una respuesta."
             />
+            {abrirTareas && <TouchableOpacity accessibilityRole="button" accessibilityLabel="Tareas y entregas · Subir tarea" style={{ backgroundColor: marca.colorPrimario, borderRadius: 8, padding: 16, marginBottom: 24, minHeight: 52, alignSelf: 'flex-start' }} onPress={abrirTareas}>
+              <Text style={{ color: textoSobreFondo(marca.colorPrimario), fontWeight: "700" }}>Tareas y entregas · Subir tarea  →</Text>
+            </TouchableOpacity>}
             {error !== "" && <ErrorCarga mensaje={error} reintentar={cargar} />}
             {ultimaActualizacion && (
               <Text accessibilityRole="text">

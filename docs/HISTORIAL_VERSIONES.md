@@ -2,6 +2,14 @@
 
 Los números de entrega describen código; no acreditan despliegue ni aceptación institucional. Los pendientes citados pertenecen a cada corte histórico.
 
+## Candidata 1.36.0 · 13/nov/2026
+
+Portal del alumno renovado; navegación adaptable; tareas accesibles y entrega de archivos desde web; detección de acceso previo; carga académica guiada y recorridos por tarea y rol. Sin migraciones nuevas. Publicación y UAT pendientes. Los manifiestos de API, web y Expo comparten la misma versión.
+
+## Base 1.35.16
+
+Aislamiento de las pruebas SMTP y claves de acceso frente a variables heredadas del entorno, integrado en la base `93e7b2a` (#242). Esta referencia histórica se conserva; no representa la versión candidata actual.
+
 ## Entregas 1.27.43–1.35.14 (integradas en main al 2/nov/2026)
 
 - **1.35.14:** auditoría de estabilización y actualización coordinada de API, administración y Portal Alumno. [Guía de actualización](ACTUALIZACION_INTEGRAL_1.35.14.md) y [diagnóstico/valor estimado](AUDITORIA_Y_RUTA_PRODUCTIVA_2026-11-01.md). Sin despliegue automático.

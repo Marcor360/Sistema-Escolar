@@ -10,8 +10,10 @@ import { activarPush, limpiarPreferenciaPushLocal } from "./src/push";
 import { preferenciaBiometrica, desbloquearBiometria } from "./src/biometria";
 import { CLAVE_ULTIMA_ACTIVIDAD, crearControlInactividad, crearPersistenciaActividad, actividadRestaurable } from "./src/utils/inactividad";
 import { debeNotificarActividad } from "./src/utils/pulso-actividad";
-import { ETIQUETAS_NAVEGACION } from "./src/utils/etiquetas-navegacion";
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { CabeceraAlumno, NavegacionAlumno } from './src/components/PortalAlumno';
+import { AnchoPortalContext, IdentidadAlumnoContext } from './src/portal-alumno';
+import { CalendarioAlumnoScreen, TramitesAlumnoScreen } from './src/screens/ServiciosAlumno';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   NavigationContainer,
   DefaultTheme,
@@ -20,7 +22,7 @@ import {
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "expo-status-bar";
-import { ActivityIndicator, AppState, BackHandler, Platform, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, AppState, BackHandler, Platform, TouchableOpacity, View, useWindowDimensions } from "react-native";
 import { Text, FuenteContext } from "./src/components/Texto";
 import { useFonts } from "expo-font";
 import * as SecureStore from "./src/almacen-seguro";
@@ -40,6 +42,7 @@ import CambioPasswordInicial from "./src/screens/CambioPasswordInicial";
 import LoginScreen from "./src/screens/Login";
 import InicioScreen from "./src/screens/Inicio";
 import ConsentimientoInstitucional, { EstadoConsentimiento } from "./src/screens/ConsentimientoInstitucional";
+import TareasScreen from "./src/screens/Tareas";
 import MateriasScreen from "./src/screens/Materias";
 import CalificacionesScreen from "./src/screens/Calificaciones";
 import EstadoCuentaScreen from "./src/screens/EstadoCuenta";
@@ -52,27 +55,27 @@ import {
   MARCA_POR_DEFECTO,
   Marca,
   MarcaContext,
-  useMarca,
 } from "./src/marca";
 
 const navegacion = createNavigationContainerRef<{
   Inicio: undefined;
-  Materias: undefined;
+  Materias: { screen: "MisMaterias" | "MisTareas" } | undefined;
   Calificaciones: undefined;
   Pagos: undefined;
   Perfil: undefined;
+  Calendario: undefined;
+  Tramites: { vista?: import("./src/recorrido-alumno").VistaSeguimientoAlumno } | undefined;
 }>();
 const Tab = createBottomTabNavigator();
 const PerfilStack = createNativeStackNavigator<{ MiPerfil: undefined; MisDocumentos: undefined }>();
 
 function PerfilConDocumentos() {
-  const { marca } = useMarca();
   return (
     <PerfilStack.Navigator screenOptions={{
-      headerStyle: { backgroundColor: marca.colorPrimario },
-      headerTintColor: textoSobreFondo(marca.colorPrimario),
+      headerStyle: { backgroundColor: "#fff" },
+      headerTintColor: colores.tinta,
     }}>
-      <PerfilStack.Screen name="MiPerfil" options={{ title: "Perfil" }}>
+      <PerfilStack.Screen name="MiPerfil" options={{ title: "Perfil", headerShown: false }}>
         {({ navigation }) => <PerfilScreen abrirDocumentos={() => navigation.navigate("MisDocumentos")} />}
       </PerfilStack.Screen>
       <PerfilStack.Screen name="MisDocumentos" component={DocumentosScreen} options={{ title: "Mis documentos" }} />
@@ -80,17 +83,31 @@ function PerfilConDocumentos() {
   );
 }
 
-const iconos: Record<string, string> = {
-  Inicio: "🏠",
-  Materias: "📚",
-  Calificaciones: "🎓",
-  Pagos: "💳",
-  Perfil: "👤",
-};
+const MateriasStack = createNativeStackNavigator<{ MisMaterias: undefined; MisTareas: undefined }>();
+function MateriasConTareas() {
+  return <MateriasStack.Navigator screenOptions={{ headerStyle: { backgroundColor: "#fff" }, headerTintColor: colores.tinta }}>
+    <MateriasStack.Screen name="MisMaterias" options={{ title: "Materias", headerShown: false }}>
+      {({ navigation }) => <MateriasScreen abrirTareas={() => navigation.navigate("MisTareas")} />}
+    </MateriasStack.Screen>
+    <MateriasStack.Screen name="MisTareas" component={TareasScreen} options={{ title: "Tareas y entregas" }} />
+  </MateriasStack.Navigator>;
+}
 
 function AppInterna() {
-  const fuenteLista = useContext(FuenteContext);
+  const { width, fontScale } = useWindowDimensions();
+  const escritorio = width >= 1000 && fontScale <= 1.3;
+  const [menuAbierto, setMenuAbierto] = useState(false);
+  const [identidadAlumno, setIdentidadAlumno] = useState<{ usuarioId: number; matricula: string; estatus: string } | null>(null);
   const [sesion, setSesion] = useState<Sesion | null>(null);
+  useEffect(() => {
+    let vigente = true;
+    setIdentidadAlumno(null);
+    setMenuAbierto(false);
+    if (sesion?.sub) void api.get<{ matricula: string; estatus: string }>('/alumnos/me/perfil').then(({ data }) => {
+      if (vigente) setIdentidadAlumno({ usuarioId: sesion.sub, matricula: data.matricula, estatus: data.estatus });
+    }).catch(() => { /* Los detalles del perfil se pueden reintentar desde Mi perfil. */ });
+    return () => { vigente = false; };
+  }, [sesion?.sub]);
   const [bloqueoBiometrico, setBloqueoBiometrico] = useState(false);
   const usuarioEnDesbloqueo = useRef<number | null>(null);
   const revisionSesion = useRef(0);
@@ -552,7 +569,7 @@ function AppInterna() {
       <SesionContext.Provider
         value={{ sesion, iniciar, cerrar, finalizarSesionLocal }}
       >
-        <SafeAreaView style={{ flex: 1, backgroundColor:sesion ? colores.papel : marca.colorPrimario }} edges={sesion ? ["left","right"] : ["left","right","top","bottom"]} onTouchStart={registrarInteraccion}>
+        <SafeAreaView style={{ flex: 1, backgroundColor:sesion ? colores.papel : marca.colorPrimario }} edges={sesion ? ["left","right","top"] : ["left","right","top","bottom"]} onTouchStart={registrarInteraccion}>
         <NavigationContainer
           ref={navegacion}
           theme={tema}
@@ -563,43 +580,26 @@ function AppInterna() {
         >
           <StatusBar
             style={
-              textoSobreFondo(marca.colorPrimario) === "#ffffff"
-                ? "light"
-                : "dark"
+              sesion ? 'dark' : textoSobreFondo(marca.colorPrimario) === "#ffffff" ? "light" : "dark"
             }
           />
           {sesion ? (
+            <IdentidadAlumnoContext.Provider value={identidadAlumno?.usuarioId === sesion.sub ? identidadAlumno : {}}>
+            <CabeceraAlumno escritorio={escritorio} menuAbierto={menuAbierto} alternarMenu={() => setMenuAbierto(v => !v)}
+              abrirPerfil={() => { if (navegacion.isReady()) navegacion.navigate('Perfil'); }} />
+            <AnchoPortalContext.Provider value={escritorio ? width - (menuAbierto ? 264 : 88) : width}>
             <Tab.Navigator
               key={sesion.sub}
-              screenOptions={({ route }) => ({
-                headerStyle: { backgroundColor: marca.colorPrimario },
-                headerTintColor: textoSobreFondo(marca.colorPrimario),
-                headerTitleStyle: {
-                  fontFamily: fuenteLista ? "Onest" : undefined,
-                  fontWeight: "700",
-                },
-                tabBarActiveTintColor: textoSobreFondo(colores.papel),
-                tabBarInactiveTintColor: colores.gris,
-                tabBarHideOnKeyboard: true,
-                tabBarLabelPosition: "below-icon",
-                tabBarLabelStyle: {
-                  fontFamily: fuenteLista ? "Onest" : undefined,
-                  fontSize: 12,
-                  fontWeight: "600",
-                },
-                tabBarItemStyle: { minHeight: 48 },
-                tabBarAccessibilityLabel: ETIQUETAS_NAVEGACION[route.name] ?? route.name,
-                tabBarStyle: {
-                  backgroundColor: colores.papel,
-                  borderTopColor: colores.linea,
-                  minHeight: 68,
-                  paddingTop: 6,
-                },
-                tabBarIcon: () => <Text accessible={false}>{iconos[route.name] ?? "•"}</Text>,
-              })}
+              tabBar={props => <NavegacionAlumno {...props} escritorio={escritorio} menuAbierto={menuAbierto} cerrarMenu={() => setMenuAbierto(false)} />}
+              screenOptions={{
+                headerShown: false,
+                tabBarPosition: escritorio ? 'left' : 'bottom',
+                tabBarStyle: escritorio ? { width: menuAbierto ? 264 : 88 } : undefined,
+                sceneStyle: { backgroundColor: colores.papel },
+              }}
             >
               <Tab.Screen name="Inicio" component={InicioScreen} />
-              <Tab.Screen name="Materias" component={MateriasScreen} />
+              <Tab.Screen name="Materias" component={MateriasConTareas} options={{ headerShown: false }} />
               <Tab.Screen
                 name="Calificaciones"
                 component={CalificacionesScreen}
@@ -610,13 +610,21 @@ function AppInterna() {
                 component={EstadoCuentaScreen}
                 options={{ title: "Estado de cuenta", tabBarLabel: "Cuenta" }}
               />
+              <Tab.Screen name="Calendario" component={CalendarioAlumnoScreen} />
+              <Tab.Screen name="Tramites" component={TramitesAlumnoScreen} />
               <Tab.Screen name="Perfil" component={PerfilConDocumentos} options={{ headerShown: false }} />
             </Tab.Navigator>
+            </AnchoPortalContext.Provider>
+            </IdentidadAlumnoContext.Provider>
           ) : (
             <LoginScreen aviso={avisoCierre} />
           )}
         </NavigationContainer>
-        {sesion&&<RecorridoAlumno key={sesion.sub} usuarioId={sesion.sub} navegar={pantalla=>{if(navegacion.isReady())navegacion.navigate(pantalla);}}/>}
+        {sesion&&<RecorridoAlumno key={sesion.sub} usuarioId={sesion.sub} navegar={(pantalla,paso)=>{if(!navegacion.isReady())return;
+          if(pantalla==='Materias')navegacion.navigate('Materias',{screen:paso?.subpantalla ?? 'MisMaterias'});
+          else if(pantalla==='Tramites')navegacion.navigate('Tramites',{vista:paso?.vista ?? 'tramites'});
+          else navegacion.navigate(pantalla);
+        }}/>}
         </SafeAreaView>
       </SesionContext.Provider>
     </MarcaContext.Provider>

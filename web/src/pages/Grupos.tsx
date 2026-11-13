@@ -151,11 +151,15 @@ export default function GruposPage() {
 
   useEffect(() => {
     if(legado) return;
+    consultaGrupo.current += 1;
+    setSeleccionado(null); setAsignaciones([]); setInscritos([]);
+    setDetalleGrupoCompleto(false); setCargandoGrupo(false);
+    setReasignando(null); setNuevoDocente('');
     if(trabajo.modo === 'nuevo') {setEditando(null);setFormGrupo({cicloId:'',plantelId:'',nombre:'',grado:'',turno:'MATUTINO'});setContexto(CONTEXTO_VACIO);setUsarContexto(false);}
     if(!trabajo.id || !['editar','administrar'].includes(trabajo.modo))return;
     let vigente = true;
     api.get<Grupo>(`/academico/grupos/${trabajo.id}`).then(({data:g})=>{if(!vigente)return;if(trabajo.modo==='editar') editar(g);else void abrirGrupo(g);}).catch(e=>{if(vigente)setError(mensajeDeError(e));});
-    return()=>{vigente=false;};
+    return()=>{vigente=false; consultaGrupo.current += 1;};
     // Los handlers cargan solo el registro seleccionado; sus respuestas tienen contador propio.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trabajo.modo,trabajo.id,legado]);
@@ -219,7 +223,7 @@ export default function GruposPage() {
       {errorCatalogos && <div role="alert"><p>{errorCatalogos}</p><button className="boton secundario" onClick={() => { void cargarCatalogos(); }}>Reintentar catálogos</button></div>}
 
       {(legado || trabajo.modo === 'nuevo' || (trabajo.modo === 'editar' && editando?.id === trabajo.id)) && <section className="panel">
-        <p className="texto-ayuda">Paso 1: selecciona un plantel y un ciclo en preparación o activo. Después abre Administrar para asignar materias y docentes e inscribir alumnos.</p><h2 id="form-grupo">{editando ? 'Editar grupo' : 'Nuevo grupo'}</h2>
+        <p className="texto-ayuda">Paso 1: selecciona un plantel y un ciclo en preparación o activo. Después abre Administrar para asignar materias y docentes. Para nuevas inscripciones con cargos, continúa en Apertura de cartera.</p><h2 id="form-grupo">{editando ? 'Editar grupo' : 'Nuevo grupo'}</h2>
         <form onSubmit={crearGrupo} className="fila">
           <div className="campo"><label htmlFor="grupos-campo-1">Plantel</label>
             <select id="grupos-campo-1" required disabled={editando !== null || enviando} value={formGrupo.plantelId} onChange={(e) => { setContexto(CONTEXTO_VACIO); setFormGrupo({ ...formGrupo, plantelId: e.target.value }); }}>
@@ -300,7 +304,7 @@ export default function GruposPage() {
 
       {cargandoGrupo && <p role="status">Cargando detalle del grupo…</p>}
       {(legado || trabajo.modo === 'administrar') && seleccionado && !cargandoGrupo && !detalleGrupoCompleto && <button className="boton secundario" onClick={() => { void abrirGrupo(seleccionado); }}>Reintentar detalle del grupo</button>}
-      {seleccionado && !cargandoGrupo && detalleGrupoCompleto && (
+      {(legado || (trabajo.modo === 'administrar' && trabajo.id === seleccionado?.id)) && seleccionado && !cargandoGrupo && detalleGrupoCompleto && (
         <>
           <section className="panel" aria-label="Preparación del grupo">
             <h2>{seleccionado.nombre}: preparación académica</h2>

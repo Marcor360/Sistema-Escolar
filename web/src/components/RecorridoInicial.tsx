@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { api } from '../api/client';
 import { claveRecorrido } from './recorrido-por-rol';
 import type { AreaRecorrido, PasoRecorrido } from './recorrido-por-rol';
 
@@ -17,8 +18,10 @@ function completado(clave: string): boolean {
   }
 }
 export function RecorridoInicial({ usuarioId, roles, pasos, areas }: Props) {
+  const alumno = roles.includes('ALUMNO');
+  const [reducido, setReducido] = useState(false);
   const clave = usuarioId ? claveRecorrido(usuarioId, roles) : '';
-  const [actual, setActual] = useState<number | null>(() => (clave && pasos.length && !completado(clave) ? 0 : null));
+  const [actual, setActual] = useState<number | null>(() => (clave && pasos.length && !alumno && !completado(clave) ? 0 : null));
   const [areaId, setAreaId] = useState(areas?.[0]?.id ?? 'general');
   const [elegir, setElegir] = useState(!!areas?.length);
   const area = areas?.find((a) => a.id === areaId) ?? areas?.[0];
@@ -32,12 +35,24 @@ export function RecorridoInicial({ usuarioId, roles, pasos, areas }: Props) {
   const panel = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    setActual(clave && pasos.length && !completado(clave) ? 0 : null);
-  }, [clave, pasos.length]);
+    let vigente = true;
+    setActual(null);
+    setReducido(false);
+    setElegir(!!areas?.length);
+    if (clave && pasos.length && !completado(clave)) {
+      if (alumno) {
+        void api.get<{ accesoPrevio: boolean }>('/auth/me').then(({ data }) => {
+          if (vigente && data.accesoPrevio === false) setActual(0);
+        }).catch(() => { /* La guía sigue disponible desde el menú. */ });
+      } else setActual(0);
+    }
+    return () => { vigente = false; };
+  }, [clave, pasos.length, alumno, areas?.length]);
   useEffect(() => {
     const repetir = () => {
       if (clave && pasos.length) {
         setActual(0);
+        setReducido(false);
         setElegir(!!areas?.length);
       }
     };
@@ -77,6 +92,11 @@ export function RecorridoInicial({ usuarioId, roles, pasos, areas }: Props) {
   };
   if (!clave || !pasos.length || actual === null) return null;
   const paso = guia[Math.min(actual, guia.length - 1)];
+  if (reducido) return <aside className="recorrido-reducido" aria-label="Guía pausada">
+    <span>{area?.titulo ?? 'Recorrido'} · Paso {Math.min(actual + 1, guia.length)} de {guia.length}</span>
+    <button className="boton secundario" onClick={() => setReducido(false)}>Continuar guía</button>
+    <button className="boton secundario" onClick={terminar}>Cerrar guía</button>
+  </aside>;
   if (elegir && areas?.length)
     return (
       <aside
@@ -90,7 +110,7 @@ export function RecorridoInicial({ usuarioId, roles, pasos, areas }: Props) {
       >
         <p className="recorrido-progreso">Guías especializadas por área</p>
         <h2 id="recorrido-titulo">¿Qué herramientas quieres conocer?</h2>
-        <p>Solo verás las áreas permitidas para tu cuenta. Puedes omitir y repetir cada guía.</p>
+        <p>Elige una tarea. Cada guía muestra el orden recomendado y lo que debes revisar antes de guardar. Puedes omitirla y volver desde Mi cuenta.</p>
         <div className="recorrido-areas">
           {areas.map((a) => (
             <button
@@ -129,6 +149,11 @@ export function RecorridoInicial({ usuarioId, roles, pasos, areas }: Props) {
         Recorrido guiado · {actual + 1} de {guia.length}
         {area ? ' · ' + area.titulo : ''}
       </p>
+      <label className="recorrido-elegir-paso">Ir a un paso
+        <select value={Math.min(actual, guia.length - 1)} onChange={e => setActual(Number(e.target.value))}>
+          {guia.map((p, i) => <option key={i} value={i}>{i + 1}. {p.titulo.replace(/^\d+\.\s*/, '')}</option>)}
+        </select>
+      </label>
       <h2 id="recorrido-titulo">{paso.titulo}</h2>
       <p>{paso.descripcion}</p>
       {paso.comprobar && (
@@ -137,10 +162,11 @@ export function RecorridoInicial({ usuarioId, roles, pasos, areas }: Props) {
         </p>
       )}
       <p className="recorrido-ayuda">
-        Se muestra la sección real y se destaca su acceso en el menú. Puedes finalizar este recorrido en cualquier
-        momento.
+        Esta guía no guarda datos ni confirma operaciones. Reduce la guía para trabajar y retómala cuando quieras.
       </p>
       <div className="recorrido-acciones">
+        <button type="button" className="boton secundario" onClick={() => setReducido(true)}>Reducir guía</button>
+        <button type="button" className="boton secundario" onClick={() => navigate(paso.destino)}>Abrir pantalla del paso</button>
         <button type="button" className="boton secundario" onClick={terminar}>
           Omitir recorrido
         </button>

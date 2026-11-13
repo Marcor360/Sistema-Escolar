@@ -1161,3 +1161,16 @@ dialog :is(.boton, button):focus-visible { outline: 3px solid var(--dorado); out
 .campo-password-ojo:hover { background: rgba(25,39,44,.08); }
 .campo-password-ojo:disabled { cursor: not-allowed; opacity: .45; }
 .campo-password-ojo:focus-visible { outline: 3px solid var(--dorado); outline-offset: 2px; }
+
+.ruta-carga { max-width: 1000px; }
+.ruta-carga-pasos { list-style: none; padding: 0; display: grid; gap: 16px; margin: 28px 0; }
+.ruta-carga-pasos > li { display: flex; gap: 18px; border: 1px solid var(--linea, #d8dcd6); border-radius: 12px; padding: 22px; }
+.ruta-carga-numero { flex: 0 0 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; background: var(--pizarra); color: var(--texto-sobre-pizarra, #fff); font-weight: 700; }
+.ruta-carga-pasos h3 { margin: 0 0 8px; }.ruta-carga-pasos p { line-height: 1.6; }
+.ruta-carga-enlaces { display: flex; flex-wrap: wrap; gap: 10px; }
+.importacion-etapas { display: flex; flex-wrap: wrap; gap: 12px 32px; padding: 16px 32px; background: var(--papel); border-radius: 10px; }
+@media (max-width: 600px) { .ruta-carga-pasos > li { padding: 16px; gap: 12px; }.ruta-carga-enlaces .boton { width: 100%; white-space: normal; } }
+
+.recorrido-elegir-paso { display: grid; gap: 6px; font-size: .85rem; margin: 12px 0; }
+.recorrido-elegir-paso select { max-width: 100%; width: 100%; }
+.recorrido-reducido { position: fixed; bottom: 16px; right: 16px; z-index: 90; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--linea); border-radius: 12px; background: white; color: var(--pizarra); box-shadow: 0 4px 18px #0002; max-width: calc(100vw - 32px); }

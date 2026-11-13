@@ -24,16 +24,17 @@ export function MateriasGrupo({ seleccionado, reasignando, nuevoDocente, setNuev
               etiqueta="Nuevo docente" filtros={{ plantelId: seleccionado.plantel?.id }} texto={(d) => `${d.numEmpleado} — ${d.usuario.nombre} ${d.usuario.apellidoPaterno}`} />
               <button disabled={enviando || !nuevoDocente} onClick={() => operar(`/academico/grupo-materias/${reasignando}/docente/${nuevoDocente}`, 'patch')}>Confirmar reasignación</button>
               <button onClick={() => setReasignando(null)}>Cancelar</button></div>}
+            <p className="texto-ayuda">Solo aparecen las materias que aún no están asignadas. Si ya tiene una materia y falta su profesor, utiliza Reasignar docente en la tabla.</p>
             <form onSubmit={asignarMateria} className="fila" style={{ marginBottom: 14 }}>
               <div className="campo"><label htmlFor="grupos-campo-7">Materia</label>
-                <select id="grupos-campo-7" required value={materiaId} onChange={(e) => setMateriaId(e.target.value)}>
+                <select id="grupos-campo-7" required disabled={enviando} value={materiaId} onChange={(e) => setMateriaId(e.target.value)}>
                   <option value="">Selecciona…</option>
-                  {materias.map((m) => <option key={m.id} value={m.id}>{m.clave} — {m.nombre}</option>)}
+                  {materias.filter(m => !asignaciones.some(a => a.materia.id === m.id)).map((m) => <option key={m.id} value={m.id}>{m.clave} — {m.nombre}</option>)}
                 </select>
               </div>
-              <SelectorBuscable<Docente> ruta="/docentes" valor={docenteId} cambiar={setDocenteId} etiqueta="Docente" requerido={false}
+              <SelectorBuscable<Docente> ruta="/docentes" valor={docenteId} cambiar={setDocenteId} etiqueta="Docente" requerido={false} deshabilitado={enviando}
                 filtros={{ plantelId: seleccionado.plantel?.id }} texto={(d) => `${d.numEmpleado} — ${d.usuario.nombre} ${d.usuario.apellidoPaterno}`} />
-              <button disabled={enviando} className="boton">Asignar materia</button>
+              <button disabled={enviando || !materiaId} className="boton">Asignar materia</button>
             </form>
             <div className="tabla-contenedor" role="region" aria-label="Materias asignadas al grupo" tabIndex={0}><table className="tabla">
               <thead><tr><th>Materia</th><th>Docente</th><th>Correcciones</th></tr></thead>
@@ -46,7 +47,7 @@ export function MateriasGrupo({ seleccionado, reasignando, nuevoDocente, setNuev
                       <button disabled={enviando} onClick={() => operar(`/academico/grupo-materias/${gm.id}`, 'delete')}>Quitar materia</button></td>
                   </tr>
                 ))}
-                {asignaciones.length === 0 && <tr><td className="vacio" colSpan={2}>Sin materias asignadas.</td></tr>}
+                {asignaciones.length === 0 && <tr><td className="vacio" colSpan={3}>Sin materias asignadas.</td></tr>}
               </tbody>
             </table></div>
           </section>); }

@@ -1,6 +1,6 @@
 {
-  "version": "1.35.16",
-  "alcance": "Candidata 1.35.16: aislamiento de la configuración de las pruebas de correo SMTP y claves de acceso frente a variables heredadas del servidor. Sin cambios de producción, migraciones, despliegue ni aceptación institucional de esta candidata.",
+  "version": "1.36.0",
+  "alcance": "Candidata 1.36.0: rediseño del portal del alumno y navegación adaptable, acceso visible a tareas y entrega web de archivos, detección de acceso previo entre app y web, carga académica guiada y recorridos por tarea y rol. Sin migraciones nuevas. Publicación, CI por SHA y aceptación institucional pendientes de acreditar.",
   "escenarios": [
     {
       "id": "UAT-01",

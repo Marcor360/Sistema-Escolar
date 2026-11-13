@@ -205,7 +205,7 @@ export default function DocumentosScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={base.contenidoLista} style={[base.pantalla, diseno.pantalla]}
+    <ScrollView contentContainerStyle={[base.contenidoLista, diseno.contenidoScroll]} style={[base.pantalla, diseno.pantallaScroll]}
       refreshControl={<RefreshControl refreshing={cargando} onRefresh={cargar} />}>
       <GuiaPantalla titulo="Mis documentos"
         detalle="Descarga boletas informativas en PDF y abre materiales de clase mediante enlaces privados. Se requiere internet; no se guardan documentos dentro de la app." />
