@@ -18,7 +18,7 @@ import {
 import { Text } from "../components/Texto";
 import { useFocusEffect } from "@react-navigation/native";
 import { api, archivosBase, mensajeDeError } from "../api/client";
-import { GuiaPantalla, base, ErrorCarga, Tarjeta, Vacio } from "./comunes";
+import { BannerAlumno, base, ErrorCarga, Tarjeta, Vacio } from "./comunes";
 
 interface Boleta {
   inscripcionId: number;
@@ -199,10 +199,11 @@ export default function CalificacionesScreen() {
         keyboardShouldPersistTaps="handled"
         ListHeaderComponent={
           <>
-            <GuiaPantalla
-              titulo="Mis calificaciones"
-              detalle="Consulta la escala de cada materia. En el esquema 0–10, P1–P4 aportan 25 % cada uno y la propuesta requiere aprobación o captura manual de Final. Un parcial pendiente no equivale a cero."
-            />
+            <BannerAlumno titulo="Avance académico" icono="chart" detalle="Consulta tus calificaciones y boletas. Cada paso cuenta en tu formación." />
+            <View style={base.tarjeta}>
+              <Text style={base.tituloTarjeta}>Boleta de calificaciones</Text>
+              <Text style={base.secundario}>Revisa el detalle por materia y elige el ciclo que quieres consultar. Un parcial pendiente no equivale a cero.</Text>
+            </View>
 
             {error !== "" && <ErrorCarga mensaje={error} reintentar={cargar} />}
             {ultimaActualizacion && (

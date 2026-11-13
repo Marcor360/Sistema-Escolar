@@ -155,9 +155,9 @@ it('cambiar de alumno desde página dos vuelve a uno sin mostrar datos anteriore
 
 it('los materiales también paginan en servidor y no conservan otra página como copia', async () => {
   await montar(); vi.mocked(api.get).mockResolvedValueOnce({data:{datos:[material],total:12}}); await pulsar('MAT1: Materia 1. Ver materiales');
-  const siguiente = vista.root.findAllByProps({accessibilityLabel:'Página siguiente'})[1];
+  const siguiente = vista.root.findAllByProps({accessibilityLabel:'Página siguiente'}).at(-1)!;
   const pendientePagina = pendiente(); vi.mocked(api.get).mockReturnValueOnce(pendientePagina.promesa);
   await act(async () => siguiente.props.onPress()); expect(textos()).not.toContain('guia.pdf');
   expect(api.get).toHaveBeenLastCalledWith('/grupo-materias/1/materiales/listado',{params:{pagina:2,porPagina:10}});
-  await act(async () => pendientePagina.resolver({data:{datos:[],total:12}})); expect(vista.root.findAllByProps({accessibilityLabel:'Página anterior'})[1].props.disabled).toBe(false);
+  await act(async () => pendientePagina.resolver({data:{datos:[],total:12}})); expect(vista.root.findAllByProps({accessibilityLabel:'Página anterior'}).at(-1)!.props.disabled).toBe(false);
 });

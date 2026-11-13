@@ -15,6 +15,7 @@ export function Paginador({
   cambiar: (p: number) => void;
 }) {
   const paginas = Math.max(1, Math.ceil(total / porPagina));
+  if (paginas === 1 && total >= 0) return total > 0 ? <Text style={[base.secundario, { marginBottom: 16 }]}>{total} registros</Text> : null;
   return (
     <View accessibilityLabel="Paginación" style={{ gap: 8, marginBottom: 16 }}>
       <Text accessibilityLiveRegion="polite" style={base.secundario}>

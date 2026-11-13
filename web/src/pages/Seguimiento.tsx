@@ -1,7 +1,7 @@
 import { CorreccionCalidad } from '../components/CorreccionCalidad';
 import { EstadoRespaldo } from '../components/EstadoRespaldo';
 import { FormEvent, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { api, mensajeDeError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { useDatos } from '../hooks/useDatos';
@@ -218,19 +218,31 @@ function Calidad() {
   );
 }
 export default function SeguimientoPage() {
+  const [query] = useSearchParams();
+  const solicitada = query.get('seccion');
   const { sesion } = useAuth();
   const administrativo = sesion?.roles.some((r) => ['ADMINISTRATIVO', 'SUPERADMIN'].includes(r));
   const fin = sesion?.roles.some((r) => ['FINANZAS', 'SUPERADMIN'].includes(r));
+  const disponibles = ['pendientes', 'preferencias', ...(administrativo || sesion?.roles.includes('ALUMNO') ? ['tramites'] : []), ...(administrativo ? ['calidad'] : []), ...(fin ? ['conciliacion'] : []), ...(sesion?.roles.includes('SUPERADMIN') ? ['respaldo'] : [])];
+  const seccion = solicitada && disponibles.includes(solicitada) ? solicitada : null;
   return (
     <>
       <h1>Seguimiento y pendientes</h1>
-      <CentroPendientes />
-      {sesion?.roles.some(r=>['SUPERADMIN','ADMINISTRATIVO','DIRECTOR','MAESTRO'].includes(r))&&<section className="panel"><h2>Boletas · seguimiento del alumno</h2><p>Aceptaciones y solicitudes de revisión, con comentarios de docentes por materia.</p><div className="acciones-formulario"><Link className="boton" to="/boletas?estado=PENDIENTE_RESPUESTA">Pendientes de aceptación</Link><Link className="boton" to="/boletas?estado=ACEPTADA">Boletas aceptadas</Link><Link className="boton secundario" to="/boletas?estado=REVISION">Boletas con comentarios</Link></div></section>}
-      {(administrativo || sesion?.roles.includes('ALUMNO')) && <Tramites />}
-      {administrativo && <Calidad />}
-      {fin && <ConciliacionBancaria />}
-      {sesion?.roles.includes('SUPERADMIN') && <EstadoRespaldo />}
-      <PreferenciasSesiones />
+      <nav aria-label="Herramientas de seguimiento" className="acciones-formulario">
+        <Link to="/seguimiento">Ver todo</Link><Link to="/seguimiento?seccion=pendientes">Pendientes</Link>
+        {(administrativo || sesion?.roles.includes('ALUMNO')) && <Link to="/seguimiento?seccion=tramites">Trámites</Link>}
+        {administrativo && <Link to="/seguimiento?seccion=calidad">Calidad de datos</Link>}
+        {fin && <Link to="/seguimiento?seccion=conciliacion">Conciliación bancaria</Link>}
+        {sesion?.roles.includes('SUPERADMIN') && <Link to="/seguimiento?seccion=respaldo">Respaldos</Link>}
+        <Link to="/seguimiento?seccion=preferencias">Preferencias y sesiones</Link>
+      </nav>
+      {(!seccion || seccion === 'pendientes') && <CentroPendientes />}
+      {!seccion && sesion?.roles.some(r=>['SUPERADMIN','ADMINISTRATIVO','DIRECTOR','MAESTRO'].includes(r))&&<section className="panel"><h2>Boletas · seguimiento del alumno</h2><p>Aceptaciones y solicitudes de revisión, con comentarios de docentes por materia.</p><div className="acciones-formulario"><Link className="boton" to="/boletas?estado=PENDIENTE_RESPUESTA">Pendientes de aceptación</Link><Link className="boton" to="/boletas?estado=ACEPTADA">Boletas aceptadas</Link><Link className="boton secundario" to="/boletas?estado=REVISION">Boletas con comentarios</Link></div></section>}
+      {(!seccion || seccion === 'tramites') && (administrativo || sesion?.roles.includes('ALUMNO')) && <Tramites />}
+      {(!seccion || seccion === 'calidad') && administrativo && <Calidad />}
+      {(!seccion || seccion === 'conciliacion') && fin && <ConciliacionBancaria />}
+      {(!seccion || seccion === 'respaldo') && sesion?.roles.includes('SUPERADMIN') && <EstadoRespaldo />}
+      {(!seccion || seccion === 'preferencias') && <PreferenciasSesiones />}
     </>
   );
 }

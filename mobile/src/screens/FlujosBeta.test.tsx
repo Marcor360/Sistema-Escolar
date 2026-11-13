@@ -282,7 +282,7 @@ it("pago requiere confirmación antes de crear orden", async () => {
     },
   });
   await montar(<EstadoCuenta />);
-  const boton = vista.root.findAllByType(TouchableOpacity)[0];
+  const boton = vista.root.findByProps({ accessibilityLabel: "Pagar Colegiatura en línea. Saldo $100.00" });
   await act(async () => boton.props.onPress());
   expect(api.post).not.toHaveBeenCalled();
   expect(Alert.alert).toHaveBeenCalledWith(
@@ -372,7 +372,7 @@ it("confirmar pago crea orden pero no abre enlace inseguro", async () => {
   });
   await montar(<EstadoCuenta />);
   await act(async () =>
-    vista.root.findAllByType(TouchableOpacity)[0].props.onPress(),
+    vista.root.findByProps({ accessibilityLabel: "Pagar Colegiatura en línea. Saldo $100.00" }).props.onPress(),
   );
   const botones = vi.mocked(Alert.alert).mock.calls.at(-1)?.[2];
   await act(async () =>
@@ -639,7 +639,7 @@ it("bloquea nuevas órdenes cuando la consulta del saldo falla", async () => {
         ),
       ),
   ).toBe(true);
-  const boton = vista.root.findAllByType(TouchableOpacity)[0];
+  const boton = vista.root.findByProps({ accessibilityLabel: "Pagar Colegiatura en línea. Saldo $100.00" });
   expect(boton.props.disabled).toBe(true);
   expect(api.post).not.toHaveBeenCalled();
 });
@@ -669,7 +669,7 @@ it("revalida el importe antes de generar una orden y rechaza saldos modificados"
       cargos: [{ ...estado.cargos[0], saldo: 80 }],
     },
   });
-  const boton = vista.root.findAllByType(TouchableOpacity)[0];
+  const boton = vista.root.findByProps({ accessibilityLabel: "Pagar Colegiatura en línea. Saldo $100.00" });
   await act(async () => boton.props.onPress());
   const continuar = vi
     .mocked(Alert.alert)

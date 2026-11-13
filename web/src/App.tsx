@@ -76,7 +76,7 @@ export default function App() {
           </Route>
 
           <Route element={<RutaProtegida roles={['ADMINISTRATIVO', 'FINANZAS']} />}>
-            <Route path="/operaciones" element={<ModuloTrabajo titulo="Importar y promover" acciones={[{titulo:'Importar expedientes',detalle:'Previsualizar y confirmar CSV o Excel',vista:'importar'},{titulo:'Promover alumnos',detalle:'Promoción autorizada entre ciclos',vista:'promover',roles:['ADMINISTRATIVO']},{titulo:'Consultar bitácora',detalle:'Operaciones académicas auditadas',vista:'consulta',roles:['ADMINISTRATIVO']}]}><OperacionesPage /></ModuloTrabajo>} />
+            <Route path="/operaciones" element={<ModuloTrabajo titulo="Importar y promover" acciones={[{titulo:'Preparar carga académica',detalle:'Orden para cargar materias, grupos y alumnos',vista:'preparar'},{titulo:'Importar expedientes',detalle:'Previsualizar y confirmar CSV o Excel',vista:'importar'},{titulo:'Promover alumnos',detalle:'Promoción autorizada entre ciclos',vista:'promover',roles:['ADMINISTRATIVO']},{titulo:'Consultar bitácora',detalle:'Operaciones académicas auditadas',vista:'consulta',roles:['ADMINISTRATIVO']}]}><OperacionesPage /></ModuloTrabajo>} />
           </Route>
 
           <Route element={<RutaProtegida roles={['ALUMNO','MAESTRO','ADMINISTRATIVO','FINANZAS']} />}>

@@ -1,7 +1,8 @@
 import { useModuloTrabajo } from '../components/ModuloTrabajo';
 import { useConfirmacion } from '../components/useConfirmacion';
 import { BitacoraAcademica } from '../components/BitacoraAcademica';
-import { FormEvent, useEffect, useState } from 'react';
+import { RutaCargaAcademica } from '../components/RutaCargaAcademica';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { Encabezado } from '../components/Encabezado';
 import { SelectorBuscable } from '../components/SelectorBuscable';
@@ -19,8 +20,16 @@ export default function OperacionesPage() {
   const [origen, setOrigen] = useState(''); const [destino, setDestino] = useState(''); const [promocion, setPromocion] = useState<PreviewPromocion | null>(null); const [elegidos, setElegidos] = useState<number[]>([]);
   const [enviando, setEnviando] = useState(false); const [etapa, setEtapa] = useState(''); const [error, setError] = useState(''); const [mensaje, setMensaje] = useState('');
   const trabajo=useModuloTrabajo(enviando),legado=trabajo.modo==='legado';
+  const tipoSolicitado = trabajo.query.get('tipo');
+  const puedeImportarAlumnos = tieneRol('FINANZAS', 'SUPERADMIN');
+  useEffect(() => {
+    if (trabajo.modo === 'importar' && tipoSolicitado === 'ALUMNOS' && puedeImportarAlumnos) {
+      setTipo('ALUMNOS'); setArchivo(null); setPreview(null); setError(''); setMensaje('');
+    }
+  }, [tipoSolicitado, trabajo.modo, puedeImportarAlumnos]);
   useEffect(() => { if(!legado && trabajo.modo !== 'promover') return; let vigente=true; api.get('/academico/ciclos').then(({data})=>{if(vigente)setCiclos(data);}).catch(err=>{if(vigente)setError(mensajeDeError(err));});return()=>{vigente=false;}; }, [legado,trabajo.modo]);
-  const operar = async (fn: () => Promise<void>) => { if (enviando) return; setEnviando(true); setError(''); setMensaje(''); try { await fn(); } catch (err) { setError(mensajeDeError(err)); } finally { setEnviando(false); setEtapa(''); } };
+  const operacionEnCurso = useRef(false);
+  const operar = async (fn: () => Promise<void>) => { if (operacionEnCurso.current) return; operacionEnCurso.current = true; setEnviando(true); setError(''); setMensaje(''); try { await fn(); } catch (err) { setError(mensajeDeError(err)); } finally { operacionEnCurso.current = false; setEnviando(false); setEtapa(''); } };
   const guardarArchivo = (blob: Blob, nombre: string) => { const url = URL.createObjectURL(blob); const enlace = document.createElement('a'); enlace.href = url; enlace.download = nombre; enlace.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); };
   const descargarErrores = async (id: string) => {
     const { data } = await api.get<Blob>(`/importaciones/correcciones/${id}`, { responseType: 'blob' });
@@ -35,6 +44,7 @@ export default function OperacionesPage() {
     if (!archivo.size || archivo.size > 5 * 1024 * 1024) {
       setError('El archivo debe contener datos y pesar como máximo 5 MB.'); setPreview(null); return;
     }
+    setPreview(null);
     setEtapa('Validando filas y comparando alumnos existentes…');
     void operar(async () => {
       const form = new FormData();
@@ -44,11 +54,12 @@ export default function OperacionesPage() {
     });
   };
   const plantilla = () => { void operar(async () => { const { data } = await api.get<Blob>('/importaciones/plantilla', { params: { tipo }, responseType: 'blob' }); guardarArchivo(data, `plantilla_${tipo.toLowerCase()}.xlsx`); }); };
+  if (trabajo.modo === 'preparar') return <RutaCargaAcademica />;
   return <>{confirmacion.elemento}<Encabezado titulo="Operaciones académicas masivas" detalle="Previsualizar y confirmar. Alumnos nuevos válidos se registran; existentes se omiten y filas incorrectas se descargan para corregir." />
-    {error && <p role="alert" className="mensaje-error">{error}</p>}{mensaje && <p role="status">{mensaje}</p>}{enviando && <p role="status" aria-live="polite">{etapa || 'Procesando solicitud…'} Puedes seguir utilizando otras secciones; evita repetir la importación hasta recibir la confirmación.</p>}
-    {(legado || trabajo.modo==='importar') && <section className="panel"><h2>Importación CSV / Excel</h2><p><a href="/calificaciones">Ir a la importación de calificaciones</a></p><p className="texto-ayuda">1. Descarga la plantilla del tipo elegido. 2. Complétala sin fórmulas. 3. Adjunta el archivo. 4. Revisa los errores antes de confirmar. Esta importación es de expedientes, docentes, personal e inscripciones; la carga de calificaciones se realiza desde la sección Calificaciones, con su propia plantilla y confirmación.</p><p>Para completar <code>plantelId</code>, <code>plantelIds</code> o <code>grupoId</code>, consulta la columna ID en <a href="/planteles">Planteles</a> o <a href="/grupos">Grupos</a>. Son identificadores numéricos, no la clave o el nombre visible.</p><p>Máximo 500 registros y 5 MB. Planteles y roles múltiples se separan con punto y coma. No incluyas contraseñas. Para ALUMNOS son obligatorios el correo institucional (de acceso), nombres, apellido paterno, matrícula, CURP y plantel. La columna correoPersonal es opcional y se guarda como contacto; correoProveedor permite elegir por alumno Microsoft 365 o GoDaddy, y debe seleccionarse obligatoriamente en cada fila. El primer nombre es obligatorio y el segundo nombre opcional. Elige el servicio que puede entregar a ese buzón. La matrícula no es una contraseña. El alumno solicita un código de activación por correo institucional y establece su propia contraseña; sin correo operativo el acceso permanece pendiente. Para DOCENTES y PERSONAL se mantiene la activación por recuperación de correo (requiere SMTP).</p>
-      <label htmlFor="tipo-importacion">Tipo</label><select id="tipo-importacion" disabled={enviando} value={tipo} onChange={(e) => { setTipo(e.target.value); setArchivo(null); setPreview(null); setError(''); }}>{tiposDisponibles.map((t) => <option key={t}>{t}</option>)}</select><button disabled={enviando} onClick={plantilla}>Descargar plantilla</button>
-      <form onSubmit={previsualizar}><label htmlFor="archivo-importacion">Archivo</label><input key={tipo} id="archivo-importacion" type="file" required accept=".csv,.xlsx" disabled={enviando} onChange={(e) => { setArchivo(e.target.files?.[0] ?? null); setPreview(null); }} /><button className="boton" disabled={enviando || !archivo}>Previsualizar archivo</button></form>
+    {error && <p role="alert" className="mensaje-error">{error}</p>}{mensaje && <p role="status">{mensaje}</p>}{enviando && <p role="status" aria-live="polite">{etapa || 'Procesando solicitud…'} Espera el resultado antes de cambiar de archivo o volver a importar.</p>}
+    {(legado || trabajo.modo==='importar') && <section className="panel"><h2>Importación CSV / Excel</h2><ol className="importacion-etapas" aria-label="Pasos de importación"><li>Descargar plantilla</li><li>Completar y adjuntar</li><li>Revisar previsualización</li><li>Confirmar importación</li></ol><p><a href="/calificaciones?vista=importar">Ir a la importación de calificaciones</a></p><p className="texto-ayuda">1. Descarga la plantilla del tipo elegido. 2. Complétala sin fórmulas. 3. Adjunta el archivo. 4. Revisa los errores antes de confirmar. Esta importación es de expedientes, docentes, personal e inscripciones; la carga de calificaciones se realiza desde la sección Calificaciones, con su propia plantilla y confirmación.</p><p>Para completar <code>plantelId</code>, <code>plantelIds</code> o <code>grupoId</code>, consulta la columna ID en <a href="/planteles?vista=consulta">Planteles</a> o <a href="/grupos?vista=consulta">Grupos</a>. Son identificadores numéricos, no la clave o el nombre visible.</p><details><summary>Requisitos y campos de la plantilla</summary><p>Máximo 500 registros y 5 MB. Planteles y roles múltiples se separan con punto y coma. No incluyas contraseñas. Para ALUMNOS son obligatorios el correo institucional (de acceso), nombres, apellido paterno, matrícula, CURP y plantel. La columna correoPersonal es opcional y se guarda como contacto; correoProveedor permite elegir por alumno Microsoft 365 o GoDaddy, y debe seleccionarse obligatoriamente en cada fila. El primer nombre es obligatorio y el segundo nombre opcional. Elige el servicio que puede entregar a ese buzón. La matrícula no es una contraseña. El alumno solicita un código de activación por correo institucional y establece su propia contraseña; sin correo operativo el acceso permanece pendiente. Para DOCENTES y PERSONAL se mantiene la activación por recuperación de correo (requiere SMTP).</p></details>
+      <label htmlFor="tipo-importacion">Tipo</label><select id="tipo-importacion" disabled={enviando} value={tipo} onChange={(e) => { setTipo(e.target.value); setArchivo(null); setPreview(null); setError(''); setMensaje(''); }}>{tiposDisponibles.map((t) => <option key={t}>{t}</option>)}</select><button disabled={enviando} onClick={plantilla}>Descargar plantilla</button>
+      <form onSubmit={previsualizar}><label htmlFor="archivo-importacion">Archivo</label><input key={tipo} id="archivo-importacion" type="file" required accept=".csv,.xlsx" disabled={enviando} onChange={(e) => { setArchivo(e.target.files?.[0] ?? null); setPreview(null); setError(''); setMensaje(''); }} /><button className="boton" disabled={enviando || !archivo}>Previsualizar archivo</button></form>
       {preview && <section aria-label="Resultado de la previsualización" aria-busy={enviando}>
         <h3>Resultado de {preview.registros} registros</h3>
         <p role="status"><strong>{preview.validos} nuevos válidos</strong> · {preview.duplicados.length} ya registrados o repetidos · {preview.errores.length} requieren corrección.</p>
@@ -70,10 +81,11 @@ export default function OperacionesPage() {
             {preview.identificadores.map((i) => <tr key={i.fila}><td data-etiqueta="Fila">{i.fila}</td><td data-etiqueta="Identificador">{i.identificador}</td></tr>)}
           </tbody></table></div>
           <button type="button" disabled={enviando || !preview.previewId} onClick={async () => {
-            if (!preview.previewId || !await confirmacion.solicitar(`¿Confirmar ${preview.validos} ${tipo === 'ALUMNOS' ? 'alumnos nuevos' : 'registros'}? ${tipo === 'ALUMNOS' ? 'Los existentes y los incorrectos se omitirán.' : 'Se aplicarán únicamente si todo el lote es válido.'}`)) return;
+            if (!preview.previewId) return;
             const id = preview.previewId;
-            setEtapa('Importando únicamente alumnos nuevos y válidos…');
             void operar(async () => {
+              if (!await confirmacion.solicitar(`¿Confirmar ${preview.validos} ${tipo === 'ALUMNOS' ? 'alumnos nuevos' : 'registros'}? ${tipo === 'ALUMNOS' ? 'Los existentes y los incorrectos se omitirán.' : 'Se aplicarán únicamente si todo el lote es válido.'}`)) return;
+              setEtapa('Importando registros validados…');
               if (tipo === 'ALUMNOS' && preview.errores.length > 0) await descargarErrores(id);
               const { data } = await api.post<{ total: number; insertados: number; existentes: number; rechazados: number; activacion: string | null }>(
                 '/importaciones/confirmar', { previewId: id, confirmado: true });

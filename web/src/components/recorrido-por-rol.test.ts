@@ -37,3 +37,18 @@ it('explica cartera sin correo y activación posterior solo a quien tiene acceso
   expect(control.pasos[0].comprobar).toContain('pausa sin cargos');
   expect(recorridosPorArea(secciones,['FINANZAS']).flatMap(a=>a.pasos).some(p=>p.destino==='/apertura-cartera')).toBe(false);
 });
+
+it('renumera los pasos filtrados y abre herramientas concretas', () => {
+  const areas = recorridosPorArea([
+    { destino: '/finanzas', roles: ['FINANZAS'] }, { destino: '/seguimiento', roles: ['FINANZAS'] }, { destino: '/analitica', roles: ['FINANZAS'] },
+  ], ['FINANZAS']);
+  const fin = areas.find(a => a.id === 'finanzas')!;
+  expect(fin.pasos.map(p => p.titulo.split('.')[0])).toEqual(fin.pasos.map((_, i) => String(i + 1)));
+  expect(fin.pasos.some(p => p.destino === '/seguimiento?seccion=conciliacion')).toBe(true);
+  expect(fin.pasos.some(p => p.destino === '/analitica?vista=consulta')).toBe(true);
+});
+it('ofrece una guía a Dirección sin herramientas financieras', () => {
+  const areas = recorridosPorArea([{ destino: '/boletas', roles: ['DIRECTOR'] }, { destino: '/roles-personal', roles: ['DIRECTOR'] }], ['DIRECTOR']);
+  expect(areas.some(a => a.id === 'direccion')).toBe(true);
+  expect(areas.some(a => a.id === 'finanzas')).toBe(false);
+});

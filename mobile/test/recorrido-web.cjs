@@ -44,10 +44,11 @@ const server = http.createServer((req, res) => {
       : {}),
   });
   try {
-    for (const width of [360, 768, 1280, 1920]) {
+    for (const width of (process.env.ALUMNO_VIEWPORTS ? process.env.ALUMNO_VIEWPORTS.split(',').map(Number) : [360, 768, 1280, 1920])) {
       const page = await browser.newPage({ viewport: { width, height: 900 } });
       const errores = [],
         respuestas = [];
+      const entregas = [];
       let estadoBoleta = "PENDIENTE_RESPUESTA";
       page.on("pageerror", (e) => errores.push(e.stack));
       await page.route("https://api.example.invalid/**", async (route) => {
@@ -55,10 +56,11 @@ const server = http.createServer((req, res) => {
         let data = [];
         if (p.endsWith("/configuracion/marca"))
           data = {
-            nombreInstitucion: "Escuela QA",
-            nombreCorto: "QA",
+            nombreInstitucion: "Instituto Universitario · Demo",
+            nombreCorto: "IUA",
             colorPrimario: "#14343B",
             colorAcento: "#C79A3C",
+            colorPrimarioOscuro: "#0E262B", logoUrl: null, actualizadoEn: '2026-11-13',
           };
         if (p.endsWith("/auth/login-alumno-web"))
           data = {
@@ -66,10 +68,11 @@ const server = http.createServer((req, res) => {
             usuario: {
               sub: 1,
               email: "qa@example.invalid",
-              nombre: "Alumna QA",
+              nombre: "Alumna Elena QA Escolar",
               roles: ["ALUMNO"],
             },
           };
+        if (p.endsWith("/auth/me")) data = { accesoPrevio: true };
         if (p.endsWith("/auth/consentimiento")) data = { pendiente: false };
         if (p.endsWith("/calendario/opciones")) data = { ciclos: [{ id: 1, nombre: "Octubre QA", activo: true, fechaInicio: "2026-10-01", fechaFin: "2026-10-31" }] };
         if (p.endsWith("/calendario")) {
@@ -79,9 +82,15 @@ const server = http.createServer((req, res) => {
         }
 
         if (p.endsWith("/estado-cuenta"))
-          data = { saldoTotal: 100, cargos: [], pagos: [] };
+          data = { saldoTotal: 1825, cargos: [{ id: 1, descripcion: "Colegiatura · Noviembre", fechaVencimiento: "2026-11-20", estatus: "PENDIENTE", total: 2500, pagado: 675, saldo: 1825 }], pagos: [{ id: 2, monto: 675, metodo: "Transferencia", fechaPago: "2026-11-10T12:00:00Z", estatus: "CONFIRMADO", aplicado: true }] };
+        if (p.endsWith("/seguimiento/pendientes")) data = [{ titulo: "Actividades sin entrega", cantidad: 1 }, { titulo: "Cargos por cubrir", cantidad: 1 }];
+        if (p.endsWith("/actividades/91/entrega") && route.request().method() === 'POST') {
+          entregas.push(route.request().postDataBuffer().toString());
+          data = { id: 1, estatus: 'ENTREGADA' };
+        }
         if (p.endsWith("/recursamientos/me")) data = { datos: [], total: 0 };
         if (p.endsWith("/listado")) data = { datos: [], total: 0 };
+        if (p.endsWith("/alumnos/me/tareas/listado")) data = { datos: [{ id: 91, titulo: "Tarea QA", tipo: "TAREA", parcial: 1, fechaEntrega: null, entrega: null }], total: 1 };
         if (p.endsWith("/reportes/mis-boletas"))
           data = [
             {
@@ -208,6 +217,11 @@ const server = http.createServer((req, res) => {
           },
         });
       });
+      const captura = async (nombre) => {
+        if (!process.env.ALUMNO_SCREENSHOT_DIR || ![360, 1280].includes(width)) return;
+        fs.mkdirSync(process.env.ALUMNO_SCREENSHOT_DIR, { recursive: true });
+        await page.screenshot({ path: path.join(process.env.ALUMNO_SCREENSHOT_DIR, `${nombre}-${width}.png`) });
+      };
       await page.goto("http://127.0.0.1:5190");
       await page
         .getByLabel("Correo institucional", { exact: true })
@@ -217,17 +231,41 @@ const server = http.createServer((req, res) => {
         .fill("Qa-password12");
       await page.getByRole("button", { name: "Entrar", exact: true }).click();
       await expect(page.getByRole("tab", { name: /Materias/ })).toBeVisible();
-      await page
-        .getByRole("button", { name: "Omitir recorrido", exact: true })
-        .waitFor();
-      await page
-        .getByRole("button", { name: "Omitir recorrido", exact: true })
-        .click();
+      await expect(page.getByRole("button", { name: "Omitir recorrido", exact: true })).toHaveCount(0);
       await expect(
         page.getByText("Tienes 1 boleta pendiente de aceptación.", {
           exact: true,
         }),
       ).toBeVisible();
+      if (width >= 1000) {
+        const lateral = await page.getByTestId('menu-lateral-alumno').boundingBox();
+        expect(lateral.width).toBe(88);
+      }
+      const tarjetaAula = await page.getByRole('button', { name: 'Materias y tareas', exact: true }).boundingBox();
+      expect(tarjetaAula.x + tarjetaAula.width).toBeLessThanOrEqual(width);
+      await captura('inicio-alumno');
+      await page.getByRole('button', { name: 'Abrir menú principal', exact: true }).click();
+      await expect(page.getByTestId('menu-lateral-alumno').getByRole('tab', { name: 'Ventanilla de trámites', exact: true })).toBeVisible();
+      await captura('menu-alumno');
+      if (width >= 1000) await page.getByRole('button', { name: 'Cerrar menú principal', exact: true }).click();
+      else {
+        await page.keyboard.press('Escape');
+        await expect(page.getByRole('button', { name: 'Abrir menú principal', exact: true })).toBeFocused();
+      }
+      await page.getByRole('button', { name: 'Abrir menú principal', exact: true }).click();
+      await page.getByTestId('menu-lateral-alumno').getByRole('tab', { name: 'Ventanilla de trámites', exact: true }).click();
+      await expect(page.getByRole('heading', { name: 'Ventanilla de trámites', exact: true })).toBeVisible();
+      if (width >= 1000) await page.getByRole('button', { name: 'Cerrar menú principal', exact: true }).click();
+      await page.getByRole('tab', { name: 'Inicio del alumno', exact: true }).click();
+      await page.getByRole('button', { name: 'Abrir mi perfil', exact: true }).click();
+      await page.getByRole('button', { name: 'Ver recorrido especializado del alumno', exact: true }).click();
+      await page.getByRole('button', { name: 'Ver todos los pasos', exact: true }).click();
+      await page.getByRole('button', { name: 'Ir al paso 4: Entregar una actividad', exact: true }).click();
+      await page.getByRole('button', { name: 'Ver esta pantalla', exact: true }).click();
+      await expect(page.getByText('Mis tareas', { exact: true })).toBeVisible();
+      expect(entregas).toHaveLength(0);
+      await page.getByRole('button', { name: 'Finalizar guía por ahora', exact: true }).click();
+      await page.getByRole('tab', { name: 'Inicio del alumno', exact: true }).click();
       await page.getByRole("button", { name: "Ver calendario institucional", exact: true }).click();
       const diaCalendario = page.getByRole("button", { name: "2026-10-15: 2 evento(s)", exact: true });
       await diaCalendario.click();
@@ -251,11 +289,28 @@ const server = http.createServer((req, res) => {
         await expect(tab).toBeVisible();
         await tab.click();
         await page.waitForTimeout(300);
+        if (name.test("materias")) {
+          await page.getByRole("button", { name: "Tareas y entregas · Subir tarea", exact: true }).click();
+          await expect(page.getByText("Mis tareas", { exact: true })).toBeVisible();
+          await expect(page.getByRole("button", { name: "Entregar archivo: Tarea QA", exact: true })).toBeEnabled();
+          await expect(page.getByRole("button", { name: "Actualizar tareas", exact: true })).toBeVisible();
+          await captura('tareas-alumno');
+          const selector = page.waitForEvent('filechooser');
+          await page.getByRole('button', { name: 'Entregar archivo: Tarea QA', exact: true }).click();
+          await (await selector).setFiles({ name: 'tarea-demo.txt', mimeType: 'text/plain', buffer: Buffer.from('Entrega QA desde el portal web') });
+          await expect(page.getByRole('dialog')).toContainText('Entrega enviada');
+          expect(entregas).toHaveLength(1);
+          expect(entregas[0]).toContain('filename="tarea-demo.txt"');
+          expect(entregas[0]).toContain('Entrega QA desde el portal web');
+          await page.getByRole('dialog').getByRole('button', { name: 'Aceptar', exact: true }).click();
+        }
         if (name.test("perfil")) {
           await expect(page.getByText("Segundo nombre: Elena", { exact: true })).toBeVisible();
           await expect(page.getByText("Segundo apellido: Escolar", { exact: true })).toBeVisible();
         }
+        if (name.test("estado de cuenta")) await captura('finanzas-alumno');
         if (name.test("calificaciones")) {
+          await captura('avance-academico');
           await page
             .getByRole("button", {
               name: "Ver boleta de 2058, QA",

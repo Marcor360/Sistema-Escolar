@@ -1,6 +1,6 @@
-# Estado de implementación — candidata 1.35.16
+# Estado de implementación — candidata 1.36.0
 
-Corte 3/nov/2026 sobre main 1.35.15 (`891ef82`). La candidata 1.35.16 aísla la configuración de las pruebas de correo y claves de acceso frente a variables heredadas del servidor; no modifica código de producción ni añade migraciones. La base conserva la revisión del ciclo de alumnos, códigos tras baja/reactivación y documentación vigente. [Recorridos y resultados](BARRIDO_Y_CICLO_ALUMNOS_2026-11-02.md) y [preparación del piloto](PILOTO_PRODUCCION.md).
+Corte 13/nov/2026 sobre la base de código 1.35.16 (`93e7b2a`). La candidata 1.36.0 reúne el [rediseño del portal del alumno](PORTAL_ALUMNO_REFERENCIA_UTC.md), la [carga académica guiada](CARGA_ACADEMICA_GUIADA.md) y los [recorridos por tarea](RECORRIDOS_POR_TAREA.md). Incluye navegación adaptable, entrega web de archivos y consulta de accesos previos para evitar repetir la guía entre app y portal. No añade migraciones. La versión de código no acredita publicación, CI por SHA ni UAT institucional.
 
 La actualización coordinada de sistema y Portal Alumno está integrada en main mediante #240. Su CI aprobada corresponde al SHA `74ab0d5`; no acredita ejecución en IIS ni despliegue institucional. Esta candidata no añade migraciones. [Guía de actualización](ACTUALIZACION_INTEGRAL_1.35.14.md).
 
