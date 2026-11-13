@@ -13,7 +13,7 @@ Implementada en el portal administrativo, pendiente de publicación. Entrada: **
 
 La guía conserva las autorizaciones vigentes: Finanzas y Superadmin pueden dar de alta alumnos; Control Escolar administra grupos y asignaciones. Los enlaces se muestran por rol. La API mantiene la autorización efectiva por plantel y expediente.
 
-Importaciones CSV/XLSX sigue admitiendo alumnos, docentes, personal e inscripciones. No se añadió importación masiva de materias o grupos: se explica dónde registrarlos. La inscripción académica importada no genera cargos; la cartera tiene su propia revisión y confirmación.
+Importaciones CSV/XLSX sigue admitiendo alumnos, docentes, personal e inscripciones. Desde 1.37.0 también admite importación masiva de materias y grupos con sus propias plantillas. La inscripción académica importada no genera cargos; la cartera tiene su propia revisión y confirmación.
 
 ## Correcciones
 

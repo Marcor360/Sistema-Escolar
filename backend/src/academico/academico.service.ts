@@ -20,6 +20,7 @@ crearMateria(dto: MateriaDto) { return this.materias.crearMateria(dto); }
 async actualizarMateria(id: number, dto: ActualizarMateriaDto) { return this.materias.actualizarMateria(id, dto); }
 async desactivarMateria(id: number) { return this.materias.desactivarMateria(id); }
 async listarGrupos(user: JwtUser, query: ListarGruposDto) { return this.grupos.listarGrupos(user, query); }
+listarPreparacion(user: JwtUser, query: ListarGruposDto) { return this.grupos.listarPreparacion(user,query); }
 obtenerGrupo(id: number, user: JwtUser) { return this.grupos.obtenerGrupo(id,user); }
 async crearGrupo(dto: GrupoDto, user: JwtUser) { return this.grupos.crearGrupo(dto, user); }
 async actualizarGrupo(id: number, dto: ActualizarGrupoDto, user: JwtUser) { return this.grupos.actualizarGrupo(id, dto, user); }

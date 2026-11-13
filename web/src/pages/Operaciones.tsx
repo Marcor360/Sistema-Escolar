@@ -14,19 +14,21 @@ export default function OperacionesPage() {
   const confirmacion = useConfirmacion();
   const { tieneRol } = useAuth();
   const soloFinanzas = tieneRol('FINANZAS') && !tieneRol('SUPERADMIN', 'ADMINISTRATIVO');
-  const tiposDisponibles = soloFinanzas ? ['ALUMNOS'] : [...(tieneRol('SUPERADMIN') ? ['ALUMNOS', 'DOCENTES', 'INSCRIPCIONES', 'PERSONAL'] : ['DOCENTES', 'INSCRIPCIONES'])];
+  const tiposDisponibles = [...(tieneRol('FINANZAS', 'SUPERADMIN') ? ['ALUMNOS'] : []), ...(tieneRol('ADMINISTRATIVO', 'SUPERADMIN') ? ['DOCENTES', 'INSCRIPCIONES', 'MATERIAS', 'GRUPOS'] : []), ...(tieneRol('SUPERADMIN') ? ['PERSONAL'] : [])];
   const [tipo, setTipo] = useState(soloFinanzas ? 'ALUMNOS' : tiposDisponibles[0]); const [archivo, setArchivo] = useState<File | null>(null); const [preview, setPreview] = useState<PreviewImport | null>(null);
   const [ciclos, setCiclos] = useState<{ id: number; clave: string; estado: string }[]>([]); const [cicloOrigen, setCicloOrigen] = useState(''); const [cicloDestino, setCicloDestino] = useState('');
   const [origen, setOrigen] = useState(''); const [destino, setDestino] = useState(''); const [promocion, setPromocion] = useState<PreviewPromocion | null>(null); const [elegidos, setElegidos] = useState<number[]>([]);
   const [enviando, setEnviando] = useState(false); const [etapa, setEtapa] = useState(''); const [error, setError] = useState(''); const [mensaje, setMensaje] = useState('');
   const trabajo=useModuloTrabajo(enviando),legado=trabajo.modo==='legado';
+  const cargaAcademica = tipo === 'MATERIAS' || tipo === 'GRUPOS';
   const tipoSolicitado = trabajo.query.get('tipo');
+  const puedeImportarAcademico = tieneRol('ADMINISTRATIVO','SUPERADMIN');
   const puedeImportarAlumnos = tieneRol('FINANZAS', 'SUPERADMIN');
   useEffect(() => {
-    if (trabajo.modo === 'importar' && tipoSolicitado === 'ALUMNOS' && puedeImportarAlumnos) {
-      setTipo('ALUMNOS'); setArchivo(null); setPreview(null); setError(''); setMensaje('');
+    if (trabajo.modo === 'importar' && ((tipoSolicitado === 'ALUMNOS' && puedeImportarAlumnos) || (['MATERIAS','GRUPOS'].includes(tipoSolicitado ?? '') && puedeImportarAcademico))) {
+      setTipo(tipoSolicitado!); setArchivo(null); setPreview(null); setError(''); setMensaje('');
     }
-  }, [tipoSolicitado, trabajo.modo, puedeImportarAlumnos]);
+  }, [tipoSolicitado, trabajo.modo, puedeImportarAlumnos, puedeImportarAcademico]);
   useEffect(() => { if(!legado && trabajo.modo !== 'promover') return; let vigente=true; api.get('/academico/ciclos').then(({data})=>{if(vigente)setCiclos(data);}).catch(err=>{if(vigente)setError(mensajeDeError(err));});return()=>{vigente=false;}; }, [legado,trabajo.modo]);
   const operacionEnCurso = useRef(false);
   const operar = async (fn: () => Promise<void>) => { if (operacionEnCurso.current) return; operacionEnCurso.current = true; setEnviando(true); setError(''); setMensaje(''); try { await fn(); } catch (err) { setError(mensajeDeError(err)); } finally { operacionEnCurso.current = false; setEnviando(false); setEtapa(''); } };
@@ -57,30 +59,31 @@ export default function OperacionesPage() {
   if (trabajo.modo === 'preparar') return <RutaCargaAcademica />;
   return <>{confirmacion.elemento}<Encabezado titulo="Operaciones académicas masivas" detalle="Previsualizar y confirmar. Alumnos nuevos válidos se registran; existentes se omiten y filas incorrectas se descargan para corregir." />
     {error && <p role="alert" className="mensaje-error">{error}</p>}{mensaje && <p role="status">{mensaje}</p>}{enviando && <p role="status" aria-live="polite">{etapa || 'Procesando solicitud…'} Espera el resultado antes de cambiar de archivo o volver a importar.</p>}
-    {(legado || trabajo.modo==='importar') && <section className="panel"><h2>Importación CSV / Excel</h2><ol className="importacion-etapas" aria-label="Pasos de importación"><li>Descargar plantilla</li><li>Completar y adjuntar</li><li>Revisar previsualización</li><li>Confirmar importación</li></ol><p><a href="/calificaciones?vista=importar">Ir a la importación de calificaciones</a></p><p className="texto-ayuda">1. Descarga la plantilla del tipo elegido. 2. Complétala sin fórmulas. 3. Adjunta el archivo. 4. Revisa los errores antes de confirmar. Esta importación es de expedientes, docentes, personal e inscripciones; la carga de calificaciones se realiza desde la sección Calificaciones, con su propia plantilla y confirmación.</p><p>Para completar <code>plantelId</code>, <code>plantelIds</code> o <code>grupoId</code>, consulta la columna ID en <a href="/planteles?vista=consulta">Planteles</a> o <a href="/grupos?vista=consulta">Grupos</a>. Son identificadores numéricos, no la clave o el nombre visible.</p><details><summary>Requisitos y campos de la plantilla</summary><p>Máximo 500 registros y 5 MB. Planteles y roles múltiples se separan con punto y coma. No incluyas contraseñas. Para ALUMNOS son obligatorios el correo institucional (de acceso), nombres, apellido paterno, matrícula, CURP y plantel. La columna correoPersonal es opcional y se guarda como contacto; correoProveedor permite elegir por alumno Microsoft 365 o GoDaddy, y debe seleccionarse obligatoriamente en cada fila. El primer nombre es obligatorio y el segundo nombre opcional. Elige el servicio que puede entregar a ese buzón. La matrícula no es una contraseña. El alumno solicita un código de activación por correo institucional y establece su propia contraseña; sin correo operativo el acceso permanece pendiente. Para DOCENTES y PERSONAL se mantiene la activación por recuperación de correo (requiere SMTP).</p></details>
+    {(legado || trabajo.modo==='importar') && <section className="panel"><h2>Importación CSV / Excel</h2><ol className="importacion-etapas" aria-label="Pasos de importación"><li>Descargar plantilla</li><li>Completar y adjuntar</li><li>Revisar previsualización</li><li>Confirmar importación</li></ol><p><a href="/calificaciones?vista=importar">Ir a la importación de calificaciones</a></p><p className="texto-ayuda">1. Descarga la plantilla del tipo elegido. 2. Complétala sin fórmulas. 3. Adjunta el archivo. 4. Revisa los errores antes de confirmar. Esta importación admite expedientes, docentes, personal, inscripciones, materias y grupos según tu rol; la carga de calificaciones se realiza desde la sección Calificaciones, con su propia plantilla y confirmación.</p><p>Para completar <code>plantelId</code>, <code>plantelIds</code> o <code>grupoId</code>, consulta la columna ID en <a href="/planteles?vista=consulta">Planteles</a> o <a href="/grupos?vista=consulta">Grupos</a>. Son identificadores numéricos, no la clave o el nombre visible.</p><details><summary>Requisitos y campos de la plantilla</summary><p>Máximo 500 registros y 5 MB. Planteles y roles múltiples se separan con punto y coma. No incluyas contraseñas. Para ALUMNOS son obligatorios el correo institucional (de acceso), nombres, apellido paterno, matrícula, CURP y plantel. La columna correoPersonal es opcional y se guarda como contacto; correoProveedor permite elegir por alumno Microsoft 365 o GoDaddy, y debe seleccionarse obligatoriamente en cada fila. El primer nombre es obligatorio y el segundo nombre opcional. Elige el servicio que puede entregar a ese buzón. La matrícula no es una contraseña. El alumno solicita un código de activación por correo institucional y establece su propia contraseña; sin correo operativo el acceso permanece pendiente. Para DOCENTES y PERSONAL se mantiene la activación por recuperación de correo (requiere SMTP).</p></details>
+      {cargaAcademica && <p className="mensaje-info">{tipo === 'MATERIAS' ? 'La clave identifica una materia del catálogo global; vincula sus planes y periodos después de importarla.' : 'Usa plantelId y cicloId reales. Si indicas el contexto, completa nivelId, carreraId y periodoAcademicoId compatibles. Los grupos se crean sin materias, docentes ni alumnos.'} Los duplicados se omiten sin modificar registros existentes. Corrige todas las filas con errores antes de confirmar.</p>}
       <label htmlFor="tipo-importacion">Tipo</label><select id="tipo-importacion" disabled={enviando} value={tipo} onChange={(e) => { setTipo(e.target.value); setArchivo(null); setPreview(null); setError(''); setMensaje(''); }}>{tiposDisponibles.map((t) => <option key={t}>{t}</option>)}</select><button disabled={enviando} onClick={plantilla}>Descargar plantilla</button>
       <form onSubmit={previsualizar}><label htmlFor="archivo-importacion">Archivo</label><input key={tipo} id="archivo-importacion" type="file" required accept=".csv,.xlsx" disabled={enviando} onChange={(e) => { setArchivo(e.target.files?.[0] ?? null); setPreview(null); setError(''); setMensaje(''); }} /><button className="boton" disabled={enviando || !archivo}>Previsualizar archivo</button></form>
       {preview && <section aria-label="Resultado de la previsualización" aria-busy={enviando}>
         <h3>Resultado de {preview.registros} registros</h3>
         <p role="status"><strong>{preview.validos} nuevos válidos</strong> · {preview.duplicados.length} ya registrados o repetidos · {preview.errores.length} requieren corrección.</p>
         <p className="texto-ayuda">{preview.regla}</p>
-        {preview.duplicados.length > 0 && <details><summary>{preview.duplicados.length} alumnos no se importarán porque ya existen o están repetidos</summary>
+        {preview.duplicados.length > 0 && <details><summary>{preview.duplicados.length} registros no se importarán porque ya existen o están repetidos</summary>
           {preview.duplicados.map((d) => <p key={d.fila}>Fila {d.fila}: {d.mensaje}</p>)}
         </details>}
-        {preview.errores.length > 0 && <section aria-label="Alumnos por corregir">
+        {preview.errores.length > 0 && <section aria-label={tipo === 'ALUMNOS' ? 'Alumnos por corregir' : 'Registros por corregir'}>
           <h4>Registros con errores</h4>
           {preview.errores.map((e) => <p key={e.fila} role="alert">Fila {e.fila}: {e.mensaje}</p>)}
-          <p>Descarga una plantilla con solo estas filas. La hoja «Errores» explica qué corregir. Los alumnos ya registrados no aparecerán allí.</p>
+          {tipo === 'ALUMNOS' ? <>          <p>Descarga una plantilla con solo estas filas. La hoja «Errores» explica qué corregir. Los alumnos ya registrados no aparecerán allí.</p>
           <button type="button" disabled={enviando || !preview.previewId} onClick={() => { if (!preview.previewId) return;
             setEtapa('Preparando Excel de correcciones…');
             void operar(async () => { await descargarErrores(preview.previewId!); });
-          }}>Descargar únicamente alumnos por corregir</button>
+          }}>Descargar únicamente alumnos por corregir</button></> : <p>Corrige estas filas en tu archivo y vuelve a previsualizar. El lote no se aplicará mientras tenga errores.</p>}
         </section>}
         {preview.validos > 0 && <><div className="tabla-contenedor" role="region" aria-label="Filas de previsualización" tabIndex={0}>
           <table className="tabla tabla-adaptable"><thead><tr><th scope="col">Fila</th><th scope="col">Identificador</th></tr></thead><tbody>
             {preview.identificadores.map((i) => <tr key={i.fila}><td data-etiqueta="Fila">{i.fila}</td><td data-etiqueta="Identificador">{i.identificador}</td></tr>)}
           </tbody></table></div>
-          <button type="button" disabled={enviando || !preview.previewId} onClick={async () => {
+          <button type="button" disabled={enviando || !preview.previewId || (cargaAcademica && preview.errores.length > 0)} onClick={async () => {
             if (!preview.previewId) return;
             const id = preview.previewId;
             void operar(async () => {

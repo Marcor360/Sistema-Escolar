@@ -15,6 +15,7 @@ import { exigirGrupoConfigurable } from '../common/contexto-academico';
 import { leerArchivo } from './lectura';
 import { TipoImportacion } from './importaciones.dto';
 import { proveedorCorreoPredeterminado } from '../common/proveedor-correo';
+import { COLUMNAS_ACADEMICAS, evaluarCargaAcademica, guardarCargaAcademica } from './carga-academica';
 import { PreviewCifrado } from './preview-cifrado';
 type Fila = Record<string,string>;
 interface Catalogos {
@@ -23,6 +24,7 @@ interface Catalogos {
 }
 const trozos = <T>(filas: T[]) => Array.from({ length: Math.ceil(filas.length / 100) }, (_, i) => filas.slice(i*100,(i+1)*100));
 export const CABECERAS: Record<TipoImportacion, string[]> = {
+  ...COLUMNAS_ACADEMICAS,
   ALUMNOS: ['correoInstitucional', 'correoPersonal', 'correoProveedor', 'nombre', 'segundoNombre', 'apellidoPaterno', 'apellidoMaterno', 'matricula', 'plantelId', 'curp', 'fechaNacimiento', 'telefono', 'tutorNombre', 'tutorTelefono', 'direccion', 'email'],
   DOCENTES: ['email', 'nombre', 'segundoNombre', 'apellidoPaterno', 'apellidoMaterno', 'numEmpleado', 'plantelIds', 'cedulaProfesional', 'cedulaPendiente', 'especialidad', 'telefono', 'correoProveedor'],
   PERSONAL: ['email', 'nombre', 'segundoNombre', 'apellidoPaterno', 'apellidoMaterno', 'roles', 'plantelIds', 'telefono', 'correoProveedor'],
@@ -34,6 +36,10 @@ export class ImportacionesService {
   private readonly cifrado: PreviewCifrado;
   constructor(private readonly ds: DataSource, private readonly scope: ScopeService, config: ConfigService) { this.cifrado = new PreviewCifrado(config.getOrThrow<string>('JWT_SECRET')); }
   private autorizar(tipo: TipoImportacion, user: JwtUser) {
+    if (tipo === 'MATERIAS' || tipo === 'GRUPOS') {
+      if (user.roles.some(r=>['ADMINISTRATIVO','SUPERADMIN'].includes(r))) return;
+      throw new ForbiddenException('La carga académica requiere Administrativo o Superadmin');
+    }
     if (tipo === 'CALIFICACIONES') throw new BadRequestException('Utiliza la importación desde Calificaciones');
     if (user.roles.includes('SUPERADMIN')) return;
     if (tipo === 'ALUMNOS' && user.roles.includes('FINANZAS')) return;
@@ -182,6 +188,11 @@ export class ImportacionesService {
     let duplicados: { fila: number; mensaje: string }[] = [];
     let validos = 0;
     await this.ds.transaction(async (manager) => {
+      if (tipo === 'MATERIAS' || tipo === 'GRUPOS') {
+        const resultado = await evaluarCargaAcademica(manager,tipo,filas,user,this.scope,false);
+        errores.push(...resultado.errores); duplicados=resultado.duplicados; validos=resultado.validas.length;
+        return;
+      }
       const c = await this.catalogos(manager, tipo, filas, user, false);
       if (tipo === 'ALUMNOS') {
         const resultado = await this.evaluarAlumnos(filas, c);
@@ -201,7 +212,7 @@ export class ImportacionesService {
       }
     });
     let previewId: string | null = null;
-    if ((!errores.length && tipo !== 'ALUMNOS') || (tipo === 'ALUMNOS' && (validos > 0 || errores.length > 0))) {
+    if ((!errores.length && validos > 0 && tipo !== 'ALUMNOS') || (tipo === 'ALUMNOS' && (validos > 0 || errores.length > 0))) {
       const p = this.ds.getRepository(ImportacionPreview).create({
         id: randomUUID(), actorId: user.sub, tipo, expira: new Date(Date.now() + 15 * 60000),
       });
@@ -223,10 +234,10 @@ export class ImportacionesService {
     }
     return {
       previewId, registros: filas.length, validos, duplicados, errores,
-      identificadores: filas.map((f, i) => ({ fila: i + 2, identificador: f.matricula ?? f.numEmpleado ?? f.correoInstitucional ?? f.email })),
+      identificadores: filas.map((f, i) => ({ fila: i + 2, identificador: f.matricula ?? f.numEmpleado ?? f.correoInstitucional ?? f.email ?? f.clave ?? f.nombre ?? '' })),
       regla: tipo === 'ALUMNOS'
         ? 'Solo se incorporarán alumnos nuevos y válidos. Los existentes se omiten y las filas con errores pueden descargarse para corregirse. Revisa y confirma para importar.'
-        : 'Confirmación atómica; el lote se revierte si alguna fila es inválida.',
+        : tipo === 'MATERIAS' || tipo === 'GRUPOS' ? 'Los duplicados se omiten sin modificar datos. Corrige todos los errores antes de confirmar. La carga es atómica y no genera inscripciones ni cargos.' : 'Confirmación atómica; el lote se revierte si alguna fila es inválida.',
     };
   }
 
@@ -279,7 +290,7 @@ export class ImportacionesService {
         const generados = await Promise.all(lote.map(() => hashPasswordNueva(randomBytes(32).toString('base64url'))));
         lote.forEach((correo, indice) => hashesAlumnos.set(correo, generados[indice]));
       }
-    } else if (previa.tipo !== 'INSCRIPCIONES') {
+    } else if (!['INSCRIPCIONES','MATERIAS','GRUPOS'].includes(previa.tipo)) {
       for (let i = 0; i < filas.length; i += 4) {
         hashes.push(...await Promise.all(filas.slice(i, i + 4).map(() =>
           hashPasswordNueva(randomBytes(32).toString('base64url')),
@@ -288,6 +299,11 @@ export class ImportacionesService {
     }
     try { return await this.ds.transaction('SERIALIZABLE', async (manager) => {
       const p = await manager.getRepository(ImportacionPreview).findOne({ where: { id: previewId }, lock: { mode: 'pessimistic_write' } }); this.comprobar(p,user);
+      if (p.tipo === 'MATERIAS' || p.tipo === 'GRUPOS') {
+        const resultado = await guardarCargaAcademica(manager,p.tipo,filas,user,this.scope);
+        await manager.getRepository(ImportacionPreview).delete(p.id);
+        return resultado;
+      }
       const c = await this.catalogos(manager,p.tipo,filas,user,true), vistos = new Set<string>();
       const evaluacion = p.tipo === 'ALUMNOS' ? await this.evaluarAlumnos(filas, c) : null;
       const validas = evaluacion ? evaluacion.validas : [];

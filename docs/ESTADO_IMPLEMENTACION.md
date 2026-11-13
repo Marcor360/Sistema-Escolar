@@ -1,6 +1,6 @@
-# Estado de implementación — candidata 1.36.0
+# Estado de implementación — candidata 1.37.0
 
-Corte 13/nov/2026 sobre la base de código 1.35.16 (`93e7b2a`). La candidata 1.36.0 reúne el [rediseño del portal del alumno](PORTAL_ALUMNO_REFERENCIA_UTC.md), la [carga académica guiada](CARGA_ACADEMICA_GUIADA.md) y los [recorridos por tarea](RECORRIDOS_POR_TAREA.md). Incluye navegación adaptable, entrega web de archivos y consulta de accesos previos para evitar repetir la guía entre app y portal. No añade migraciones. La versión de código no acredita publicación, CI por SHA ni UAT institucional.
+Corte 13/nov/2026 sobre la base 1.36.0 (`2870152`). La candidata 1.37.0 añade [importación masiva de materias y grupos, resumen de preparación y mediciones de carga](CARGA_MASIVA_1.37.0.md). Conserva el rediseño del portal del alumno y los recorridos de la base. No añade migraciones. La candidata no acredita publicación, CI por SHA ni aceptación institucional.
 
 La actualización coordinada de sistema y Portal Alumno está integrada en main mediante #240. Su CI aprobada corresponde al SHA `74ab0d5`; no acredita ejecución en IIS ni despliegue institucional. Esta candidata no añade migraciones. [Guía de actualización](ACTUALIZACION_INTEGRAL_1.35.14.md).
 

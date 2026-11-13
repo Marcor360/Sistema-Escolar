@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsBoolean, IsIn, IsUUID } from 'class-validator';
-export const TIPOS_IMPORTACION = ['ALUMNOS', 'DOCENTES', 'PERSONAL', 'INSCRIPCIONES'] as const;
+export const TIPOS_IMPORTACION = ['ALUMNOS', 'DOCENTES', 'PERSONAL', 'INSCRIPCIONES', 'MATERIAS', 'GRUPOS'] as const;
 export type TipoImportacion = typeof TIPOS_IMPORTACION[number] | 'CALIFICACIONES';
 export class TipoImportacionDto { @ApiProperty({ enum: TIPOS_IMPORTACION })
   @IsIn(TIPOS_IMPORTACION) tipo!: Exclude<TipoImportacion, 'CALIFICACIONES'>; }

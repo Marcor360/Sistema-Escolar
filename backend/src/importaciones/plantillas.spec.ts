@@ -16,7 +16,7 @@ for (const tipo of TIPOS_IMPORTACION) {
     expect(datos.views[0]).toMatchObject({ state: 'frozen', ySplit: 1 });
     expect(datos.autoFilter).toBeTruthy();
     const guia = libro.getWorksheet('Instrucciones');
-    const filaGuia = tipo === 'ALUMNOS' ? 8 : tipo === 'INSCRIPCIONES' ? 6 : 7;
+    const filaGuia = tipo === 'ALUMNOS' ? 8 : ['INSCRIPCIONES','MATERIAS','GRUPOS'].includes(tipo) ? 6 : 7;
     expect(guia?.getCell(`A${filaGuia}`).value).toBe('Campo técnico');
     expect(guia?.getCell(`B${filaGuia}`).value).toBe('Requerido');
     expect(guia?.rowCount).toBe(filaGuia + COLUMNAS_PLANTILLA[tipo].length);

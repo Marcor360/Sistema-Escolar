@@ -50,7 +50,7 @@ it.each(['usuarios','grupos'])('guardar %s vuelve a consulta sin sobrescribir la
   fireEvent.change(screen.getByLabelText('Plantel'),{target:{value:'1'}});fireEvent.change(screen.getByLabelText('Ciclo'),{target:{value:'1'}});fireEvent.change(screen.getByLabelText('Nombre'),{target:{value:'Grupo prueba'}});fireEvent.click(screen.getByRole('button',{name:'Crear grupo'}));
  }
  await waitFor(()=>expect(post).toHaveBeenCalledTimes(1));await waitFor(()=>expect(router.state.location.search).toContain('vista=consulta'));expect(router.state.location.search).toContain('pagina=2');expect(router.state.location.search).toContain('buscar=criterio');expect(screen.queryByRole('dialog')).toBeNull();
- await waitFor(()=>expect(get.mock.calls.some(([url])=>url===(tipo==='usuarios'?'/usuarios/listado':'/academico/grupos'))).toBe(true));
+ await waitFor(()=>expect(get.mock.calls.some(([url])=>url===(tipo==='usuarios'?'/usuarios/listado':'/academico/grupos/preparacion'))).toBe(true));
 });
 
 it('admite consulta inicial directa solo en módulos que la solicitan', async () => {

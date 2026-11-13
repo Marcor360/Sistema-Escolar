@@ -99,6 +99,8 @@ export class AcademicoController {
   listarGrupos(@CurrentUser() user: JwtUser, @Query() query: ListarGruposDto) {
     return this.service.listarGrupos(user, query);
   }
+  @Get('grupos/preparacion') @Roles('ADMINISTRATIVO')
+  listarPreparacion(@CurrentUser() user: JwtUser, @Query() query: ListarGruposDto) { return this.service.listarPreparacion(user,query); }
   @Get('grupos/:id') @Roles('ADMINISTRATIVO')
   obtenerGrupo(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtUser) { return this.service.obtenerGrupo(id,user); }
   @Post('grupos') @Roles('ADMINISTRATIVO') crearGrupo(@Body() dto: GrupoDto, @CurrentUser() user: JwtUser) {

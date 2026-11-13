@@ -25,7 +25,7 @@ export class ImportacionesController {
   }
   @ApiOperation({ summary: 'Validar hasta 500 filas sin importarlas; preview cifrado del actor válido 15 minutos' })
   @ApiConsumes('multipart/form-data')
-  @ApiBody({ schema: { type: 'object', required: ['tipo','archivo'], properties: { tipo: { type: 'string', enum: ['ALUMNOS','DOCENTES','PERSONAL','INSCRIPCIONES'] }, archivo: { type: 'string', format: 'binary', description: 'CSV/XLSX hasta 5 MB, sin fórmulas' } } } })
+  @ApiBody({ schema: { type: 'object', required: ['tipo','archivo'], properties: { tipo: { type: 'string', enum: ['ALUMNOS','DOCENTES','PERSONAL','INSCRIPCIONES','MATERIAS','GRUPOS'] }, archivo: { type: 'string', format: 'binary', description: 'CSV/XLSX hasta 5 MB, sin fórmulas' } } } })
   @ApiResponse({ status: 413, description: 'Archivo mayor que 5 MB' })
   @ApiCreatedResponse({ type: PreviewImportacionRespuestaDto })
   @Post('preview') @UseInterceptors(FileInterceptor('archivo', { limits: { fileSize: 5 * 1024 * 1024, files: 1 } }))

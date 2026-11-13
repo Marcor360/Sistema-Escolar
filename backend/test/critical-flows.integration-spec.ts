@@ -1,3 +1,4 @@
+import { registrarCargaAcademica } from './integration/carga-academica.cases';
 import { registrarBoletasFirmas } from './integration/boletas-firmas.cases';
 import { registrarPendientesInscripcion } from './integration/pendientes-inscripcion.cases';
 import { registrarCarteraIntegral } from './integration/cartera-integral.cases';
@@ -478,6 +479,7 @@ get passwords() { return passwords; },
 get emitirToken() { return emitirToken; },
 get emitirFinanzasB() { return emitirFinanzasB; },
 };
+registrarCargaAcademica(contexto);
 const casos = { ...casos_baseline, ...casos_identidad, ...casos_academico, ...casos_calificaciones, ...casos_finanzas, ...casos_archivos, ...casos_calendario, ...casos_conducta, ...casos_analitica, ...casos_importaciones, ...casos_roles };
 Object.keys(casos).map(Number).sort((a,b) => a-b).forEach((id) => casos[id](contexto));
 
