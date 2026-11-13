@@ -3,6 +3,7 @@ import { FormEvent } from 'react';
 import { pesos, selloDeCargo } from '../../utils/formato';
 import { SelectorBuscable } from '../../components/SelectorBuscable';
 import { Paginador } from '../../components/Paginador';
+import { Link } from 'react-router-dom';
 import type { Alumno, Concepto, Ciclo, ResultadoCargos } from './tipos';
 interface Props {
 vista?: 'legado' | 'consulta' | 'nuevo' | 'colegiaturas';
@@ -22,7 +23,7 @@ cargarCargos: (pagina?: number) => Promise<void>;
 }
 export function PanelCargos({ vista = 'legado', crearCargo, formCargo, setFormCargo, conceptos,  enviando, generarColegiaturas, formColegiaturas, setFormColegiaturas, ciclos, aplicarRecargos, resultadoCargos, corregir, cargarCargos }: Props) { return (<div id="panel-cargos" role="tabpanel" aria-label="Cargos" tabIndex={0}>
           {(vista === 'legado' || vista === 'nuevo') && <section className="panel">
-            <h2>Asignar cargo adicional</h2><p>Busca al alumno por su matrícula o nombre completo. Selecciona un concepto autorizado; el cargo aparecerá en su estado de cuenta. Las colegiaturas se gestionan por su flujo independiente. Registrar un cargo no significa que ya se haya pagado.</p>
+            <h2>Asignar cargo adicional</h2><p>Busca al alumno por su matrícula o nombre completo. Selecciona un concepto autorizado; el cargo aparecerá en su estado de cuenta. Las colegiaturas se gestionan por su flujo independiente. Registrar un cargo no significa que ya se haya pagado.</p><p className="texto-ayuda">¿Todavía no existe el concepto o falta autorizar su tarifa? <Link to="/finanzas?vista=conceptos">Revisa el catálogo de conceptos</Link> antes de emitir un cargo.</p>
             <form onSubmit={crearCargo} className="fila">
               <SelectorBuscable<Alumno> ruta="/finanzas/alumnos" valor={formCargo.alumnoId} cambiar={(id) => setFormCargo({ ...formCargo, alumnoId: id })} etiqueta="Alumno" texto={(a) => `${a.matricula} — ${a.usuario.nombre} ${a.usuario.apellidoPaterno} ${a.usuario.apellidoMaterno ?? ''}`.trim()} />
               <div className="campo"><label htmlFor="finanzas-campo-1">Concepto</label>
@@ -46,7 +47,7 @@ export function PanelCargos({ vista = 'legado', crearCargo, formCargo, setFormCa
                 <input id="finanzas-campo-2" required value={formCargo.descripcion} onChange={(e) => setFormCargo({ ...formCargo, descripcion: e.target.value })} />
               </div>
               <div className="campo"><label htmlFor="finanzas-campo-3">Monto</label>
-                <input id="finanzas-campo-3" type="number" min={0} step={0.01} required value={formCargo.monto} onChange={(e) => setFormCargo({ ...formCargo, monto: e.target.value })} />
+                <input id="finanzas-campo-3" type="number" min={0.01} step={0.01} required value={formCargo.monto} onChange={(e) => setFormCargo({ ...formCargo, monto: e.target.value })} />
               </div>
               <div className="campo"><label htmlFor="descuento-cargo">Beca / descuento</label><input id="descuento-cargo" type="number" min={0} max={formCargo.monto || undefined} step="0.01" value={formCargo.descuento} onChange={(e) => setFormCargo({ ...formCargo, descuento: e.target.value })} /></div><div className="campo"><label htmlFor="finanzas-campo-4">Vence</label>
                 <input id="finanzas-campo-4" type="date" value={formCargo.fechaVencimiento} onChange={(e) => setFormCargo({ ...formCargo, fechaVencimiento: e.target.value })} />
@@ -56,7 +57,7 @@ export function PanelCargos({ vista = 'legado', crearCargo, formCargo, setFormCa
           </section>}
 
           {(vista === 'legado' || vista === 'colegiaturas') && <section className="panel">
-            <h2>Generar colegiaturas del periodo</h2>
+            <h2>Generar colegiaturas del periodo</h2><p className="texto-ayuda">Primero autoriza el concepto y su tarifa en Finanzas. Después revisa plantel, ciclo y periodo: la previsualización muestra a quiénes corresponde generar el cargo. No se cobra a alumnos sin inscripción válida ni se registra un pago automáticamente.</p>
             <form onSubmit={generarColegiaturas} className="fila">
               <div className="campo"><label htmlFor="finanzas-campo-5">Ciclo</label>
                 <select id="finanzas-campo-5" required value={formColegiaturas.cicloId} onChange={(e) => setFormColegiaturas({ ...formColegiaturas, cicloId: e.target.value })}>
@@ -87,7 +88,7 @@ export function PanelCargos({ vista = 'legado', crearCargo, formCargo, setFormCa
                   <td><span className={`sello ${selloDeCargo(c.estatus)}`}>{c.estatus}</span></td><td>{c.estatus !== 'CANCELADO' && <button disabled={enviando} onClick={() => corregir('cargos', c.id)}>Cancelar cargo</button>}</td>
                 </tr>
               ))}
-              {resultadoCargos.datos.length === 0 && <tr><td className="vacio" colSpan={7}>Sin cargos registrados.</td></tr>}
+              {resultadoCargos.datos.length === 0 && <tr><td className="vacio" colSpan={8}>Sin cargos registrados.</td></tr>}
             </tbody>
           </table></div>
           <Paginador total={resultadoCargos.total} pagina={resultadoCargos.pagina} porPagina={resultadoCargos.porPagina} onCambio={cargarCargos} /></>}
