@@ -8,7 +8,7 @@ export function registrarCatalogos(ctx: ContextoIntegracion) {
     const ruta = '/academico/catalogos';
     expect((await ctx.api(`${ruta}/niveles`)).response.status).toBe(401);
     expect((await ctx.api(`${ruta}/niveles`, { token: alumno })).response.status).toBe(403);
-    const body = { plantelId: ctx.plantelId, clave: `N${ctx.sufijo}`, nombre: 'Nivel configurable' };
+    const body = { plantelId: ctx.plantelId, clave: `CAT-N${ctx.sufijo}`, nombre: 'Nivel configurable' };
     expect((await ctx.api(`${ruta}/niveles`, { method: 'POST', token: finanzas, body })).response.status).toBe(403);
     expect((await ctx.api(`${ruta}/niveles`, { method: 'POST', token: admin, body: { ...body, plantelId: ctx.otroPlantelId } })).response.status).toBe(403);
     const repetidos = await Promise.all([1, 2].map(() => ctx.api(`${ruta}/niveles`, { method: 'POST', token: admin, body })));

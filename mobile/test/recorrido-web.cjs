@@ -262,7 +262,7 @@ const server = http.createServer((req, res) => {
       await page.getByRole('button', { name: 'Ver todos los pasos', exact: true }).click();
       await page.getByRole('button', { name: 'Ir al paso 4: Entregar una actividad', exact: true }).click();
       await page.getByRole('button', { name: 'Ver esta pantalla', exact: true }).click();
-      await expect(page.getByText('Mis tareas', { exact: true })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Mis tareas', exact: true })).toBeVisible();
       expect(entregas).toHaveLength(0);
       await page.getByRole('button', { name: 'Finalizar guía por ahora', exact: true }).click();
       await page.getByRole('tab', { name: 'Inicio del alumno', exact: true }).click();
@@ -291,7 +291,7 @@ const server = http.createServer((req, res) => {
         await page.waitForTimeout(300);
         if (name.test("materias")) {
           await page.getByRole("button", { name: "Tareas y entregas · Subir tarea", exact: true }).click();
-          await expect(page.getByText("Mis tareas", { exact: true })).toBeVisible();
+          await expect(page.getByRole("heading", { name: "Mis tareas", exact: true })).toBeVisible();
           await expect(page.getByRole("button", { name: "Entregar archivo: Tarea QA", exact: true })).toBeEnabled();
           await expect(page.getByRole("button", { name: "Actualizar tareas", exact: true })).toBeVisible();
           await captura('tareas-alumno');

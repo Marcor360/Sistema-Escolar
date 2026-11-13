@@ -65,7 +65,7 @@ it('presenta por separado los válidos, existentes e inválidos de la importaci�
 });
 
  it('descarta el resultado anterior si falla una nueva previsualización', async () => {
-  vi.spyOn(api, 'get').mockResolvedValue({ data: [] });
+  vi.spyOn(api, 'get').mockImplementation(async ruta => ({ data: ruta === '/academico/ciclos' ? [] : { datos: [], total: 0 } }));
   const post = vi.spyOn(api, 'post').mockResolvedValueOnce({ data: {
     previewId: 'anterior', registros: 1, validos: 1, duplicados: [], errores: [], regla: '', identificadores: [],
   } }).mockRejectedValueOnce(new Error('Sin conexión'));
@@ -86,7 +86,7 @@ it('bloquea archivo y tipo mientras se confirma y permite cancelar sin importar'
   Object.defineProperty(HTMLDialogElement.prototype, 'close', { configurable: true, writable: true, value() {} });
   vi.spyOn(HTMLDialogElement.prototype, 'showModal').mockImplementation(function (this: HTMLDialogElement) { this.setAttribute('open', ''); });
   vi.spyOn(HTMLDialogElement.prototype, 'close').mockImplementation(function (this: HTMLDialogElement) { this.removeAttribute('open'); });
-  vi.spyOn(api, 'get').mockResolvedValue({ data: [] });
+  vi.spyOn(api, 'get').mockImplementation(async ruta => ({ data: ruta === '/academico/ciclos' ? [] : { datos: [], total: 0 } }));
   const post = vi.spyOn(api, 'post').mockResolvedValue({ data: {
     previewId: 'lote', registros: 1, validos: 1, duplicados: [], errores: [], regla: '', identificadores: [],
   } });
@@ -104,7 +104,7 @@ it('bloquea archivo y tipo mientras se confirma y permite cancelar sin importar'
 });
 
 it.each(['MATERIAS','GRUPOS'])('previsualiza %s con duplicados sin tratarlo como alumnos', async tipo => {
-  vi.spyOn(api,'get').mockResolvedValue({data:[]});
+  vi.spyOn(api,'get').mockImplementation(async ruta => ({ data: ruta === '/academico/ciclos' ? [] : { datos: [], total: 0 } }));
   const post=vi.spyOn(api,'post').mockResolvedValue({data:{previewId:'academica',registros:3,validos:1,duplicados:[{fila:3,mensaje:'Ya registrado'}],errores:[{fila:4,mensaje:'Campo inválido'}],regla:'Corregir errores antes de confirmar',identificadores:[{fila:2,identificador:'MAT01'}]}});
   render(<OperacionesPage/>);
   fireEvent.change(screen.getByLabelText('Tipo'),{target:{value:tipo}});
@@ -122,7 +122,7 @@ it.each([
   { roles: ['ADMINISTRATIVO', 'FINANZAS'], alumnos: true, academico: true },
 ])('muestra la combinación autorizada de tipos para $roles', ({ roles, alumnos, academico })=>{
   permisos.roles=roles;
-  vi.spyOn(api,'get').mockResolvedValue({data:[]});
+  vi.spyOn(api,'get').mockImplementation(async ruta => ({ data: ruta === '/academico/ciclos' ? [] : { datos: [], total: 0 } }));
   render(<OperacionesPage/>);
   const tipos=Array.from((screen.getByLabelText('Tipo') as HTMLSelectElement).options).map(o=>o.value);
   expect(tipos.includes('ALUMNOS')).toBe(alumnos);
