@@ -10,6 +10,7 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 it('crea materia con cero créditos y ciclo en preparación sin activar el vigente', async () => {
   vi.spyOn(api, 'get').mockImplementation(async url => ({ data: url === '/academico/materias/listado' ? { datos: [], total: 0 } : [] })); const post = vi.spyOn(api, 'post').mockResolvedValue({ data: {} });
   render(<MemoryRouter><MateriasPage /></MemoryRouter>);
+  expect(screen.getByText(/sin elegir plantel, grupo ni docente/)).toBeTruthy();
   fireEvent.change(screen.getByLabelText('Clave'), { target: { value: 'MAT' } }); fireEvent.change(screen.getByLabelText('Nombre'), { target: { value: 'Matemáticas' } });
   fireEvent.click(screen.getByRole('button', { name: 'Guardar materia' }));
   await waitFor(() => expect(post).toHaveBeenCalledWith('/academico/materias', expect.objectContaining({ creditos: 0 })));
