@@ -82,6 +82,7 @@ Los recordatorios al consultar son una primera etapa. Notificaciones automática
 | UX-10 | Media | `web/src/features/finanzas/ConfirmarProgramacion.tsx:93-105` exige contexto válido para autorizar programación y su emisión | Usuarios con expediente parcial necesitan una explicación contextual | Diseñar estado de preparación sin emisión; **no** crear cargos ni levantar bloqueos contables |
 | UX-11 | Media | `web/src/components/recorrido-por-rol.ts` y `docs/CARGA_ACADEMICA_GUIADA.md` presentan rutas recomendadas pero no auditan todas las secuencias reales con BD | Riesgo de pasos que dependen de catálogos inexistentes | Ejecutar UAT por nivel, rol, ciclo, plantel, pagos e inscripción en una BD aislada |
 | UX-12 | Media | `backend/src/finanzas/programaciones.ts` define secundaria 1 cuota, bachillerato 2 y superior 4 por cuatrimestre | La periodicidad puede no coincidir con un plan institucional específico | Validar política aprobada por nivel y calendario antes de generalizar o hacer configurable; no cambiar tarifas automáticamente |
+| UX-13 | Media | `web/src/components/CatalogoConceptos.tsx` mostraba tipos históricos BECA/DESCUENTO/RECARGO en el listado, pero no en el selector y enviaba el tipo prohibido en PATCH | No era posible guardar una corrección válida sin provocar error de API | **Corregido en este PR:** conservar el tipo histórico inmutable en UI y enviar solo los otros campos al editar; prueba de regresión |
 
 ### Aceptación requerida para PR(s) posteriores
 
