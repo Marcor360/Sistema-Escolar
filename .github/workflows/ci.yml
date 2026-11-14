@@ -244,7 +244,9 @@ jobs:
         run: npm run test:responsive
         working-directory: web
       - name: Cartera integral responsive (API simulada)
-        run: npm run test:cartera
+        run: |
+          npm run test:cartera
+          npm run test:apertura-flexible
         working-directory: web
       - name: Boletas, revisión y comentarios por materia (API simulada)
         run: npm run test:boletas

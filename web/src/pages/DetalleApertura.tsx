@@ -15,6 +15,7 @@ interface Detalle {
   grupoId: number | null;
   contexto: Record<string, string | number> | null;
   financiero: ResumenFinancieroCartera;
+  avisos?: string[];
 }
 /** Vista independiente: el calendario y la reanudación no se insertan dentro de una celda. */
 export function DetalleApertura() {
@@ -25,6 +26,8 @@ export function DetalleApertura() {
     [cargando, setCargando] = useState(true),
     [ocupado, setOcupado] = useState(false),
     [grupoId, setGrupoId] = useState(''),
+    [carreraId, setCarreraId] = useState(''),
+    [periodoId, setPeriodoId] = useState(''),
     [motivo, setMotivo] = useState(''),
     [mensaje, setMensaje] = useState(''),
     [intento, setIntento] = useState(0);
@@ -42,6 +45,7 @@ export function DetalleApertura() {
     setDatos(null);
     setError('');
     setGrupoId('');
+    setCarreraId(''); setPeriodoId('');
     setMotivo('');
     setMensaje('');
     if (!/^\d+$/.test(id || '') || Number(id) < 1) {
@@ -83,6 +87,8 @@ export function DetalleApertura() {
     try {
       const r = await api.post(`/cartera/${id}/reanudar`, {
         ...(grupoId ? { grupoId: Number(grupoId) } : {}),
+        ...(carreraId ? { carreraId: Number(carreraId) } : {}),
+        ...(periodoId ? { periodoAcademicoId: Number(periodoId) } : {}),
         motivo,
         confirmado: true,
       });
@@ -131,6 +137,7 @@ export function DetalleApertura() {
               {datos.grupoId ? `Grupo ${datos.grupoId}` : 'Sin grupo asignado'}
             </p>
           </section>
+          {!!datos.avisos?.length && <section className="panel" aria-label="Pendientes académicos"><h2>Pendientes académicos</h2>{datos.avisos.map(aviso => <p key={aviso} role="status">{aviso}</p>)}<Link to="/grupos?vista=consulta">Revisar grupos, materias y profesores</Link></section>}
           <ResumenCartera datos={datos.financiero} />
           {datos.estado === 'PAUSA' && datos.contexto && (
             <form className="panel formulario-cartera" onSubmit={reanudar}>
@@ -139,15 +146,20 @@ export function DetalleApertura() {
                 <p>
                   Selecciona un grupo o deja la asignación automática. Si no hay grupo, seguirá en pausa sin cargos.
                 </p>
-                <SelectorBuscable<{ id: number; nombre: string }>
+                {(!datos.contexto.carreraId || !datos.contexto.periodoAcademicoId) && <>
+                  <p>Completa el plan y periodo del nivel elegido para poder asignar grupo.</p>
+                  {!datos.contexto.carreraId && <SelectorBuscable<{ id: number; nombre: string }> ruta="/academico/catalogos/carreras" etiqueta="Carrera y plan pendientes" valor={carreraId} cambiar={v => { setCarreraId(v); setPeriodoId(''); setGrupoId(''); }} filtros={{ plantelId: datos.contexto.plantelId, nivelId: datos.contexto.nivelId }} texto={c => c.nombre} />}
+                  {(carreraId || datos.contexto.carreraId) && <SelectorBuscable<{ id: number; nombre: string }> ruta="/academico/catalogos/periodos" etiqueta="Periodo académico pendiente" valor={periodoId} cambiar={v => { setPeriodoId(v); setGrupoId(''); }} filtros={{ plantelId: datos.contexto.plantelId, cicloId: datos.contexto.cicloId, carreraId: carreraId || datos.contexto.carreraId }} texto={p => p.nombre} />}
+                </>}
+                {(periodoId || datos.contexto.periodoAcademicoId) && <SelectorBuscable<{ id: number; nombre: string }>
                   ruta="/academico/grupos"
                   etiqueta="Grupo para reanudar cartera (opcional)"
                   requerido={false}
                   valor={grupoId}
                   cambiar={setGrupoId}
-                  filtros={datos.contexto}
+                  filtros={{ ...datos.contexto, ...(carreraId ? { carreraId } : {}), ...(periodoId ? { periodoAcademicoId: periodoId } : {}) }}
                   texto={(g) => g.nombre}
-                />
+                />}
                 <div className="campo">
                   <label htmlFor="reanudar-motivo">Motivo de reanudación</label>
                   <input
@@ -160,7 +172,7 @@ export function DetalleApertura() {
                   />
                 </div>
                 <div className="acciones-formulario">
-                  <button className="boton" disabled={ocupado}>
+                  <button className="boton" disabled={ocupado || !(carreraId || datos.contexto.carreraId) || !(periodoId || datos.contexto.periodoAcademicoId)}>
                     {ocupado ? 'Reanudando…' : 'Revisar reanudación'}
                   </button>
                 </div>
