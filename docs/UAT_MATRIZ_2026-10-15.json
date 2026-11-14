@@ -1,6 +1,6 @@
 {
-  "version": "1.38.2",
-  "alcance": "Candidata 1.38.2: Recorridos guiados de maestro y alumno para temarios, tareas, entregas y calificaciones de trabajos, distinguidos de las calificaciones oficiales. Solo interfaz y pruebas; sin migraciones.",
+  "version": "1.38.3",
+  "alcance": "Candidata 1.38.3: Ayudas de proceso por módulo, jerarquías de permisos y navegación accesible en web. Orientaciones de alta, inscripción, docencia y finanzas sin nuevas autorizaciones ni migraciones.",
   "escenarios": [
     {
       "id": "UAT-01",

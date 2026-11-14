@@ -1,4 +1,5 @@
 import { esFormularioModulo } from '../components/ModuloTrabajo';
+import { descripcionSeccion } from './ayudas-seccion';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
@@ -302,39 +303,13 @@ export function Shell() {
   );
 }
 
-const guias: Record<string, string> = {
-  '/': 'Consulta indicadores y accesos de tus funciones. Selecciona un plantel para acotar el resumen.',
-  '/biblioteca': 'Organiza documentos, fotos, logos y calendarios privados del plantel. Selecciona una carpeta y carga un archivo; solo el personal administrativo autorizado puede descargarlo.',
-  '/operaciones':
-    'Revisa una importación antes de confirmarla. La promoción mueve inscripciones entre ciclos y debe verificarse antes de ejecutarse.',
-  '/conducta':
-    'Registra y consulta incidencias internas. Esta información sólo está disponible para personal autorizado.',
-  '/analitica':
-    'Compara indicadores dentro de tus permisos. Revisa el periodo y plantel seleccionados antes de interpretar los resultados.',
-  '/alumnos':
-    'Busca expedientes por matrícula o plantel. Aplica los filtros para actualizar la lista; las acciones afectan al alumno seleccionado.',
-  '/planteles': 'Consulta las sedes a las que tienes acceso y sus datos de contacto.',
-  '/docentes': 'Consulta el directorio docente y abre una ficha para revisar sus datos.',
-  '/materias': 'Administra el catálogo de materias. La asignación de docentes y grupos se realiza desde Grupos.',
-  '/grupos': 'Organiza los grupos por plantel y ciclo, sus inscripciones y las materias impartidas.',
-  '/maestro': 'Abre una de tus clases para publicar actividades, materiales y revisar entregas.',
-  '/calificaciones':
-    'Captura parciales y revisa el promedio oficial. Las correcciones requieren motivo y quedan en el historial.',
-  '/calendario': 'Consulta y publica eventos. Puedes eliminar los eventos permitidos por tu rol, plantel y autoría.',
-  '/avisos': 'Publica comunicaciones para los destinatarios permitidos por tus funciones.',
-  '/finanzas': 'Revisa cargos, pagos y adeudos. Verifica alumno, monto y referencia antes de registrar una operación.',
-  '/usuarios':
-    'Gestiona o consulta cuentas dentro de tus permisos. Los roles determinan qué información y acciones puede usar cada persona.',
-  '/configuracion':
-    'Configura nombre, colores y logo institucionales. Los cambios también se muestran en la app del alumno.',
-  '/cuenta': 'Revisa tu cuenta y cambia la contraseña. Al actualizarla tendrás que volver a iniciar sesión.',
-};
 function GuiaSeccion({ ruta }: { ruta: string }) {
-  if (!guias[ruta]) return null;
+  const descripcion = descripcionSeccion(ruta);
+  if (!descripcion) return null;
   return (
     <details className="panel" style={{ padding: 12, marginBottom: 16 }}>
-      <summary style={{ cursor: 'pointer', minHeight: 32 }}>¿Para qué sirve esta sección?</summary>
-      <p>{guias[ruta]}</p>
+      <summary style={{ cursor: 'pointer', minHeight: 44 }}>¿Para qué sirve esta sección?</summary>
+      <p>{descripcion}</p>
       <p>Las opciones dependen de tus permisos. No compartas tu contraseña y cierra sesión en equipos compartidos.</p>
     </details>
   );
