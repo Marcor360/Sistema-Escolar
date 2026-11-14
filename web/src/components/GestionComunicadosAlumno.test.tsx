@@ -52,3 +52,23 @@ it('exige confirmación antes de publicar y no envía nada cuando se cancela', a
   await screen.findByText('Comunicado publicado a 3 alumnos.');
   expect(publicar.mock.calls.filter(([ruta]) => ruta.endsWith('/publicar'))).toHaveLength(1);
 });
+
+it('no ofrece volver a crear el borrador cuando guardar tuvo éxito pero falló el refresco', async () => {
+  let lecturas = 0;
+  vi.spyOn(api, 'get').mockImplementation(async (ruta) => {
+    if (ruta === '/planteles/mios') return { data: [sede] };
+    if (++lecturas === 1) return { data: listado };
+    throw new Error('Red interrumpida al actualizar');
+  });
+  const crear = vi.spyOn(api, 'post').mockResolvedValue({ data: { id: 23 } });
+  render(<GestionComunicadosAlumno />);
+  await screen.findByRole('button', { name: 'Revisar y publicar' });
+  fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Recordatorio' } });
+  fireEvent.change(screen.getByLabelText('Mensaje'), { target: { value: 'Revisa tus pendientes.' } });
+  fireEvent.submit(screen.getByLabelText('Título').closest('form')!);
+  expect(await screen.findByText('Borrador guardado. No se ha enviado ninguna notificación.')).toBeTruthy();
+  expect((await screen.findByRole('alert')).textContent).toContain('Red interrumpida al actualizar');
+  expect(screen.getByRole('button', { name: 'Reintentar consulta' })).toBeTruthy();
+  expect(crear).toHaveBeenCalledTimes(1);
+  expect((screen.getByLabelText('Título') as HTMLInputElement).value).toBe('');
+});
