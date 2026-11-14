@@ -58,7 +58,7 @@ it('no ofrece volver a crear el borrador cuando guardar tuvo éxito pero falló 
   vi.spyOn(api, 'get').mockImplementation(async (ruta) => {
     if (ruta === '/planteles/mios') return { data: [sede] };
     if (++lecturas === 1) return { data: listado };
-    throw new Error('Red interrumpida al actualizar');
+    throw Object.assign(new Error('Red interrumpida al actualizar'), { code: 'ERR_NETWORK' });
   });
   const crear = vi.spyOn(api, 'post').mockResolvedValue({ data: { id: 23 } });
   render(<GestionComunicadosAlumno />);
@@ -67,7 +67,9 @@ it('no ofrece volver a crear el borrador cuando guardar tuvo éxito pero falló 
   fireEvent.change(screen.getByLabelText('Mensaje'), { target: { value: 'Revisa tus pendientes.' } });
   fireEvent.submit(screen.getByLabelText('Título').closest('form')!);
   expect(await screen.findByText('Borrador guardado. No se ha enviado ninguna notificación.')).toBeTruthy();
-  expect((await screen.findByRole('alert')).textContent).toContain('Red interrumpida al actualizar');
+  const alerta = (await screen.findByRole('alert')).textContent;
+  expect(alerta).toContain('Revisa tu conexión');
+  expect(alerta).not.toContain('Red interrumpida al actualizar');
   expect(screen.getByRole('button', { name: 'Reintentar consulta' })).toBeTruthy();
   expect(crear).toHaveBeenCalledTimes(1);
   expect((screen.getByLabelText('Título') as HTMLInputElement).value).toBe('');
