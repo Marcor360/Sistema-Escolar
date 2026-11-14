@@ -240,7 +240,7 @@ export default function GruposPage() {
       {errorCatalogos && <div role="alert"><p>{errorCatalogos}</p><button className="boton secundario" onClick={() => { void cargarCatalogos(); }}>Reintentar catálogos</button></div>}
 
       {(legado || trabajo.modo === 'nuevo' || (trabajo.modo === 'editar' && editando?.id === trabajo.id)) && <section className="panel">
-        <p className="texto-ayuda">Paso 1: selecciona un plantel y un ciclo en preparación o activo. Después abre Administrar para asignar materias y docentes. Para nuevas inscripciones con cargos, continúa en Apertura de cartera.</p><h2 id="form-grupo">{editando ? 'Editar grupo' : 'Nuevo grupo'}</h2>
+        <p className="texto-ayuda">Selecciona un plantel y un ciclo en preparación o activo. Puedes guardar el grupo aunque aún no tenga materias, docentes, alumnos o contexto académico. Si agregas contexto, selecciona juntos nivel, plan y periodo. Revisa los pendientes en Administrar antes de comenzar clases o generar cargos.</p><h2 id="form-grupo">{editando ? 'Editar grupo' : 'Nuevo grupo'}</h2>
         <form onSubmit={crearGrupo} className="fila">
           <div className="campo"><label htmlFor="grupos-campo-1">Plantel</label>
             <select id="grupos-campo-1" required disabled={editando !== null || enviando} value={formGrupo.plantelId} onChange={(e) => { setContexto(CONTEXTO_VACIO); setFormGrupo({ ...formGrupo, plantelId: e.target.value }); }}>
@@ -266,7 +266,7 @@ export default function GruposPage() {
               <option value="VESPERTINO">Vespertino</option>
             </select>
           </div>
-          <label className="casilla"><input type="checkbox" checked={usarContexto} onChange={(e) => { setUsarContexto(e.target.checked); if (!e.target.checked) setContexto(CONTEXTO_VACIO); }} />Asignar nivel, carrera/plan y periodo</label>
+          <label className="casilla"><input type="checkbox" checked={usarContexto} onChange={(e) => { setUsarContexto(e.target.checked); if (!e.target.checked) setContexto(CONTEXTO_VACIO); }} />Completar nivel, programa/plan y periodo (opcional al crear)</label>
           {usarContexto && <ContextoAcademicoSelector plantelId={formGrupo.plantelId} cicloId={formGrupo.cicloId} valor={contexto} cambiar={setContexto} deshabilitado={enviando} />}
           <button disabled={enviando} className="boton">{editando ? 'Guardar corrección' : 'Crear grupo'}</button>{editando && <button type="button" onClick={() => {if(!legado) trabajo.ir('consulta'); else {setContexto(CONTEXTO_VACIO); setUsarContexto(false); setEditando(null); setFormGrupo({ cicloId: '', plantelId: '', nombre: '', grado: '', turno: 'MATUTINO' });}}}>Cancelar edición</button>}
         </form>
@@ -332,8 +332,8 @@ export default function GruposPage() {
               <li>{asignaciones.length} materias asignadas; {asignaciones.filter((a) => !a.docente).length} pendientes de docente.</li>
               <li>{inscritos.length} alumnos inscritos; el expediente y la cartera se verifican en módulos separados.</li>
             </ol>
-            {asignaciones.length === 0 ? <p role="status">Preparación pendiente: registra las materias y sus docentes desde este panel.</p>
-              : asignaciones.some((a) => !a.docente) ? <p role="status">Preparación pendiente: asigna los profesores que faltan antes de impartir clases.</p>
+            {asignaciones.length === 0 ? <p role="status">El grupo ya está creado. Puedes asignar materias después y elegir sus docentes cuando estén disponibles; aún no está listo para impartir clases.</p>
+              : asignaciones.some((a) => !a.docente) ? <p role="status">Puedes continuar preparando el grupo. Antes de impartir clases, asigna los profesores pendientes.</p>
               : inscritos.length === 0 ? <p role="status">Materias y profesores asignados; todavía no hay alumnos inscritos.</p>
               : <p role="status">Las materias registradas tienen docente y alumnos. Revisa también las materias del periodo en el resumen del listado, el ciclo vigente y la cartera.</p>}
           </section>

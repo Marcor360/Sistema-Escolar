@@ -22,7 +22,7 @@ it('cotiza alumno y cuotas sin correo y obliga a previsualizar tras cambiar el c
   fireEvent.submit(screen.getByRole('button',{name:'Previsualizar apertura'}).closest('form')!);
   await screen.findByRole('button',{name:'Confirmar alumno y cartera'});
   expect(post.mock.calls[0][0]).toBe('/cartera/integral/previsualizar');
-  expect(post.mock.calls[0][1]).toMatchObject({asignacion:'PAUSA',total:125,cuotas:[{conceptoId:3,monto:125}]});
+  expect(post.mock.calls[0][1]).toMatchObject({asignacion:'AUTOMATICA',total:125,cuotas:[{conceptoId:3,monto:125}]});
   expect((post.mock.calls[0][1] as {nuevoAlumno:object}).nuevoAlumno).not.toHaveProperty('email');
   fireEvent.change(screen.getByLabelText('Fecha de vencimiento'),{target:{value:'2054-02-05'}});
   expect(screen.queryByRole('button',{name:'Confirmar alumno y cartera'})).toBeNull();

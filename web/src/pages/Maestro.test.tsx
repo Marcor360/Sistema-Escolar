@@ -66,6 +66,8 @@ function montar(query: string) {
 it('abrir clase muestra operaciones sin descargar actividades, materiales ni entregas', async () => {
   montar('vista=clase&clase=7');
   await screen.findByRole('heading', { name: 'Operaciones de esta clase' });
+  expect(screen.getByText(/La calificación de una entrega no modifica por sí sola el acta oficial/)).toBeTruthy();
+  expect(screen.getByText(/Secuencia recomendada: prepara temario y materiales/)).toBeTruthy();
   expect(api.get).toHaveBeenCalledTimes(1);
   expect(api.get).toHaveBeenCalledWith('/grupo-materias/7/detalle');
   expect(screen.queryByLabelText('Título')).toBeNull();

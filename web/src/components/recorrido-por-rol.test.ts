@@ -44,6 +44,7 @@ it('renumera los pasos filtrados y abre herramientas concretas', () => {
   ], ['FINANZAS']);
   const fin = areas.find(a => a.id === 'finanzas')!;
   expect(fin.pasos.map(p => p.titulo.split('.')[0])).toEqual(fin.pasos.map((_, i) => String(i + 1)));
+  expect(fin.pasos.some(p => p.destino === '/finanzas?vista=conceptos')).toBe(true);
   expect(fin.pasos.some(p => p.destino === '/seguimiento?seccion=conciliacion')).toBe(true);
   expect(fin.pasos.some(p => p.destino === '/analitica?vista=consulta')).toBe(true);
 });
