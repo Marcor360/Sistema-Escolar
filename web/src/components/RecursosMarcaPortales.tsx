@@ -2,6 +2,7 @@ import { ChangeEvent, FormEvent, useState } from 'react';
 import { api, archivosBase, mensajeDeError } from '../api/client';
 import { useMarca } from '../marca/MarcaContext';
 import { optimizarLogo, MAX_LOGO_ORIGINAL_BYTES } from '../utils/optimizar-logo';
+import { useConfirmacion } from './useConfirmacion';
 
 type Recurso = 'faviconAdministrativoUrl' | 'faviconAlumnoUrl' | 'logoAlumnoUrl';
 const recursos: Array<{ campo: Recurso; nombre: string; ruta: string; favicon: boolean }> = [
@@ -12,6 +13,7 @@ const recursos: Array<{ campo: Recurso; nombre: string; ruta: string; favicon: b
 
 export function RecursosMarcaPortales() {
   const { marca, recargar } = useMarca();
+  const confirmacion = useConfirmacion();
   const [archivos, setArchivos] = useState<Partial<Record<Recurso, File>>>({});
   const [ocupado, setOcupado] = useState<Recurso | null>(null);
   const [error, setError] = useState('');
@@ -34,23 +36,37 @@ export function RecursosMarcaPortales() {
       const datos = new FormData();
       datos.append(favicon ? 'imagen' : 'logo', favicon ? archivo : await optimizarLogo(archivo));
       await api.post('/configuracion/marca/' + ruta, datos);
-      await recargar();
       setArchivos((actual) => ({ ...actual, [campo]: undefined }));
-      setExito('Recurso actualizado correctamente.');
+      try {
+        await recargar();
+        setExito('Recurso actualizado correctamente.');
+      } catch {
+        setError('El recurso se guardó, pero no se pudo actualizar la vista. Recarga la página para visualizarlo.');
+      }
     } catch (error) { setError(mensajeDeError(error)); }
     finally { setOcupado(null); }
   };
   const quitar = async (campo: Recurso, ruta: string) => {
-    if (ocupado || !window.confirm('¿Quitar el recurso y volver a la imagen predeterminada?')) return;
+    if (ocupado || !await confirmacion.solicitar({
+      titulo: 'Retirar recurso visual',
+      descripcion: 'Se retirará el archivo seleccionado y el portal utilizará la imagen predeterminada. Esta acción no elimina otros logotipos.',
+      riesgo: 'alto',
+      etiqueta: 'Retirar recurso',
+    })) return;
     setOcupado(campo); setError(''); setExito('');
     try {
       await api.delete('/configuracion/marca/' + ruta);
-      await recargar();
-      setExito('Recurso retirado correctamente.');
+      try {
+        await recargar();
+        setExito('Recurso retirado correctamente.');
+      } catch {
+        setError('El recurso se retiró, pero no se pudo actualizar la vista. Recarga la página para comprobarlo.');
+      }
     } catch (error) { setError(mensajeDeError(error)); }
     finally { setOcupado(null); }
   };
   return <section className="panel" aria-labelledby="recursos-marca-titulo">
+    {confirmacion.elemento}
     <h2 id="recursos-marca-titulo">Favicons y logos por portal</h2>
     <p className="detalle">El favicon se muestra en la pestaña del navegador. El logo del alumno se muestra en la app y su portal; el institucional funciona como respaldo.</p>
     {recursos.map(({ campo, nombre, ruta, favicon }) => <form key={campo} className="campo" onSubmit={(evento) => void guardar(evento, campo, ruta, favicon)} aria-busy={ocupado === campo}>

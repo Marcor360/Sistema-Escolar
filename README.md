@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.38.5`** · Protección de integridad financiera: el tipo de concepto queda inmutable tras el alta, mientras nombre, tarifa base futura y estado siguen editables; pruebas unitarias sin migraciones. Pruebas técnicas, aceptación institucional y despliegue se acreditan por separado.
+**Versión candidata: `1.38.6`** · Confirmaciones accesibles de roles, comunicados y recursos de marca; recuperación de fallos de consulta y control de respuestas obsoletas en comunicados. Solo web y pruebas; sin migraciones. Pruebas técnicas, aceptación institucional y despliegue se acreditan por separado.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -18,6 +18,8 @@ Sistema escolar multiplataforma para operación académica, administrativa y fin
 Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [índice documental](docs/README.md) e [historial de documentos retirados](docs/HISTORIAL.md).
 
 ### Entrega actual
+
+La candidata **1.38.6** reemplaza las confirmaciones nativas de roles, publicación de comunicados y retiro de favicons/logos por el diálogo accesible reutilizable; distingue red caída de lista vacía y permite reintentar consultas de comunicados, sin cambiar permisos ni emitir mensajes automáticamente. Sin migraciones.
 
 La candidata **1.38.5** impide reclasificar conceptos de cobro y preserva el historial financiero. Las tarifas autorizadas pueden corregirse sin recalcular automáticamente cargos emitidos. Conserva las capacidades de 1.37.0. Sin migraciones; CI y UAT se acreditan por separado.
 

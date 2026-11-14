@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { Encabezado } from '../components/Encabezado';
+import { useConfirmacion } from '../components/useConfirmacion';
 
 type RolPersonal = 'FINANZAS' | 'ADMINISTRATIVO' | 'DIRECTOR';
 interface Cuenta {
@@ -16,6 +17,7 @@ interface Resultado { datos: Cuenta[]; total: number; pagina: number; porPagina:
 
 export default function RolesPersonalPage() {
   const { sesion } = useAuth();
+  const confirmacion = useConfirmacion();
   const [pagina, setPagina] = useState(1);
   const [resultado, setResultado] = useState<Resultado>({ datos: [], total: 0, pagina: 1, porPagina: 10 });
   const [seleccion, setSeleccion] = useState<Cuenta | null>(null);
@@ -23,6 +25,7 @@ export default function RolesPersonalPage() {
   const [cargando, setCargando] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
+  const [errorConsulta, setErrorConsulta] = useState('');
   const [mensaje, setMensaje] = useState('');
 
   const esSuperadmin = sesion?.roles.includes('SUPERADMIN') ?? false;
@@ -33,13 +36,13 @@ export default function RolesPersonalPage() {
     : esDirector ? ['FINANZAS', 'ADMINISTRATIVO'] : ['FINANZAS'];
 
   const consultar = useCallback(async (paginaSolicitada: number) => {
-    setCargando(true); setError('');
+    setCargando(true); setErrorConsulta('');
     try {
       const { data } = await api.get<Resultado>('/usuarios/listado', {
         params: { tipo: 'PERSONAL', pagina: paginaSolicitada, porPagina: 10 },
       });
       setResultado(data);
-    } catch (err) { setError(mensajeDeError(err)); }
+    } catch (err) { setErrorConsulta(mensajeDeError(err)); }
     finally { setCargando(false); }
   }, []);
 
@@ -60,7 +63,12 @@ export default function RolesPersonalPage() {
     const conservados = seleccion.roles.filter((rol) => rol === 'MAESTRO');
     const propuesta = [...new Set([...conservados, ...roles])];
     if (propuesta.length === 0) { setError('Debe conservarse al menos una función de personal.'); return; }
-    if (!window.confirm('¿Confirmas el cambio de funciones? Se cerrarán las sesiones del usuario.')) return;
+    if (!await confirmacion.solicitar({
+      titulo: 'Confirmar cambio de funciones',
+      descripcion: `Se actualizarán las funciones de ${seleccion.nombre} a: ${propuesta.join(', ')}. Se revocarán sus sesiones anteriores.`,
+      riesgo: 'alto',
+      etiqueta: 'Actualizar funciones',
+    })) return;
     setGuardando(true); setError(''); setMensaje('');
     try {
       await api.patch(`/usuarios/${seleccion.id}/roles`, { roles: propuesta });
@@ -72,11 +80,15 @@ export default function RolesPersonalPage() {
   };
 
   return <main>
+    {confirmacion.elemento}
     <Encabezado titulo="Asignación de funciones" detalle="Gestiona roles subordinados del personal sin modificar expedientes académicos." />
     <p>Los roles docentes se gestionan desde el expediente de Docentes. Esta pantalla no convierte alumnos en empleados ni permite modificar una cuenta de igual o mayor jerarquía.</p>
     {error && <p role="alert" className="error">{error}</p>}
+    {errorConsulta && <p role="alert" className="error">No se pudo consultar el personal: {errorConsulta}</p>}
     {mensaje && <p role="status">{mensaje}</p>}
-    {cargando ? <p role="status">Consultando personal…</p> : (
+    {cargando ? <p role="status">Consultando personal…</p> : errorConsulta ? (
+      <button className="boton secundario" type="button" onClick={() => void consultar(pagina)}>Reintentar consulta</button>
+    ) : (
       <section className="panel" aria-label="Personal registrado">
         <h2>Personal institucional</h2>
         {resultado.datos.length === 0 ? <p>No se encontraron cuentas para consultar.</p> : (
