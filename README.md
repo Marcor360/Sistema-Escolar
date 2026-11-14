@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.38.3`** · Ayudas de proceso por módulo, jerarquías de permisos y navegación accesible en web. Orientaciones de alta, inscripción, docencia y finanzas sin nuevas autorizaciones ni migraciones. Pruebas técnicas, aceptación institucional y despliegue se acreditan por separado.
+**Versión candidata: `1.38.4`** · Mapa visual de journeys para seis roles y plan UAT de 84 casos pendientes; documentación y numeración de release, sin cambios funcionales ni migraciones. Pruebas técnicas, aceptación institucional y despliegue se acreditan por separado.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -19,6 +19,8 @@ Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [ín
 
 ### Entrega actual
 
+La candidata **1.38.4** incorpora Mapa visual de journeys para seis roles y plan UAT de 84 casos pendientes; documentación y numeración de release, sin cambios funcionales ni migraciones. Conserva los cambios históricos de 1.37.0, documentados en [carga masiva y preparación](docs/CARGA_MASIVA_1.37.0.md). Publicación y aceptación institucional se acreditan por separado.
+
 La candidata **1.38.3** incorpora Ayudas de proceso por módulo, jerarquías de permisos y navegación accesible en web. Orientaciones de alta, inscripción, docencia y finanzas sin nuevas autorizaciones ni migraciones. Conserva los cambios históricos de 1.37.0, documentados en [carga masiva y preparación](docs/CARGA_MASIVA_1.37.0.md). Publicación y aceptación institucional se acreditan por separado.
 
 La candidata **1.38.2** incorpora Recorridos guiados de maestro y alumno para temarios, tareas, entregas y calificaciones de trabajos, distinguidos de las calificaciones oficiales. Solo interfaz y pruebas; sin migraciones. Conserva los cambios históricos de 1.37.0, documentados en [carga masiva y preparación](docs/CARGA_MASIVA_1.37.0.md). Publicación y aceptación institucional se acreditan por separado.
@@ -27,6 +29,8 @@ La candidata **1.38.1** incorpora ayudas contextuales, validación de cargos y e
 
 La candidata **1.38.0** permite registrar una apertura con el nivel académico y completar plan/periodo después; muestra pendientes de grupo, materias y profesores. Vincula personal existente como docente conservando su cuenta y sus demás funciones. [Reglas de apertura y personal](docs/APERTURA_FLEXIBLE_Y_PERSONAL_1.38.0.md). Conserva la entrega 1.37.0, que añade importación CSV/XLSX de materias y grupos con plantilla, previsualización y confirmación atómica; omite duplicados sin modificar los existentes. Incluye indicadores de preparación por grupo y evita descargar el catálogo completo de materias al consultar grupos. Conserva el rediseño y los recorridos de 1.36.0. Sin migraciones nuevas. [Alcance y mediciones](docs/CARGA_MASIVA_1.37.0.md). Publicación y aceptación institucional se acreditan por separado.
 
+- [Mapa integral de todos los procesos](docs/journeys/MAPA_INTEGRAL_SISTEMA_2026-11-13.md): dependencias, siete diagramas y pasos por rol.
+- [Plan integral de aceptación](docs/journeys/PLAN_UAT_INTEGRAL_2026-11-13.md): 84 escenarios pendientes de ejecución por rol y plataforma.
 - [Portal del alumno](docs/PORTAL_ALUMNO_REFERENCIA_UTC.md): diseño y navegación.
 - [Carga académica guiada](docs/CARGA_ACADEMICA_GUIADA.md): orden para materias, grupos y alumnos.
 - [Recorridos por tarea](docs/RECORRIDOS_POR_TAREA.md): guías administrativas y del alumno.

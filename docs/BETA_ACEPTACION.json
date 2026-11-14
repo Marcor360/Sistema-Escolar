@@ -1,6 +1,6 @@
 {
-  "version": "1.38.3",
-  "alcance": "Candidata 1.38.3: Ayudas de proceso por módulo, jerarquías de permisos y navegación accesible en web. Orientaciones de alta, inscripción, docencia y finanzas sin nuevas autorizaciones ni migraciones.",
+  "version": "1.38.4",
+  "alcance": "Candidata 1.38.4: Mapa visual de journeys para seis roles y plan UAT de 84 casos pendientes; documentación y numeración de release, sin cambios funcionales ni migraciones.",
   "puertas": [
     {
       "id": "ci_ultimo_sha",
