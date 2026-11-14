@@ -25,10 +25,16 @@ export class ConceptosService {
   }
 
   async actualizar(id: number, dto: ActualizarConceptoDto) {
-    await this.obtener(id);
-    if (dto.tipo) this.validarTipo(dto.tipo);
+    const actual = await this.obtener(id);
     exigirCambios(dto);
-    try { await this.repo.update(id, dto); }
+    // La clasificación gobierna reglas de cargos y programaciones, incluso en historiales.
+    if (dto.tipo !== undefined && dto.tipo !== actual.tipo) {
+      throw new ConflictException('El tipo de concepto no puede cambiarse una vez creado. Registra otro concepto y conserva el historial.');
+    }
+    const cambios = { ...dto };
+    delete cambios.tipo;
+    if (!Object.keys(cambios).length) return actual;
+    try { await this.repo.update(id, cambios); }
     catch (error) { if (esConflictoUnico(error)) throw new ConflictException('La clave de concepto ya está registrada'); throw error; }
     return this.repo.findOne({ where: { id } });
   }

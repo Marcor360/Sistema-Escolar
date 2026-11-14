@@ -1,6 +1,6 @@
 {
-  "version": "1.38.4",
-  "alcance": "Candidata 1.38.4: Mapa visual de journeys para seis roles y plan UAT de 84 casos pendientes; documentación y numeración de release, sin cambios funcionales ni migraciones.",
+  "version": "1.38.5",
+  "alcance": "Candidata 1.38.5: Protección de integridad financiera: el tipo de concepto queda inmutable tras el alta, mientras nombre, tarifa base futura y estado siguen editables; pruebas unitarias sin migraciones.",
   "puertas": [
     {
       "id": "ci_ultimo_sha",
