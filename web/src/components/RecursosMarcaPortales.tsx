@@ -36,9 +36,13 @@ export function RecursosMarcaPortales() {
       const datos = new FormData();
       datos.append(favicon ? 'imagen' : 'logo', favicon ? archivo : await optimizarLogo(archivo));
       await api.post('/configuracion/marca/' + ruta, datos);
-      await recargar();
       setArchivos((actual) => ({ ...actual, [campo]: undefined }));
-      setExito('Recurso actualizado correctamente.');
+      try {
+        await recargar();
+        setExito('Recurso actualizado correctamente.');
+      } catch {
+        setError('El recurso se guardó, pero no se pudo actualizar la vista. Recarga la página para visualizarlo.');
+      }
     } catch (error) { setError(mensajeDeError(error)); }
     finally { setOcupado(null); }
   };
@@ -52,8 +56,12 @@ export function RecursosMarcaPortales() {
     setOcupado(campo); setError(''); setExito('');
     try {
       await api.delete('/configuracion/marca/' + ruta);
-      await recargar();
-      setExito('Recurso retirado correctamente.');
+      try {
+        await recargar();
+        setExito('Recurso retirado correctamente.');
+      } catch {
+        setError('El recurso se retiró, pero no se pudo actualizar la vista. Recarga la página para comprobarlo.');
+      }
     } catch (error) { setError(mensajeDeError(error)); }
     finally { setOcupado(null); }
   };
