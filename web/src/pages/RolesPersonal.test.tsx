@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import RolesPersonal from './RolesPersonal';
 import { api } from '../api/client';
@@ -40,7 +40,7 @@ it('solicita confirmación accesible antes de revocar funciones y permite cancel
   expect(dialogo.textContent).toContain('Personal autorizado');
   expect(dialogo.textContent).toContain('Se revocarán sus sesiones anteriores');
   expect(patch).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole('button', { name: 'Cancelar', hidden: false }).closest('dialog')!.querySelector('button[type="button"]')!);
+  fireEvent.click(within(dialogo).getByRole('button', { name: 'Cancelar' }));
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   expect(patch).not.toHaveBeenCalled();
   fireEvent.click(guardar);
