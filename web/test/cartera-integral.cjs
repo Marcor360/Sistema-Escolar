@@ -132,6 +132,7 @@ let browser;
     await page.getByLabel('Nivel académico', { exact: true }).selectOption('1');
     await page.getByLabel('Carrera y plan', { exact: true }).selectOption('1');
     await page.getByLabel('Periodo académico', { exact: true }).selectOption('1');
+    await page.getByLabel('Asignación de grupo', { exact: true }).selectOption('PAUSA');
     await page.getByLabel('Total contratado del periodo').fill('200');
     await page.getByLabel('Concepto', { exact: true }).selectOption('1');
     await page.getByLabel('Mes de cobro', { exact: true }).fill('2057-02');

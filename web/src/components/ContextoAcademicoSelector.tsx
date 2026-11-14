@@ -11,12 +11,14 @@ export function ContextoAcademicoSelector({
   valor,
   cambiar,
   deshabilitado = false,
+  planOpcional = false,
 }: {
   plantelId: string;
   cicloId: string;
   valor: ContextoAcademicoValor;
   cambiar: (v: ContextoAcademicoValor) => void;
   deshabilitado?: boolean;
+  planOpcional?: boolean;
 }) {
   return (
     <fieldset disabled={deshabilitado} className="contexto-academico">
@@ -37,6 +39,7 @@ export function ContextoAcademicoSelector({
             <SelectorBuscable<{ id: number; nombre: string; versionPlan: string }>
               ruta="/academico/catalogos/carreras"
               etiqueta="Carrera y plan"
+              requerido={!planOpcional}
               valor={valor.carreraId}
               filtros={{ plantelId, nivelId: valor.nivelId }}
               cambiar={(carreraId) => cambiar({ ...valor, carreraId, periodoAcademicoId: '' })}
@@ -47,6 +50,7 @@ export function ContextoAcademicoSelector({
             <SelectorBuscable<{ id: number; nombre: string; tipo: string; numero: number }>
               ruta="/academico/catalogos/periodos"
               etiqueta="Periodo académico"
+              requerido={!planOpcional}
               valor={valor.periodoAcademicoId}
               filtros={{ plantelId, carreraId: valor.carreraId, cicloId }}
               cambiar={(periodoAcademicoId) => cambiar({ ...valor, periodoAcademicoId })}

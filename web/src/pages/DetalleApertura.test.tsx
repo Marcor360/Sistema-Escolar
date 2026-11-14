@@ -11,7 +11,7 @@ const dato = {
   estado: 'PAUSA',
   grupoId: null,
   total: 200,
-  contexto: { plantelId: 1 },
+  contexto: { plantelId: 1, cicloId: 2, nivelId: 3, carreraId: 4, periodoAcademicoId: 5 },
   financiero: { aperturas: [], cargos: [], pagado: 0, saldo: 0 },
 };
 afterEach(() => {
@@ -89,4 +89,13 @@ it('cancelar la confirmación no genera cargos; reanudar actualiza el estado y e
   await waitFor(() => expect(screen.queryByRole('button', { name: 'Revisar reanudación' })).toBeNull());
   expect(post).toHaveBeenCalledTimes(1);
   expect(show).toHaveBeenCalledTimes(2);
+});
+
+it('muestra pendientes y pide completar plan y periodo antes de reanudar', async () => {
+  vi.spyOn(api, 'get').mockImplementation(async ruta => ({ data: ruta === '/cartera/4' ? { ...dato, contexto: { plantelId: 1, cicloId: 2, nivelId: 3 }, avisos: ['El alumno todavía no tiene grupo asignado.'] } : { datos: [], total: 0 } }));
+  montar();
+  await screen.findByRole('region', { name: 'Pendientes académicos' });
+  expect(screen.getByText('El alumno todavía no tiene grupo asignado.')).toBeTruthy();
+  expect((screen.getByRole('button', { name: 'Revisar reanudación' }) as HTMLButtonElement).disabled).toBe(true);
+  expect(screen.getByLabelText('Carrera y plan pendientes')).toBeTruthy();
 });
