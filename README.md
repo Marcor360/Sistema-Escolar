@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.38.1`** · Ayudas de creación progresiva en catálogos académicos y grupos, catálogo de conceptos, validación y estados financieros, con pruebas y mapa UX. Sin cambios de esquema ni reglas de cobro; CI y UAT pendientes. Pruebas técnicas, aceptación institucional y despliegue se acreditan por separado.
+**Versión candidata: `1.38.2`** · Recorridos guiados de maestro y alumno para temarios, tareas, entregas y calificaciones de trabajos, distinguidos de las calificaciones oficiales. Solo interfaz y pruebas; sin migraciones. Pruebas técnicas, aceptación institucional y despliegue se acreditan por separado.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -18,6 +18,8 @@ Sistema escolar multiplataforma para operación académica, administrativa y fin
 Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [índice documental](docs/README.md) e [historial de documentos retirados](docs/HISTORIAL.md).
 
 ### Entrega actual
+
+La candidata **1.38.2** incorpora Recorridos guiados de maestro y alumno para temarios, tareas, entregas y calificaciones de trabajos, distinguidos de las calificaciones oficiales. Solo interfaz y pruebas; sin migraciones. Conserva los cambios históricos de 1.37.0, documentados en [carga masiva y preparación](docs/CARGA_MASIVA_1.37.0.md). Publicación y aceptación institucional se acreditan por separado.
 
 La candidata **1.38.1** incorpora ayudas contextuales, validación de cargos y estados de conceptos, conservando las importaciones y los recorridos de 1.37.0. La apertura flexible 1.38.0 ya está integrada. Sin migraciones. [Alcance del journey](docs/JOURNEY_ACADEMIA_FINANZAS_2026-11-13.md). Publicación y aceptación institucional se acreditan por separado.
 

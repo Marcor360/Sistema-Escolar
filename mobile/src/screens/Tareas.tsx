@@ -275,7 +275,7 @@ export default function TareasScreen() {
           <>
             <GuiaPantalla
               titulo="Mis tareas"
-              detalle="Adjunta un archivo de hasta 100 MB o escribe tu respuesta (máximo 3000 caracteres). Formatos: PDF, Office, OpenDocument, imágenes, RTF, CSV, TXT, MD, ZIP, MP3, WAV, MP4 y M4A. La entrega solo queda registrada al recibir confirmación del servidor."
+              detalle="Selecciona una tarea, adjunta un archivo de hasta 100 MB o escribe una respuesta de máximo 3000 caracteres. Revisa la fecha de entrega y espera confirmación del servidor antes de salir. Una entrega evaluada ya no puede sustituirse; su nota no equivale necesariamente a la calificación oficial de la materia."
             />
             {error !== "" && <ErrorCarga mensaje={error} reintentar={cargar} />}
             {ultimaActualizacion && (
@@ -319,14 +319,14 @@ export default function TareasScreen() {
         }
         ListEmptyComponent={
           cargaInicialCompleta && !error ? (
-            <Vacio mensaje="Sin tareas pendientes por ahora." />
+            <Vacio mensaje="No hay tareas disponibles en esta consulta. Revisa Mis materias o actualiza la lista." />
           ) : !cargaInicialCompleta && !error ? (
             <ActivityIndicator accessibilityLabel="Cargando tareas" />
           ) : null
         }
         renderItem={({ item }) => (
           <Tarjeta>
-            <Text style={base.tituloTarjeta}>{item.titulo}</Text>
+            <Text style={base.tituloTarjeta}>{item.titulo}</Text>{item.entrega?.estatus === "CALIFICADA" && <Text style={base.secundario}>Entrega evaluada. Consulta aquí la retroalimentación del docente; la nota oficial del periodo está en Calificaciones.</Text>}
             {item.entrega?.comentarioDocente && (
               <Text>
                 Comentarios del profesor: {item.entrega.comentarioDocente}

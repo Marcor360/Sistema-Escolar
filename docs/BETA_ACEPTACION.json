@@ -1,6 +1,6 @@
 {
-  "version": "1.38.1",
-  "alcance": "Candidata 1.38.1: Ayudas de creación progresiva en catálogos académicos y grupos, catálogo de conceptos, validación y estados financieros, con pruebas y mapa UX. Sin cambios de esquema ni reglas de cobro; CI y UAT pendientes.",
+  "version": "1.38.2",
+  "alcance": "Candidata 1.38.2: Recorridos guiados de maestro y alumno para temarios, tareas, entregas y calificaciones de trabajos, distinguidos de las calificaciones oficiales. Solo interfaz y pruebas; sin migraciones.",
   "puertas": [
     {
       "id": "ci_ultimo_sha",

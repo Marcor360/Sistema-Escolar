@@ -1350,3 +1350,12 @@ it('Inicio muestra boletas publicadas pendientes y permite ir a Calificaciones',
  const boton=vista.root.findAllByType(TouchableOpacity).find(b=>b.findAll(n=>n.children.some(c=>typeof c==='string'&&c==='Revisar mis boletas')).length>0)!;
  await act(async()=>boton.props.onPress());expect(sesion.navegar).toHaveBeenCalledWith('Calificaciones');
 });
+
+it("explica que la nota de tareas es distinta de la calificación oficial y muestra vacío real", async () => {
+  vi.mocked(api.get).mockImplementation(async ruta => ({
+    data: ruta === "/alumnos/me/tareas/listado" ? { datos: [], total: 0 } : [],
+  }));
+  await montar(<Tareas />);
+  expect(texto()).toContain("Una entrega evaluada ya no puede sustituirse");
+  expect(texto()).toContain("No hay tareas disponibles en esta consulta");
+});
