@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query,
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ActivacionService } from '../auth/activacion.service';
 import { DocentesService } from './docentes.service';
-import { ActualizarDocenteDto, CrearDocenteDto, ListarDocentesDto, PlantelesDocenteDto, ReactivarDocenteDto } from './docentes.dto';
+import { ActualizarDocenteDto, CrearDocenteDto, VincularPersonalDocenteDto, ListarDocentesDto, PlantelesDocenteDto, ReactivarDocenteDto } from './docentes.dto';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { RolesGuard } from '../common/roles.guard';
 import { Roles } from '../common/roles.decorator';
@@ -28,6 +28,11 @@ export class DocentesController {
     const docente = await this.service.crear(dto, user);
     await this.activacion.solicitar(dto.email);
     return docente;
+  }
+  @Post('vincular-personal')
+  @ApiOperation({ summary: 'Vincular personal existente como docente conservando sus funciones y planteles' })
+  vincularPersonal(@Body() dto: VincularPersonalDocenteDto, @CurrentUser() user: JwtUser) {
+    return this.service.vincularPersonal(dto, user);
   }
   @Patch(':id') actualizar(
     @Param('id', ParseIntPipe) id: number, @Body() dto: ActualizarDocenteDto, @CurrentUser() user: JwtUser,

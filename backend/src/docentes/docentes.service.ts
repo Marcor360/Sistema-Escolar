@@ -1,3 +1,10 @@
+import { esConflictoTransaccional, esConflictoUnico } from '../academico/conflictos';
+import { Rol } from '../entities/rol.entity';
+import { HistorialRolesUsuario } from '../entities/historial-roles-usuario.entity';
+import { validarCambioRolesPersonal } from '../common/jerarquia-roles';
+import { RolClave } from '../common/roles.decorator';
+import { EntityManager } from 'typeorm';
+import { vincularPersonalDocente } from './vincular-personal';
 import { randomBytes } from 'crypto';
 import { Usuario } from '../entities/usuario.entity';
 import { BitacoraAcademica } from '../entities/bitacora-academica.entity';
@@ -8,7 +15,7 @@ import { Plantel } from '../entities/plantel.entity';
 import { GrupoMateria } from '../entities/grupo-materia.entity';
 import { Docente } from '../entities/docente.entity';
 import { UsuariosService } from '../usuarios/usuarios.service';
-import { ActualizarDocenteDto, CrearDocenteDto, ListarDocentesDto } from './docentes.dto';
+import { ActualizarDocenteDto, CrearDocenteDto, ListarDocentesDto, VincularPersonalDocenteDto } from './docentes.dto';
 import { UsuarioPlantel } from '../entities/usuario-plantel.entity';
 import { ScopeService } from '../planteles/scope.service';
 import { JwtUser } from '../common/current-user.decorator';
@@ -77,6 +84,8 @@ export class DocentesService {
     if (!ids.length) throw new ConflictException('Asigna al menos un plantel');
     for (const plantelId of ids) await this.scope.validarGestion(user, plantelId);
     return this.dataSource.transaction(async (manager) => {
+      await this.validarPersonalCompartido(manager, docente, user);
+      if (this.esPersonalCompartido(docente)) throw new ConflictException('Gestiona los planteles del personal con varias funciones desde Usuarios');
       const asignaciones = manager.getRepository(UsuarioPlantel);
       const anteriores = await asignaciones.find({ where: { usuarioId: docente.usuarioId, activo: true } });
       for (const anterior of anteriores) {
@@ -110,10 +119,41 @@ export class DocentesService {
     throw new ForbiddenException('El docente no pertenece a un plantel dentro de tu alcance');
   }
 
+  private esPersonalCompartido(docente: Docente) {
+    return docente.usuario?.roles?.some(r => ['ADMINISTRATIVO', 'FINANZAS', 'DIRECTOR', 'SUPERADMIN'].includes(r.clave)) ?? false;
+  }
+
+  private async validarPersonalCompartido(manager: EntityManager, docente: Docente, user: JwtUser) {
+    docente.usuario = await manager.getRepository(Usuario).findOneOrFail({ where: { id: docente.usuarioId }, lock: { mode: 'pessimistic_write' } });
+    if (!this.esPersonalCompartido(docente)) return;
+    const actor = await manager.getRepository(Usuario).findOneBy({ id: user.sub, activo: true });
+    if (!actor) throw new ForbiddenException('Cuenta autorizante inactiva');
+    const roles = docente.usuario.roles.map(r => r.clave) as RolClave[];
+    validarCambioRolesPersonal({ sub: actor.id, roles: actor.roles.map(r => r.clave) }, docente.usuarioId, roles, roles);
+  }
+
+  private async cambiarFuncionCompartida(manager: EntityManager, docente: Docente, activar: boolean, actor: JwtUser) {
+    const usuario = await manager.getRepository(Usuario).findOneOrFail({ where: { id: docente.usuarioId }, lock: { mode: 'pessimistic_write' } });
+    const anteriores = usuario.roles.map(r => r.clave);
+    usuario.roles = usuario.roles.filter(r => r.clave !== 'MAESTRO');
+    if (activar) usuario.roles.push(await manager.getRepository(Rol).findOneByOrFail({ clave: 'MAESTRO' }));
+    usuario.sessionVersion = (usuario.sessionVersion ?? 0) + 1;
+    await manager.getRepository(Usuario).save(usuario);
+    await manager.getRepository(HistorialRolesUsuario).insert({ usuarioId: usuario.id, actorId: actor.sub, rolesAntes: anteriores.sort().join(','), rolesDespues: usuario.roles.map(r => r.clave).sort().join(',') });
+  }
+
   async obtenerPorUsuario(usuarioId: number) {
     const docente = await this.docentes.findOne({ where: { usuarioId } });
     if (!docente) throw new NotFoundException('El usuario no tiene expediente de docente');
     return docente;
+  }
+
+  async vincularPersonal(dto: VincularPersonalDocenteDto, user: JwtUser) {
+    try { return await this.dataSource.transaction(m => vincularPersonalDocente(m, dto, user, this.scope)); }
+    catch (e) {
+      if (esConflictoUnico(e) || esConflictoTransaccional(e)) throw new ConflictException('La cuenta o el expediente cambiaron concurrentemente; consulta el resultado antes de reintentar');
+      throw e;
+    }
   }
 
   async crear(dto: CrearDocenteDto, user: JwtUser) {
@@ -160,6 +200,7 @@ export class DocentesService {
       const docente = await docentes.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!docente) throw new NotFoundException('Docente no encontrado');
       await this.validarAlcanceDocente(docente.usuarioId, user, true);
+      await this.validarPersonalCompartido(manager, docente, user);
       if ([dto.nombre, dto.segundoNombre, dto.apellidoPaterno, dto.apellidoMaterno, dto.telefono, dto.correoProveedor].some((v) => v !== undefined)) {
         await this.usuarios.actualizar(docente.usuarioId, {
           nombre: dto.nombre,
@@ -186,17 +227,19 @@ export class DocentesService {
       const docente = await docentes.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!docente) throw new NotFoundException('Docente no encontrado');
       await this.validarAlcanceDocente(docente.usuarioId, user, true);
+      await this.validarPersonalCompartido(manager, docente, user);
       if (docente.estatus !== 'ACTIVO') throw new ConflictException('El docente ya está dado de baja');
       docente.estatus = 'BAJA';
       await docentes.save(docente);
       // Las notas y actividades conservan a sus autores; las clases quedan pendientes de reasignación.
       await manager.getRepository(GrupoMateria).update({ docenteId: id }, { docenteId: null });
       const plantelesPrevios = await manager.getRepository(UsuarioPlantel).find({ where: { usuarioId: docente.usuarioId, activo: true } });
-      await manager.getRepository(UsuarioPlantel).update(
-        { usuarioId: docente.usuarioId, activo: true }, { activo: false },
-      );
-      await this.usuarios.actualizar(docente.usuarioId, { activo: false }, manager);
-      for (const plantelId of [...new Set(plantelesPrevios.map((a) => a.plantelId))]) await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId, accion: 'DOCENTE_BAJA', entidadId: id, detalle: 'Cuenta y planteles desactivados; clases pendientes de reasignación', fecha: new Date() });
+      if (this.esPersonalCompartido(docente)) await this.cambiarFuncionCompartida(manager, docente, false, user);
+      else {
+        await manager.getRepository(UsuarioPlantel).update({ usuarioId: docente.usuarioId, activo: true }, { activo: false });
+        await this.usuarios.actualizar(docente.usuarioId, { activo: false }, manager);
+      }
+      for (const plantelId of [...new Set(plantelesPrevios.map((a) => a.plantelId))]) await manager.getRepository(BitacoraAcademica).insert({ usuarioId: user.sub, plantelId, accion: 'DOCENTE_BAJA', entidadId: id, detalle: this.esPersonalCompartido(docente) ? 'Baja de función docente; conserva cuenta, funciones administrativas y planteles; clases pendientes' : 'Cuenta y planteles desactivados; clases pendientes de reasignación', fecha: new Date() });
       return { ok: true };
     });
   }
@@ -212,8 +255,14 @@ export class DocentesService {
       for (const plantelId of ids) {
         if (!await manager.getRepository(Plantel).findOneBy({ id: plantelId, activo: true })) throw new ConflictException('El plantel no está activo');
       }
+      await this.validarPersonalCompartido(manager, actual, user);
+      if (this.esPersonalCompartido(actual)) {
+        if (!actual.usuario.activo) throw new ConflictException('Reactiva primero la cuenta de personal desde Usuarios');
+        const vigentes = await manager.getRepository(UsuarioPlantel).find({ where: { usuarioId: actual.usuarioId, activo: true } });
+        if (ids.length !== vigentes.length || ids.some(id => !vigentes.some(p => p.plantelId === id))) throw new ConflictException('El personal compartido conserva sus planteles; gestiona sus asignaciones desde Usuarios');
+        await this.cambiarFuncionCompartida(manager, actual, true, user);
+      } else await this.usuarios.actualizar(docente.usuarioId, { activo: true }, manager);
       await repo.update(id, { estatus: 'ACTIVO' });
-      await this.usuarios.actualizar(docente.usuarioId, { activo: true }, manager);
       const asignaciones = manager.getRepository(UsuarioPlantel);
       for (const plantelId of ids) {
         const previa = await asignaciones.findOneBy({ usuarioId: actual.usuarioId, plantelId });

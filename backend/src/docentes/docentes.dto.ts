@@ -63,3 +63,13 @@ export class PlantelesDocenteDto {
 export class ReactivarDocenteDto extends PlantelesDocenteDto {
   @IsString() @MinLength(3) @MaxLength(500) motivo!: string;
 }
+
+export class VincularPersonalDocenteDto {
+  @IsInt() @Min(1) usuarioId!: number;
+  @Normalizar(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim().toUpperCase() : value)
+  @IsString() @MinLength(1) @MaxLength(20) numEmpleado!: string;
+  @IsOptional() @IsBoolean() cedulaPendiente?: boolean;
+  @ValidateIf((dto: VincularPersonalDocenteDto) => !dto.cedulaPendiente)
+  @IsString() @MinLength(1) @MaxLength(20) cedulaProfesional?: string;
+  @IsOptional() @IsString() @MaxLength(120) especialidad?: string;
+}
