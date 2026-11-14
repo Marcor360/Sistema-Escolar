@@ -54,9 +54,12 @@ export function GestionComunicadosAlumno() {
     try {
       if (editando !== null) await api.patch(`/notificaciones/comunicados/${editando}`, datos);
       else await api.post('/notificaciones/comunicados', { ...datos, plantelId: Number(plantelId) });
-      await cargar();
       setDatos(vacio); setEditando(null);
       setExito('Borrador guardado. No se ha enviado ninguna notificación.');
+      try {
+        await cargar();
+        setErrorConsulta('');
+      } catch (fallo) { setErrorConsulta(mensajeDeError(fallo)); }
     } catch (fallo) { setError(mensajeDeError(fallo)); }
     finally { setOcupado(false); }
   };
@@ -78,7 +81,10 @@ export function GestionComunicadosAlumno() {
       })) return;
       const respuesta = await api.post<{ enviadas: number; repetido: boolean }>(`/notificaciones/comunicados/${id}/publicar`);
       setExito(respuesta.data.repetido ? 'Este comunicado ya había sido publicado; no se duplicó.' : `Comunicado publicado a ${respuesta.data.enviadas} alumnos.`);
-      await cargar();
+      try {
+        await cargar();
+        setErrorConsulta('');
+      } catch (fallo) { setErrorConsulta(mensajeDeError(fallo)); }
     } catch (fallo) { setError(mensajeDeError(fallo)); }
     finally { setOcupado(false); }
   };
