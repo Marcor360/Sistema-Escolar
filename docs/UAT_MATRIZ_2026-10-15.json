@@ -1,6 +1,6 @@
 {
-  "version": "1.37.0",
-  "alcance": "Candidata 1.37.0: importación masiva de materias y grupos con plantillas, previsualización cifrada, duplicados y confirmación atómica; resumen de preparación por grupo y carga diferida del catálogo de materias basada en mediciones. Sin migraciones nuevas; publicación y aceptación institucional pendientes.",
+  "version": "1.38.2",
+  "alcance": "Candidata 1.38.2: Recorridos guiados de maestro y alumno para temarios, tareas, entregas y calificaciones de trabajos, distinguidos de las calificaciones oficiales. Solo interfaz y pruebas; sin migraciones.",
   "escenarios": [
     {
       "id": "UAT-01",
