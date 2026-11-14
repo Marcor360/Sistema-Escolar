@@ -1,5 +1,6 @@
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
+import { useConfirmacion } from './useConfirmacion';
 
 type Plantel = { id: number; nombre: string };
 type Comunicado = {
@@ -10,6 +11,10 @@ type Listado = { datos: Comunicado[]; total: number; pagina: number; porPagina: 
 const vacio = { titulo: '', mensaje: '' };
 
 export function GestionComunicadosAlumno() {
+  const confirmacion = useConfirmacion();
+  const consultaActual = useRef(0);
+  const [revision, setRevision] = useState(0);
+  const [errorConsulta, setErrorConsulta] = useState('');
   const [planteles, setPlanteles] = useState<Plantel[]>([]);
   const [plantelId, setPlantelId] = useState('');
   const [datos, setDatos] = useState(vacio);
@@ -22,10 +27,12 @@ export function GestionComunicadosAlumno() {
   const [exito, setExito] = useState('');
 
   const cargar = useCallback(async () => {
+    const solicitud = ++consultaActual.current;
     const [{ data: sedes }, { data: lista }] = await Promise.all([
       api.get<Plantel[]>('/planteles/mios'),
       api.get<Listado>('/notificaciones/comunicados', { params: { pagina, porPagina: 10 } }),
     ]);
+    if (solicitud !== consultaActual.current) return;
     setPlanteles(sedes);
     setListado(lista);
     setPlantelId((actual) => actual || String(sedes[0]?.id || ''));
@@ -34,10 +41,11 @@ export function GestionComunicadosAlumno() {
   useEffect(() => {
     let vigente = true;
     setCargando(true);
-    void cargar().catch((fallo: unknown) => { if (vigente) setError(mensajeDeError(fallo)); })
+    setErrorConsulta('');
+    void cargar().catch((fallo: unknown) => { if (vigente) setErrorConsulta(mensajeDeError(fallo)); })
       .finally(() => { if (vigente) setCargando(false); });
-    return () => { vigente = false; };
-  }, [cargar]);
+    return () => { vigente = false; consultaActual.current += 1; };
+  }, [cargar, revision]);
 
   const guardar = async (evento: FormEvent) => {
     evento.preventDefault();
@@ -62,7 +70,12 @@ export function GestionComunicadosAlumno() {
         setError(data.excedeLimite ? 'La campaña supera 500 alumnos. Divide la audiencia antes de enviar.' : 'El plantel no tiene alumnos activos destinatarios.');
         return;
       }
-      if (!window.confirm(`¿Publicar este comunicado para ${data.destinatarios} alumnos activos? Esta acción no se puede deshacer.`)) return;
+      if (!await confirmacion.solicitar({
+        titulo: 'Publicar comunicado a alumnos',
+        descripcion: `Se publicará este comunicado para ${data.destinatarios} alumnos activos. Revisa el contenido y el plantel antes de continuar; la publicación no puede deshacerse.`,
+        riesgo: 'alto',
+        etiqueta: 'Publicar comunicado',
+      })) return;
       const respuesta = await api.post<{ enviadas: number; repetido: boolean }>(`/notificaciones/comunicados/${id}/publicar`);
       setExito(respuesta.data.repetido ? 'Este comunicado ya había sido publicado; no se duplicó.' : `Comunicado publicado a ${respuesta.data.enviadas} alumnos.`);
       await cargar();
@@ -78,6 +91,7 @@ export function GestionComunicadosAlumno() {
   };
 
   return <section className="panel" aria-labelledby="comunicados-alumnos-titulo">
+    {confirmacion.elemento}
     <h2 id="comunicados-alumnos-titulo">Comunicados gestionados para alumnos</h2>
     <p className="detalle">Prepara mensajes por plantel y publícalos después de revisar el número de alumnos. El historial enviado se conserva y no se modifica.</p>
     <form onSubmit={(evento) => void guardar(evento)} aria-busy={ocupado}>
@@ -93,9 +107,11 @@ export function GestionComunicadosAlumno() {
         {editando !== null && <button className="boton secundario" type="button" onClick={() => { setEditando(null); setDatos(vacio); }}>Cancelar edición</button>}</div>
     </form>
     {error && <p role="alert" className="mensaje-error">{error}</p>}
+    {errorConsulta && <p role="alert" className="mensaje-error">No se pudieron consultar los comunicados: {errorConsulta}</p>}
     {exito && <p role="status" className="mensaje-ok">{exito}</p>}
     <h3>Historial y borradores</h3>
     {cargando ? <p role="status">Cargando comunicados…</p>
+      : errorConsulta ? <button type="button" className="boton secundario" onClick={() => setRevision((v) => v + 1)}>Reintentar consulta</button>
       : !listado?.datos.length ? <p>No hay comunicados en los planteles autorizados.</p>
       : <ul>{listado.datos.map((comunicado) => <li key={comunicado.id}>
         <strong>{comunicado.titulo}</strong> · {comunicado.estado === 'ENVIADO' ? `Publicado a ${comunicado.destinatarios} alumnos` : 'Borrador'} · {planteles.find((plantel) => plantel.id === comunicado.plantelId)?.nombre ?? 'Plantel autorizado'}
@@ -106,9 +122,9 @@ export function GestionComunicadosAlumno() {
         </div>}
       </li>)}</ul>}
     <div className="fila">
-      <button type="button" className="boton secundario" disabled={pagina <= 1 || ocupado} onClick={() => setPagina((actual) => actual - 1)}>Anterior</button>
+      <button type="button" className="boton secundario" disabled={pagina <= 1 || ocupado || cargando || !!errorConsulta} onClick={() => setPagina((actual) => actual - 1)}>Anterior</button>
       <span>Página {pagina}</span>
-      <button type="button" className="boton secundario" disabled={ocupado || (listado?.total ?? 0) <= pagina * 10} onClick={() => setPagina((actual) => actual + 1)}>Siguiente</button>
+      <button type="button" className="boton secundario" disabled={ocupado || cargando || !!errorConsulta || (listado?.total ?? 0) <= pagina * 10} onClick={() => setPagina((actual) => actual + 1)}>Siguiente</button>
     </div>
   </section>;
 }
