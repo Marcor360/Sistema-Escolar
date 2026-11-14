@@ -21,6 +21,8 @@ Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [ín
 
 La candidata **1.38.4** incorpora Mapa visual de journeys para seis roles y plan UAT de 84 casos pendientes; documentación y numeración de release, sin cambios funcionales ni migraciones. Conserva los cambios históricos de 1.37.0, documentados en [carga masiva y preparación](docs/CARGA_MASIVA_1.37.0.md). Publicación y aceptación institucional se acreditan por separado.
 
+- [Mapa integral de todos los procesos](docs/journeys/MAPA_INTEGRAL_SISTEMA_2026-11-13.md): dependencias, siete diagramas y pasos por rol.
+- [Plan integral de aceptación](docs/journeys/PLAN_UAT_INTEGRAL_2026-11-13.md): 84 escenarios pendientes de ejecución por rol y plataforma.
 - [Portal del alumno](docs/PORTAL_ALUMNO_REFERENCIA_UTC.md): diseño y navegación.
 - [Carga académica guiada](docs/CARGA_ACADEMICA_GUIADA.md): orden para materias, grupos y alumnos.
 - [Recorridos por tarea](docs/RECORRIDOS_POR_TAREA.md): guías administrativas y del alumno.
