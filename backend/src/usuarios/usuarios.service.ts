@@ -1,3 +1,4 @@
+import { GrupoMateria } from '../entities/grupo-materia.entity';
 import { UsuarioVinculoPersona } from '../entities/usuario-vinculo-persona.entity';
 import { VincularAlumnoPersonalDto } from './usuarios.dto';
 import { esConflictoUnico } from '../academico/conflictos';
@@ -292,7 +293,7 @@ export class UsuariosService {
 
   async detallePersonal(id: number) {
     const usuario = await this.obtener(id);
-    if (usuario.roles.some((r) => ['ALUMNO', 'MAESTRO'].includes(r.clave))) throw new ConflictException('Gestiona la cuenta desde su expediente');
+    if (usuario.roles.some(r => r.clave === 'ALUMNO') || !usuario.roles.some(r => ['ADMINISTRATIVO', 'FINANZAS', 'DIRECTOR', 'SUPERADMIN'].includes(r.clave))) throw new ConflictException('Gestiona la cuenta desde su expediente');
     const asignaciones = await this.asignaciones.find({ where: { usuarioId: id, activo: true } });
     return { ...usuario, plantelIds: asignaciones.map((a) => a.plantelId) };
   }
@@ -304,12 +305,22 @@ export class UsuariosService {
       const repo = manager.getRepository(Usuario);
       const usuario = await repo.findOne({ where: { id }, lock: { mode: 'pessimistic_write' } });
       if (!usuario) throw new NotFoundException('Usuario no encontrado');
-      if (usuario.roles.some((r) => ['ALUMNO', 'MAESTRO'].includes(r.clave))) throw new ConflictException('Gestiona la cuenta desde su expediente');
+      if (usuario.roles.some(r => r.clave === 'ALUMNO') || !usuario.roles.some(r => ['ADMINISTRATIVO', 'FINANZAS', 'DIRECTOR', 'SUPERADMIN'].includes(r.clave))) throw new ConflictException('Gestiona la cuenta desde su expediente');
       const claves = dto.roles ?? usuario.roles.map((r) => r.clave);
-      if (claves.some((r) => ['ALUMNO', 'MAESTRO'].includes(r)) || !claves.length) throw new ConflictException('Selecciona roles de personal autorizado');
+      if (claves.includes('ALUMNO') || !claves.length || claves.includes('MAESTRO') !== usuario.roles.some(r => r.clave === 'MAESTRO')) throw new ConflictException('Conserva la función docente y selecciona roles de personal autorizado');
       if (!claves.includes('SUPERADMIN') && !ids.length) throw new ConflictException('Asigna al menos un plantel al personal');
       for (const plantelId of ids) if (!await manager.getRepository(Plantel).findOneBy({ id: plantelId, activo: true })) throw new ConflictException('Plantel inactivo o inexistente');
       const asignaciones = manager.getRepository(UsuarioPlantel);
+      if (usuario.roles.some(r => r.clave === 'MAESTRO')) {
+        const docente = await manager.getRepository(Docente).findOneBy({ usuarioId: id });
+        if (!docente || docente.estatus !== 'ACTIVO') throw new ConflictException('Revisa el expediente docente antes de modificar el alcance');
+        const anteriores = await asignaciones.find({ where: { usuarioId: id, activo: true } });
+        for (const a of anteriores) {
+          if (ids.includes(a.plantelId)) continue;
+          const clases = await manager.getRepository(GrupoMateria).count({ where: { docenteId: docente.id, grupo: { plantelId: a.plantelId, activo: true, ciclo: { activo: true } } } });
+          if (clases) throw new ConflictException('Reasigna las clases antes de quitar el plantel del personal docente');
+        }
+      }
       await asignaciones.update({ usuarioId: id }, { activo: false });
       for (const plantelId of ids) {
         const previa = await asignaciones.findOneBy({ usuarioId: id, plantelId });

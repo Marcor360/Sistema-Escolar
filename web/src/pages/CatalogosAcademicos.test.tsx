@@ -48,3 +48,14 @@ it('conserva datos tras fallo y guarda un nivel configurable sin datos inventado
   await waitFor(() => expect(router.state.location.pathname).toBe('/catalogos-academicos'));
   expect(post).toHaveBeenLastCalledWith('/academico/catalogos/niveles', { clave: 'LIC', nombre: 'Licenciatura', plantelId: 1 });
 });
+
+it('explica los niveles institucionales y separa periodos de cobros', async () => {
+  vi.spyOn(api, 'get').mockImplementation(async (ruta) => ({
+    data: ruta === '/planteles/mios' ? [] : { datos: [], total: 0 },
+  }));
+  montar('/catalogos-academicos?tipo=niveles');
+  expect(screen.getByText(/Secundaria, Bachillerato, Licenciatura, Maestría o Doctorado/)).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: 'Volver a catálogos' }));
+  fireEvent.click(screen.getByRole('button', { name: /Periodos académicos/ }));
+  expect(screen.getByText(/No equivale a un parcial de calificaciones ni genera colegiaturas/)).toBeTruthy();
+});

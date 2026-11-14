@@ -139,5 +139,5 @@ it('identifica grupos automáticos y sus tareas de preparación pendientes', asy
   expect(screen.getByText('Generado automáticamente')).toBeTruthy();
   await administrar(0);
   expect(await screen.findByText(/Su clave es provisional/)).toBeTruthy();
-  expect(screen.getByText(/Preparación pendiente: registra las materias/)).toBeTruthy();
+  expect(screen.getByText(/El grupo ya está creado. Puedes asignar materias después/)).toBeTruthy();
 });

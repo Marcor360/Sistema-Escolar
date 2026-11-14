@@ -1,3 +1,5 @@
+import { pendientesApertura } from './pendientes-apertura';
+import { contextoAperturaCompleto, validarContextoApertura } from './contexto-apertura';
 import { AperturaIntegralDto, ConfirmarAperturaIntegralDto, ReanudarAperturaDto } from './apertura-integral.dto';
 import { crearIdentidadApertura, validarIdentidadApertura } from './apertura-identidad';
 import { resumenCarteraAlumno } from './resumen-cartera';
@@ -70,16 +72,18 @@ export class CarteraService {
     return this.confirmar(d, u);
   }
 
-  private async cotizar(m: EntityManager, d: PrevisualizarCarteraDto, u: JwtUser, sinAlumno = false) {
+  private async cotizar(m: EntityManager, d: Omit<PrevisualizarCarteraDto, 'carreraId' | 'periodoAcademicoId'> & { carreraId?: number; periodoAcademicoId?: number }, u: JwtUser, sinAlumno = false, parcial = false) {
     await this.scope.validarGestion(u, d.plantelId);
     const pl = await m.getRepository(Plantel).findOne({ where: { id: d.plantelId }, lock: { mode: 'pessimistic_write' } });
     const ciclo = await m.getRepository(CicloEscolar).findOneBy({ id: d.cicloId });
     if (!pl?.activo || !ciclo || !['PREPARACION','ACTIVO'].includes(ciclo.estado)) throw new ConflictException('Plantel y ciclo no disponibles');
     if(await m.getRepository(ReinscripcionPeriodo).existsBy({alumnoId:d.alumnoId,cicloId:d.cicloId,estado:In(['PENDIENTE','CONFIRMADA','REQUIERE_REVISION'])}))throw new ConflictException('Ya existe una reinscripción del alumno en el ciclo; consulta esa operación antes de abrir otra cartera');
-    await validarContextoGrupo(m, d);
+    if (parcial) await validarContextoApertura(m, d);
+    else await validarContextoGrupo(m, d);
     if ('origenInscripcionId' in d) await this.validarReinscripcion(m, d as PrevisualizarReinscripcionDto, u);
     const a = await m.getRepository(Alumno).findOneBy({ id: d.alumnoId, plantelId: d.plantelId });
     if (!sinAlumno && (!a || a.estatus !== 'ACTIVO' || !a.usuario.activo)) throw new ConflictException('Selecciona un alumno activo del plantel');
+    if (d.grupoId && !contextoAperturaCompleto(d)) throw new ConflictException('Completa el plan y periodo para seleccionar un grupo');
     if (d.grupoId) {
       const grupo = await m.getRepository(Grupo).findOneBy({ id: d.grupoId, plantelId: d.plantelId, cicloId: d.cicloId, nivelId: d.nivelId, carreraId: d.carreraId, periodoAcademicoId: d.periodoAcademicoId, turno: d.turno, tipo: 'REGULAR', activo: true });
       if (!grupo) throw new ConflictException('El grupo seleccionado no coincide con el contexto ordinario');
@@ -152,10 +156,10 @@ export class CarteraService {
     if (d.nuevoAlumno) await validarIdentidadApertura(m, d.nuevoAlumno);
     const ids = [...new Set(d.cuotas.map(c => c.conceptoId))];
     // Reutiliza validaciones institucionales de plantel, ciclo, alumno, grupo y conceptos.
-    await this.cotizar(m, { ...d, alumnoId: d.alumnoId ?? 0, conceptoIds: ids, periodo: d.cuotas[0].periodo, fechaVencimiento: d.cuotas[0].fechaVencimiento }, u, !!d.nuevoAlumno);
-    const periodo = await m.getRepository(PeriodoAcademico).findOneByOrFail({ id: d.periodoAcademicoId });
+    await this.cotizar(m, { ...d, alumnoId: d.alumnoId ?? 0, conceptoIds: ids, periodo: d.cuotas[0].periodo, fechaVencimiento: d.cuotas[0].fechaVencimiento }, u, !!d.nuevoAlumno, true);
+    const periodo = d.periodoAcademicoId ? await m.getRepository(PeriodoAcademico).findOneByOrFail({ id: d.periodoAcademicoId }) : null;
     const ciclo = await m.getRepository(CicloEscolar).findOneByOrFail({ id: d.cicloId });
-    const inicio = periodo.fechaInicio ?? ciclo.fechaInicio, fin = periodo.fechaFin ?? ciclo.fechaFin;
+    const inicio = periodo?.fechaInicio ?? ciclo.fechaInicio, fin = periodo?.fechaFin ?? ciclo.fechaFin;
     const catalogo = await m.getRepository(ConceptoPago).find({ where: { id: In(ids), activo: true }, order: { id: 'ASC' }, lock: { mode: 'pessimistic_read' } });
     const claves = new Set<string>();
     const conceptos: ConceptoApertura[] = d.cuotas.map(q => {
@@ -186,7 +190,7 @@ export class CarteraService {
     // El DTO de confirmación añade metadatos que no forman parte de la cotización.
     const contextoPrecio = { alumnoId: d.alumnoId ?? null, nuevoAlumno: d.nuevoAlumno ?? null, plantelId: d.plantelId, cicloId: d.cicloId,
       nivelId: d.nivelId, carreraId: d.carreraId, periodoAcademicoId: d.periodoAcademicoId, turno: d.turno, grupoId: d.grupoId ?? null, asignacion: d.asignacion };
-    return { conceptos, total: total/100, cotizacion: hash({ contexto: contextoPrecio, conceptos, ventana: [inicio, fin] }) };
+    return { avisos: contextoAperturaCompleto(d) ? [] : ['Falta completar carrera/plan y periodo; la apertura quedará en pausa sin grupo ni cargos.'], conceptos, total: total/100, cotizacion: hash({ contexto: contextoPrecio, conceptos, ventana: [inicio, fin] }) };
   }
   previsualizarIntegral(d: AperturaIntegralDto, u: JwtUser) {
     return this.ds.transaction('READ COMMITTED', m => this.cotizarIntegral(m, d, u));
@@ -201,7 +205,7 @@ export class CarteraService {
         if (previa) {
           if (previa.creadoPorId !== u.sub || previa.peticionHash !== peticionHash) throw new ConflictException('Idempotencia asociada a otra apertura');
           await this.scope.validarGestion(u, previa.plantelId);
-          return this.proyectar(previa);
+          return { ...this.proyectar(previa), avisos: await pendientesApertura(m, previa) };
         }
         const precio = await this.cotizarIntegral(m, d, u);
         if (precio.cotizacion !== d.cotizacion) throw new ConflictException('La cotización cambió; vuelve a previsualizar');
@@ -209,10 +213,11 @@ export class CarteraService {
         const contexto = { alumnoId, plantelId: d.plantelId, cicloId: d.cicloId, nivelId: d.nivelId, carreraId: d.carreraId, periodoAcademicoId: d.periodoAcademicoId, turno: d.turno };
         const a = await repo.save(repo.create({ alumnoId, plantelId: d.plantelId, cicloId: d.cicloId, creadoPorId: u.sub,
           idempotencia: d.idempotencia, peticionHash, estado: 'PAUSA', conceptos: precio.conceptos, solicitudId: null, contextoJson: JSON.stringify(contexto) }));
-        if (d.asignacion !== 'PAUSA') await this.asignarIntegral(m, a, contexto, d.grupoId, u);
+        if (d.asignacion !== 'PAUSA' && contextoAperturaCompleto(contexto)) await this.asignarIntegral(m, a, contexto, d.grupoId, u);
         await m.getRepository(BitacoraFinanciera).insert({ usuarioId: u.sub, plantelId: d.plantelId, accion: 'APERTURA_CARTERA', entidad: 'apertura', entidadId: a.id,
           detalle: `Alta integral; total=${precio.total}; sin asignación de correo; cotizacion=${precio.cotizacion}` });
-        return this.proyectar(await repo.findOneOrFail({ where: { id: a.id }, relations: { solicitud: true, alumno: { usuario: true } } }));
+        const guardada = await repo.findOneOrFail({ where: { id: a.id }, relations: { solicitud: true, alumno: { usuario: true } } });
+        return { ...this.proyectar(guardada), avisos: await pendientesApertura(m, guardada) };
       });
     } catch (e) {
       if (esConflictoUnico(e)) throw new ConflictException('La CURP, matrícula o cartera ya están registradas; consulta el expediente existente');
@@ -243,10 +248,15 @@ export class CarteraService {
       const a = await repo.findOneOrFail({ where: { id }, lock: { mode: 'pessimistic_write' } });
       if (a.estado === 'ABIERTA') return this.proyectar(await repo.findOneOrFail({ where: { id }, relations: { solicitud: true } }));
       if (a.estado !== 'PAUSA' || !a.contextoJson) throw new ConflictException('Solo se reanuda una apertura integral en pausa');
-      const contexto = JSON.parse(a.contextoJson) as import('../academico/agrupacion-regular.service').ContextoRegular;
+      const anterior = JSON.parse(a.contextoJson) as { carreraId?: number; periodoAcademicoId?: number };
+      if ((anterior.carreraId && d.carreraId && anterior.carreraId !== d.carreraId) || (anterior.periodoAcademicoId && d.periodoAcademicoId && anterior.periodoAcademicoId !== d.periodoAcademicoId)) throw new ConflictException('La reanudación solo completa datos pendientes; no cambia el contexto contratado');
+      const contexto = { ...JSON.parse(a.contextoJson) as import('../academico/agrupacion-regular.service').ContextoRegular, ...(d.carreraId ? { carreraId: d.carreraId } : {}), ...(d.periodoAcademicoId ? { periodoAcademicoId: d.periodoAcademicoId } : {}) };
+      await validarContextoApertura(m, contexto);
+      if (!contextoAperturaCompleto(contexto)) throw new ConflictException('Completa carrera o plan y periodo antes de asignar el grupo');
+      await repo.update(a.id, { contextoJson: JSON.stringify(contexto) });
       const periodo = await m.getRepository(PeriodoAcademico).findOneByOrFail({ id: contexto.periodoAcademicoId });
       const ciclo = await m.getRepository(CicloEscolar).findOneByOrFail({ id: a.cicloId });
-      const inicio = periodo.fechaInicio ?? ciclo.fechaInicio, fin = periodo.fechaFin ?? ciclo.fechaFin;
+      const inicio = periodo?.fechaInicio ?? ciclo.fechaInicio, fin = periodo?.fechaFin ?? ciclo.fechaFin;
       if (a.conceptos.some(c => c.fechaVencimiento < inicio || c.fechaVencimiento > fin || c.periodo < inicio.slice(0,7) || c.periodo > fin.slice(0,7)))
         throw new ConflictException('El calendario del periodo cambió; requiere revisión antes de reanudar');
       await this.asignarIntegral(m, a, contexto, d.grupoId, u);
@@ -265,6 +275,6 @@ export class CarteraService {
   }
   async obtener(id: number, u: JwtUser) {
     const a = await this.ds.getRepository(AperturaCartera).findOne({ where: { id }, relations: { solicitud: true, alumno: { usuario: true } } });
-    if (!a) throw new NotFoundException('Apertura no encontrada'); await this.scope.validarGestion(u, a.plantelId); return { ...this.proyectar(a), financiero: await resumenCarteraAlumno(this.ds.manager, a.alumnoId, a.plantelId) };
+    if (!a) throw new NotFoundException('Apertura no encontrada'); await this.scope.validarGestion(u, a.plantelId); return { ...this.proyectar(a), avisos: await pendientesApertura(this.ds.manager, a), financiero: await resumenCarteraAlumno(this.ds.manager, a.alumnoId, a.plantelId) };
   }
 }
