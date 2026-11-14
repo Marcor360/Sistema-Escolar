@@ -32,8 +32,8 @@ export class AperturaIntegralDto {
   @IsInt() @Min(1) plantelId!: number;
   @IsInt() @Min(1) cicloId!: number;
   @IsInt() @Min(1) nivelId!: number;
-  @IsInt() @Min(1) carreraId!: number;
-  @IsInt() @Min(1) periodoAcademicoId!: number;
+  @IsOptional() @IsInt() @Min(1) carreraId?: number;
+  @IsOptional() @IsInt() @Min(1) periodoAcademicoId?: number;
   @IsIn(['MATUTINO', 'VESPERTINO']) turno!: 'MATUTINO' | 'VESPERTINO';
   @IsIn(['PAUSA', 'AUTOMATICA', 'GRUPO']) asignacion!: 'PAUSA' | 'AUTOMATICA' | 'GRUPO';
   @IsOptional() @IsInt() @Min(1) grupoId?: number;
@@ -51,6 +51,8 @@ export class ConfirmarAperturaIntegralDto extends AperturaIntegralDto {
   @Equals(true) confirmado!: boolean;
 }
 export class ReanudarAperturaDto {
+  @IsOptional() @IsInt() @Min(1) carreraId?: number;
+  @IsOptional() @IsInt() @Min(1) periodoAcademicoId?: number;
   @IsOptional() @IsInt() @Min(1) grupoId?: number;
   @IsString() @MinLength(10) @MaxLength(500) motivo!: string;
   @Equals(true) confirmado!: boolean;

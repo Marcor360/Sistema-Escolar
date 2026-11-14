@@ -182,7 +182,7 @@ export default function MaestroPage() {
   return (
     <>
       {confirmar.elemento}
-      <Encabezado titulo="Mis clases" detalle="Consulta una clase y elige una operación" />
+      <Encabezado titulo="Mis clases" detalle="Consulta una clase y elige una operación" /><p className="texto-ayuda">Control Escolar crea grupos, vincula materias y asigna docentes. Cuando tengas una clase asignada podrás preparar actividades, subir materiales, revisar entregas y dar retroalimentación. La calificación de una entrega no modifica por sí sola el acta oficial del periodo.</p>
       {error && (
         <p role="alert">
           {error}
@@ -230,7 +230,7 @@ export default function MaestroPage() {
           </section>
           {modo === 'clase' && (
             <section className="panel">
-              <h2>Operaciones de esta clase</h2>
+              <h2>Operaciones de esta clase</h2><p className="texto-ayuda">Secuencia recomendada: prepara temario y materiales; publica una actividad; revisa las entregas del alumnado; califica y retroalimenta cada entrega. Cuando corresponda, registra por separado la evaluación oficial en Calificaciones.</p>
               <div className="fila">
                 <button onClick={() => ir('actividades')}>Consultar actividades</button>
                 <button onClick={() => ir('actividad-nueva')}>Crear actividad</button>
@@ -278,7 +278,7 @@ export default function MaestroPage() {
                 deshabilitado={cargando || enviando}
                 onCambio={(p) => trabajo.actualizar({ [modo + 'Pagina']: String(p) })}
               />
-              {!cargando && !error && total === 0 && <p>Sin registros para esta consulta.</p>}
+              {!cargando && !error && total === 0 && <p>{modo === 'actividades' ? 'Esta clase todavía no tiene actividades. Puedes crear una para recibir entregas.' : modo === 'materiales' ? 'Todavía no hay materiales. Puedes subir uno para esta clase.' : 'Aún no hay entregas para la actividad seleccionada.'}</p>}
               {modo === 'actividades' &&
                 actividades.map((a) => (
                   <article key={a.id}>
@@ -368,7 +368,7 @@ export default function MaestroPage() {
           {['actividad-nueva', 'actividad-editar'].includes(modo) && listo && (
             <form className="temario-form" onSubmit={guardarActividad}>
               <fieldset disabled={enviando}>
-                <legend>{modo === 'actividad-editar' ? 'Editar actividad' : 'Nueva actividad'}</legend>
+                <legend>{modo === 'actividad-editar' ? 'Editar actividad' : 'Nueva actividad'}</legend><p className="texto-ayuda">Se publicará en la clase seleccionada. El alumnado podrá consultar la actividad y entregar un archivo o una respuesta escrita; la fecha de entrega puede quedar pendiente. El peso de seguimiento no calcula automáticamente la nota oficial.</p>
                 <label htmlFor="actividad-titulo">Título</label>
                 <input
                   id="actividad-titulo"
@@ -492,7 +492,7 @@ export default function MaestroPage() {
                   <p style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{entrega.respuestaTexto}</p>
                 </div>
               )}
-              <label htmlFor="entrega-nota">Calificación de la entrega</label><p>Escala 0–{entrega.escalaMaxima ?? 100}</p>
+              <p className="texto-ayuda">Esta nota corresponde únicamente a la entrega y su retroalimentación. Para capturar o modificar una calificación oficial del periodo, entra en Calificaciones y selecciona la clase autorizada.</p><label htmlFor="entrega-nota">Calificación de la entrega</label><p>Escala 0–{entrega.escalaMaxima ?? 100}</p>
               <input
                 id="entrega-nota"
                 required
