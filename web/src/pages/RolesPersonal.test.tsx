@@ -47,3 +47,16 @@ it('solicita confirmación accesible antes de revocar funciones y permite cancel
   fireEvent.click(screen.getByRole('button', { name: 'Actualizar funciones' }));
   await waitFor(() => expect(patch).toHaveBeenCalledWith('/usuarios/8/roles', { roles: ['FINANZAS'] }));
 });
+
+it('permite reintentar un error al listar personal sin anunciar un directorio vacío', async () => {
+  const get = vi.spyOn(api, 'get').mockRejectedValueOnce(new Error('Sin conexión')).mockResolvedValue({ data: {
+    datos: [{ id: 8, nombre: 'Personal autorizado', correo: 'personal@ejemplo.test', roles: ['FINANZAS'], planteles: [], activo: true }],
+    total: 1, pagina: 1, porPagina: 10,
+  } });
+  render(<RolesPersonal />);
+  expect((await screen.findByRole('alert')).textContent).toContain('No se pudo consultar el personal');
+  expect(screen.queryByText('No se encontraron cuentas para consultar.')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Reintentar consulta' }));
+  expect(await screen.findByText('Personal autorizado')).toBeTruthy();
+  expect(get).toHaveBeenCalledTimes(2);
+});
