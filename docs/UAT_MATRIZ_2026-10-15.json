@@ -1,6 +1,6 @@
 {
-  "version": "1.37.0",
-  "alcance": "Candidata 1.37.0: importación masiva de materias y grupos con plantillas, previsualización cifrada, duplicados y confirmación atómica; resumen de preparación por grupo y carga diferida del catálogo de materias basada en mediciones. Sin migraciones nuevas; publicación y aceptación institucional pendientes.",
+  "version": "1.38.1",
+  "alcance": "Candidata 1.38.1: Ayudas de creación progresiva en catálogos académicos y grupos, catálogo de conceptos, validación y estados financieros, con pruebas y mapa UX. Sin cambios de esquema ni reglas de cobro; CI y UAT pendientes.",
   "escenarios": [
     {
       "id": "UAT-01",
