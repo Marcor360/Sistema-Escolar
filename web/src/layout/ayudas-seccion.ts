@@ -21,7 +21,7 @@ const ayudas: Readonly<Record<string, string>> = {
   '/calificaciones': 'Captura notas de una clase autorizada, revisa régimen, parcial y escala. Una corrección requiere justificación y conserva historial.',
   '/conducta': 'Registra incidencias internas con alcance institucional. Una incidencia no sanciona automáticamente ni modifica calificaciones o cargos.',
   '/biblioteca': 'Gestiona carpetas y archivos administrativos privados del plantel. Subirlos aquí no los publica a alumnos ni maestros.',
-  '/finanzas': 'Primero revisa conceptos y tarifas; después previsualiza cargos o colegiaturas, emite y registra pagos. Concepto, programación, cargo, pago y conciliación son estados diferentes.',
+  '/finanzas': 'Primero revisa conceptos y tarifas; después previsualiza cargos o colegiaturas, emite y registra pagos. Concepto, programación, cargo, pago y conciliación son estados diferentes. Verifica alumno, monto y referencia antes de registrar una operación.',
   '/analitica': 'Consulta indicadores por rol, plantel y periodo. Los cobros confirmados no representan automáticamente toda la utilidad ni los alumnos por carrera son siempre sumables.',
   '/usuarios': 'Gestiona cuentas y alcance institucional según tu jerarquía. Asignar una función no asigna clases ni modifica expedientes académicos.',
   '/roles-personal': 'Director o personal autorizado modifica únicamente funciones subordinadas. Crear planteles y administrar la configuración global corresponde a Superadmin.',
