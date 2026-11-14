@@ -8,6 +8,11 @@ import { useConfirmacion } from '../components/useConfirmacion';
 const tipos = ['niveles', 'carreras', 'periodos'] as const;
 type Tipo = typeof tipos[number];
 const etiquetas = { niveles: 'Niveles académicos', carreras: 'Carreras y planes', periodos: 'Periodos académicos' };
+const explicaciones: Record<Tipo, string> = {
+  niveles: 'Identifica la oferta autorizada de cada plantel: por ejemplo, Secundaria, Bachillerato, Licenciatura, Maestría o Doctorado. Registrar un nivel no crea grupos ni alumnos.',
+  carreras: 'Registra el programa académico y la versión de su plan, como una licenciatura o maestría específica. Las materias y los docentes se relacionan después.',
+  periodos: 'Organiza un plan dentro de un ciclo por año, semestre o cuatrimestre. No equivale a un parcial de calificaciones ni genera colegiaturas.',
+};
 interface Registro { id: number; nombre: string; clave: string; activo: boolean; plantelId: number; versionPlan?: string; tipo?: string; numero?: number }
 const vacio = { clave: '', nombre: '', plantelId: '', nivelId: '', carreraId: '', cicloId: '', versionPlan: '', tipo: 'SEMESTRAL', numero: '1', fechaInicio: '', fechaFin: '', activo: true };
 export default function CatalogosAcademicosPage() {
@@ -37,8 +42,8 @@ function Directorio() {
   return <><header className="encabezado"><h1>Catálogos académicos</h1><p>Configuración institucional por plantel; los datos históricos se conservan.</p></header>
     {location.state?.mensaje && <p role="status">{location.state.mensaje}</p>}
     {error && <p role="alert">{error}<button onClick={() => setIntento((n) => n + 1)}>Reintentar</button></p>}
-    {!tipo ? <PanelAccionesModulo titulo="Selecciona un catálogo" acciones={tipos.map((t) => ({ titulo: etiquetas[t], detalle: 'Consultar, registrar o editar', ejecutar: () => cambiar('tipo', t) }))} /> : <>
-      <button onClick={() => setQ({})}>Volver a catálogos</button><h2>{etiquetas[tipo]}</h2>
+    {!tipo ? <PanelAccionesModulo titulo="Selecciona un catálogo" acciones={tipos.map((t) => ({ titulo: etiquetas[t], detalle: explicaciones[t], ejecutar: () => cambiar('tipo', t) }))} /> : <>
+      <button onClick={() => setQ({})}>Volver a catálogos</button><h2>{etiquetas[tipo]}</h2><p className="texto-ayuda">{explicaciones[tipo]}</p>
       <button className="boton" onClick={() => navigate(`/catalogos-academicos/${tipo}/nuevo`)}>Registrar</button>
       <label htmlFor="catalogo-plantel">Plantel</label><select id="catalogo-plantel" value={plantelId} onChange={(e) => cambiar('plantel', e.target.value)}><option value="">Todos los permitidos</option>{planteles.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select>
       <label htmlFor="catalogo-buscar">Buscar por clave o nombre</label><input id="catalogo-buscar" value={termino} onChange={(e) => setTermino(e.target.value)} />
@@ -80,7 +85,7 @@ function Formulario({ tipo, id }: { tipo: Tipo; id: string }) {
       guardado.current = true; navigate(`/catalogos-academicos?tipo=${tipo}`, { replace: true, state: { mensaje: 'Catálogo guardado.' } });
     } catch (err) { setError(mensajeDeError(err)); } finally { ocupado.current = false; setGuardando(false); }
   };
-  return <main className="contenido edicion-enfocada">{confirmacion.elemento}<h1 ref={titulo} tabIndex={-1}>{nuevo ? 'Registrar' : 'Editar'} · {etiquetas[tipo]}</h1>
+  return <main className="contenido edicion-enfocada">{confirmacion.elemento}<h1 ref={titulo} tabIndex={-1}>{nuevo ? 'Registrar' : 'Editar'} · {etiquetas[tipo]}</h1><p className="texto-ayuda">{explicaciones[tipo]}</p>
     <button disabled={guardando} onClick={() => navigate(`/catalogos-academicos?tipo=${tipo}`)}>Cancelar y volver</button>
     {cargando && <p role="status">Cargando…</p>}{error && <p role="alert">{error}</p>}{!cargando && error && <button disabled={guardando || sucio} onClick={() => setIntento((n) => n + 1)}>Reintentar carga</button>}
     {!cargando && <form className="panel" onSubmit={guardar}><fieldset disabled={guardando}><legend>Identificación del catálogo</legend>

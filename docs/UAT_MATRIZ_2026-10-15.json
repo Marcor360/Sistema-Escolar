@@ -1,6 +1,6 @@
 {
-  "version": "1.38.0",
-  "alcance": "Candidata 1.38.0: apertura integral con nivel académico y plan/periodo pendientes, asignación automática por defecto, avisos académicos y vinculación de personal existente como docente sin duplicar identidad ni perder sus otras funciones. Sin migraciones nuevas; publicación y aceptación institucional pendientes.",
+  "version": "1.38.1",
+  "alcance": "Candidata 1.38.1: Ayudas de creación progresiva en catálogos académicos y grupos, catálogo de conceptos, validación y estados financieros, con pruebas y mapa UX. Sin cambios de esquema ni reglas de cobro; CI y UAT pendientes.",
   "escenarios": [
     {
       "id": "UAT-01",

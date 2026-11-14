@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.38.0`** · Apertura flexible por nivel, pendientes académicos y personal con varias funciones. Pruebas técnicas, aceptación institucional y despliegue se acreditan por separado.
+**Versión candidata: `1.38.1`** · Ayudas de creación progresiva en catálogos académicos y grupos, catálogo de conceptos, validación y estados financieros, con pruebas y mapa UX. Sin cambios de esquema ni reglas de cobro; CI y UAT pendientes. Pruebas técnicas, aceptación institucional y despliegue se acreditan por separado.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -18,6 +18,8 @@ Sistema escolar multiplataforma para operación académica, administrativa y fin
 Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [índice documental](docs/README.md) e [historial de documentos retirados](docs/HISTORIAL.md).
 
 ### Entrega actual
+
+La candidata **1.38.1** incorpora ayudas contextuales, validación de cargos y estados de conceptos, conservando las importaciones y los recorridos de 1.37.0. La apertura flexible 1.38.0 ya está integrada. Sin migraciones. [Alcance del journey](docs/JOURNEY_ACADEMIA_FINANZAS_2026-11-13.md). Publicación y aceptación institucional se acreditan por separado.
 
 La candidata **1.38.0** permite registrar una apertura con el nivel académico y completar plan/periodo después; muestra pendientes de grupo, materias y profesores. Vincula personal existente como docente conservando su cuenta y sus demás funciones. [Reglas de apertura y personal](docs/APERTURA_FLEXIBLE_Y_PERSONAL_1.38.0.md). Conserva la entrega 1.37.0, que añade importación CSV/XLSX de materias y grupos con plantilla, previsualización y confirmación atómica; omite duplicados sin modificar los existentes. Incluye indicadores de preparación por grupo y evita descargar el catálogo completo de materias al consultar grupos. Conserva el rediseño y los recorridos de 1.36.0. Sin migraciones nuevas. [Alcance y mediciones](docs/CARGA_MASIVA_1.37.0.md). Publicación y aceptación institucional se acreditan por separado.
 

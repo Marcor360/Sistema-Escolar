@@ -91,6 +91,12 @@ const catalogo: (AreaRecorrido & { roles: string[] })[] = [
         'Comprueba el plantel y la fecha antes de operar.',
       ),
       paso(
+        '2. Revisar conceptos y tarifas',
+        '/finanzas?vista=conceptos',
+        'Registra o ajusta los conceptos autorizados antes de generar cobros. Un concepto con tarifa cero es un pendiente de configuración, no un cargo ni un pago.',
+        'Confirma el tipo, el costo vigente y la autorización de Finanzas; los cargos históricos conservan sus importes.',
+      ),
+      paso(
         '2. Consultar cargos y saldos',
         '/finanzas?vista=cargos',
         'Filtra los cargos del alumno. Distingue monto, descuento, recargo, aplicado y saldo. Un cargo cancelado no debe volver a cobrarse.',
