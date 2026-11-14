@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.37.0`** · Importación masiva de materias y grupos, preparación académica y optimización de cargas. Pruebas técnicas, aceptación institucional y despliegue se acreditan por separado.
+**Versión candidata: `1.38.5`** · Protección de integridad financiera: el tipo de concepto queda inmutable tras el alta, mientras nombre, tarifa base futura y estado siguen editables; pruebas unitarias sin migraciones. Pruebas técnicas, aceptación institucional y despliegue se acreditan por separado.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -19,7 +19,7 @@ Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [ín
 
 ### Entrega actual
 
-La candidata **1.37.0** añade importación CSV/XLSX de materias y grupos con plantilla, previsualización y confirmación atómica; omite duplicados sin modificar los existentes. Incluye indicadores de preparación por grupo y evita descargar el catálogo completo de materias al consultar grupos. Conserva el rediseño y los recorridos de 1.36.0. Sin migraciones nuevas. [Alcance y mediciones](docs/CARGA_MASIVA_1.37.0.md). Publicación y aceptación institucional se acreditan por separado.
+La candidata **1.38.5** impide reclasificar conceptos de cobro y preserva el historial financiero. Las tarifas autorizadas pueden corregirse sin recalcular automáticamente cargos emitidos. Conserva las capacidades de 1.37.0. Sin migraciones; CI y UAT se acreditan por separado.
 
 - [Portal del alumno](docs/PORTAL_ALUMNO_REFERENCIA_UTC.md): diseño y navegación.
 - [Carga académica guiada](docs/CARGA_ACADEMICA_GUIADA.md): orden para materias, grupos y alumnos.
