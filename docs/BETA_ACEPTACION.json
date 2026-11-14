@@ -1,6 +1,6 @@
 {
-  "version": "1.37.0",
-  "alcance": "Candidata 1.37.0: importación masiva de materias y grupos con plantillas, previsualización cifrada, duplicados y confirmación atómica; resumen de preparación por grupo y carga diferida del catálogo de materias basada en mediciones. Sin migraciones nuevas; publicación y aceptación institucional pendientes.",
+  "version": "1.38.3",
+  "alcance": "Candidata 1.38.3: Ayudas de proceso por módulo, jerarquías de permisos y navegación accesible en web. Orientaciones de alta, inscripción, docencia y finanzas sin nuevas autorizaciones ni migraciones.",
   "puertas": [
     {
       "id": "ci_ultimo_sha",
