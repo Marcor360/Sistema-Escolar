@@ -32,3 +32,15 @@ it('no elimina un favicon hasta aceptar la confirmación y conserva la opción d
   await waitFor(() => expect(eliminar).toHaveBeenCalledTimes(1));
   expect(eliminar).toHaveBeenCalledWith('/configuracion/marca/favicon/alumno');
 });
+
+it('reconoce que el retiro se completó aunque falle el refresco visual', async () => {
+  HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', ''); };
+  HTMLDialogElement.prototype.close = function () { this.removeAttribute('open'); };
+  recargar.mockRejectedValueOnce(new Error('Recarga indisponible'));
+  const eliminar = vi.spyOn(api, 'delete').mockResolvedValue({ data: {} });
+  render(<RecursosMarcaPortales />);
+  fireEvent.click(screen.getByRole('button', { name: 'Quitar' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Retirar recurso' }));
+  expect((await screen.findByRole('alert')).textContent).toContain('El recurso se retiró');
+  expect(eliminar).toHaveBeenCalledTimes(1);
+});
