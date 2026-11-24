@@ -4,10 +4,11 @@ import { useMarca } from '../marca/MarcaContext';
 import { optimizarLogo, MAX_LOGO_ORIGINAL_BYTES } from '../utils/optimizar-logo';
 import { useConfirmacion } from './useConfirmacion';
 
-type Recurso = 'faviconAdministrativoUrl' | 'faviconAlumnoUrl' | 'logoAlumnoUrl';
+type Recurso = 'faviconAdministrativoUrl' | 'faviconAlumnoUrl' | 'logoAlumnoUrl' | 'fondoAlumnoUrl';
 const recursos: Array<{ campo: Recurso; nombre: string; ruta: string; favicon: boolean }> = [
   { campo: 'faviconAdministrativoUrl', nombre: 'Favicon del sistema administrativo', ruta: 'favicon/administrativo', favicon: true },
   { campo: 'faviconAlumnoUrl', nombre: 'Favicon del Portal Alumno', ruta: 'favicon/alumno', favicon: true },
+  { campo: 'fondoAlumnoUrl', nombre: 'Fondo del acceso de alumnos', ruta: 'fondo-alumno', favicon: false },
   { campo: 'logoAlumnoUrl', nombre: 'Logo específico del Portal Alumno', ruta: 'logo-alumno', favicon: false },
 ];
 
