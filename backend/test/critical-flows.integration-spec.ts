@@ -285,7 +285,7 @@ describe('Integración de flujos críticos (base aislada)', () => {
   };
 
   const passwords = new Map<string, string>();
-  const emitirToken = async (email: string | null) => {
+  const emitirToken = async (email: string | null, dispositivoId?: string) => {
     if (!email) throw new Error('El fixture no tiene correo institucional para iniciar sesión');
     const usuario = await dataSource.getRepository(Usuario).findOneOrFail({
       where: { email },
@@ -315,7 +315,7 @@ describe('Integración de flujos críticos (base aislada)', () => {
       passwords.set(email, 'Integracion_Renovada_42!');
     }
     return (await app.get(AuthService).login(email, passwords.get(email) ?? passwordInicial,
-      usuario.roles.some((r) => r.clave === 'ALUMNO') ? 'MOVIL' : 'WEB')).accessToken;
+      usuario.roles.some((r) => r.clave === 'ALUMNO') ? 'MOVIL' : 'WEB', undefined, undefined, false, dispositivoId)).accessToken;
   };
 
   const emitirFinanzasB = async () => {

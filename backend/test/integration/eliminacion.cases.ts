@@ -14,7 +14,7 @@ export function registrarEliminacion(ctx: ContextoIntegracion) {
       nombre: 'Eliminar', apellidoPaterno: 'Personal', roles: ['ADMINISTRATIVO'], plantelIds: [ctx.plantelId],
     } });
     expect(personal.response.status).toBe(201);
-    const sesion = await ctx.emitirToken(personal.data.email);
+    const sesion = await ctx.emitirToken(personal.data.email, randomUUID());
     expect(await ctx.dataSource.getRepository(AuthCorreoEvento).countBy({ usuarioId: personal.data.id })).toBeGreaterThan(0);
     await ctx.dataSource.getRepository(Notificacion).save({ usuarioId: personal.data.id, titulo: 'Prueba', mensaje: 'Prueba' });
     const borrar = (ruta: string) => ctx.api(ruta, { method: 'DELETE', token: root, body: { confirmacion: 'ELIMINAR' } });
@@ -72,7 +72,7 @@ export function registrarEliminacion(ctx: ContextoIntegracion) {
     } });
     expect(alta.response.status).toBe(201);
     const id: number = alta.data.id;
-    const token = await ctx.emitirToken(alta.data.email);
+    const token = await ctx.emitirToken(alta.data.email, randomUUID());
     const borrar = () => ctx.api(`/usuarios/${id}/permanente`, { method: 'DELETE', token: root, body: { confirmacion: 'ELIMINAR' } });
     const historial = await ctx.dataSource.getRepository(BitacoraFinanciera).save({ usuarioId: id, plantelId: ctx.plantelId, accion: 'PRUEBA', entidad: 'prueba', entidadId: null, detalle: null });
     expect((await borrar()).response.status).toBe(409);
