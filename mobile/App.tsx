@@ -16,13 +16,14 @@ import { CalendarioAlumnoScreen, TramitesAlumnoScreen } from './src/screens/Serv
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   NavigationContainer,
+  DarkTheme,
   DefaultTheme,
   createNavigationContainerRef,
 } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "expo-status-bar";
-import { ActivityIndicator, AppState, BackHandler, Platform, TouchableOpacity, View, useWindowDimensions } from "react-native";
+import { ActivityIndicator, AppState, BackHandler, Platform, TouchableOpacity, View, useColorScheme, useWindowDimensions } from "react-native";
 import { Text, FuenteContext } from "./src/components/Texto";
 import { useFonts } from "expo-font";
 import * as SecureStore from "./src/almacen-seguro";
@@ -37,7 +38,11 @@ import {
   eliminarTokensSesion,
 } from "./src/api/client";
 import { Sesion, SesionContext } from "./src/sesion";
-import { colores, textoSobreFondo } from "./src/theme";
+import { colores as coloresIniciales, textoSobreFondo } from "./src/theme";
+import { paletaAlumno, TemaAlumnoContext, useTemaAlumno, type ModoAlumno } from "./src/tema-alumno";
+import { guardarPreferencia, leerPreferencia } from "./src/utils/preferencias-web";
+import { guardarRutaAlumno, leerRutaAlumno } from "./src/utils/ruta-alumno";
+import { obtenerDispositivoId } from "./src/api/dispositivo";
 import CambioPasswordInicial from "./src/screens/CambioPasswordInicial";
 import LoginScreen from "./src/screens/Login";
 import InicioScreen from "./src/screens/Inicio";
@@ -50,7 +55,6 @@ import PerfilScreen from "./src/screens/Perfil";
 import DocumentosScreen from "./src/screens/Documentos";
 import { cargarMarca, esMarcaValida, mismaMarca } from "./src/marca-carga";
 import {
-  aplicarColores,
   MARCA_CACHE_KEY,
   MARCA_POR_DEFECTO,
   Marca,
@@ -70,9 +74,10 @@ const Tab = createBottomTabNavigator();
 const PerfilStack = createNativeStackNavigator<{ MiPerfil: undefined; MisDocumentos: undefined }>();
 
 function PerfilConDocumentos() {
+  const { colores } = useTemaAlumno();
   return (
     <PerfilStack.Navigator screenOptions={{
-      headerStyle: { backgroundColor: "#fff" },
+      headerStyle: { backgroundColor: colores.superficie },
       headerTintColor: colores.tinta,
     }}>
       <PerfilStack.Screen name="MiPerfil" options={{ title: "Perfil", headerShown: false }}>
@@ -85,7 +90,8 @@ function PerfilConDocumentos() {
 
 const MateriasStack = createNativeStackNavigator<{ MisMaterias: undefined; MisTareas: undefined }>();
 function MateriasConTareas() {
-  return <MateriasStack.Navigator screenOptions={{ headerStyle: { backgroundColor: "#fff" }, headerTintColor: colores.tinta }}>
+  const { colores } = useTemaAlumno();
+  return <MateriasStack.Navigator screenOptions={{ headerStyle: { backgroundColor: colores.superficie }, headerTintColor: colores.tinta }}>
     <MateriasStack.Screen name="MisMaterias" options={{ title: "Materias", headerShown: false }}>
       {({ navigation }) => <MateriasScreen abrirTareas={() => navigation.navigate("MisTareas")} />}
     </MateriasStack.Screen>
@@ -93,7 +99,8 @@ function MateriasConTareas() {
   </MateriasStack.Navigator>;
 }
 
-function AppInterna() {
+function AppInterna({ marca, setMarca }: { marca: Marca; setMarca: (marca: Marca) => void }) {
+  const { colores, oscuro } = useTemaAlumno();
   const { width, fontScale } = useWindowDimensions();
   const escritorio = width >= 1000 && fontScale <= 1.3;
   const [menuAbierto, setMenuAbierto] = useState(false);
@@ -111,20 +118,40 @@ function AppInterna() {
   const [bloqueoBiometrico, setBloqueoBiometrico] = useState(false);
   const usuarioEnDesbloqueo = useRef<number | null>(null);
   const revisionSesion = useRef(0);
+  const revocacion = useRef<Promise<void>>(Promise.resolve());
   const [consentimiento, setConsentimiento] = useState<EstadoConsentimiento | null>(null);
   const [errorConsentimiento, setErrorConsentimiento] = useState("");
-  const consultarConsentimiento = useCallback(async () => {
-    setConsentimiento(null); setErrorConsentimiento("");
-    try { const { data } = await api.get<EstadoConsentimiento>("/auth/consentimiento"); setConsentimiento(data); }
-    catch (e) { setErrorConsentimiento(mensajeDeError(e)); }
+  const consultaConsentimiento = useRef<Promise<void> | null>(null);
+  const consultarConsentimiento = useCallback(() => {
+    if (consultaConsentimiento.current) return consultaConsentimiento.current;
+    const revision = revisionSesion.current;
+    setErrorConsentimiento("");
+    const consulta = api.get<EstadoConsentimiento>("/auth/consentimiento")
+      .then(({ data }) => {
+        if (revision === revisionSesion.current) setConsentimiento(data);
+      })
+      .catch((error) => {
+        if (revision === revisionSesion.current) setErrorConsentimiento(mensajeDeError(error));
+      })
+      .finally(() => {
+        if (consultaConsentimiento.current === consulta) consultaConsentimiento.current = null;
+      });
+    consultaConsentimiento.current = consulta;
+    return consulta;
   }, []);
   const [avisoCierre, setAvisoCierre] = useState("");
   const ultimaActividadGuardada = useRef(Date.now());
   const ultimaActividadPersistida = useRef(0);
   const ultimoAvisoServidor = useRef(0);
   const persistenciaActividad = useRef(crearPersistenciaActividad(
-    (fecha) => SecureStore.setItemAsync(CLAVE_ULTIMA_ACTIVIDAD, String(fecha)),
-    () => SecureStore.deleteItemAsync(CLAVE_ULTIMA_ACTIVIDAD),
+    async (fecha) => {
+      if (Platform.OS === "web") guardarPreferencia(CLAVE_ULTIMA_ACTIVIDAD, String(fecha), true);
+      else await SecureStore.setItemAsync(CLAVE_ULTIMA_ACTIVIDAD, String(fecha));
+    },
+    async () => {
+      if (Platform.OS === "web") guardarPreferencia(CLAVE_ULTIMA_ACTIVIDAD, null, true);
+      else await SecureStore.deleteItemAsync(CLAVE_ULTIMA_ACTIVIDAD);
+    },
   ));
   const controlInactividad = useRef<ReturnType<typeof crearControlInactividad> | null>(null);
   const guardarActividad = (fecha: number) => { void persistenciaActividad.current.guardar(fecha); };
@@ -137,7 +164,6 @@ function AppInterna() {
     return () => limpiarCacheAcademica();
   }, [sesion?.sub]);
   const [listo, setListo] = useState(false);
-  const [marca, setMarca] = useState<Marca>(MARCA_POR_DEFECTO);
   const marcaActual = useRef<Marca>(MARCA_POR_DEFECTO);
   useEffect(() => {
     if (Platform.OS !== "web" || typeof document === "undefined") return;
@@ -169,9 +195,8 @@ function AppInterna() {
   const aplicarMarcaActual = useCallback((nueva: Marca) => {
     if (mismaMarca(marcaActual.current, nueva)) return;
     marcaActual.current = nueva;
-    aplicarColores(nueva);
     setMarca(nueva);
-  }, []);
+  }, [setMarca]);
 
   const revalidarMarca = useCallback((): Promise<void> => {
     if (consultaMarca.current) return consultaMarca.current;
@@ -181,7 +206,8 @@ function AppInterna() {
         if (!esMarcaValida(data)) return;
         if (mismaMarca(marcaActual.current, data)) return;
         aplicarMarcaActual(data);
-        await SecureStore.setItemAsync(MARCA_CACHE_KEY, JSON.stringify(data)).catch(() => undefined);
+        if (Platform.OS === "web") guardarPreferencia(MARCA_CACHE_KEY, JSON.stringify(data));
+        else await SecureStore.setItemAsync(MARCA_CACHE_KEY, JSON.stringify(data)).catch(() => undefined);
       } catch {
         /* Sin red: mostrar la última marca válida desde el dispositivo. */
       }
@@ -201,20 +227,20 @@ function AppInterna() {
     return () => { suscripcion.remove(); clearInterval(intervalo); };
   }, [revalidarMarca]);
 
-  const tema = useMemo(
-    () => ({
-      ...DefaultTheme,
+  const tema = useMemo(() => {
+    const base = oscuro ? DarkTheme : DefaultTheme;
+    return {
+      ...base,
       colors: {
-        ...DefaultTheme.colors,
-        primary: marca.colorPrimario,
+        ...base.colors,
+        primary: colores.enlace,
         background: colores.papel,
-        card: marca.colorPrimario,
+        card: colores.superficie,
         text: colores.tinta,
         border: colores.linea,
       },
-    }),
-    [marca],
-  );
+    };
+  }, [colores, oscuro]);
 
   const restaurarSesion = useCallback(async () => {
     const revision = ++revisionSesion.current;
@@ -223,11 +249,12 @@ function AppInterna() {
     try {
       const token = await SecureStore.getItemAsync(TOKEN_KEY);
       if (revision !== revisionSesion.current) return;
-      if (token) {
-        const usuarioBiometrico = await preferenciaBiometrica();
+      const actividadWeb = Platform.OS === "web" ? leerPreferencia(CLAVE_ULTIMA_ACTIVIDAD, true) : null;
+      if (token || actividadWeb) {
+        const usuarioBiometrico = Platform.OS === "web" ? null : await preferenciaBiometrica();
         if (revision !== revisionSesion.current) return;
         usuarioEnDesbloqueo.current = usuarioBiometrico;
-        const guardada = await SecureStore.getItemAsync(CLAVE_ULTIMA_ACTIVIDAD).catch(() => null);
+        const guardada = Platform.OS === "web" ? actividadWeb : await SecureStore.getItemAsync(CLAVE_ULTIMA_ACTIVIDAD).catch(() => null);
         if (revision !== revisionSesion.current) return;
         const ultima = actividadRestaurable(guardada, Date.now());
         if (ultima === null) {
@@ -258,6 +285,11 @@ function AppInterna() {
           if (usuarioBiometrico !== null && data.id !== usuarioBiometrico) {
             await eliminarTokensSesion();
             setAvisoCierre("La cuenta cambió. Ingresa nuevamente para verificar tu identidad.");
+            return;
+          }
+          if (!data.roles.some((rol: { clave: string }) => rol.clave === "ALUMNO")) {
+            await eliminarTokensSesion();
+            await persistenciaActividad.current.borrar();
             return;
           }
           setSesion({
@@ -293,9 +325,9 @@ function AppInterna() {
     let activa = true;
     void cargarMarca(
       {
-        leer: () => SecureStore.getItemAsync(MARCA_CACHE_KEY),
-        eliminar: () => SecureStore.deleteItemAsync(MARCA_CACHE_KEY),
-        guardar: (valor) => SecureStore.setItemAsync(MARCA_CACHE_KEY, valor),
+        leer: async () => Platform.OS === "web" ? leerPreferencia(MARCA_CACHE_KEY) : SecureStore.getItemAsync(MARCA_CACHE_KEY),
+        eliminar: async () => Platform.OS === "web" ? guardarPreferencia(MARCA_CACHE_KEY, null) : SecureStore.deleteItemAsync(MARCA_CACHE_KEY),
+        guardar: async (valor) => Platform.OS === "web" ? guardarPreferencia(MARCA_CACHE_KEY, valor) : SecureStore.setItemAsync(MARCA_CACHE_KEY, valor),
         consultar: async () =>
           (await api.get<Marca>("/configuracion/marca")).data,
       },
@@ -327,6 +359,9 @@ function AppInterna() {
       void persistenciaActividad.current.borrar().catch(() => undefined);
       if (Platform.OS !== "web") void Notifications.dismissAllNotificationsAsync().catch(() => undefined);
       setBloqueoBiometrico(false);
+      consultaConsentimiento.current = null;
+      setConsentimiento(null);
+      setAvisoCierre("Tu sesión terminó. Inicia sesión para continuar.");
       setSesion(null);
     });
     return () => registrarSesionExpirada(null);
@@ -339,7 +374,10 @@ function AppInterna() {
 
   const iniciar = async (email: string, password: string) => {
     const revision = ++revisionSesion.current;
-    const { data } = await api.post(Platform.OS === "web" ? "/auth/login-alumno-web" : "/auth/login", { email, password });
+    await revocacion.current;
+    const dispositivoId = await obtenerDispositivoId();
+    if (revision !== revisionSesion.current) throw new Error("La sesión cambió. Vuelve a iniciar sesión.");
+    const { data } = await api.post(Platform.OS === "web" ? "/auth/login-alumno-web" : "/auth/login", { email, password, dispositivoId });
     if (revision !== revisionSesion.current) throw new Error("La sesión cambió. Vuelve a iniciar sesión.");
     if (!data.usuario.roles.includes("ALUMNO")) throw new Error("Esta aplicación es exclusiva para alumnos. Usa el portal administrativo.");
     await establecerTokensSesion(data.accessToken, data.refreshToken);
@@ -378,6 +416,7 @@ function AppInterna() {
     const borrarActividad = persistenciaActividad.current.borrar();
     setSesion(null);
     setBloqueoBiometrico(false);
+    consultaConsentimiento.current = null;
     setConsentimiento(null);
     setAvisoCierre(motivo === "inactividad"
       ? "La sesión se cerró tras 30 minutos sin actividad. Ingresa nuevamente." : "");
@@ -397,30 +436,36 @@ function AppInterna() {
       SecureStore.getItemAsync(REFRESH_KEY).catch(() => null),
     ]);
     if (revision !== revisionSesion.current) return;
-    await finalizarSesionLocal(motivo);
-    // El acceso de 15 minutos puede haber caducado; renovar SOLO para revocar el
-    // dispositivo, sin restaurar los tokens ni la interfaz después del cierre.
-    if ((token || refresh) && typeof fetch === "function") {
-      void (async () => {
+    const cierreLocal = finalizarSesionLocal(motivo);
+    // Esperar antes de un nuevo login para que un refresh de cierre no sobrescriba su cookie.
+    revocacion.current = (async () => {
+      if ((!token && !refresh) || typeof fetch !== "function") return;
+      const control = new AbortController();
+      const limite = setTimeout(() => control.abort(), 5000);
+      try {
         const origen = api.defaults.baseURL;
         const retirar = (acceso: string) => fetch(`${origen}/auth/logout`, {
-          method: "POST", credentials: Platform.OS === "web" ? "include" : "omit",
+          method: "POST", credentials: Platform.OS === "web" ? "include" : "omit", signal: control.signal,
           headers: { Authorization: `Bearer ${acceso}`, "x-portal": Platform.OS === "web" ? "WEB" : "MOVIL" },
         });
         const respuesta = token ? await retirar(token) : null;
-        if (respuesta?.status !== 401 && respuesta !== null) return;
+        if (respuesta && respuesta.status !== 401) return;
         if (!refresh && Platform.OS !== "web") return;
         const renovacion = await fetch(`${origen}/auth/refresh`, {
-          method: "POST",
-          credentials: Platform.OS === "web" ? "include" : "omit",
+          method: "POST", credentials: Platform.OS === "web" ? "include" : "omit", signal: control.signal,
           headers: { "x-portal": Platform.OS === "web" ? "WEB" : "MOVIL", "Content-Type": "application/json" },
           body: JSON.stringify(Platform.OS === "web" ? {} : { refreshToken: refresh }),
         });
         if (!renovacion.ok) return;
         const datos: { accessToken?: string } = await renovacion.json();
         if (datos.accessToken) await retirar(datos.accessToken);
-      })().catch(() => undefined);
-    }
+      } catch {
+        // El cierre local se completa aunque la API no esté disponible.
+      } finally {
+        clearTimeout(limite);
+      }
+    })();
+    await cierreLocal;
   };
 
   useEffect(() => {
@@ -431,7 +476,10 @@ function AppInterna() {
     );
     controlInactividad.current = control;
     const app = AppState.addEventListener("change", (estado) => {
-      if (estado === "active") { control.comprobar(); void consultarConsentimiento(); }
+      if (estado === "active") {
+        control.comprobar();
+        if (!sesion.passwordChangeRequired && controlInactividad.current === control) void consultarConsentimiento();
+      }
       else guardarActividad(control.ultimaActividad());
     });
     const atras = BackHandler.addEventListener("hardwareBackPress", () => {
@@ -444,7 +492,7 @@ function AppInterna() {
       app.remove();
       atras.remove();
     };
-  }, [sesion?.sub, consultarConsentimiento]);
+  }, [sesion?.sub, sesion?.passwordChangeRequired, consultarConsentimiento]);
 
   const registrarInteraccion = () => {
     const control = controlInactividad.current;
@@ -518,11 +566,22 @@ function AppInterna() {
   if (sesion && !sesion.passwordChangeRequired && (consentimiento === null || consentimiento.pendiente)) {
     return <MarcaContext.Provider value={{ marca }}><View style={{ flex: 1, backgroundColor: colores.papel }}>
       {consentimiento?.pendiente ? <ConsentimientoInstitucional estado={consentimiento} actualizar={setConsentimiento} salir={() => void cerrar()} /> :
-      <View style={{ flex: 1, justifyContent: "center", padding: 24, gap: 14 }}>
-        <Text accessibilityRole="header">Verificando documentos institucionales</Text>
-        {errorConsentimiento ? <Text accessibilityRole="alert">{errorConsentimiento}</Text> : <ActivityIndicator accessibilityLabel="Comprobando consentimiento" />}
-        <TouchableOpacity accessibilityRole="button" onPress={() => void consultarConsentimiento()} style={{ minHeight: 48 }}><Text>Reintentar</Text></TouchableOpacity>
-        <TouchableOpacity accessibilityRole="button" onPress={() => void cerrar()} style={{ minHeight: 48 }}><Text>Cerrar sesión</Text></TouchableOpacity>
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 20 }}>
+        <View style={{ width: "100%", maxWidth: 520, padding: 24, gap: 14, borderRadius: 16, backgroundColor: colores.superficie, borderWidth: 1, borderColor: colores.linea }}>
+          <Text accessibilityRole="header" style={{ fontSize: 24, fontWeight: "700" }}>Documentos institucionales</Text>
+          {errorConsentimiento ? <>
+            <Text accessibilityRole="alert" style={{ color: colores.gris }}>{errorConsentimiento}</Text>
+            <TouchableOpacity accessibilityRole="button" onPress={() => void consultarConsentimiento()} style={{ minHeight: 48, borderRadius: 10, justifyContent: "center", alignItems: "center", backgroundColor: colores.pizarra }}>
+              <Text style={{ color: colores.sobrePrimario, fontWeight: "700" }}>Reintentar</Text>
+            </TouchableOpacity>
+          </> : <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <ActivityIndicator accessibilityLabel="Comprobando consentimiento" color={colores.enlace} />
+            <Text>Verificando tus documentos…</Text>
+          </View>}
+          <TouchableOpacity accessibilityRole="button" onPress={() => void cerrar()} style={{ minHeight: 48, justifyContent: "center", alignItems: "center" }}>
+            <Text style={{ color: colores.enlace }}>Cerrar sesión</Text>
+          </TouchableOpacity>
+        </View>
       </View>}
     </View></MarcaContext.Provider>;
   }
@@ -566,65 +625,66 @@ function AppInterna() {
 
   return (
     <MarcaContext.Provider value={{ marca }}>
-      <SesionContext.Provider
-        value={{ sesion, iniciar, cerrar, finalizarSesionLocal }}
-      >
-        <SafeAreaView style={{ flex: 1, backgroundColor:sesion ? colores.papel : marca.colorPrimario }} edges={sesion ? ["left","right","top"] : ["left","right","top","bottom"]} onTouchStart={registrarInteraccion}>
-        <NavigationContainer
-          ref={navegacion}
-          theme={tema}
-          onReady={() => {
-            if (Platform.OS !== "web" && sesion && Notifications.getLastNotificationResponse())
-              navegacion.navigate("Inicio");
-          }}
+      <SesionContext.Provider value={{ sesion, iniciar, cerrar, finalizarSesionLocal }}>
+        <SafeAreaView
+          style={{ flex: 1, backgroundColor: sesion ? colores.papel : colores.pizarra }}
+          edges={sesion ? ["left", "right", "top"] : ["left", "right", "top", "bottom"]}
+          onTouchStart={registrarInteraccion}
         >
-          <StatusBar
-            style={
-              sesion ? 'dark' : textoSobreFondo(marca.colorPrimario) === "#ffffff" ? "light" : "dark"
-            }
-          />
+          <StatusBar style={(sesion ? oscuro : colores.sobrePrimario === "#ffffff") ? "light" : "dark"} />
           {sesion ? (
-            <IdentidadAlumnoContext.Provider value={identidadAlumno?.usuarioId === sesion.sub ? identidadAlumno : {}}>
-            <CabeceraAlumno escritorio={escritorio} menuAbierto={menuAbierto} alternarMenu={() => setMenuAbierto(v => !v)}
-              abrirPerfil={() => { if (navegacion.isReady()) navegacion.navigate('Perfil'); }} />
-            <AnchoPortalContext.Provider value={escritorio ? width - (menuAbierto ? 264 : 88) : width}>
-            <Tab.Navigator
+            <NavigationContainer
               key={sesion.sub}
-              tabBar={props => <NavegacionAlumno {...props} escritorio={escritorio} menuAbierto={menuAbierto} cerrarMenu={() => setMenuAbierto(false)} />}
-              screenOptions={{
-                headerShown: false,
-                tabBarPosition: escritorio ? 'left' : 'bottom',
-                tabBarStyle: escritorio ? { width: menuAbierto ? 264 : 88 } : undefined,
-                sceneStyle: { backgroundColor: colores.papel },
+              ref={navegacion}
+              theme={tema}
+              onReady={() => {
+                if (Platform.OS !== "web" && Notifications.getLastNotificationResponse()) navegacion.navigate("Inicio");
               }}
+              initialState={Platform.OS === "web" ? leerRutaAlumno(sesion.sub) : undefined}
+              onStateChange={Platform.OS === "web" ? (estado) => guardarRutaAlumno(sesion.sub, estado) : undefined}
             >
-              <Tab.Screen name="Inicio" component={InicioScreen} />
-              <Tab.Screen name="Materias" component={MateriasConTareas} options={{ headerShown: false }} />
-              <Tab.Screen
-                name="Calificaciones"
-                component={CalificacionesScreen}
-                options={{ tabBarLabel: "Notas" }}
-              />
-              <Tab.Screen
-                name="Pagos"
-                component={EstadoCuentaScreen}
-                options={{ title: "Estado de cuenta", tabBarLabel: "Cuenta" }}
-              />
-              <Tab.Screen name="Calendario" component={CalendarioAlumnoScreen} />
-              <Tab.Screen name="Tramites" component={TramitesAlumnoScreen} />
-              <Tab.Screen name="Perfil" component={PerfilConDocumentos} options={{ headerShown: false }} />
-            </Tab.Navigator>
-            </AnchoPortalContext.Provider>
-            </IdentidadAlumnoContext.Provider>
-          ) : (
-            <LoginScreen aviso={avisoCierre} />
-          )}
-        </NavigationContainer>
-        {sesion&&<RecorridoAlumno key={sesion.sub} usuarioId={sesion.sub} navegar={(pantalla,paso)=>{if(!navegacion.isReady())return;
-          if(pantalla==='Materias')navegacion.navigate('Materias',{screen:paso?.subpantalla ?? 'MisMaterias'});
-          else if(pantalla==='Tramites')navegacion.navigate('Tramites',{vista:paso?.vista ?? 'tramites'});
-          else navegacion.navigate(pantalla);
-        }}/>}
+              <IdentidadAlumnoContext.Provider value={identidadAlumno?.usuarioId === sesion.sub ? identidadAlumno : {}}>
+                <CabeceraAlumno
+                  escritorio={escritorio}
+                  menuAbierto={menuAbierto}
+                  alternarMenu={() => setMenuAbierto(v => !v)}
+                  abrirPerfil={() => { if (navegacion.isReady()) navegacion.navigate("Perfil"); }}
+                />
+                <AnchoPortalContext.Provider value={escritorio ? width - (menuAbierto ? 264 : 88) : width}>
+                  <Tab.Navigator
+                    tabBar={props => (
+                      <NavegacionAlumno
+                        {...props}
+                        escritorio={escritorio}
+                        menuAbierto={menuAbierto}
+                        cerrarMenu={() => setMenuAbierto(false)}
+                      />
+                    )}
+                    screenOptions={{
+                      headerShown: false,
+                      tabBarPosition: escritorio ? "left" : "bottom",
+                      sceneStyle: { backgroundColor: colores.papel, width: "100%", minWidth: 0 },
+                      tabBarStyle: escritorio ? { width: menuAbierto ? 264 : 88 } : undefined,
+                    }}
+                  >
+                    <Tab.Screen name="Inicio" component={InicioScreen} />
+                    <Tab.Screen name="Materias" component={MateriasConTareas} />
+                    <Tab.Screen name="Calificaciones" component={CalificacionesScreen} options={{ tabBarLabel: "Notas" }} />
+                    <Tab.Screen name="Pagos" component={EstadoCuentaScreen} options={{ title: "Estado de cuenta", tabBarLabel: "Cuenta" }} />
+                    <Tab.Screen name="Calendario" component={CalendarioAlumnoScreen} />
+                    <Tab.Screen name="Tramites" component={TramitesAlumnoScreen} />
+                    <Tab.Screen name="Perfil" component={PerfilConDocumentos} />
+                  </Tab.Navigator>
+                </AnchoPortalContext.Provider>
+              </IdentidadAlumnoContext.Provider>
+            </NavigationContainer>
+          ) : <LoginScreen aviso={avisoCierre} />}
+          {sesion && <RecorridoAlumno key={sesion.sub} usuarioId={sesion.sub} navegar={(pantalla, paso) => {
+            if (!navegacion.isReady()) return;
+            if (pantalla === "Materias") navegacion.navigate("Materias", { screen: paso?.subpantalla ?? "MisMaterias" });
+            else if (pantalla === "Tramites") navegacion.navigate("Tramites", { vista: paso?.vista ?? "tramites" });
+            else navegacion.navigate(pantalla);
+          }} />}
         </SafeAreaView>
       </SesionContext.Provider>
     </MarcaContext.Provider>
@@ -636,6 +696,29 @@ export default function App() {
   const [fuenteLista, errorFuente] = useFonts({
     Onest: require("./src/assets/fonts/OnestVariable.ttf"),
   });
+  const [marca, setMarca] = useState(MARCA_POR_DEFECTO);
+  const sistema = useColorScheme();
+  const [modo, setModo] = useState<ModoAlumno>(() => {
+    const anterior = Platform.OS === "web" ? leerPreferencia("escolar_apariencia") : null;
+    return anterior === "oscuro" || anterior === "claro" ? anterior : "sistema";
+  });
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    let vigente = true;
+    void SecureStore.getItemAsync("escolar_apariencia").then((valor) => {
+      if (vigente && (valor === "oscuro" || valor === "claro")) setModo(valor);
+    }).catch(() => undefined);
+    return () => { vigente = false; };
+  }, []);
+  const cambiarModo = useCallback((valor: ModoAlumno) => {
+    setModo(valor);
+    if (Platform.OS === "web") guardarPreferencia("escolar_apariencia", valor);
+    else void SecureStore.setItemAsync("escolar_apariencia", valor).catch(() => undefined);
+  }, []);
+  const oscuro = modo === "oscuro" || (modo === "sistema" && sistema === "dark");
+  const tema = useMemo(() => ({
+    colores: paletaAlumno(marca, oscuro), oscuro, modo, setModo: cambiarModo,
+  }), [marca, oscuro, modo, cambiarModo]);
   if (!fuenteLista && !errorFuente) {
     return (
       <View
@@ -643,19 +726,21 @@ export default function App() {
           flex: 1,
           justifyContent: "center",
           alignItems: "center",
-          backgroundColor: colores.papel,
+          backgroundColor: coloresIniciales.papel,
         }}
       >
         <ActivityIndicator
           accessibilityLabel="Preparando tipografía"
-          color={colores.pizarra}
+          color={coloresIniciales.pizarra}
         />
       </View>
     );
   }
   return (
     <FuenteContext.Provider value={fuenteLista}>
-      <SafeAreaProvider><AppInterna /><AlertasWeb /></SafeAreaProvider>
+      <TemaAlumnoContext.Provider value={tema}>
+        <SafeAreaProvider><AppInterna marca={marca} setMarca={setMarca} /><AlertasWeb /></SafeAreaProvider>
+      </TemaAlumnoContext.Provider>
     </FuenteContext.Provider>
   );
 }

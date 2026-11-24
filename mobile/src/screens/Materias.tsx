@@ -1,3 +1,4 @@
+import { useTemaAlumno, useEstilosAlumno, type ColoresAlumno } from "../tema-alumno";
 import { useDisenoAlumno } from "../use-diseno-alumno";
 import { TemarioClase } from "../components/TemarioClase";
 import { Paginador } from "../components/Paginador";
@@ -20,10 +21,10 @@ import { useFocusEffect } from "@react-navigation/native";
 import { api, archivosBase, mensajeDeError } from "../api/client";
 import { useSesion } from "../sesion";
 import { useMarca } from "../marca";
-import { colores, radio, espacio, tipografia, textoSobreFondo } from "../theme";
+import { radio, espacio, tipografia, textoSobreFondo } from "../theme";
 import {
-  GuiaPantalla,
-  base,
+  BannerAlumno,
+  useBase,
   ErrorCarga,
   Sello,
   Tarjeta,
@@ -49,6 +50,9 @@ interface Material {
 }
 
 export default function MateriasScreen({ abrirTareas }: { abrirTareas?: () => void }) {
+  const base = useBase();
+  const { colores } = useTemaAlumno();
+  const estilos = useEstilosAlumno(crearEstilos);
   const diseno = useDisenoAlumno();
   const { marca } = useMarca();
   const { sesion } = useSesion();
@@ -234,7 +238,8 @@ export default function MateriasScreen({ abrirTareas }: { abrirTareas?: () => vo
         keyboardShouldPersistTaps="handled"
         ListHeaderComponent={
           <>
-            <GuiaPantalla
+            <BannerAlumno
+              icono="aula"
               titulo="Mi aula"
               detalle="Consulta materiales de clase. En Tareas y entregas puedes subir archivos o enviar una respuesta."
             />
@@ -262,6 +267,9 @@ export default function MateriasScreen({ abrirTareas }: { abrirTareas?: () => vo
             <RecursamientosPropios />
           </>
         }
+        key={diseno.amplio ? "materias-dos-columnas" : "materias-una-columna"}
+        numColumns={diseno.amplio ? 2 : 1}
+        columnWrapperStyle={diseno.amplio ? { gap: 16 } : undefined}
         data={materias}
         keyExtractor={(m) => String(m.id)}
         refreshControl={
@@ -278,6 +286,7 @@ export default function MateriasScreen({ abrirTareas }: { abrirTareas?: () => vo
           const desplegada = abierta === item.id;
           const materiales = materialesPor[item.id];
           return (
+            <View style={{ width: diseno.amplio ? Math.floor((diseno.anchoContenido - diseno.lateral * 2 - 16) / 2) : "100%", maxWidth: "100%", minWidth: 0 }}>
             <Tarjeta>
               <TouchableOpacity
                 onPress={() => alternar(item)}
@@ -347,7 +356,7 @@ export default function MateriasScreen({ abrirTareas }: { abrirTareas?: () => vo
                       <Text
                         style={[
                           estilos.materialTitulo,
-                          { color: marca.colorPrimario },
+                          { color: colores.enlace },
                         ]}
                       >
                         📄 {m.titulo}
@@ -360,6 +369,7 @@ export default function MateriasScreen({ abrirTareas }: { abrirTareas?: () => vo
                 </View>
               )}
             </Tarjeta>
+            </View>
           );
         }}
       />
@@ -367,7 +377,7 @@ export default function MateriasScreen({ abrirTareas }: { abrirTareas?: () => vo
   );
 }
 
-const estilos = StyleSheet.create({
+const crearEstilos = (colores: ColoresAlumno) => StyleSheet.create({
   materiales: {
     marginTop: espacio.md,
     paddingTop: espacio.md,
@@ -389,7 +399,7 @@ const estilos = StyleSheet.create({
   },
   materialTitulo: {
     fontSize: tipografia.cuerpo,
-    color: colores.pizarra,
+    color: colores.enlace,
     fontWeight: "600",
   },
   indicador: {

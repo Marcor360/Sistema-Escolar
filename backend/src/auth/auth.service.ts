@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Not, Repository } from 'typeorm';
 import { createHash, randomUUID } from 'crypto';
 import { Sesion } from '../entities/sesion.entity';
+import { DispositivoAcceso } from '../entities/dispositivo-acceso.entity';
 import { LIMITE_INACTIVIDAD_MS, sesionInactiva, instanteActividad } from './sesion-inactividad';
 import { Alumno } from '../entities/alumno.entity';
 import { Docente } from '../entities/docente.entity';
@@ -32,7 +33,7 @@ export class AuthService {
     @Optional() private readonly avisos?: AuthCorreoEventosService,
   ) {}
 
-  async login(email: string, password: string, portal: Portal = 'WEB', ip?: string, agente?:string, alumnoWeb = false) {
+  async login(email: string, password: string, portal: Portal = 'WEB', ip?: string, agente?:string, alumnoWeb = false, dispositivoId?: string) {
     const usuario = await this.usuarios.findOne({
       where: { email, activo: true },
       select: ['id', 'email', 'passwordHash', 'nombre', 'segundoNombre', 'apellidoPaterno', 'apellidoMaterno', 'sessionVersion', 'passwordChangeRequired', 'activacionPendiente'],
@@ -53,9 +54,32 @@ export class AuthService {
       version: usuario.sessionVersion ?? 0, expiraEn: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       ultimaActividadEn: instanteActividad(), revocada: false });
     const resultado = this.emitir(usuario, sesion);
+    const avisos = this.avisos;
+    if (dispositivoId && avisos) {
+      const huella = createHash('sha256')
+        .update(`${usuario.id}:${portal}:${dispositivoId.toLowerCase()}`).digest('hex');
+      try {
+        await this.dataSource.transaction(async (manager) => {
+          // Serializar los primeros accesos de esta cuenta, incluso entre instancias de la API.
+          await manager.getRepository(Usuario).findOneOrFail({
+            where: { id: usuario.id }, select: { id: true }, loadEagerRelations: false,
+            lock: { mode: 'pessimistic_write' },
+          });
+          const dispositivos = manager.getRepository(DispositivoAcceso);
+          const conocido = await dispositivos.existsBy({ usuarioId: usuario.id, huella });
+          await manager.getRepository(Sesion).save(sesion);
+          if (!conocido) {
+            await dispositivos.insert({ usuarioId: usuario.id, huella, primerEventoId: sesion.id });
+            await avisos.encolarEnTransaccion(manager, usuario.id, 'INGRESO', sesion.id);
+          }
+        });
+        return resultado;
+      } catch {
+        // La transacción revierte el reconocimiento si falla la cola. El próximo acceso puede reintentarlo.
+        this.logger.warn('No se pudo registrar el aviso de acceso desde un dispositivo nuevo');
+      }
+    }
     await sesiones.save(sesion);
-    // El acceso autorizado no se bloquea por una caída del proveedor de correo.
-    await this.avisos?.encolar(usuario.id, 'INGRESO', sesion.id).catch(() => this.logger.warn('Aviso de ingreso pendiente por error de cola'));
     return resultado;
   }
 

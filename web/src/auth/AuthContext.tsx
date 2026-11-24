@@ -23,6 +23,19 @@ interface AuthValue {
 
 const AuthContext = createContext<AuthValue>(null as unknown as AuthValue);
 
+function dispositivoDelNavegador() {
+  try {
+    const clave = 'escolar_dispositivo';
+    const guardado = localStorage.getItem(clave);
+    if (guardado && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(guardado)) return guardado;
+    const nuevo = crypto.randomUUID();
+    localStorage.setItem(clave, nuevo);
+    return nuevo;
+  } catch {
+    return undefined;
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [sesion, setSesion] = useState<Sesion | null>(null);
   const [cargando, setCargando] = useState(true);
@@ -68,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Un refresh de logout antiguo no debe sobrescribir la cookie del login nuevo.
     cancelarRevocacion.current?.abort();
     await revocacion.current;
-    const { data } = await api.post('/auth/login', { email, password });
+    const { data } = await api.post('/auth/login', { email, password, dispositivoId: dispositivoDelNavegador() });
     iniciarActividadAutenticada();
     establecerToken(data.accessToken);
     setSesion(data.usuario);

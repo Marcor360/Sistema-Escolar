@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/commo
 import { randomUUID } from 'crypto';
 import { DataSource, EntityManager, LessThan } from 'typeorm';
 import { AuthCorreoEvento, TipoEventoSeguridad } from '../entities/auth-correo-evento.entity';
+import { DispositivoAcceso } from '../entities/dispositivo-acceso.entity';
 import { Usuario } from '../entities/usuario.entity';
 import { NotificacionesService } from '../notificaciones/notificaciones.service';
 import { ConfiguracionService } from '../configuracion/configuracion.service';
@@ -84,6 +85,13 @@ export class AuthCorreoEventosService implements OnModuleInit, OnModuleDestroy {
       }, 30000);
       latido.unref();
       try {
+        if (candidato.tipo === 'INGRESO' && !await this.ds.getRepository(DispositivoAcceso).existsBy({
+          primerEventoId: candidato.id, usuarioId: candidato.usuarioId,
+        })) {
+          // Los avisos pendientes de la versión anterior no acreditan un dispositivo nuevo.
+          await repo.update({ id: candidato.id, claim }, { estado: 'FALLIDO', claim: null, leaseHasta: null });
+          continue;
+        }
         const usuario = await this.ds.getRepository(Usuario).findOne({ where: { id: candidato.usuarioId, activo: true } });
         if (!usuario?.email) {
           await repo.update({ id: candidato.id, claim }, { estado: 'FALLIDO', claim: null, leaseHasta: null });

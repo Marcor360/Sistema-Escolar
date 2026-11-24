@@ -1,8 +1,8 @@
+import { useEstilosAlumno, type ColoresAlumno } from "../tema-alumno";
 import { forwardRef, useState } from 'react';
 import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import type { TextInputProps } from 'react-native';
 import { Text } from './Texto';
-import { colores } from '../theme';
 
 interface Props extends Omit<TextInputProps, 'secureTextEntry'> {
   etiquetaControl?: string;
@@ -11,6 +11,7 @@ interface Props extends Omit<TextInputProps, 'secureTextEntry'> {
 export const CampoPassword = forwardRef<TextInput, Props>(function CampoPassword(
   { etiquetaControl = 'contraseña', style, editable = true, ...props }, ref,
 ) {
+  const styles = useEstilosAlumno(crearEstilos);
   const [visible, setVisible] = useState(false);
   return (
     <View style={styles.contenedor}>
@@ -36,7 +37,7 @@ export const CampoPassword = forwardRef<TextInput, Props>(function CampoPassword
   );
 });
 
-const styles = StyleSheet.create({
+const crearEstilos = (colores: ColoresAlumno) => StyleSheet.create({
   contenedor: { position: 'relative', width: '100%' },
   input: { paddingRight: 56 },
   ojo: {

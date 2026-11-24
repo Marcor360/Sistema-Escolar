@@ -6,14 +6,16 @@ import { Paginador } from './Paginador';
 import { api, archivosBase, mensajeDeError } from '../api/client';
 import { resolverEnlacePrivado } from '../api/enlaces-privados';
 import { useSesion } from '../sesion';
-import { base } from '../screens/comunes';
+import { useBase } from '../screens/comunes';
 interface Tema { id: number; indice: number; titulo: string; contenido: string; parcial: number | null; enlace: string | null; hasta: string | null; adjuntos: { id: number; archivoNombre: string }[] }
 export function TemarioClase({ claseId }: { claseId: number }) {
+  const base = useBase();
   const { sesion } = useSesion();
   const [abierto, setAbierto] = useState(false);
   return <View><TouchableOpacity style={[base.tarjeta, { minHeight: 44 }]} accessibilityRole="button" onPress={() => setAbierto(v => !v)}><Text>{abierto ? 'Ocultar temario de esta clase' : 'Ver temario de esta clase'}</Text></TouchableOpacity>{abierto && <Temas key={String(claseId) + ':' + sesion?.sub} claseId={claseId} />}</View>;
 }
 function Temas({ claseId }: { claseId: number }) {
+  const base = useBase();
   const { sesion } = useSesion(), [pagina, setPagina] = useState(1), [datos, setDatos] = useState<Tema[]>([]), [total, setTotal] = useState(0), [cargando, setCargando] = useState(false), [error, setError] = useState(''), [intento, setIntento] = useState(0);
   useFocusEffect(useCallback(() => { let vigente = true; setDatos([]); setTotal(0); setError(''); setCargando(true); api.get(`/grupo-materias/${claseId}/temario`, { params: { pagina, porPagina: 10 } }).then(r => { if (vigente) { setDatos(r.data.datos); setTotal(r.data.total); } }).catch(e => { if (vigente) setError(mensajeDeError(e)); }).finally(() => { if (vigente) setCargando(false); }); return () => { vigente = false; }; }, [claseId, pagina, sesion?.sub, intento]));
   const abrirArchivo = async (id: number) => { try { const { data } = await api.get<{ url: string }>(`/archivos/temarios/${id}/enlace`); await Linking.openURL(resolverEnlacePrivado(archivosBase, data.url, 'temario', id)); } catch (e) { setError(mensajeDeError(e)); } };

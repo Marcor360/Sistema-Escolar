@@ -1,3 +1,4 @@
+import { useTemaAlumno, useEstilosAlumno, type ColoresAlumno } from "../tema-alumno";
 import { useDisenoAlumno } from "../use-diseno-alumno";
 import { useSesion } from "../sesion";
 import { crearControlLectura } from "../api/lectura-vigente";
@@ -15,12 +16,12 @@ import {
 import { Text } from "../components/Texto";
 import { useFocusEffect } from "@react-navigation/native";
 import { api, mensajeDeError } from "../api/client";
-import { colores, radio, espacio, tipografia, textoSobreFondo } from "../theme";
+import { radio, espacio, tipografia, textoSobreFondo } from "../theme";
 import { pesos } from "../formato";
 import { useMarca } from "../marca";
 import {
   BannerAlumno,
-  base,
+  useBase,
   ErrorCarga,
   Sello,
   Tarjeta,
@@ -50,6 +51,9 @@ interface Estado {
 }
 
 export default function EstadoCuentaScreen() {
+  const base = useBase();
+  const { colores } = useTemaAlumno();
+  const estilos = useEstilosAlumno(crearEstilos);
   const diseno = useDisenoAlumno();
   const { sesion } = useSesion();
   const usuarioActual = sesion?.sub ?? null;
@@ -205,7 +209,7 @@ export default function EstadoCuentaScreen() {
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 20 }}>
         <Text style={base.tituloTarjeta}>Ventanilla de pagos</Text>
         <TouchableOpacity accessibilityRole="button" accessibilityLabel="Actualizar estado de cuenta" disabled={cargando || pagando} style={base.botonAccesible} onPress={cargar}>
-          <Text style={{ color: marca.colorPrimario, fontWeight: '600', fontSize: 13 }}>{cargando ? 'Actualizando…' : 'Actualizar estado de cuenta'}</Text>
+          <Text style={{ color: colores.enlace, fontWeight: '600', fontSize: 13 }}>{cargando ? 'Actualizando…' : 'Actualizar estado de cuenta'}</Text>
         </TouchableOpacity>
       </View>
       {error !== "" && <ErrorCarga mensaje={error} reintentar={cargar} />}
@@ -248,8 +252,10 @@ export default function EstadoCuentaScreen() {
           {estado.cargos.filter((c) => c.saldo > 0).length === 0 && (
             <Vacio mensaje="No tienes pagos pendientes." />
           )}
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 16 }}>
           {estado.cargos.filter((c) => c.saldo > 0).map((c) => (
-            <Tarjeta key={c.id}>
+            <View key={c.id} style={{ width: diseno.amplio ? Math.floor((diseno.anchoContenido - diseno.lateral * 2 - 32) / 3) : "100%" }}>
+            <Tarjeta>
               <Text style={base.tituloTarjeta}>{c.descripcion}</Text>
               <Text style={base.secundario}>
                 {c.fechaVencimiento ? `Vence: ${c.fechaVencimiento} · ` : ""}
@@ -293,7 +299,9 @@ export default function EstadoCuentaScreen() {
                 </TouchableOpacity>
               )}
             </Tarjeta>
+            </View>
           ))}
+          </View>
           <Text accessibilityRole="header" style={[base.tituloTarjeta, { marginVertical: 16 }]}>Pagos registrados</Text>
           {estado.pagos.length === 0 && <Tarjeta><Text style={base.secundario}>Aún no hay pagos registrados en esta consulta.</Text></Tarjeta>}
           {estado.pagos.map(pago => <Tarjeta key={pago.id}>
@@ -309,9 +317,9 @@ export default function EstadoCuentaScreen() {
   );
 }
 
-const estilos = StyleSheet.create({
+const crearEstilos = (colores: ColoresAlumno) => StyleSheet.create({
   resumen: {
-    backgroundColor: "#fff",
+    backgroundColor: colores.superficie,
     borderWidth: 1,
     borderColor: colores.linea,
     padding: espacio.xl,
@@ -349,7 +357,7 @@ const estilos = StyleSheet.create({
     borderRadius: radio.sm,
   },
   botonTexto: {
-    color: colores.pizarraOscuro,
+    color: colores.enlace,
     fontSize: tipografia.cuerpo,
     fontWeight: "600",
   },

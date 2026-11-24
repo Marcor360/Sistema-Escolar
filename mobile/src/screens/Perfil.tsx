@@ -1,3 +1,4 @@
+import { useTemaAlumno, type ModoAlumno, useEstilosAlumno, type ColoresAlumno } from "../tema-alumno";
 import { CampoPassword } from '../components/CampoPassword';
 import { useDisenoAlumno } from "../use-diseno-alumno";
 import { repetirRecorridoAlumno } from '../recorrido-alumno';
@@ -21,8 +22,8 @@ import { useFocusEffect } from "@react-navigation/native";
 import { api, mensajeDeError } from "../api/client";
 import { useSesion } from "../sesion";
 import { useMarca } from "../marca";
-import { colores, radio, espacio, tipografia, textoSobreFondo } from "../theme";
-import { base, ErrorCarga, Tarjeta, GuiaPantalla } from "./comunes";
+import { radio, espacio, tipografia, textoSobreFondo } from "../theme";
+import { useBase, ErrorCarga, Tarjeta, GuiaPantalla } from "./comunes";
 import { ocultarCurp } from "../utils/curp-privada";
 
 interface Perfil {
@@ -46,6 +47,9 @@ interface Perfil {
 }
 
 export default function PerfilScreen({ abrirDocumentos }: { abrirDocumentos?: () => void } = {}) {
+  const base = useBase();
+  const { colores, modo, setModo } = useTemaAlumno();
+  const estilos = useEstilosAlumno(crearEstilos);
   const diseno = useDisenoAlumno();
   const { marca } = useMarca();
   const { sesion, cerrar, finalizarSesionLocal } = useSesion();
@@ -222,6 +226,19 @@ export default function PerfilScreen({ abrirDocumentos }: { abrirDocumentos?: ()
       automaticallyAdjustKeyboardInsets
     >
       <GuiaPantalla titulo="Mi perfil" detalle="Consulta tus datos y documentos. Administra tu acceso y seguridad desde esta cuenta."/>
+      <Tarjeta>
+        <Text accessibilityRole="header" style={base.tituloTarjeta}>Apariencia</Text>
+        <View accessibilityRole="radiogroup" accessibilityLabel="Apariencia" style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
+          {(["sistema", "claro", "oscuro"] as ModoAlumno[]).map(opcion => (
+            <TouchableOpacity key={opcion} accessibilityRole="radio" accessibilityLabel={opcion[0].toUpperCase() + opcion.slice(1)} aria-checked={modo === opcion}
+              onPress={() => setModo(opcion)}
+              style={[base.botonAccesible, { paddingHorizontal: 16, borderRadius: 10, borderWidth: 1,
+                borderColor: modo === opcion ? colores.enlace : colores.linea, backgroundColor: modo === opcion ? colores.suave : colores.superficie }]}>
+              <Text style={{ color: modo === opcion ? colores.enlace : colores.tinta, fontWeight: modo === opcion ? "700" : "500", textTransform: "capitalize" }}>{opcion}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </Tarjeta>
       {errorPerfil !== "" && (
         <ErrorCarga mensaje={errorPerfil} reintentar={cargarPerfil} />
       )}
@@ -481,7 +498,7 @@ export default function PerfilScreen({ abrirDocumentos }: { abrirDocumentos?: ()
   );
 }
 
-const estilos = StyleSheet.create({
+const crearEstilos = (colores: ColoresAlumno) => StyleSheet.create({
   etiqueta: {
     fontSize: 11,
     letterSpacing: 0.5,
@@ -492,8 +509,8 @@ const estilos = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: "#B9C0BA",
-    backgroundColor: "#fff",
+    borderColor: colores.linea,
+    backgroundColor: colores.superficie,
     minHeight: 48,
     paddingHorizontal: espacio.md,
     paddingVertical: espacio.md,

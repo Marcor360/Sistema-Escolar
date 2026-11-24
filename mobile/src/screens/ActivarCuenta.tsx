@@ -1,3 +1,4 @@
+import { useTemaAlumno, useEstilosAlumno, type ColoresAlumno } from "../tema-alumno";
 import { CampoPassword } from '../components/CampoPassword';
 import { useDisenoAlumno } from "../use-diseno-alumno";
 import { useEffect, useRef, useState } from "react";
@@ -13,7 +14,7 @@ import {
 import * as SecureStore from "../almacen-seguro";
 import { Text } from "../components/Texto";
 import { api, mensajeDeError } from "../api/client";
-import { colores, espacio, radio, tipografia, textoSobreFondo } from "../theme";
+import { espacio, radio, tipografia, textoSobreFondo } from "../theme";
 import { useMarca } from "../marca";
 
 const ESPERA_MS = 60_000;
@@ -28,6 +29,8 @@ export default function ActivarCuentaScreen({
   correoInicial?: string;
   recuperacion?: boolean;
 }) {
+  const { colores } = useTemaAlumno();
+  const styles = useEstilosAlumno(crearEstilos);
   const diseno = useDisenoAlumno();
   const { marca } = useMarca();
   const claveReenvio = recuperacion
@@ -396,7 +399,7 @@ export default function ActivarCuentaScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (colores: ColoresAlumno) => StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: colores.pizarra },
   contenido: { flexGrow: 1, justifyContent: "center", padding: espacio.lg },
   tarjeta: {

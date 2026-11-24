@@ -1,12 +1,13 @@
 import { PasswordNuevaValida } from '../../common/password-bcrypt';
 import { Transform } from 'class-transformer';
 import { IsOptional } from 'class-validator';
-import { IsEmail, IsNotEmpty, IsString, Matches, MinLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, IsUUID, Matches, MinLength } from 'class-validator';
 
 export class LoginDto {
   @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim().toLowerCase() : value)
   @IsEmail() email!: string;
   @IsString() @IsNotEmpty() password!: string;
+  @IsOptional() @IsUUID('4') dispositivoId?: string;
 }
 
 export class ForgotPasswordDto {

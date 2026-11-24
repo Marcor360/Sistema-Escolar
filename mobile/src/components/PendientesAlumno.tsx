@@ -5,8 +5,9 @@ import { Text } from "./Texto";
 import { api, mensajeDeError } from "../api/client";
 import { useMarca } from "../marca";
 import { textoSobreFondo } from "../theme";
-import { base } from "../screens/comunes";
+import { useBase } from "../screens/comunes";
 export function PendientesAlumno() {
+  const base = useBase();
   const navigation = useNavigation();
   const { marca } = useMarca();
   const [consultado, setConsultado] = useState(false);

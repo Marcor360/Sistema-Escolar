@@ -1,3 +1,4 @@
+import { useTemaAlumno, useEstilosAlumno, type ColoresAlumno } from "../tema-alumno";
 import { useDisenoAlumno } from "../use-diseno-alumno";
 import { Paginador } from "../components/Paginador";
 import { crearControlLectura } from "../api/lectura-vigente";
@@ -18,11 +19,11 @@ import { Text } from "../components/Texto";
 import { useFocusEffect } from "@react-navigation/native";
 import * as DocumentPicker from "expo-document-picker";
 import { api, mensajeDeError } from "../api/client";
-import { colores, tipografia, textoSobreFondo } from "../theme";
+import { tipografia, textoSobreFondo } from "../theme";
 import { useMarca } from "../marca";
 import {
   GuiaPantalla,
-  base,
+  useBase,
   ErrorCarga,
   Sello,
   Tarjeta,
@@ -47,6 +48,9 @@ interface Tarea {
 }
 
 export default function TareasScreen() {
+  const base = useBase();
+  const { colores } = useTemaAlumno();
+  const estilos = useEstilosAlumno(crearEstilos);
   const diseno = useDisenoAlumno();
   const { marca } = useMarca();
   const [pagina, setPagina] = useState(1),
@@ -370,6 +374,7 @@ export default function TareasScreen() {
                 <TextInput
                   accessibilityLabel={`Respuesta escrita: ${item.titulo}`}
                   placeholder="Escribe tu respuesta"
+                  placeholderTextColor={colores.gris}
                   multiline
                   maxLength={3000}
                   style={estilos.comentario}
@@ -405,6 +410,7 @@ export default function TareasScreen() {
               }
               accessibilityLabel={`Comentario para el profesor: ${item.titulo}`}
               placeholder="Comentario opcional para el profesor"
+              placeholderTextColor={colores.gris}
               multiline
               style={estilos.comentario}
               maxLength={500}
@@ -473,7 +479,7 @@ export default function TareasScreen() {
   );
 }
 
-const estilos = StyleSheet.create({
+const crearEstilos = (colores: ColoresAlumno) => StyleSheet.create({
   comentario: {
     borderWidth: 1,
     borderColor: colores.linea,

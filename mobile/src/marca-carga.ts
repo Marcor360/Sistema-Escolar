@@ -66,6 +66,7 @@ export async function cargarMarca(
 export function mismaMarca(a: Marca, b: Marca): boolean {
   return a.nombreAdministrativo === b.nombreAdministrativo && a.nombrePortalAlumno === b.nombrePortalAlumno && a.nombreInstitucion === b.nombreInstitucion
     && a.nombreCorto === b.nombreCorto
+    && a.tamanoLogo === b.tamanoLogo
     && a.logoUrl === b.logoUrl
     && a.faviconAlumnoUrl === b.faviconAlumnoUrl
     && a.logoAlumnoUrl === b.logoAlumnoUrl

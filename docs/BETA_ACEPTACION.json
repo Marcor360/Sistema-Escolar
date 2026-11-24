@@ -1,6 +1,6 @@
 {
-  "version": "1.38.6",
-  "alcance": "Candidata 1.38.6: Confirmaciones accesibles de roles, comunicados y recursos de marca; recuperación de fallos de consulta y control de respuestas obsoletas en comunicados. Solo web y pruebas; sin migraciones.",
+  "version": "1.38.7",
+  "alcance": "Candidata 1.38.7. Portal alumno adaptable con marca institucional, temas y calendario renovado, recuperación de navegación y avisos por dispositivo nuevo. Incluye migración incremental.",
   "puertas": [
     {
       "id": "ci_ultimo_sha",

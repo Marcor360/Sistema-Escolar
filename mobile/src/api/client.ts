@@ -115,7 +115,7 @@ api.interceptors.response.use(
     if (
       error.response?.status === 401 &&
       (!error.config?.url?.startsWith("/auth/") ||
-        error.config?.url === "/auth/me") &&
+        ["/auth/me", "/auth/consentimiento", "/auth/actividad"].includes(error.config?.url)) &&
       !error.config?.headers["x-reintento-sesion"]
     ) {
       const actual = generacion;

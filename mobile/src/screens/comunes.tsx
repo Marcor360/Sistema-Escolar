@@ -1,15 +1,18 @@
+import { useTemaAlumno, useEstilosAlumno, type ColoresAlumno } from "../tema-alumno";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "../components/Texto";
-import { colores, espacio, radio, tipografia, textoSobreFondo } from "../theme";
+import { espacio, radio, tipografia, textoSobreFondo } from "../theme";
 import { useMarca } from "../marca";
 import { IconoAlumno, type NombreIconoAlumno } from '../components/IconoAlumno';
 
 export function BannerAlumno({ titulo, detalle, icono }: { titulo: string; detalle: string; icono: NombreIconoAlumno }) {
-  return <View style={{ backgroundColor: '#123744', borderRadius: 12, padding: 28, marginBottom: 24, flexDirection: 'row', alignItems: 'center', gap: 20 }}>
-    <View style={{ flex: 1, minWidth: 0 }}><Text style={{ fontSize: 10, letterSpacing: 1.5, color: '#C3D4DA', fontWeight: '700', marginBottom: 12 }}>SERVICIOS ESCOLARES</Text>
-      <Text accessibilityRole="header" style={{ fontSize: 28, fontWeight: '700', color: '#fff', marginBottom: 10 }}>{titulo}</Text>
-      <Text style={{ fontSize: 13, lineHeight: 21, color: '#DAE6E9' }}>{detalle}</Text></View>
-    <IconoAlumno nombre={icono} color="#C3D4DA" tamano={42} />
+  const { colores } = useTemaAlumno();
+  return <View style={{ backgroundColor: colores.pizarraOscuro, borderRadius: 16, padding: 24, marginBottom: 26, flexDirection: 'row', alignItems: 'center', gap: 18, borderLeftWidth: 4, borderLeftColor: colores.dorado }}>
+    <View style={{ flex: 1, minWidth: 0 }}>
+      <Text accessibilityRole="header" style={{ fontSize: 30, fontWeight: '700', color: colores.sobrePrimarioOscuro, marginBottom: 8 }}>{titulo}</Text>
+      <Text style={{ fontSize: 15, lineHeight: 23, color: colores.sobrePrimarioOscuro }}>{detalle}</Text>
+    </View>
+    <IconoAlumno nombre={icono} color={colores.sobrePrimarioOscuro} tamano={34} />
   </View>;
 }
 
@@ -20,6 +23,7 @@ export function GuiaPantalla({
   titulo: string;
   detalle: string;
 }) {
+  const base = useBase();
   return (
     <View style={{ marginBottom: espacio.xl }}>
       <Text accessibilityRole="header" style={base.tituloPantalla}>
@@ -31,6 +35,7 @@ export function GuiaPantalla({
 }
 
 export function Tarjeta({ children }: { children: React.ReactNode }) {
+  const base = useBase();
   return <View style={base.tarjeta}>{children}</View>;
 }
 
@@ -41,6 +46,8 @@ export function Sello({
   texto: string;
   tono: "ok" | "aviso" | "mal" | "neutro";
 }) {
+  const base = useBase();
+  const { colores } = useTemaAlumno();
   const color =
     tono === "ok"
       ? colores.exito
@@ -55,6 +62,7 @@ export function Sello({
 }
 
 export function Vacio({ mensaje }: { mensaje: string }) {
+  const base = useBase();
   return <Text style={base.vacio}>{mensaje}</Text>;
 }
 
@@ -65,6 +73,7 @@ export function ErrorCarga({
   mensaje: string;
   reintentar: () => void;
 }) {
+  const base = useBase();
   const { marca } = useMarca();
   return (
     <View accessibilityRole="alert" style={base.errorCarga}>
@@ -98,7 +107,7 @@ export function ErrorCarga({
   );
 }
 
-export const base = StyleSheet.create({
+const crearBase = (colores: ColoresAlumno) => StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: colores.papel, padding: espacio.lg, paddingTop: espacio.xxl },
   contenidoLista: { paddingBottom: 32 },
   tituloPantalla: {
@@ -110,7 +119,7 @@ export const base = StyleSheet.create({
   },
   tarjeta: {
     minWidth: 0,
-    backgroundColor: "#fff",
+    backgroundColor: colores.superficie,
     borderWidth: 1,
     borderColor: colores.linea,
     padding: espacio.xl,
@@ -148,7 +157,7 @@ export const base = StyleSheet.create({
     paddingHorizontal: 20,
   },
   errorCarga: {
-    backgroundColor: "#fff",
+    backgroundColor: colores.superficie,
     borderWidth: 1,
     borderColor: colores.peligro,
     padding: espacio.xl,
@@ -157,7 +166,7 @@ export const base = StyleSheet.create({
   },
   errorTexto: { color: colores.peligro, marginBottom: 8 },
   reintentar: {
-    color: colores.pizarra,
+    color: colores.enlace,
     textDecorationLine: "underline",
     fontWeight: "600",
   },
@@ -176,3 +185,5 @@ export const base = StyleSheet.create({
     color: colores.tinta,
   },
 });
+
+export const useBase = () => useEstilosAlumno(crearBase);

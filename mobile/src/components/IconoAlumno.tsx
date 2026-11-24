@@ -1,3 +1,4 @@
+import { useTemaAlumno } from '../tema-alumno';
 import { Image } from 'react-native';
 import menu from '../assets/icons/menu.png';
 import close from '../assets/icons/close.png';
@@ -32,6 +33,7 @@ const iconos = {
   book,
 };
 export type NombreIconoAlumno = keyof typeof iconos;
-export function IconoAlumno({ nombre, color = '#20333D', tamano = 22 }: { nombre: NombreIconoAlumno; color?: string; tamano?: number }) {
-  return <Image accessible={false} source={iconos[nombre]} style={{ width: tamano, height: tamano, tintColor: color }} />;
+export function IconoAlumno({ nombre, color, tamano = 22, invertido = false }: { nombre: NombreIconoAlumno; color?: string; tamano?: number; invertido?: boolean }) {
+  const { colores } = useTemaAlumno();
+  return <Image accessible={false} source={iconos[nombre]} style={{ width: tamano, height: tamano, tintColor: color ?? colores.tinta, transform: invertido ? [{ rotate: "180deg" }] : undefined }} />;
 }

@@ -1,3 +1,4 @@
+import { useTemaAlumno } from "../tema-alumno";
 import { CampoPassword } from '../components/CampoPassword';
 import { useRef, useState } from "react";
 import {
@@ -8,14 +9,16 @@ import {
 } from "react-native";
 import { Text } from "../components/Texto";
 import { mensajeDeError } from "../api/errores";
-import { colores, textoSobreFondo } from "../theme";
-import { base, Tarjeta } from "./comunes";
+import { textoSobreFondo } from "../theme";
+import { useBase, Tarjeta } from "./comunes";
 
 export default function CambioPasswordInicial({
   guardar,
 }: {
   guardar: (actual: string, nueva: string) => Promise<void>;
 }) {
+  const base = useBase();
+  const { colores } = useTemaAlumno();
   const [actual, setActual] = useState("");
   const [nueva, setNueva] = useState("");
   const [confirmacion, setConfirmacion] = useState("");

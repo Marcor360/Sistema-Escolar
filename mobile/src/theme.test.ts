@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { textoSobreFondo } from './theme';
+import { paletaAlumno } from './tema-alumno';
 
 const contraste = (fondo: string, texto: string) => {
   const l = (c: string) => {
@@ -19,4 +20,16 @@ describe('Contraste del tema móvil', () => {
       expect(contraste(fondo, textoSobreFondo(fondo))).toBeGreaterThanOrEqual(4.5);
     }
   });
+});
+
+it('conserva la marca y el contraste de botones y enlaces en temas claro y oscuro', () => {
+  for (const oscuro of [true, false]) {
+    for (const colorPrimario of ['#FFFFFF', '#998167', '#883200', '#000000']) {
+      const paleta = paletaAlumno({ colorPrimario, colorPrimarioOscuro: '#12343B', colorAcento: '#C79A3C' }, oscuro);
+      expect(paleta.pizarra).toBe(colorPrimario);
+      expect(contraste(paleta.pizarra, paleta.sobrePrimario)).toBeGreaterThanOrEqual(4.5);
+      expect(contraste(paleta.superficie, paleta.enlace)).toBeGreaterThanOrEqual(4.5);
+      expect(contraste(paleta.papel, paleta.enlace)).toBeGreaterThanOrEqual(4.5);
+    }
+  }
 });

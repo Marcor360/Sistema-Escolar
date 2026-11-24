@@ -66,7 +66,8 @@
         "migracion_usuario_vinculos_persona.sql",
         "migracion_favicons_y_logo_alumno.sql",
         "migracion_comunicados_alumnos.sql",
-        "migracion_auth_eventos_seguridad.sql"
+        "migracion_auth_eventos_seguridad.sql",
+        "migracion_dispositivo_acceso.sql"
       ]
     },
     "sqlserver": {
@@ -133,7 +134,8 @@
         "migracion_usuario_vinculos_persona.sql",
         "migracion_favicons_y_logo_alumno.sql",
         "migracion_comunicados_alumnos.sql",
-        "migracion_auth_eventos_seguridad.sql"
+        "migracion_auth_eventos_seguridad.sql",
+        "migracion_dispositivo_acceso.sql"
       ]
     }
   }

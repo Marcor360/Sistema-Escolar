@@ -44,36 +44,59 @@ const server = http.createServer((req, res) => {
       : {}),
   });
   try {
-    for (const width of (process.env.ALUMNO_VIEWPORTS ? process.env.ALUMNO_VIEWPORTS.split(',').map(Number) : [360, 768, 1280, 1920])) {
+    for (const width of (process.env.ALUMNO_VIEWPORTS ? process.env.ALUMNO_VIEWPORTS.split(',').map(Number) : [360, 768, 1280, 1920, 2560])) {
       const page = await browser.newPage({ viewport: { width, height: 900 } });
       const errores = [],
         respuestas = [];
       const entregas = [];
       let estadoBoleta = "PENDIENTE_RESPUESTA";
+      let caducarConsentimiento = true;
+      let renovaciones = 0;
+      let consultasConsentimiento = 0;
+      let dispositivoId;
+      const nombreAlumno = "Alumna Elena QA Escolar";
       page.on("pageerror", (e) => errores.push(e.stack));
       await page.route("https://api.example.invalid/**", async (route) => {
         const p = new URL(route.request().url()).pathname;
         let data = [];
+        if (p === "/uploads/marca-logo-alumno-1234abcd.png") return route.fulfill({
+          contentType: "image/png",
+          path: path.resolve(__dirname, "../src/assets/icons/aula.png"),
+        });
         if (p.endsWith("/configuracion/marca"))
           data = {
             nombreInstitucion: "Instituto Universitario · Demo",
             nombreCorto: "IUA",
             colorPrimario: "#14343B",
             colorAcento: "#C79A3C",
-            colorPrimarioOscuro: "#0E262B", logoUrl: null, actualizadoEn: '2026-11-13',
+            colorPrimarioOscuro: "#0E262B", logoUrl: null, logoAlumnoUrl: "/uploads/marca-logo-alumno-1234abcd.png", actualizadoEn: '2026-11-13',
           };
-        if (p.endsWith("/auth/login-alumno-web"))
+        if (p.endsWith("/auth/login-alumno-web")) {
+          const actual = route.request().postDataJSON().dispositivoId;
+          if (dispositivoId) expect(actual).toBe(dispositivoId);
+          dispositivoId = actual;
+          expect(dispositivoId).toMatch(/^[0-9a-f-]{36}$/i);
           data = {
             accessToken: "qa",
-            usuario: {
-              sub: 1,
-              email: "qa@example.invalid",
-              nombre: "Alumna Elena QA Escolar",
-              roles: ["ALUMNO"],
-            },
+            usuario: { sub: 1, email: "qa@example.invalid", nombre: nombreAlumno, roles: ["ALUMNO"] },
           };
-        if (p.endsWith("/auth/me")) data = { accesoPrevio: true };
-        if (p.endsWith("/auth/consentimiento")) data = { pendiente: false };
+        }
+        if (p.endsWith("/auth/refresh")) {
+          renovaciones++;
+          data = { accessToken: "qa-renovado" };
+        }
+        if (p.endsWith("/auth/me")) {
+          if (!route.request().headers().authorization) return route.fulfill({ status: 401, json: { message: "Unauthorized" } });
+          data = { id: 1, email: "qa@example.invalid", nombreCompleto: nombreAlumno, roles: [{ clave: "ALUMNO" }], accesoPrevio: true };
+        }
+        if (p.endsWith("/auth/consentimiento")) {
+          consultasConsentimiento++;
+          if (caducarConsentimiento) {
+            caducarConsentimiento = false;
+            return route.fulfill({ status: 401, json: { message: "Unauthorized" } });
+          }
+          data = { pendiente: false };
+        }
         if (p.endsWith("/calendario/opciones")) data = { ciclos: [{ id: 1, nombre: "Octubre QA", activo: true, fechaInicio: "2026-10-01", fechaFin: "2026-10-31" }] };
         if (p.endsWith("/calendario")) {
           const global = { id: 1, titulo: "Evento institucional QA", fechaInicio: "2026-10-15T12:00:00Z", fechaFin: null, imagenNombre: null };
@@ -218,7 +241,7 @@ const server = http.createServer((req, res) => {
         });
       });
       const captura = async (nombre) => {
-        if (!process.env.ALUMNO_SCREENSHOT_DIR || ![360, 1280].includes(width)) return;
+        if (!process.env.ALUMNO_SCREENSHOT_DIR || ![360, 1280, 2560].includes(width)) return;
         fs.mkdirSync(process.env.ALUMNO_SCREENSHOT_DIR, { recursive: true });
         await page.screenshot({ path: path.join(process.env.ALUMNO_SCREENSHOT_DIR, `${nombre}-${width}.png`) });
       };
@@ -243,6 +266,8 @@ const server = http.createServer((req, res) => {
       }
       const tarjetaAula = await page.getByRole('button', { name: 'Materias y tareas', exact: true }).boundingBox();
       expect(tarjetaAula.x + tarjetaAula.width).toBeLessThanOrEqual(width);
+      expect(renovaciones).toBe(1);
+      await expect(page.getByLabel("Logo de Instituto Universitario · Demo")).toBeVisible();
       await captura('inicio-alumno');
       await page.getByRole('button', { name: 'Abrir menú principal', exact: true }).click();
       await expect(page.getByTestId('menu-lateral-alumno').getByRole('tab', { name: 'Ventanilla de trámites', exact: true })).toBeVisible();
@@ -258,6 +283,15 @@ const server = http.createServer((req, res) => {
       if (width >= 1000) await page.getByRole('button', { name: 'Cerrar menú principal', exact: true }).click();
       await page.getByRole('tab', { name: 'Inicio del alumno', exact: true }).click();
       await page.getByRole('button', { name: 'Abrir mi perfil', exact: true }).click();
+      const oscuro = page.getByRole("radio", { name: "Oscuro", exact: true });
+      await oscuro.click();
+      await expect(oscuro).toHaveAttribute("aria-checked", "true");
+      await expect(page.getByTestId("cabecera-alumno")).toHaveCSS("background-color", "rgb(27, 38, 45)");
+      await page.getByRole("radio", { name: "Sistema", exact: true }).click();
+      await page.emulateMedia({ colorScheme: "dark" });
+      await expect(page.getByTestId("cabecera-alumno")).toHaveCSS("background-color", "rgb(27, 38, 45)");
+      await page.emulateMedia({ colorScheme: "light" });
+      await expect(page.getByTestId("cabecera-alumno")).toHaveCSS("background-color", "rgb(255, 255, 255)");
       await page.getByRole('button', { name: 'Ver recorrido especializado del alumno', exact: true }).click();
       await page.getByRole('button', { name: 'Ver todos los pasos', exact: true }).click();
       await page.getByRole('button', { name: 'Ir al paso 4: Entregar una actividad', exact: true }).click();
@@ -265,12 +299,29 @@ const server = http.createServer((req, res) => {
       await expect(page.getByRole('heading', { name: 'Mis tareas', exact: true })).toBeVisible();
       expect(entregas).toHaveLength(0);
       await page.getByRole('button', { name: 'Finalizar guía por ahora', exact: true }).click();
+      if (width === 1280) {
+        const consultasAntes = consultasConsentimiento;
+        caducarConsentimiento = true;
+        await page.evaluate(() => {
+          Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
+          document.dispatchEvent(new Event("visibilitychange"));
+          Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
+          document.dispatchEvent(new Event("visibilitychange"));
+        });
+        await expect.poll(() => consultasConsentimiento).toBe(consultasAntes + 2);
+        await expect(page.getByRole('heading', { name: 'Mis tareas', exact: true })).toBeVisible();
+      }
+      const antesDeRecargar = renovaciones;
+      await page.reload();
+      await expect(page.getByRole('heading', { name: 'Mis tareas', exact: true })).toBeVisible();
+      expect(renovaciones).toBe(antesDeRecargar + 1);
       await page.getByRole('tab', { name: 'Inicio del alumno', exact: true }).click();
       await page.getByRole("button", { name: "Ver calendario institucional", exact: true }).click();
       const diaCalendario = page.getByRole("button", { name: "2026-10-15: 2 evento(s)", exact: true });
       await diaCalendario.click();
       const actividadesCalendario = page.getByRole("heading", { name: "Actividades del 2026-10-15", exact: true }).locator("..");
       await expect(actividadesCalendario.getByText("Evento del plantel QA", { exact: true })).toBeVisible();
+      await captura("calendario-alumno");
       const celda = await diaCalendario.boundingBox();
       expect(celda.width).toBeGreaterThanOrEqual(44);
       expect(celda.height).toBeGreaterThanOrEqual(44);
@@ -279,6 +330,17 @@ const server = http.createServer((req, res) => {
       await expect(actividadesCalendario.getByText("Evento institucional QA", { exact: true })).toBeVisible();
       await expect(actividadesCalendario.getByText("Evento del plantel QA", { exact: true })).toHaveCount(0);
       await page.getByRole("button", { name: "Ocultar calendario institucional", exact: true }).click();
+      await page.getByRole('button', { name: 'Abrir menú principal', exact: true }).click();
+      await page.getByTestId('menu-lateral-alumno').getByRole('tab', { name: 'Calendario escolar', exact: true }).click();
+      if (width >= 1000) await page.getByRole('button', { name: 'Cerrar menú principal', exact: true }).click();
+      await expect(page.getByRole("heading", { name: "Calendario escolar", exact: true })).toBeVisible();
+      await page.getByRole("button", { name: "Agenda accesible", exact: true }).click();
+      const panelCalendario = page.getByRole("heading", { name: "Calendario del ciclo escolar", exact: true }).locator("..");
+      await expect(panelCalendario.getByText("Evento del plantel QA", { exact: true })).toBeVisible();
+      await page.getByRole("button", { name: "Ciclo completo", exact: true }).click();
+      await page.getByRole("button", { name: "2026-10-15: 2 evento(s)", exact: true }).click();
+      await expect(page.getByRole("heading", { name: "Actividades del 2026-10-15", exact: true })).toBeVisible();
+      await captura("calendario-escolar");
       for (const name of [
         /materias/i,
         /calificaciones/i,
@@ -435,6 +497,10 @@ const server = http.createServer((req, res) => {
       await expect(
         page.getByLabel("Correo institucional", { exact: true }),
       ).toBeVisible();
+      await page.getByLabel("Correo institucional", { exact: true }).fill("qa@example.invalid");
+      await page.getByLabel("Contraseña", { exact: true }).fill("Qa-password12");
+      await page.getByRole("button", { name: "Entrar", exact: true }).click();
+      await expect(page.getByRole("heading", { name: "Apariencia", exact: true })).toBeVisible();
       if (errores.length) console.log(errores);
       expect(errores).toEqual([]);
       console.log("PASS Expo web " + width);

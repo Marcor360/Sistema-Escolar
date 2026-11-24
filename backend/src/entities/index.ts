@@ -29,6 +29,7 @@ export * from './bitacora-financiera.entity';
 export * from './bitacora-actividad.entity';
 export * from './configuracion-marca.entity';
 export * from './sesion.entity';
+export * from './dispositivo-acceso.entity';
 export * from './bitacora-academica.entity';
 export * from './incidencia.entity';
 export * from './incidencia-seguimiento.entity';

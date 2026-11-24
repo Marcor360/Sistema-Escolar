@@ -26,7 +26,7 @@ export class AuthController {
   @Post('login')
   @Throttle(LIMITE_ESTRICTO)
   async login(@Body() dto: LoginDto, @PortalActual() portal: Portal, @Ip() ip: string, @Res({ passthrough: true }) res: Response, @Headers('user-agent') agente?:string) {
-    return this.responder(await this.auth.login(dto.email, dto.password, portal, ip, agente), portal, res);
+    return this.responder(await this.auth.login(dto.email, dto.password, portal, ip, agente, false, dto.dispositivoId), portal, res);
   }
 
   @Post('login-alumno-web')
@@ -34,7 +34,7 @@ export class AuthController {
   @ApiOperation({summary:'Acceso exclusivo del portal web del alumno; refresh HttpOnly'})
   async loginAlumnoWeb(@Body() dto:LoginDto,@PortalActual() portal:Portal,@Ip() ip:string,@Res({passthrough:true}) res:Response,@Headers('user-agent') agente?:string){
     if(portal!=='WEB')throw new ForbiddenException('Utiliza el acceso de la app para Android/iOS');
-    return this.responder(await this.auth.login(dto.email,dto.password,'WEB',ip,agente,true),'WEB',res);
+    return this.responder(await this.auth.login(dto.email,dto.password,'WEB',ip,agente,true,dto.dispositivoId),'WEB',res);
   }
 
   private responder(tokens: Awaited<ReturnType<AuthService['login']>>, portal: Portal, res: Response) {

@@ -1,3 +1,4 @@
+import { useTemaAlumno } from "../tema-alumno";
 import { useEffect, useState } from "react";
 import { Modal, ScrollView, TouchableOpacity, View } from "react-native";
 import * as SecureStore from "../almacen-seguro";
@@ -10,7 +11,7 @@ import {
 } from "../recorrido-alumno";
 import { api } from "../api/client";
 import { useMarca } from "../marca";
-import { colores, textoSobreFondo } from "../theme";
+import { textoSobreFondo } from "../theme";
 export function RecorridoAlumno({
   usuarioId,
   navegar,
@@ -18,6 +19,7 @@ export function RecorridoAlumno({
   usuarioId: number;
   navegar: (pantalla: PasoAlumno["pantalla"], paso?: PasoAlumno) => void;
 }) {
+  const { colores } = useTemaAlumno();
   const [actual, setActual] = useState<number | null>(null),
     [pausado, setPausado] = useState(false),
     [listo, setListo] = useState(false),
@@ -77,7 +79,7 @@ export function RecorridoAlumno({
           right: 12,
           left: 12,
           padding: 10,
-          backgroundColor: "#fff",
+          backgroundColor: colores.superficie,
           borderRadius: 12,
           borderWidth: 1,
         }}
@@ -107,7 +109,7 @@ export function RecorridoAlumno({
         padding: 12,
         marginVertical: 4,
         borderRadius: 12,
-        backgroundColor: secundario ? "#fff" : marca.colorPrimario,
+        backgroundColor: secundario ? colores.superficie : marca.colorPrimario,
         borderWidth: secundario ? 1 : 0,
         borderColor: colores.linea,
         alignItems: "center",
@@ -138,7 +140,7 @@ export function RecorridoAlumno({
           accessibilityViewIsModal
           style={{
             maxHeight: "85%",
-            backgroundColor: "#fff",
+            backgroundColor: colores.superficie,
             borderRadius: 20,
             padding: 20,
           }}

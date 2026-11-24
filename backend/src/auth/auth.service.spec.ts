@@ -1,6 +1,7 @@
 import { Not } from 'typeorm';
-import type { Repository, DataSource } from 'typeorm';
-import type { Usuario } from '../entities/usuario.entity';
+import type { Repository, DataSource, EntityManager } from 'typeorm';
+import { DispositivoAcceso } from '../entities/dispositivo-acceso.entity';
+import { Usuario } from '../entities/usuario.entity';
 import type { PasswordResetToken } from '../entities/password-reset-token.entity';
 import type { BitacoraActividad } from '../entities/bitacora-actividad.entity';
 import type { JwtService } from '@nestjs/jwt';
@@ -286,13 +287,15 @@ describe('AuthService.logout', () => {
 });
 
 describe('Correo de seguridad tras inicio de sesión', () => {
-  it('encola un aviso por sesión y no bloquea el acceso si la cola falla', async () => {
+  async function contexto() {
     const cuenta = {
       id: 8, email: 'prueba@example.test', nombreCompleto: 'Prueba',
       passwordHash: await bcrypt.hash('Segura123', 4), roles: [{ clave: 'ADMINISTRATIVO' }],
     };
-    const sesiones = { create: jest.fn((valor: unknown) => valor), save: jest.fn().mockResolvedValue(undefined) };
-    const avisos = { encolar: jest.fn().mockRejectedValue(new Error('cola desconectada')) };
+    const registrados = new Set<string>();
+    const crear = jest.fn((valor: unknown) => valor);
+    const guardarSesion = jest.fn().mockResolvedValue(undefined);
+    const avisos = { encolarEnTransaccion: jest.fn().mockResolvedValue(undefined) };
     const service = new AuthService(
       stub<Repository<Usuario>>({ findOne: jest.fn().mockResolvedValue(cuenta) }),
       stub<Repository<PasswordResetToken>>({}),
@@ -300,11 +303,48 @@ describe('Correo de seguridad tras inicio de sesión', () => {
       stub<JwtService>({ sign: jest.fn().mockReturnValue('token') }),
       stub<CorreoAccesoOutboxService>({}),
       stub<ConfigService>({}),
-      stub<DataSource>({ getRepository: jest.fn(() => sesiones) }),
+      stub<DataSource>({
+        getRepository: jest.fn(() => ({ create: crear, save: guardarSesion })),
+        transaction: jest.fn(async (operacion: (manager: EntityManager) => Promise<unknown>) => {
+          const confirmados: string[] = [];
+          const manager = { getRepository: (entidad: unknown) => entidad === Usuario
+            ? { findOneOrFail: jest.fn().mockResolvedValue({ id: cuenta.id }) }
+            : entidad === DispositivoAcceso
+              ? {
+                existsBy: async ({ huella }: { huella: string }) => registrados.has(huella),
+                insert: async ({ huella }: { huella: string }) => { confirmados.push(huella); },
+              }
+              : { save: async () => undefined } };
+          await operacion(manager as unknown as EntityManager);
+          confirmados.forEach(hash => registrados.add(hash));
+        }),
+      }),
       avisos as never,
     );
-    const resultado = await service.login('prueba@example.test', 'Segura123', 'WEB');
-    expect(resultado.accessToken).toBe('token');
-    expect(avisos.encolar).toHaveBeenCalledWith(8, 'INGRESO', expect.any(String));
+    const iniciar = (dispositivoId?: string) => service.login(cuenta.email, 'Segura123', 'WEB', undefined, undefined, false, dispositivoId);
+    return { iniciar, registrados, avisos, guardarSesion };
+  }
+
+  it('avisa una sola vez por dispositivo y distingue dos navegadores del mismo tipo', async () => {
+    const { iniciar, registrados, avisos } = await contexto();
+    await iniciar('7b5648a0-bc65-4035-91b9-a9fc15c15270');
+    await iniciar('7b5648a0-bc65-4035-91b9-a9fc15c15270');
+    await iniciar('85becf4a-31b1-4315-85b0-fb17bd54730b');
+    await iniciar(); // Clientes instalados antes de incorporar el identificador.
+    expect(avisos.encolarEnTransaccion).toHaveBeenCalledTimes(2);
+    expect(avisos.encolarEnTransaccion).toHaveBeenCalledWith(expect.anything(), 8, 'INGRESO', expect.any(String));
+    expect([...registrados]).toEqual([expect.stringMatching(/^[a-f0-9]{64}$/), expect.stringMatching(/^[a-f0-9]{64}$/)]);
+  });
+
+  it('permite iniciar sesión y vuelve a intentar reconocer el dispositivo si la cola falla', async () => {
+    const { iniciar, registrados, avisos, guardarSesion } = await contexto();
+    const dispositivo = '7b5648a0-bc65-4035-91b9-a9fc15c15270';
+    avisos.encolarEnTransaccion.mockRejectedValueOnce(new Error('cola desconectada'));
+    await expect(iniciar(dispositivo)).resolves.toMatchObject({ accessToken: 'token' });
+    expect(guardarSesion).toHaveBeenCalledTimes(1);
+    expect(registrados.size).toBe(0);
+    await iniciar(dispositivo);
+    expect(registrados.size).toBe(1);
+    expect(avisos.encolarEnTransaccion).toHaveBeenCalledTimes(2);
   });
 });

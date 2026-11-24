@@ -11,7 +11,7 @@ vi.mock("../api/client", () => ({
   mensajeDeError: () => "Error de conexión",
 }));
 vi.mock("./Texto", () => ({ Text: "Text" }));
-vi.mock("../screens/comunes", () => ({ base: { botonAccesible: {} } }));
+vi.mock("../screens/comunes", () => ({ useBase: () => ({ botonAccesible: {}, tarjeta: {} }) }));
 vi.mock("react-native", () => ({
   View: "View",
   Text: "Text",
