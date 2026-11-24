@@ -68,7 +68,8 @@
         "migracion_comunicados_alumnos.sql",
         "migracion_auth_eventos_seguridad.sql",
         "migracion_dispositivo_acceso.sql",
-        "migracion_presentacion_alumno.sql"
+        "migracion_presentacion_alumno.sql",
+        "migracion_boleta_oficial.sql"
       ]
     },
     "sqlserver": {
@@ -137,7 +138,8 @@
         "migracion_comunicados_alumnos.sql",
         "migracion_auth_eventos_seguridad.sql",
         "migracion_dispositivo_acceso.sql",
-        "migracion_presentacion_alumno.sql"
+        "migracion_presentacion_alumno.sql",
+        "migracion_boleta_oficial.sql"
       ]
     }
   }

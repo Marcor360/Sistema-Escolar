@@ -1233,3 +1233,6 @@ ALTER TABLE configuracion_marca ADD fondo_alumno_url VARCHAR(255) NULL,
   ADD privacidad_alumno VARCHAR(500) NULL,
   ADD reglamento_alumno VARCHAR(500) NULL,
   ADD sitio_alumno VARCHAR(500) NULL;
+
+ALTER TABLE configuracion_marca ADD titulo_boleta VARCHAR(120) NULL, ADD pie_boleta VARCHAR(480) NULL;
+ALTER TABLE boleta_respuestas ADD archivo_oficial VARCHAR(36) NULL;

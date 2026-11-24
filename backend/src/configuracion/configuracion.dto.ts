@@ -29,6 +29,8 @@ export class ActualizarOpcionesGlobalesDto {
   @OpcionalNoNulo() @Transform(limpiar) @Length(0, 500) @ValidateIf((_obj, value) => value !== '') @IsUrl({ protocols: ['https'], require_protocol: true, disallow_auth: true }) privacidadAlumno?: string;
   @OpcionalNoNulo() @Transform(limpiar) @Length(0, 500) @ValidateIf((_obj, value) => value !== '') @IsUrl({ protocols: ['https'], require_protocol: true, disallow_auth: true }) reglamentoAlumno?: string;
   @OpcionalNoNulo() @Transform(limpiar) @Length(0, 500) @ValidateIf((_obj, value) => value !== '') @IsUrl({ protocols: ['https'], require_protocol: true, disallow_auth: true }) sitioAlumno?: string;
+  @OpcionalNoNulo() @Transform(limpiar) @Length(0, 120) tituloBoleta?: string;
+  @OpcionalNoNulo() @Transform(limpiar) @Length(0, 480) pieBoleta?: string;
   @IsIn(['NORMAL', 'GRANDE'])
   tamanoLogo!: 'NORMAL' | 'GRANDE';
 }
@@ -46,6 +48,8 @@ export interface MarcaPublicaDto {
   colorAcento: string;
   mensajeBienvenida: string;
   tamanoLogo: 'NORMAL' | 'GRANDE';
+  tituloBoleta?: string | null;
+  pieBoleta?: string | null;
   fondoAlumnoUrl?: string | null;
   bienvenidaAlumno?: string | null;
   descripcionAlumno?: string | null;

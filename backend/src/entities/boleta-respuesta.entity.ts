@@ -23,5 +23,6 @@ export class BoletaRespuesta {
   @Column({ length: 10 }) firmanteTipo!: 'ALUMNO' | 'TUTOR' | 'DOCENTE';
   @Column({ length: 2000, default: '' }) comentario!: string;
   @Column({ type: 'text', nullable: true }) snapshotJson!: string | null;
+  @Column({ type: String, length: 36, nullable: true }) archivoOficial!: string | null;
   @CreateDateColumn() createdAt!: Date;
 }

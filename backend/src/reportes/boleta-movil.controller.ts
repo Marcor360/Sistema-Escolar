@@ -38,18 +38,19 @@ export class BoletaMovilController {
     @Query('respuestaId', new ParseIntPipe({ optional: true })) respuestaId?: number,
   ) {
     const alumno = await this.alumnos.obtenerPorUsuario(user.sub);
-    if (formato && !['informativa-pdf', 'informativa-excel', 'constancia-aceptacion'].includes(formato))
+    if (formato && !['informativa-pdf', 'informativa-excel', 'constancia-aceptacion', 'boleta-oficial'].includes(formato))
       throw new BadRequestException('Formato de boleta no admitido');
-    if (formato === 'constancia-aceptacion') {
+    if (formato === 'constancia-aceptacion' || formato === 'boleta-oficial') {
       if (!inscripcionId || !respuestaId) throw new BadRequestException('Selecciona la inscripción y aceptación');
-      await this.boletas.constancia(inscripcionId, respuestaId, user);
+      if (formato === 'boleta-oficial') await this.boletas.oficial(inscripcionId, respuestaId, user);
+      else await this.boletas.constancia(inscripcionId, respuestaId, user);
     }
     return this.archivos.enlaceBoleta(
       alumno.id,
       cicloId,
       inscripcionId,
       user,
-      formato as 'informativa-pdf' | 'informativa-excel' | 'constancia-aceptacion' | undefined,
+      formato as 'informativa-pdf' | 'informativa-excel' | 'constancia-aceptacion' | 'boleta-oficial' | undefined,
       respuestaId,
     );
   }
@@ -58,11 +59,12 @@ export class BoletaMovilController {
     const { user, cicloId, inscripcionId, formatoBoleta, respuestaId } = await this.archivos.usuarioBoleta(id, token);
     res.setHeader('Cache-Control', 'private, no-store');
     res.setHeader('Referrer-Policy', 'no-referrer');
-    if (formatoBoleta === 'constancia-aceptacion') {
+    if (formatoBoleta === 'constancia-aceptacion' || formatoBoleta === 'boleta-oficial') {
       if (!inscripcionId || !respuestaId) throw new BadRequestException('Constancia inválida');
-      const buffer = await this.boletas.constancia(inscripcionId, respuestaId, user);
+      const oficial = formatoBoleta === 'boleta-oficial';
+      const buffer = oficial ? await this.boletas.oficial(inscripcionId, respuestaId, user) : await this.boletas.constancia(inscripcionId, respuestaId, user);
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', contentDisposition(`constancia-boleta-${respuestaId}.pdf`, 'attachment'));
+      res.setHeader('Content-Disposition', contentDisposition(`${oficial ? 'boleta-oficial' : 'constancia-boleta'}-${respuestaId}.pdf`, 'attachment'));
       res.setHeader('X-Content-Type-Options', 'nosniff');
       return res.send(buffer);
     }

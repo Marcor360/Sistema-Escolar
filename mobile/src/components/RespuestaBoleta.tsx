@@ -15,6 +15,7 @@ interface Historial {
   firmanteTipo: string;
   asignatura: string | null;
   fecha: string;
+  oficialDisponible?: boolean;
   vigente: boolean;
 }
 interface Datos {
@@ -61,7 +62,7 @@ export function RespuestaBoleta({ inscripcionId }: { inscripcionId: number }) {
       consultaActual.current++;
     };
   }, [inscripcionId]);
-  const descargarConstancia = async (respuestaId: number) => {
+  const descargarConstancia = async (respuestaId: number, oficial = false) => {
     if (bloqueo.current) return;
     bloqueo.current = true;
     setOcupado(true);
@@ -72,12 +73,12 @@ export function RespuestaBoleta({ inscripcionId }: { inscripcionId: number }) {
         params: {
           inscripcionId,
           respuestaId,
-          formato: "constancia-aceptacion",
+          formato: oficial ? "boleta-oficial" : "constancia-aceptacion",
         },
       });
       await abrirDocumentoFirmado(
         r.data.url,
-        `constancia-boleta-${respuestaId}.pdf`,
+        `${oficial ? "boleta-oficial" : "constancia-boleta"}-${respuestaId}.pdf`,
         () => consulta === consultaActual.current,
       );
     } catch (e) {
@@ -437,6 +438,7 @@ export function RespuestaBoleta({ inscripcionId }: { inscripcionId: number }) {
                 {!h.vigente ? " · Versión anterior" : ""}
               </Text>
               {!!h.comentario && <Text>{h.comentario}</Text>}
+              {h.oficialDisponible && boton(`Descargar boleta oficial #${h.id}`, () => void descargarConstancia(h.id, true))}
               {h.estado === "ACEPTADA" &&
                 boton(
                   `Descargar constancia de aceptación #${h.id}`,

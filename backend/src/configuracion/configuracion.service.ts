@@ -53,6 +53,8 @@ export class ConfiguracionService {
 
   async actualizarOpciones(dto: ActualizarOpcionesGlobalesDto): Promise<MarcaPublicaDto> {
     return this.modificar((marca) => {
+      if (dto.tituloBoleta !== undefined) marca.tituloBoleta = dto.tituloBoleta || null;
+      if (dto.pieBoleta !== undefined) marca.pieBoleta = dto.pieBoleta || null;
       if (dto.bienvenidaAlumno !== undefined) marca.bienvenidaAlumno = dto.bienvenidaAlumno || null;
       if (dto.descripcionAlumno !== undefined) marca.descripcionAlumno = dto.descripcionAlumno || null;
       if (dto.avisoAlumno !== undefined) marca.avisoAlumno = dto.avisoAlumno || null;
@@ -197,6 +199,8 @@ export class ConfiguracionService {
       colorAcento: marca.colorAcento,
       mensajeBienvenida: marca.mensajeBienvenida,
       tamanoLogo: marca.tamanoLogo,
+      tituloBoleta: marca.tituloBoleta,
+      pieBoleta: marca.pieBoleta,
       fondoAlumnoUrl: marca.fondoAlumnoUrl ?? null,
       bienvenidaAlumno: marca.bienvenidaAlumno ?? null,
       descripcionAlumno: marca.descripcionAlumno ?? null,

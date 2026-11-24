@@ -24,5 +24,7 @@ export class ConfiguracionMarca {
   @Column({ type: String, length: 500, nullable: true }) privacidadAlumno!: string | null;
   @Column({ type: String, length: 500, nullable: true }) reglamentoAlumno!: string | null;
   @Column({ type: String, length: 500, nullable: true }) sitioAlumno!: string | null;
+  @Column({ type: String, length: 120, nullable: true }) tituloBoleta!: string | null;
+  @Column({ type: String, length: 480, nullable: true }) pieBoleta!: string | null;
   @UpdateDateColumn() actualizadoEn!: Date;
 }

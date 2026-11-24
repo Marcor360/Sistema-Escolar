@@ -1,3 +1,6 @@
+import { readFile, rm } from 'fs/promises';
+import { ConfiguracionMarca } from '../entities/configuracion-marca.entity';
+import { archivarBoleta, rutaOficial } from './boleta-oficial';
 import { constanciaBoleta } from './constancia-boleta';
 import { BoletasBandejaService } from './boletas-bandeja.service';
 import { versionesBoletas } from './lectura-boletas';
@@ -127,6 +130,7 @@ export class BoletasService {
           comentario: e.comentario,
           firmanteNombre: e.firmanteNombre,
           firmanteTipo: e.firmanteTipo,
+          oficialDisponible: !!e.archivoOficial && !docente,
           asignatura: e.grupoMateria?.materia.nombre ?? null,
           fecha: e.createdAt,
           vigente: e.versionHash === v.hash && v.disponible,
@@ -138,40 +142,54 @@ export class BoletasService {
       throw new ForbiddenException('La respuesta se registra desde la cuenta del alumno');
     if (d.estado === 'REVISION' && !d.comentario?.trim())
       throw new BadRequestException('Escribe los comentarios para solicitar revisión');
-    return this.ds.transaction('READ COMMITTED', async (m) => {
-      const i = await this.contexto(id, u, m);
-      await m
-        .getRepository(CicloEscolar)
-        .findOneOrFail({ where: { id: i.grupo.cicloId }, lock: { mode: 'pessimistic_write' } });
-      const v = await this.version(i, m),
-        repo = m.getRepository(BoletaRespuesta),
-        peticionHash = hash({ id, actor: u.sub, ...d });
-      const anterior = await repo.findOneBy({ idempotencia: d.idempotencia });
-      if (anterior) {
-        if (anterior.peticionHash !== peticionHash)
-          throw new ConflictException('La clave ya corresponde a otra respuesta');
-        return { id: anterior.id, estado: anterior.estado };
+    let archivo: Awaited<ReturnType<typeof archivarBoleta>> | undefined;
+    try {
+      return await this.ds.transaction('READ COMMITTED', async (m) => {
+        const i = await this.contexto(id, u, m);
+        await m
+          .getRepository(CicloEscolar)
+          .findOneOrFail({ where: { id: i.grupo.cicloId }, lock: { mode: 'pessimistic_write' } });
+        const v = await this.version(i, m),
+          repo = m.getRepository(BoletaRespuesta),
+          peticionHash = hash({ id, actor: u.sub, ...d });
+        const anterior = await repo.findOneBy({ idempotencia: d.idempotencia });
+        if (anterior) {
+          if (anterior.peticionHash !== peticionHash)
+            throw new ConflictException('La clave ya corresponde a otra respuesta');
+          return { id: anterior.id, estado: anterior.estado };
+        }
+        if (!v.disponible) throw new ConflictException('La boleta todavía no está publicada');
+        if (v.hash !== d.versionHash)
+          throw new ConflictException('Las calificaciones cambiaron. Actualiza y revisa la nueva boleta antes de firmar');
+        const r = await repo.save(
+          repo.create({
+            inscripcionId: id,
+            actorId: u.sub,
+            grupoMateriaId: null,
+            idempotencia: d.idempotencia,
+            peticionHash,
+            versionHash: v.hash,
+            estado: d.estado,
+            firmanteNombre: d.firmanteNombre,
+            firmanteTipo: d.firmanteTipo,
+            comentario: d.comentario ?? '',
+            snapshotJson: JSON.stringify(v.filas),
+          }),
+        );
+        if (r.estado === 'ACEPTADA') {
+          const marca = await m.getRepository(ConfiguracionMarca).findOneBy({ id: 1 });
+          archivo = await archivarBoleta(i, r, marca);
+          await repo.update(r.id, { archivoOficial: archivo.clave });
+        }
+        return { id: r.id, estado: r.estado };
+      });
+    } catch (error) {
+      // Ante un COMMIT de resultado incierto, conservar el archivo si no se puede verificar la BD.
+      if (archivo && !(await this.ds.getRepository(BoletaRespuesta).existsBy({ archivoOficial: archivo.clave }).catch(() => true))) {
+        await rm(archivo.destino, { force: true });
       }
-      if (!v.disponible) throw new ConflictException('La boleta todavía no está publicada');
-      if (v.hash !== d.versionHash)
-        throw new ConflictException('Las calificaciones cambiaron. Actualiza y revisa la nueva boleta antes de firmar');
-      const r = await repo.save(
-        repo.create({
-          inscripcionId: id,
-          actorId: u.sub,
-          grupoMateriaId: null,
-          idempotencia: d.idempotencia,
-          peticionHash,
-          versionHash: v.hash,
-          estado: d.estado,
-          firmanteNombre: d.firmanteNombre,
-          firmanteTipo: d.firmanteTipo,
-          comentario: d.comentario ?? '',
-          snapshotJson: JSON.stringify(v.filas),
-        }),
-      );
-      return { id: r.id, estado: r.estado };
-    });
+      throw error;
+    }
   }
   async comentar(id: number, d: ComentarioBoletaDto, u: JwtUser) {
     const i = await this.contexto(id, u);
@@ -225,6 +243,14 @@ export class BoletasService {
       );
       return { id: r.id };
     });
+  }
+  async oficial(id: number, respuestaId: number, u: JwtUser) {
+    if (!u.roles.some(r => ['ALUMNO','SUPERADMIN','ADMINISTRATIVO','DIRECTOR'].includes(r)))
+      throw new ForbiddenException('Boleta privada para el alumno y el personal autorizado');
+    const i = await this.contexto(id, u);
+    const r = await this.ds.getRepository(BoletaRespuesta).findOneBy({ id: respuestaId, inscripcionId: id, estado: 'ACEPTADA' });
+    if (!r?.archivoOficial) throw new NotFoundException('Esta respuesta no tiene una boleta oficial archivada');
+    return readFile(rutaOficial(i, r.archivoOficial));
   }
   async constancia(id: number, respuestaId: number, u: JwtUser) {
     if (!u.roles.some((r) => ['ALUMNO', 'SUPERADMIN', 'ADMINISTRATIVO', 'DIRECTOR'].includes(r)))

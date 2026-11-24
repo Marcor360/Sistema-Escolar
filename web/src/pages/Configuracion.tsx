@@ -19,6 +19,7 @@ export default function ConfiguracionPage() {
   const [mensajeBienvenida, setMensajeBienvenida] = useState(marca.mensajeBienvenida ?? '');
   const [tamanoLogo, setTamanoLogo] = useState<'NORMAL' | 'GRANDE'>(marca.tamanoLogo ?? 'NORMAL');
   const [presentacion, setPresentacion] = useState<Partial<Record<typeof camposAlumno[number][0], string>>>({});
+  const [formatoBoleta, setFormatoBoleta] = useState<{tituloBoleta?: string; pieBoleta?: string}>({});
   const [movil, setMovil] = useState(false);
   const valor = (k: typeof camposAlumno[number][0]) => presentacion[k] ?? marca[k] ?? '';
   const [guardandoOpciones, setGuardandoOpciones] = useState(false);
@@ -138,8 +139,9 @@ export default function ConfiguracionPage() {
     if (mutando.current) return;
     mutando.current = true; setGuardandoOpciones(true); setEstadoOpciones(''); setErrorOpciones('');
     try {
-      await api.put('/configuracion/opciones', { mensajeBienvenida, tamanoLogo, ...presentacion });
+      await api.put('/configuracion/opciones', { mensajeBienvenida, tamanoLogo, ...presentacion, ...formatoBoleta });
       await recargar();
+      setFormatoBoleta({});
       setPresentacion({});
       setEstadoOpciones('Opciones globales guardadas.');
     } catch (err) {
@@ -216,6 +218,11 @@ export default function ConfiguracionPage() {
           <small>No cambia la imagen original; se adapta a la pantalla.</small>
         </div>
       </div>
+      <fieldset disabled={guardandoOpciones}><legend>Formato de boleta oficial</legend>
+        <label className="campo">Título de la boleta<input maxLength={120} placeholder="Boleta oficial de calificaciones" value={formatoBoleta.tituloBoleta ?? marca.tituloBoleta ?? ''} onChange={e => setFormatoBoleta({...formatoBoleta, tituloBoleta:e.target.value})}/></label>
+        <label className="campo">Pie del documento<textarea maxLength={480} value={formatoBoleta.pieBoleta ?? marca.pieBoleta ?? ''} onChange={e => setFormatoBoleta({...formatoBoleta, pieBoleta:e.target.value})}/></label>
+        <small>Se aplica a nuevas aceptaciones con la identidad institucional guardada.</small>
+      </fieldset>
       <h3>Acceso del alumno</h3>
       {camposAlumno.map(([k, etiqueta, limite]) => <label className="campo" key={k}>{etiqueta}
         <input disabled={guardandoOpciones} type={limite === 500 ? 'url' : 'text'} value={valor(k)} maxLength={limite} onChange={e => setPresentacion({...presentacion, [k]: e.target.value})}/>

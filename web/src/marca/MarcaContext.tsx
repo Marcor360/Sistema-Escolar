@@ -15,6 +15,8 @@ export type Marca = {
   colorAcento: string;
   mensajeBienvenida: string;
   tamanoLogo: 'NORMAL' | 'GRANDE';
+  tituloBoleta?: string | null;
+  pieBoleta?: string | null;
   fondoAlumnoUrl?: string | null;
   bienvenidaAlumno?: string | null;
   descripcionAlumno?: string | null;
@@ -94,6 +96,7 @@ function marcaIgual(anterior: Marca, siguiente: Marca): boolean {
     && anterior.faviconAdministrativoUrl === siguiente.faviconAdministrativoUrl
     && anterior.faviconAlumnoUrl === siguiente.faviconAlumnoUrl
     && anterior.logoAlumnoUrl === siguiente.logoAlumnoUrl
+    && anterior.tituloBoleta === siguiente.tituloBoleta && anterior.pieBoleta === siguiente.pieBoleta
     && anterior.fondoAlumnoUrl === siguiente.fondoAlumnoUrl
     && anterior.bienvenidaAlumno === siguiente.bienvenidaAlumno
     && anterior.descripcionAlumno === siguiente.descripcionAlumno
