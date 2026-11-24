@@ -3,10 +3,11 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { TouchableOpacity, View } from "react-native";
 import { Text } from "./Texto";
 import { api, mensajeDeError } from "../api/client";
-import { base, Tarjeta } from "../screens/comunes";
+import { useBase, Tarjeta } from "../screens/comunes";
 import { useMarca } from "../marca";
 import { textoSobreFondo } from "../theme";
 export function PendientesBoletas() {
+  const base = useBase();
   const navigation = useNavigation(),
     { marca } = useMarca(),
     turno = useRef(0);

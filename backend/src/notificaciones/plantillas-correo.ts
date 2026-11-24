@@ -121,12 +121,11 @@ export function plantillaApoyoAcceso(cuenta: string, marca: MarcaCorreo = BASE):
 /** Alertas transaccionales sin claves, códigos o enlaces sensibles. */
 export function plantillaEventoSeguridad(tipo: import('../entities/auth-correo-evento.entity').TipoEventoSeguridad, marca: MarcaCorreo = BASE): { asunto: string; html: string } {
   if (tipo === 'INGRESO') {
-    const asunto = 'Bienvenido a la plataforma escolar IUA';
+    const asunto = 'Nuevo dispositivo en tu cuenta escolar · IUA';
     return { asunto, html: marco(
-      'Bienvenido a tu plataforma escolar',
-      'Tu cuenta acaba de iniciar sesión correctamente.',
-      parrafo('Se registró un nuevo ingreso a la plataforma escolar con tu cuenta institucional.') +
-      parrafo('Ya puedes consultar los servicios disponibles según tu perfil. Si no reconoces este acceso, cambia tu contraseña y comunícate con el equipo de Sistemas de IUA o con tu coordinador académico.'),
+      'Inicio de sesión en un dispositivo nuevo',
+      'Se registró un acceso desde un navegador o una instalación que tu cuenta aún no reconocía.',
+      parrafo('Si reconoces el acceso, puedes seguir usando la plataforma con normalidad. Si no lo reconoces, cambia tu contraseña y comunícate con el equipo de Sistemas de IUA.'),
       marca,
     ) };
   }

@@ -1,6 +1,6 @@
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useWindowDimensions } from "react-native";
-import { calcularDisenoAlumno } from "./diseno-alumno";
+import { ANCHO_MAXIMO_PORTAL, calcularDisenoAlumno } from "./diseno-alumno";
 import { useContext } from 'react';
 import { AnchoPortalContext } from './portal-alumno';
 export function useDisenoAlumno() {
@@ -15,7 +15,7 @@ export function useDisenoAlumno() {
     ...diseno,
     pantallaScroll: {
       width: '100%' as const,
-      maxWidth: 1200,
+      maxWidth: ANCHO_MAXIMO_PORTAL,
       alignSelf: 'center' as const,
       padding: 0,
       paddingHorizontal: 0,
@@ -24,7 +24,7 @@ export function useDisenoAlumno() {
     contenidoScroll: { paddingHorizontal: diseno.lateral, paddingTop: 32, paddingBottom: 32 },
     pantalla: {
       width: "100%" as const,
-      maxWidth: 1200,
+      maxWidth: ANCHO_MAXIMO_PORTAL,
       alignSelf: "center" as const,
       paddingHorizontal: diseno.lateral,
     },

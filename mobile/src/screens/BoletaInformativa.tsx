@@ -1,13 +1,14 @@
+import { useTemaAlumno } from "../tema-alumno";
 import { abrirDocumentoFirmado } from "../api/abrir-documento-firmado";
 import { RespuestaBoleta } from "../components/RespuestaBoleta";
 import { useCallback, useRef, useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import { ActivityIndicator, TouchableOpacity, View } from "react-native";
-import { colores, textoSobreFondo } from "../theme";
+import { textoSobreFondo } from "../theme";
 import { useMarca } from "../marca";
 import { Text } from "../components/Texto";
 import { api, mensajeDeError } from "../api/client";
-import { base } from "./comunes";
+import { useBase } from "./comunes";
 interface Boleta {
   institucion: string;
   alumno: string;
@@ -35,6 +36,8 @@ export function BoletaInformativa({
 }: {
   inscripcionId: number;
 }) {
+  const base = useBase();
+  const { colores } = useTemaAlumno();
   const { marca } = useMarca();
   const vigente = useRef(0);
   const [datos, setDatos] = useState<Boleta | null>(null),
@@ -173,7 +176,7 @@ export function BoletaInformativa({
                 borderRadius: 12,
                 padding: 14,
                 marginBottom: 10,
-                backgroundColor: "#FFFFFF",
+                backgroundColor: colores.superficie,
                 gap: 5,
               }}
             >

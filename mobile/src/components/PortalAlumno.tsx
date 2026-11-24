@@ -1,42 +1,38 @@
+import { useTemaAlumno, useEstilosAlumno, type ColoresAlumno } from "../tema-alumno";
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Image, Modal, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Alert, Modal, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from './Texto';
 import { IconoAlumno, type NombreIconoAlumno } from './IconoAlumno';
 import { useMarca } from '../marca';
 import { useSesion } from '../sesion';
-import { archivosBase } from '../api/client';
-import { colores } from '../theme';
+import { LogoInstitucional } from './LogoInstitucional';
 import { useIdentidadAlumno } from '../portal-alumno';
 import { ETIQUETAS_NAVEGACION } from '../utils/etiquetas-navegacion';
 
 export function CabeceraAlumno({ escritorio, menuAbierto, alternarMenu, abrirPerfil }: {
   escritorio: boolean; menuAbierto: boolean; alternarMenu: () => void; abrirPerfil: () => void;
 }) {
+  const s = useEstilosAlumno(crearEstilos);
   const { marca } = useMarca();
   const { sesion } = useSesion();
   const { estatus } = useIdentidadAlumno();
-  const [logoFallo, setLogoFallo] = useState(false);
-  const logo = marca.logoAlumnoUrl || marca.logoUrl;
   const botonMenu = useRef<View>(null);
   const anterior = useRef(menuAbierto);
-  useEffect(() => setLogoFallo(false), [logo]);
   useEffect(() => {
     const timer = anterior.current && !menuAbierto ? setTimeout(() => botonMenu.current?.focus(), 50) : undefined;
     anterior.current = menuAbierto;
     return () => { if (timer) clearTimeout(timer); };
   }, [menuAbierto]);
   const iniciales = sesion?.nombre.split(' ').filter(Boolean).slice(0, 2).map(n => n[0]).join('');
-  return <View style={[s.cabecera, { borderTopColor: marca.colorPrimario }]}>
+  return <View testID="cabecera-alumno" style={[s.cabecera, { borderTopColor: marca.colorPrimario }]}>
     <TouchableOpacity ref={botonMenu} accessibilityRole="button" accessibilityLabel={menuAbierto ? 'Cerrar menú principal' : 'Abrir menú principal'}
       accessibilityState={{ expanded: menuAbierto }} onPress={alternarMenu} style={[s.menu, { width: escritorio ? 88 : 56 }]}>
       <IconoAlumno nombre={menuAbierto ? 'close' : 'menu'} />
     </TouchableOpacity>
     <View style={s.marca}>
-      {logo && !logoFallo ? <Image source={{ uri: archivosBase + logo }} resizeMode="contain" style={s.logo}
-        accessibilityLabel={`Logo de ${marca.nombreInstitucion}`} onError={() => setLogoFallo(true)} /> :
-        <Text style={[s.monograma, { color: marca.colorPrimario }]}>{marca.nombreCorto}</Text>}
+      <LogoInstitucional cabecera />
       {escritorio && <View style={s.nombreMarca}><Text style={s.institucion}>{marca.nombreInstitucion}</Text><Text style={s.meta}>Portal del alumno</Text></View>}
     </View>
     <TouchableOpacity accessibilityRole="button" accessibilityLabel="Abrir mi perfil" onPress={abrirPerfil} style={s.cuenta}>
@@ -61,6 +57,8 @@ const secciones: Record<string, { titulo: string; icono: NombreIconoAlumno }> = 
 export function NavegacionAlumno({ state, navigation, escritorio, menuAbierto, cerrarMenu }: BottomTabBarProps & {
   escritorio: boolean; menuAbierto: boolean; cerrarMenu: () => void;
 }) {
+  const { colores } = useTemaAlumno();
+  const s = useEstilosAlumno(crearEstilos);
   const { marca } = useMarca();
   const { cerrar } = useSesion();
   const insets = useSafeAreaInsets();
@@ -97,7 +95,7 @@ export function NavegacionAlumno({ state, navigation, escritorio, menuAbierto, c
   const item = (nombre: string, tareas = false, compacto = false) => {
     const seccion = tareas ? { titulo: 'Tareas y entregas', icono: 'book' as const } : secciones[nombre];
     const activo = tareas ? tareasActivas : nombre === ruta.name && (nombre !== 'Materias' || !tareasActivas);
-    const color = activo ? marca.colorPrimario : colores.tinta;
+    const color = activo ? colores.enlace : colores.tinta;
     return <TouchableOpacity key={tareas ? 'tareas' : nombre} accessibilityRole={tareas ? 'button' : 'tab'}
       accessibilityLabel={tareas ? 'Tareas y entregas' : ETIQUETAS_NAVEGACION[nombre] ?? seccion.titulo}
       accessibilityState={{ selected: activo }} onPress={() => ir(nombre, tareas)}
@@ -122,7 +120,7 @@ export function NavegacionAlumno({ state, navigation, escritorio, menuAbierto, c
     </ScrollView>
     {expandido && <View style={s.ayuda}><Text style={s.nombre}>Estamos para ayudarte</Text><Text style={s.meta}>Consulta y da seguimiento a tus trámites desde tu ventanilla.</Text>
       <TouchableOpacity accessibilityRole="button" accessibilityLabel="Abrir ventanilla de trámites" onPress={() => ir('Tramites')} style={s.ayudaBoton}>
-        <Text style={{ color: marca.colorPrimario, fontWeight: '700' }}>Ir a ventanilla</Text><IconoAlumno nombre="arrow" color={marca.colorPrimario} tamano={18} />
+        <Text style={{ color: colores.enlace, fontWeight: '700' }}>Ir a ventanilla</Text><IconoAlumno nombre="arrow" color={colores.enlace} tamano={18} />
       </TouchableOpacity></View>}
     <TouchableOpacity accessibilityRole="button" accessibilityLabel="Cerrar sesión del portal" disabled={logoutEnCurso} onPress={salir} style={[s.salir, !expandido && { justifyContent: 'center' }]}>
       <IconoAlumno nombre="logout" />{expandido && <Text style={s.etiqueta}>Cerrar sesión</Text>}
@@ -133,7 +131,7 @@ export function NavegacionAlumno({ state, navigation, escritorio, menuAbierto, c
     <View style={[s.inferior, { paddingBottom: Math.max(8, insets.bottom) }]}>
       {state.routes.filter(r => ['Inicio', 'Materias', 'Calificaciones', 'Pagos', 'Perfil'].includes(r.name)).map(r => {
         const activo = r.name === ruta.name;
-        const color = activo ? marca.colorPrimario : colores.gris;
+        const color = activo ? colores.enlace : colores.gris;
         const label: Record<string, string> = { Inicio: 'Inicio', Materias: 'Aula', Calificaciones: 'Notas', Pagos: 'Cuenta', Perfil: 'Perfil' };
         return <TouchableOpacity key={r.key} accessibilityRole="tab" accessibilityLabel={ETIQUETAS_NAVEGACION[r.name]}
           accessibilityState={{ selected: activo }} onPress={() => ir(r.name)} style={s.tabInferior}>
@@ -154,27 +152,26 @@ export function NavegacionAlumno({ state, navigation, escritorio, menuAbierto, c
   </>;
 }
 
-const s = StyleSheet.create({
-  cabecera: { height: 80, backgroundColor: '#fff', borderTopWidth: 4, borderBottomWidth: 1, borderBottomColor: colores.linea, flexDirection: 'row', alignItems: 'center', zIndex: 2 },
-  menu: { height: '100%', alignItems: 'center', justifyContent: 'center', borderRightWidth: 1, borderRightColor: '#EDF0F2' },
-  marca: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 22, paddingHorizontal: 24 },
-  logo: { width: 92, height: 48 }, monograma: { fontSize: 32, fontWeight: '800', letterSpacing: -1 },
+const crearEstilos = (colores: ColoresAlumno) => StyleSheet.create({
+  cabecera: { height: 80, backgroundColor: colores.superficie, borderTopWidth: 4, borderBottomWidth: 1, borderBottomColor: colores.linea, flexDirection: 'row', alignItems: 'center', zIndex: 2 },
+  menu: { height: '100%', alignItems: 'center', justifyContent: 'center', borderRightWidth: 1, borderRightColor: colores.linea },
+  marca: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 16, paddingHorizontal: 14 },
   nombreMarca: { borderLeftWidth: 1, borderLeftColor: colores.linea, paddingLeft: 22 },
   institucion: { fontSize: 14, fontWeight: '700', color: colores.tinta }, meta: { fontSize: 12, color: colores.gris, lineHeight: 19 },
   cuenta: { flexDirection: 'row', gap: 12, alignItems: 'center', paddingHorizontal: 20, minHeight: 48, maxWidth: '46%' },
-  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#EEF1F3', justifyContent: 'center', alignItems: 'center' },
-  iniciales: { color: '#3D505A', fontSize: 13, fontWeight: '700' }, nombre: { color: colores.tinta, fontSize: 13, fontWeight: '700' },
-  estado: { color: '#6B501B', backgroundColor: '#FAF0D8', paddingHorizontal: 9, paddingVertical: 3, alignSelf: 'flex-start', borderRadius: 12, marginTop: 4, fontSize: 10 },
-  lateral: { flexShrink: 0, backgroundColor: '#fff', borderRightWidth: 1, borderRightColor: '#E4E8EC', minHeight: 0 },
-  enlaces: { paddingHorizontal: 14, paddingVertical: 24, gap: 5 }, grupo: { color: '#6C7880', fontSize: 10, letterSpacing: 1.4, fontWeight: '700', paddingHorizontal: 12, marginBottom: 12 },
+  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: colores.suave, justifyContent: 'center', alignItems: 'center' },
+  iniciales: { color: colores.tinta, fontSize: 13, fontWeight: '700' }, nombre: { color: colores.tinta, fontSize: 13, fontWeight: '700' },
+  estado: { color: colores.avisoTexto, backgroundColor: colores.suave, paddingHorizontal: 9, paddingVertical: 3, alignSelf: 'flex-start', borderRadius: 12, marginTop: 4, fontSize: 10 },
+  lateral: { flexShrink: 0, backgroundColor: colores.superficie, borderRightWidth: 1, borderRightColor: colores.linea, minHeight: 0 },
+  enlaces: { paddingHorizontal: 14, paddingVertical: 24, gap: 5 }, grupo: { color: colores.gris, fontSize: 10, letterSpacing: 1.4, fontWeight: '700', paddingHorizontal: 12, marginBottom: 12 },
   enlace: { minHeight: 48, paddingHorizontal: 12, gap: 14, flexDirection: 'row', alignItems: 'center', borderRadius: 8, position: 'relative' },
-  enlaceCompacto: { justifyContent: 'center', paddingHorizontal: 0, marginBottom: 4 }, enlaceActivo: { backgroundColor: '#F0F3F4' },
-  etiqueta: { fontSize: 13, color: colores.tinta, flexShrink: 1 }, indicador: { position: 'absolute', left: -14, width: 3, height: 24, borderRadius: 2 },
-  ayuda: { padding: 16, marginHorizontal: 18, borderRadius: 10, backgroundColor: '#F5F7F8', gap: 7 },
+  enlaceCompacto: { justifyContent: 'center', paddingHorizontal: 0, marginBottom: 4 }, enlaceActivo: { backgroundColor: colores.suave },
+  etiqueta: { fontSize: 14, color: colores.tinta, flexShrink: 1 }, indicador: { position: 'absolute', left: -14, width: 3, height: 24, borderRadius: 2 },
+  ayuda: { padding: 16, marginHorizontal: 18, borderRadius: 10, backgroundColor: colores.suave, gap: 7 },
   ayudaBoton: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  salir: { flexDirection: 'row', gap: 14, alignItems: 'center', minHeight: 68, paddingHorizontal: 26, marginTop: 12, borderTopWidth: 1, borderTopColor: '#EDF0F2' },
-  inferior: { flexDirection: 'row', backgroundColor: '#fff', paddingTop: 10, borderTopWidth: 1, borderTopColor: colores.linea },
+  salir: { flexDirection: 'row', gap: 14, alignItems: 'center', minHeight: 68, paddingHorizontal: 26, marginTop: 12, borderTopWidth: 1, borderTopColor: colores.linea },
+  inferior: { flexDirection: 'row', backgroundColor: colores.superficie, paddingTop: 10, borderTopWidth: 1, borderTopColor: colores.linea },
   tabInferior: { flex: 1, minWidth: 0, minHeight: 48, alignItems: 'center', justifyContent: 'center', gap: 5 }, labelInferior: { fontSize: 10, fontWeight: '600' },
-  fondoMenu: { flex: 1, backgroundColor: 'rgba(15,30,40,.4)', flexDirection: 'row' }, menuMovil: { backgroundColor: '#fff', maxWidth: '88%', width: 264 },
+  fondoMenu: { flex: 1, backgroundColor: 'rgba(15,30,40,.4)', flexDirection: 'row' }, menuMovil: { backgroundColor: colores.superficie, maxWidth: '88%', width: 264 },
   tituloMenu: { minHeight: 72, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingLeft: 24, borderBottomWidth: 1, borderBottomColor: colores.linea }, cerrarMenu: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
 });

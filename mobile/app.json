@@ -2,11 +2,11 @@
   "expo": {
     "name": "Sistema Escolar Portal Alumno",
     "slug": "sistema-escolar",
-    "version": "1.38.6",
+    "version": "1.38.7",
     "orientation": "portrait",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": false,
+      "supportsTablet": true,
       "bundleIdentifier": "mx.escuela.alumnos"
     },
     "android": {
