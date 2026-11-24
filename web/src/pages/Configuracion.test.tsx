@@ -73,10 +73,10 @@ it('no informa fallo de carga si el logo se guardó y falla la actualización de
 it('distingue logo remoto de vista local dañada y bloquea el archivo dañado', () => {
   marca.logoUrl = '/uploads/marca-logo-anterior.png';
   render(<ConfiguracionPage />);
-  fireEvent.error(screen.getByRole('img'));
+  fireEvent.error(screen.getByRole('img', { name: 'Vista previa del logo' }));
   expect(screen.getByRole('alert').textContent).toContain('logotipo guardado');
   fireEvent.change(screen.getByLabelText(/Logo \(PNG/), { target: { files: [new File(['dañado'], 'logo.png')] } });
-  fireEvent.error(screen.getByRole('img'));
+  fireEvent.error(screen.getByRole('img', { name: 'Vista previa del logo' }));
   expect(screen.getByRole('alert').textContent).toContain('imagen seleccionada');
   expect((screen.getByText('Guardar cambios') as HTMLButtonElement).disabled).toBe(true);
 });

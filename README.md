@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.38.7`** · Portal alumno adaptable con marca institucional, temas y calendario renovado, recuperación de navegación y avisos por dispositivo nuevo. Incluye migración incremental. Pruebas técnicas, aceptación institucional y despliegue se acreditan por separado.
+**Versión candidata: `1.38.8`** · Portal alumno adaptable con marca institucional, temas y calendario renovado, recuperación de navegación y avisos por dispositivo nuevo. Incluye personalización del acceso del alumno y migraciones incrementales. Pruebas técnicas, aceptación institucional y despliegue se acreditan por separado.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -19,7 +19,7 @@ Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [ín
 
 ### Entrega actual
 
-La candidata **1.38.7** amplía el portal alumno para pantallas grandes, mejora el calendario y conserva la sección al volver. La apariencia admite Sistema, Claro y Oscuro con la marca de Administración. Los avisos de acceso se generan al reconocer un navegador o una instalación por primera vez.
+La candidata **1.38.8** amplía el portal alumno para pantallas grandes, mejora el calendario y conserva la sección al volver. La apariencia admite Sistema, Claro y Oscuro con la marca de Administración. Los avisos de acceso se generan al reconocer un navegador o una instalación por primera vez.
 
 La candidata **1.38.5** impide reclasificar conceptos de cobro y preserva el historial financiero. Las tarifas autorizadas pueden corregirse sin recalcular automáticamente cargos emitidos. Conserva las capacidades de 1.37.0. Sin migraciones; CI y UAT se acreditan por separado.
 
