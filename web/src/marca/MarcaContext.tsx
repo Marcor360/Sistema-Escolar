@@ -72,7 +72,7 @@ export function esMarcaWebValida(valor: unknown): valor is Marca {
     && (datos.mensajeBienvenida === undefined || typeof datos.mensajeBienvenida === 'string')
     && (datos.tamanoLogo === undefined || ['NORMAL', 'GRANDE'].includes(datos.tamanoLogo))
     && (datos.fondoAlumnoUrl == null || /^\/uploads\/marca-fondo-alumno-[a-f0-9-]+\.webp$/i.test(datos.fondoAlumnoUrl)) &&
-    [datos.bienvenidaAlumno, datos.descripcionAlumno, datos.avisoAlumno, datos.contactoAlumno, datos.privacidadAlumno, datos.reglamentoAlumno, datos.sitioAlumno].every(v => v == null || typeof v === "string") &&
+    [datos.bienvenidaAlumno, datos.descripcionAlumno, datos.avisoAlumno, datos.contactoAlumno, datos.privacidadAlumno, datos.reglamentoAlumno, datos.sitioAlumno].every(v => v == null || typeof v === 'string') &&
     typeof datos.actualizadoEn === 'string';
 }
 

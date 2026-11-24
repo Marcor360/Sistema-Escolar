@@ -20,7 +20,7 @@ export default function ConfiguracionPage() {
   const [tamanoLogo, setTamanoLogo] = useState<'NORMAL' | 'GRANDE'>(marca.tamanoLogo ?? 'NORMAL');
   const [presentacion, setPresentacion] = useState<Partial<Record<typeof camposAlumno[number][0], string>>>({});
   const [movil, setMovil] = useState(false);
-  const valor = (k: typeof camposAlumno[number][0]) => presentacion[k] ?? marca[k] ?? "";
+  const valor = (k: typeof camposAlumno[number][0]) => presentacion[k] ?? marca[k] ?? '';
   const [guardandoOpciones, setGuardandoOpciones] = useState(false);
   const [estadoOpciones, setEstadoOpciones] = useState('');
   const [errorOpciones, setErrorOpciones] = useState('');
@@ -140,6 +140,7 @@ export default function ConfiguracionPage() {
     try {
       await api.put('/configuracion/opciones', { mensajeBienvenida, tamanoLogo, ...presentacion });
       await recargar();
+      setPresentacion({});
       setEstadoOpciones('Opciones globales guardadas.');
     } catch (err) {
       setErrorOpciones(mensajeDeError(err));
@@ -217,14 +218,19 @@ export default function ConfiguracionPage() {
       </div>
       <h3>Acceso del alumno</h3>
       {camposAlumno.map(([k, etiqueta, limite]) => <label className="campo" key={k}>{etiqueta}
-        <input type={limite === 500 ? "url" : "text"} value={valor(k)} maxLength={limite} onChange={e => setPresentacion({...presentacion, [k]: e.target.value})}/>
+        <input disabled={guardandoOpciones} type={limite === 500 ? 'url' : 'text'} value={valor(k)} maxLength={limite} onChange={e => setPresentacion({...presentacion, [k]: e.target.value})}/>
       </label>)}
-      <button type="button" onClick={() => setPresentacion(Object.fromEntries(camposAlumno.map(([k]) => [k, ""])))}>Restablecer textos y enlaces</button>
-      <button type="button" onClick={() => setMovil(!movil)}>Vista previa {movil ? "de escritorio" : "móvil"}</button>
-      <section aria-label="Vista previa del acceso" style={{maxWidth: movil ? 360 : "100%", padding: 20, background: marca.colorPrimario, backgroundImage: marca.fondoAlumnoUrl ? `url(${archivosBase + marca.fondoAlumnoUrl})` : undefined, backgroundSize:"cover"}}>
-        <div style={{background:"white",color:"#20313d",padding:18,maxWidth:480,margin:"auto"}}>
-          <h3>{valor("bienvenidaAlumno") || marca.nombrePortalAlumno}</h3>
-          {camposAlumno.slice(1).map(([k, etiqueta, limite]) => valor(k) && <p key={k}>{limite === 500 ? etiqueta : valor(k)}</p>)}
+      <button type="button" onClick={() => setPresentacion(Object.fromEntries(camposAlumno.map(([k]) => [k, ''])))}>Restablecer textos y enlaces</button>
+      <button type="button" onClick={() => setMovil(!movil)}>Vista previa {movil ? 'de escritorio' : 'móvil'}</button>
+      <section aria-label="Vista previa del acceso" style={{maxWidth: movil ? 360 : '100%', padding: 20, backgroundColor: marca.colorPrimario, backgroundImage: marca.fondoAlumnoUrl ? `url(${archivosBase + marca.fondoAlumnoUrl})` : undefined, backgroundSize:'cover'}}>
+        <div style={{background:'white',color:'#20313d',padding:18,maxWidth:480,margin:'auto'}}>
+          {(marca.logoAlumnoUrl || marca.logoUrl) && <img alt={marca.nombreInstitucion}
+            src={archivosBase + (marca.logoAlumnoUrl || marca.logoUrl)} style={{maxWidth:'100%',height:56,objectFit:'contain'}} />}
+          <h3>{valor('bienvenidaAlumno') || marca.nombrePortalAlumno}</h3>
+          <p>{valor('descripcionAlumno') || 'Consulta materias, entrega tareas y revisa tus calificaciones y pagos. Ingresa con tu correo institucional.'}</p>
+          {valor('avisoAlumno') && <p>{valor('avisoAlumno')}</p>}
+          {valor('contactoAlumno') && <p>{valor('contactoAlumno')}</p>}
+          {camposAlumno.slice(4).map(([k, etiqueta]) => valor(k) && <p key={k}>{etiqueta} · {valor(k)}</p>)}
         </div>
       </section>
       {errorOpciones && <p role="alert" className="mensaje-error">{errorOpciones}</p>}
