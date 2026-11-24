@@ -16,5 +16,15 @@ export class ConfiguracionMarca {
   @Column({ type: 'char', length: 7 }) colorAcento!: string;
   @Column({ length: 180, default: '' }) mensajeBienvenida!: string;
   @Column({ length: 10, default: 'NORMAL' }) tamanoLogo!: 'NORMAL' | 'GRANDE';
+  @Column({ type: String, length: 255, nullable: true }) fondoAlumnoUrl!: string | null;
+  @Column({ type: String, length: 180, nullable: true }) bienvenidaAlumno!: string | null;
+  @Column({ type: String, length: 420, nullable: true }) descripcionAlumno!: string | null;
+  @Column({ type: String, length: 360, nullable: true }) avisoAlumno!: string | null;
+  @Column({ type: String, length: 180, nullable: true }) contactoAlumno!: string | null;
+  @Column({ type: String, length: 500, nullable: true }) privacidadAlumno!: string | null;
+  @Column({ type: String, length: 500, nullable: true }) reglamentoAlumno!: string | null;
+  @Column({ type: String, length: 500, nullable: true }) sitioAlumno!: string | null;
+  @Column({ type: String, length: 120, nullable: true }) tituloBoleta!: string | null;
+  @Column({ type: String, length: 480, nullable: true }) pieBoleta!: string | null;
   @UpdateDateColumn() actualizadoEn!: Date;
 }

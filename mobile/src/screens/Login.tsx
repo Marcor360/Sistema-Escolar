@@ -4,6 +4,7 @@ import { CampoPassword } from '../components/CampoPassword';
 import { useDisenoAlumno } from "../use-diseno-alumno";
 import { useRef, useState } from "react";
 import {
+  Image, Linking,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -14,7 +15,7 @@ import {
 } from "react-native";
 import { Text } from "../components/Texto";
 import { useSesion } from "../sesion";
-import { mensajeDeError } from "../api/client";
+import { archivosBase, mensajeDeError } from "../api/client";
 import { radio, espacio, tipografia, textoSobreFondo } from "../theme";
 import { useMarca } from "../marca";
 import ActivarCuentaScreen from "./ActivarCuenta";
@@ -56,6 +57,7 @@ export default function LoginScreen({ aviso = "" }: { aviso?: string } = {}) {
       style={[estilos.fondo, { backgroundColor: marca.colorPrimario }]}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
+      {marca.fondoAlumnoUrl && <Image accessible={false} source={{uri: archivosBase + marca.fondoAlumnoUrl}} resizeMode="cover" style={[StyleSheet.absoluteFill, {width:"100%", height:"100%"}]} />}
       <ScrollView
         contentContainerStyle={[estilos.desplazamiento,{paddingHorizontal:diseno.lateral}]}
         keyboardShouldPersistTaps="handled"
@@ -63,12 +65,12 @@ export default function LoginScreen({ aviso = "" }: { aviso?: string } = {}) {
         <View style={[estilos.caja, { borderTopColor: marca.colorAcento, padding:diseno.compacto?16:24 }]}>
           <View style={{ marginBottom: 16 }}><LogoInstitucional /></View>
           <Text style={estilos.titulo} accessibilityRole="header">
-            {marca.nombrePortalAlumno || 'Sistema Escolar Portal Alumno'}
+            {marca.bienvenidaAlumno || marca.nombrePortalAlumno || 'Sistema Escolar Portal Alumno'}
           </Text>
           <Text style={estilos.descripcion}>
-            Consulta materias, entrega tareas y revisa tus
-            calificaciones y pagos. Ingresa con tu correo institucional.
+            {marca.descripcionAlumno || "Consulta materias, entrega tareas y revisa tus calificaciones y pagos. Ingresa con tu correo institucional."}
           </Text>
+          {!!marca.avisoAlumno && <Text style={estilos.ayuda}>{marca.avisoAlumno}</Text>}
           {aviso !== "" && <Text accessibilityRole="alert" style={estilos.ayuda}>{aviso}</Text>}
           <Text style={estilos.etiqueta}>Correo institucional</Text>
           <TextInput
@@ -131,6 +133,9 @@ export default function LoginScreen({ aviso = "" }: { aviso?: string } = {}) {
           </TouchableOpacity>
           <TouchableOpacity style={estilos.controlPassword} disabled={enviando} onPress={() => { setPassword(""); setError(""); setRecuperacionVisible(true); }} accessibilityRole="button" accessibilityLabel="¿Olvidaste tu contraseña?"><Text>¿Olvidaste tu contraseña?</Text></TouchableOpacity>
           <Text style={estilos.ayuda}>Si no puedes acceder a tu correo institucional, contacta a Control escolar. El personal utiliza el portal web.</Text>
+          {!!marca.contactoAlumno && <Text style={estilos.descripcion}>{marca.contactoAlumno}</Text>}
+          {([["Aviso de privacidad", marca.privacidadAlumno], ["Reglamento", marca.reglamentoAlumno], ["Sitio oficial", marca.sitioAlumno]] as const).map(([label,url]) =>
+            url && /^https:\/\//i.test(url) ? <TouchableOpacity key={label} accessibilityRole="link" style={estilos.controlPassword} onPress={() => void Linking.openURL(url).catch(() => setError("No se pudo abrir el enlace institucional."))}><Text>{label}</Text></TouchableOpacity> : null)}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

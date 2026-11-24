@@ -1254,3 +1254,15 @@ CREATE TABLE auth_dispositivos_acceso (
   CONSTRAINT uq_auth_dispositivos_aviso UNIQUE (primer_evento_id),
   CONSTRAINT fk_auth_dispositivos_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
+
+ALTER TABLE configuracion_marca ADD fondo_alumno_url NVARCHAR(255) NULL,
+  bienvenida_alumno NVARCHAR(180) NULL,
+  descripcion_alumno NVARCHAR(420) NULL,
+  aviso_alumno NVARCHAR(360) NULL,
+  contacto_alumno NVARCHAR(180) NULL,
+  privacidad_alumno NVARCHAR(500) NULL,
+  reglamento_alumno NVARCHAR(500) NULL,
+  sitio_alumno NVARCHAR(500) NULL;
+
+ALTER TABLE configuracion_marca ADD titulo_boleta NVARCHAR(120) NULL,  pie_boleta NVARCHAR(480) NULL;
+ALTER TABLE boleta_respuestas ADD archivo_oficial NVARCHAR(36) NULL;

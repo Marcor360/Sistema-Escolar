@@ -171,6 +171,16 @@ export function registrarBoletasFirmas(ctx: ContextoIntegracion) {
     expect(boleta.data.filas[0].observaciones).toContain('Respuesta del docente');
     const aceptada = { ...payload, idempotencia: randomUUID(), estado: 'ACEPTADA', comentario: '' };
     const firma=await ctx.api(ruta + '/responder', { method: 'POST', token, body: aceptada });expect(firma.response.status).toBe(201);
+    const oficialUrl = `${ruta}/oficiales/${firma.data.id}/pdf`;
+    const oficial = await ctx.api(oficialUrl, { token });
+    expect(oficial.response.status).toBe(200);
+    expect(oficial.data.startsWith('%PDF')).toBe(true);
+    expect((await ctx.api(oficialUrl, { token: maestro })).response.status).toBe(403);
+    expect((await ctx.api(`${ruta}/oficiales/${primera.data.id}/pdf`, { token })).response.status).toBe(404);
+    expect((await ctx.api(ruta + '/responder', { method: 'POST', token, body: aceptada })).data.id).toBe(firma.data.id);
+    const enlaceOficial = await ctx.api(`/reportes/mi-boleta/enlace?inscripcionId=${insc.id}&respuestaId=${firma.data.id}&formato=boleta-oficial`, { token });
+    expect(enlaceOficial.response.status).toBe(200);
+    expect((await ctx.api(enlaceOficial.data.url.replace('/api',''))).data).toEqual(oficial.data);
     const recibo=await ctx.api(`${ruta}/constancias/${firma.data.id}/pdf`,{token});expect(recibo.response.status).toBe(200);expect(recibo.response.headers.get('content-type')).toContain('application/pdf');expect(recibo.data.startsWith('%PDF')).toBe(true);
     expect((await ctx.api(`${ruta}/constancias/${firma.data.id}/pdf`,{token:maestro})).response.status).toBe(403);
     const enlaceRecibo=await ctx.api(`/reportes/mi-boleta/enlace?inscripcionId=${insc.id}&respuestaId=${firma.data.id}&formato=constancia-aceptacion`,{token});expect(enlaceRecibo.response.status).toBe(200);expect((await ctx.api(enlaceRecibo.data.url.replace('/api',''))).response.status).toBe(200);
@@ -181,6 +191,7 @@ export function registrarBoletasFirmas(ctx: ContextoIntegracion) {
       .update({ alumnoId: alumno.id, grupoMateriaId: clases[0].id, parcial: 0 }, { calificacion: 7 });
     expect((await ctx.api(`${ruta}/constancias/${firma.data.id}/pdf`,{token})).response.status).toBe(200);
     expect((await ctx.api(ruta+'/atencion',{method:'POST',token:admin,body:{...atencion,idempotencia:randomUUID()}})).response.status).toBe(409);
+    expect((await ctx.api(oficialUrl, { token: admin })).data).toEqual(oficial.data);
     const cambiada = await ctx.api(ruta, { token });
     expect(cambiada.data.estado).toBe('PENDIENTE_RESPUESTA');
     expect(cambiada.data.historial.every((e: { vigente: boolean }) => !e.vigente)).toBe(true);
@@ -201,6 +212,7 @@ export function registrarBoletasFirmas(ctx: ContextoIntegracion) {
     const propio = await ctx.emitirToken(
       (await ds.getRepository(Usuario).findOneByOrFail({ id: ctx.alumnoUsuarioId })).email,
     );
+    expect((await ctx.api(oficialUrl, { token: propio })).response.status).toBe(403);
     expect((await ctx.api(ruta, { token: propio })).response.status).toBe(403);
     expect((await ctx.api(`${ruta}/constancias/${firma.data.id}/pdf`,{token:propio})).response.status).toBe(403);
     await ds.getRepository(Docente).update({id:docenteRegistro.id},{estatus:'BAJA'});

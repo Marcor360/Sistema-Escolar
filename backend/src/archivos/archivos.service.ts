@@ -33,7 +33,7 @@ interface EnlacePayload {
   kind: 'FILE';
   cicloId?: number;
   inscripcionId?: number;
-  formatoBoleta?: 'informativa-pdf' | 'informativa-excel' | 'constancia-aceptacion';
+  formatoBoleta?: 'informativa-pdf' | 'informativa-excel' | 'constancia-aceptacion' | 'boleta-oficial';
   respuestaId?: number;
 }
 
@@ -169,7 +169,7 @@ export class ArchivosService {
     cicloId: number | undefined,
     inscripcionId: number | undefined,
     user: JwtUser,
-    formatoBoleta?: 'informativa-pdf' | 'informativa-excel' | 'constancia-aceptacion',
+    formatoBoleta?: 'informativa-pdf' | 'informativa-excel' | 'constancia-aceptacion' | 'boleta-oficial',
     respuestaId?: number,
   ) {
     if (!user.sid || !Number.isInteger(user.ver)) throw new UnauthorizedException('Sesión no válida');

@@ -12,6 +12,14 @@ export type Marca = {
   colorPrimario: string;
   colorPrimarioOscuro: string;
   colorAcento: string;
+  fondoAlumnoUrl?: string | null;
+  bienvenidaAlumno?: string | null;
+  descripcionAlumno?: string | null;
+  avisoAlumno?: string | null;
+  contactoAlumno?: string | null;
+  privacidadAlumno?: string | null;
+  reglamentoAlumno?: string | null;
+  sitioAlumno?: string | null;
   actualizadoEn: string;
 };
 
