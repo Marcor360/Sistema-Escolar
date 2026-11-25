@@ -19,6 +19,7 @@ type Tramite = {
   estado: string;
   revision: number;
 };
+const categorias: Record<string, string> = { GENERAL: 'General', ACADEMICA: 'Académica', FINANCIERA: 'Financiera' };
 type Preferencia = { tipo: string; push: boolean; correo: boolean };
 type Sesion = {
   dispositivo?:string;
@@ -331,24 +332,21 @@ function Contenido({ vistaInicial }: { vistaInicial: string }) {
             Los avisos permanecen en tu bandeja. Los avisos de seguridad incluyen accesos desde dispositivos nuevos y cambios de contraseña.
           </Text>
           {preferencias.map((p) => (
-            <View key={p.tipo}>
-              <Text>{p.tipo}</Text>
-              {(["push", "correo"] as const).map((c) => (
-                <View key={c}>
-                  {boton(
-                    (c === "push" ? "Dispositivo" : "Correo opcional") +
-                      ": " +
-                      (p[c] ? "Activado" : "Desactivado"),
-                    () =>
-                      setPreferencias((ps) =>
-                        ps.map((x) =>
-                          x.tipo === p.tipo ? { ...x, [c]: !x[c] } : x,
-                        ),
-                      ),
-                    ocupado,
-                  )}
-                </View>
-              ))}
+            <View key={p.tipo} style={{ gap: 10, borderTopWidth: 1, borderColor: colores.linea, paddingTop: 12 }}>
+              <Text style={base.tituloTarjeta}>{categorias[p.tipo] ?? p.tipo}</Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+                {(["push", "correo"] as const).map(c => {
+                  const canal = c === "push" ? "Dispositivo" : "Correo opcional";
+                  return <TouchableOpacity key={c} accessibilityRole="switch" aria-checked={p[c]}
+                    accessibilityLabel={`${canal} · ${categorias[p.tipo] ?? p.tipo}`}
+                    accessibilityState={{ checked: p[c], disabled: ocupado }} disabled={ocupado}
+                    style={[base.botonAccesible, { paddingHorizontal: 14, borderWidth: 1, borderRadius: 9,
+                      borderColor: p[c] ? colores.enlace : colores.linea, backgroundColor: p[c] ? colores.suave : colores.superficie }]}
+                    onPress={() => setPreferencias(ps => ps.map(x => x.tipo === p.tipo ? {...x, [c]: !x[c]} : x))}>
+                    <Text>{canal}: {p[c] ? "Activado" : "Desactivado"}</Text>
+                  </TouchableOpacity>;
+                })}
+              </View>
             </View>
           ))}
           {boton(

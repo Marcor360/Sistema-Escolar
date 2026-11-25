@@ -28,7 +28,7 @@ export function CabeceraAlumno({ escritorio, menuAbierto, alternarMenu, abrirPer
   const iniciales = sesion?.nombre.split(' ').filter(Boolean).slice(0, 2).map(n => n[0]).join('');
   return <View testID="cabecera-alumno" style={[s.cabecera, { borderTopColor: marca.colorPrimario }]}>
     <TouchableOpacity ref={botonMenu} accessibilityRole="button" accessibilityLabel={menuAbierto ? 'Cerrar menú principal' : 'Abrir menú principal'}
-      accessibilityState={{ expanded: menuAbierto }} onPress={alternarMenu} style={[s.menu, { width: escritorio ? 88 : 56 }]}>
+      aria-expanded={menuAbierto} accessibilityState={{ expanded: menuAbierto }} onPress={alternarMenu} style={[s.menu, { width: escritorio ? 88 : 56 }]}>
       <IconoAlumno nombre={menuAbierto ? 'close' : 'menu'} />
     </TouchableOpacity>
     <View style={s.marca}>
@@ -62,6 +62,7 @@ export function NavegacionAlumno({ state, navigation, escritorio, menuAbierto, c
   const { marca } = useMarca();
   const { cerrar } = useSesion();
   const insets = useSafeAreaInsets();
+  const [ayudaVisible, setAyudaVisible] = useState(true);
   const [logoutEnCurso, setLogoutEnCurso] = useState(false);
   useEffect(() => {
     if (Platform.OS !== 'web' || !menuAbierto || escritorio) return;
@@ -98,7 +99,7 @@ export function NavegacionAlumno({ state, navigation, escritorio, menuAbierto, c
     const color = activo ? colores.enlace : colores.tinta;
     return <TouchableOpacity key={tareas ? 'tareas' : nombre} accessibilityRole={tareas ? 'button' : 'tab'}
       accessibilityLabel={tareas ? 'Tareas y entregas' : ETIQUETAS_NAVEGACION[nombre] ?? seccion.titulo}
-      accessibilityState={{ selected: activo }} onPress={() => ir(nombre, tareas)}
+      aria-selected={activo} accessibilityState={{ selected: activo }} onPress={() => ir(nombre, tareas)}
       style={[s.enlace, compacto && s.enlaceCompacto, activo && s.enlaceActivo]}>
       <IconoAlumno nombre={seccion.icono} color={color} tamano={22} />
       {!compacto && <Text style={[s.etiqueta, { color, fontWeight: activo ? '700' : '500' }]}>{seccion.titulo}</Text>}
@@ -117,11 +118,17 @@ export function NavegacionAlumno({ state, navigation, escritorio, menuAbierto, c
       {item('Pagos', false, !expandido)}
       {item('Calificaciones', false, !expandido)}
       {item('Perfil', false, !expandido)}
-    </ScrollView>
-    {expandido && <View style={s.ayuda}><Text style={s.nombre}>Estamos para ayudarte</Text><Text style={s.meta}>Consulta y da seguimiento a tus trámites desde tu ventanilla.</Text>
+    {expandido && ayudaVisible && <View style={s.ayuda}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <Text style={[s.nombre, { flex: 1 }]}>Estamos para ayudarte</Text>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Cerrar ayuda de ventanilla" style={s.cerrarMenu} onPress={() => setAyudaVisible(false)}>
+          <IconoAlumno nombre="close" color={colores.tinta} tamano={22} />
+        </TouchableOpacity>
+      </View><Text style={s.meta}>Consulta y da seguimiento a tus trámites desde tu ventanilla.</Text>
       <TouchableOpacity accessibilityRole="button" accessibilityLabel="Abrir ventanilla de trámites" onPress={() => ir('Tramites')} style={s.ayudaBoton}>
         <Text style={{ color: colores.enlace, fontWeight: '700' }}>Ir a ventanilla</Text><IconoAlumno nombre="arrow" color={colores.enlace} tamano={18} />
       </TouchableOpacity></View>}
+    </ScrollView>
     <TouchableOpacity accessibilityRole="button" accessibilityLabel="Cerrar sesión del portal" disabled={logoutEnCurso} onPress={salir} style={[s.salir, !expandido && { justifyContent: 'center' }]}>
       <IconoAlumno nombre="logout" />{expandido && <Text style={s.etiqueta}>Cerrar sesión</Text>}
     </TouchableOpacity>
@@ -134,7 +141,7 @@ export function NavegacionAlumno({ state, navigation, escritorio, menuAbierto, c
         const color = activo ? colores.enlace : colores.gris;
         const label: Record<string, string> = { Inicio: 'Inicio', Materias: 'Aula', Calificaciones: 'Notas', Pagos: 'Cuenta', Perfil: 'Perfil' };
         return <TouchableOpacity key={r.key} accessibilityRole="tab" accessibilityLabel={ETIQUETAS_NAVEGACION[r.name]}
-          accessibilityState={{ selected: activo }} onPress={() => ir(r.name)} style={s.tabInferior}>
+          aria-selected={activo} accessibilityState={{ selected: activo }} onPress={() => ir(r.name)} style={s.tabInferior}>
           <IconoAlumno nombre={secciones[r.name].icono} color={color} tamano={21} /><Text style={[s.labelInferior, { color }]}>{label[r.name]}</Text>
         </TouchableOpacity>;
       })}
@@ -167,7 +174,7 @@ const crearEstilos = (colores: ColoresAlumno) => StyleSheet.create({
   enlace: { minHeight: 48, paddingHorizontal: 12, gap: 14, flexDirection: 'row', alignItems: 'center', borderRadius: 8, position: 'relative' },
   enlaceCompacto: { justifyContent: 'center', paddingHorizontal: 0, marginBottom: 4 }, enlaceActivo: { backgroundColor: colores.suave },
   etiqueta: { fontSize: 14, color: colores.tinta, flexShrink: 1 }, indicador: { position: 'absolute', left: -14, width: 3, height: 24, borderRadius: 2 },
-  ayuda: { padding: 16, marginHorizontal: 18, borderRadius: 10, backgroundColor: colores.suave, gap: 7 },
+  ayuda: { padding: 12, marginTop: 14, borderRadius: 10, backgroundColor: colores.suave, gap: 7 },
   ayudaBoton: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   salir: { flexDirection: 'row', gap: 14, alignItems: 'center', minHeight: 68, paddingHorizontal: 26, marginTop: 12, borderTopWidth: 1, borderTopColor: colores.linea },
   inferior: { flexDirection: 'row', backgroundColor: colores.superficie, paddingTop: 10, borderTopWidth: 1, borderTopColor: colores.linea },

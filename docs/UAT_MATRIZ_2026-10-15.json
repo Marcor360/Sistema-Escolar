@@ -1,6 +1,6 @@
 {
-  "version": "1.38.9",
-  "alcance": "Candidata 1.38.9. Portal alumno adaptable con marca institucional, temas y calendario renovado, recuperación de navegación y avisos por dispositivo nuevo. Incluye el acceso personalizable y la emisión de boletas oficiales en el historial privado al aceptar la versión digital.",
+  "version": "1.38.10",
+  "alcance": "Candidata 1.38.10. Portal alumno con controles espaciados, ayuda descartable, selección de adjuntos antes de entregar y cierre de sesión con limpieza de la vista.",
   "escenarios": [
     {
       "id": "UAT-01",

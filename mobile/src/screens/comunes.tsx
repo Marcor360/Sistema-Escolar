@@ -118,6 +118,7 @@ const crearBase = (colores: ColoresAlumno) => StyleSheet.create({
     flexShrink: 1,
   },
   tarjeta: {
+    gap: 10,
     minWidth: 0,
     backgroundColor: colores.superficie,
     borderWidth: 1,

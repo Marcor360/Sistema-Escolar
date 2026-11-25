@@ -362,6 +362,7 @@ function AppInterna({ marca, setMarca }: { marca: Marca; setMarca: (marca: Marca
       consultaConsentimiento.current = null;
       setConsentimiento(null);
       setAvisoCierre("Tu sesión terminó. Inicia sesión para continuar.");
+      setMenuAbierto(false);
       setSesion(null);
     });
     return () => registrarSesionExpirada(null);
@@ -414,6 +415,7 @@ function AppInterna({ marca, setMarca }: { marca: Marca; setMarca: (marca: Marca
       ? limpiarPreferenciaPushLocal(usuarioParaLimpiar) : Promise.resolve();
     const borrarTokens = eliminarTokensSesion();
     const borrarActividad = persistenciaActividad.current.borrar();
+    setMenuAbierto(false);
     setSesion(null);
     setBloqueoBiometrico(false);
     consultaConsentimiento.current = null;
@@ -627,10 +629,12 @@ function AppInterna({ marca, setMarca }: { marca: Marca; setMarca: (marca: Marca
     <MarcaContext.Provider value={{ marca }}>
       <SesionContext.Provider value={{ sesion, iniciar, cerrar, finalizarSesionLocal }}>
         <SafeAreaView
-          style={{ flex: 1, backgroundColor: sesion ? colores.papel : colores.pizarra }}
+          key={sesion ? `portal-${sesion.sub}` : "acceso"}
+          style={{ flex: 1, minHeight: 0, overflow: "hidden", backgroundColor: sesion ? colores.papel : colores.pizarra }}
           edges={sesion ? ["left", "right", "top"] : ["left", "right", "top", "bottom"]}
           onTouchStart={registrarInteraccion}
         >
+          <AlertasWeb />
           <StatusBar style={(sesion ? oscuro : colores.sobrePrimario === "#ffffff") ? "light" : "dark"} />
           {sesion ? (
             <NavigationContainer
@@ -739,7 +743,7 @@ export default function App() {
   return (
     <FuenteContext.Provider value={fuenteLista}>
       <TemaAlumnoContext.Provider value={tema}>
-        <SafeAreaProvider><AppInterna marca={marca} setMarca={setMarca} /><AlertasWeb /></SafeAreaProvider>
+        <SafeAreaProvider><AppInterna marca={marca} setMarca={setMarca} /></SafeAreaProvider>
       </TemaAlumnoContext.Provider>
     </FuenteContext.Provider>
   );
