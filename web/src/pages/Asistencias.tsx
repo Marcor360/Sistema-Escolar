@@ -1,3 +1,4 @@
+import { useSearchParams } from 'react-router-dom';
 import { FormEvent, useEffect, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
@@ -23,10 +24,11 @@ interface Registro {
   materia: string;
 }
 export default function AsistenciasPage() {
+  const [params]=useSearchParams();
   const { sesion } = useAuth(),
     alumno = sesion?.roles.includes('ALUMNO');
   const [clases, setClases] = useState<Clase[]>([]),
-    [clase, setClase] = useState(''),
+    [clase, setClase] = useState(params.get('clase') ?? ''),
     [fecha, setFecha] = useState(diaLocal()),
     [desde, setDesde] = useState(diaLocal().slice(0, 7) + '-01'),
     [hasta, setHasta] = useState(diaLocal());

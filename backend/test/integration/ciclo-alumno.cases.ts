@@ -5,7 +5,7 @@ import { ActivacionService } from '../../src/auth/activacion.service';
 import { AuthService } from '../../src/auth/auth.service';
 import { ClavesCorreoAcceso } from '../../src/auth/correo-acceso-claves';
 import { CorreoAccesoOutboxService } from '../../src/auth/correo-acceso-outbox.service';
-import { Alumno, AuthCorreoOutbox, BitacoraAcademica, Cargo, CicloEscolar, ConceptoPago, EgresoAlumno, Grupo, Inscripcion, Pago, Usuario } from '../../src/entities';
+import { Alumno, AuthCorreoOutbox, BitacoraAcademica, Cargo, CicloEscolar, ConceptoPago, EgresoAlumno, Calificacion, PeriodoCalificacion, GrupoMateria, Grupo, Inscripcion, Pago, Usuario } from '../../src/entities';
 import { ContextoIntegracion } from './contexto';
 import { curpFicticia } from './identidad-ficticia';
 
@@ -136,5 +136,33 @@ export function registrarCicloAlumno(ctx: ContextoIntegracion) {
     expect(await ctx.dataSource.getRepository(EgresoAlumno).countBy({ alumnoId: a.id })).toBe(1);
     expect((await ctx.api(`/alumnos/${a.id}/historial/listado`, { token })).data).toMatchObject({ total: 1, egreso: { cicloId: ciclo.id } });
     expect((await ctx.api(`/alumnos/${a.id}/permanente`, { method: 'DELETE', token, body: { confirmacion: 'ELIMINAR' } })).response.status).toBe(409);
+    const admin = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({id:ctx.adminId})).email);
+    const finanzas = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({id:ctx.finanzasId})).email);
+    const ruta='/expedientes-egreso/'+a.matricula;
+    expect((await ctx.api(ruta,{token:admin})).data).toMatchObject({matricula:a.matricula,cerrado:false,documentos:[]});
+    expect((await ctx.api(ruta+'/documentos',{method:'POST',token:admin,body:{tipo:'TITULO'}})).response.status).toBe(403);
+    expect((await ctx.api(ruta+'/documentos',{method:'POST',token:admin,body:{tipo:'HISTORIAL'}})).response.status).toBe(409);
+    const referencia=await ctx.dataSource.getRepository(GrupoMateria).findOneByOrFail({id:ctx.grupoMateriaIdMaestro});
+    const clase=await ctx.dataSource.getRepository(GrupoMateria).save({grupoId:grupo.id,materiaId:referencia.materiaId,regimenEvaluacion:'CUATRO_PARCIALES_10'});
+    await ctx.dataSource.getRepository(Calificacion).save({alumnoId:a.id,grupoMateriaId:clase.id,parcial:0,calificacion:9,escalaMaxima:10});
+    await ctx.dataSource.getRepository(PeriodoCalificacion).save({grupoMateriaId:clase.id,parcial:0,estatus:'CERRADO'});
+    for(const tipo of ['NO_ADEUDO','SERVICIO_SOCIAL','CONCLUSION']){
+      const form=new FormData();
+      form.set('tipo',tipo);
+      form.set('detalle','Liberación de prueba sintética');
+      if(tipo!=='CONCLUSION')form.set('archivo',new Blob(['%PDF-1.7 Evidencia QA'],{type:'application/pdf'}),'hoja.pdf');
+      const r=await fetch(ctx.baseUrl+ruta+'/evidencias',{method:'POST',headers:{Authorization:'Bearer '+(tipo==='NO_ADEUDO'?finanzas:admin)},body:form});
+      expect({status:r.status,body:await r.text()}).toMatchObject({status:201});
+    }
+    const emitir=()=>ctx.api(ruta+'/documentos',{method:'POST',token:admin,body:{tipo:'HISTORIAL'}});
+    const documento=await emitir();
+    expect(documento.response.status).toBe(201);
+    expect((await emitir()).data.id).toBe(documento.data.id);
+    expect((await ctx.api(ruta+'/documentos/'+documento.data.id+'/historial',{token:admin})).data).toMatchObject({
+      esquema:'expediente-egreso-iua/v3',alumno:{matricula:a.matricula},calificaciones:[expect.objectContaining({calificacion:9})],
+    });
+    expect((await ctx.api(ruta+'/documentos',{method:'POST',token:admin,body:{tipo:'FINALIZACION'}})).response.status).toBe(201);
+    expect((await emitir()).response.status).toBe(409);
+
   });
 }

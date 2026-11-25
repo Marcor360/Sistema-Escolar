@@ -127,7 +127,7 @@ export default function ExpedientesEgreso() {
     });
   };
   return (
-    <main>
+    <section className="expediente-egreso" aria-label="Expediente de egreso">
       <h1>Expediente de egreso</h1>
       <form
         className="panel"
@@ -346,6 +346,6 @@ export default function ExpedientesEgreso() {
           </section>
         </div>
       )}
-    </main>
+    </section>
   );
 }
