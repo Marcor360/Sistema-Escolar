@@ -326,7 +326,7 @@ export default function ExpedientesEgreso() {
                 >
                   Descargar {nombres[d.tipo]}
                 </button>
-                {emite && !['NO_ADEUDO', 'SERVICIO_SOCIAL', 'CONCLUSION'].includes(d.tipo) && (
+                {(emite || d.tipo === 'NO_ADEUDO') && (
                   <button
                     disabled={ocupado}
                     onClick={() =>
@@ -338,7 +338,9 @@ export default function ExpedientesEgreso() {
                       })
                     }
                   >
-                    Historial al expedir
+                    {['NO_ADEUDO', 'SERVICIO_SOCIAL', 'CONCLUSION'].includes(d.tipo)
+                      ? 'Descargar declaración digital'
+                      : 'Historial al expedir'}
                   </button>
                 )}
               </article>

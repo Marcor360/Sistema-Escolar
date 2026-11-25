@@ -1,3 +1,4 @@
+import { leerContenido } from './contenido-egreso';
 import { EntityManager, In } from 'typeorm';
 import { createHash } from 'crypto';
 import { readFile } from 'fs/promises';
@@ -71,13 +72,16 @@ export async function expedienteHistorico(manager: EntityManager, egreso: Egreso
       sha256: true,
       createdAt: true,
       mime: true,
-      contenido: adjuntos,
-      instantanea: adjuntos,
     },
   });
-  for (const d of documentos)
-    if (adjuntos && createHash('sha256').update(Buffer.from(d.contenido, 'base64')).digest('hex') !== d.sha256)
-      throw new Error('Evidencia con huella inconsistente');
+  if (adjuntos)
+    for (const d of documentos) {
+      const bytes = await leerContenido(manager, d.id, 'CONTENIDO');
+      if (createHash('sha256').update(bytes).digest('hex') !== d.sha256)
+        throw new Error('Evidencia con huella inconsistente');
+      d.contenido = bytes.toString('base64');
+      d.instantanea = (await leerContenido(manager, d.id, 'INSTANTANEA')).toString('utf8');
+    }
   const cargos = await manager.getRepository(Cargo).find({
     where: { alumnoId: alumno.id },
     order: { id: 'ASC' },
@@ -112,14 +116,12 @@ export async function expedienteHistorico(manager: EntityManager, egreso: Egreso
   const asistencias = await manager
     .getRepository(Asistencia)
     .find({ where: { alumnoId: alumno.id }, order: { id: 'ASC' }, loadEagerRelations: false });
-  const entregas = await manager
-    .getRepository(Entrega)
-    .find({
-      where: { alumnoId: alumno.id },
-      order: { id: 'ASC' },
-      loadEagerRelations: false,
-      relations: { actividad: true },
-    });
+  const entregas = await manager.getRepository(Entrega).find({
+    where: { alumnoId: alumno.id },
+    order: { id: 'ASC' },
+    loadEagerRelations: false,
+    relations: { actividad: true },
+  });
   const respuestas = inscripciones.length
     ? await manager
         .getRepository(BoletaRespuesta)
@@ -185,6 +187,8 @@ export async function expedienteHistorico(manager: EntityManager, egreso: Egreso
     })),
     asistencias,
     entregas: entregas.map((e) => ({
+      entregaId: e.id,
+      actividadId: e.actividadId,
       actividad: e.actividad.titulo,
       claseId: e.actividad.grupoMateriaId,
       fecha: e.fechaEntregado,

@@ -138,8 +138,9 @@ export function registrarCicloAlumno(ctx: ContextoIntegracion) {
     expect((await ctx.api(`/alumnos/${a.id}/permanente`, { method: 'DELETE', token, body: { confirmacion: 'ELIMINAR' } })).response.status).toBe(409);
     const admin = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({id:ctx.adminId})).email);
     const finanzas = await ctx.emitirToken((await ctx.dataSource.getRepository(Usuario).findOneByOrFail({id:ctx.finanzasId})).email);
-    const ruta='/expedientes-egreso/'+a.matricula;
-    expect((await ctx.api(ruta,{token:admin})).data).toMatchObject({matricula:a.matricula,cerrado:false,documentos:[]});
+    const matricula=a.matricula.toUpperCase();
+    const ruta='/expedientes-egreso/'+matricula;
+    expect((await ctx.api(ruta,{token:admin})).data).toMatchObject({matricula,cerrado:false,documentos:[]});
     expect((await ctx.api(ruta+'/documentos',{method:'POST',token:admin,body:{tipo:'TITULO'}})).response.status).toBe(403);
     expect((await ctx.api(ruta+'/documentos',{method:'POST',token:admin,body:{tipo:'HISTORIAL'}})).response.status).toBe(409);
     const referencia=await ctx.dataSource.getRepository(GrupoMateria).findOneByOrFail({id:ctx.grupoMateriaIdMaestro});
@@ -150,16 +151,20 @@ export function registrarCicloAlumno(ctx: ContextoIntegracion) {
       const form=new FormData();
       form.set('tipo',tipo);
       form.set('detalle','Liberación de prueba sintética');
-      if(tipo!=='CONCLUSION')form.set('archivo',new Blob(['%PDF-1.7 Evidencia QA'],{type:'application/pdf'}),'hoja.pdf');
+      if(tipo!=='CONCLUSION')form.set('archivo',new Blob(['%PDF-1.7 Evidencia QA',' '.repeat(90_000)],{type:'application/pdf'}),'hoja.pdf');
       const r=await fetch(ctx.baseUrl+ruta+'/evidencias',{method:'POST',headers:{Authorization:'Bearer '+(tipo==='NO_ADEUDO'?finanzas:admin)},body:form});
       expect({status:r.status,body:await r.text()}).toMatchObject({status:201});
     }
+    const indice=await ctx.api(ruta,{token:finanzas});
+    expect(indice.data.documentos).toHaveLength(1);
+    const hoja=await fetch(ctx.baseUrl+ruta+'/documentos/'+indice.data.documentos[0].id,{headers:{Authorization:'Bearer '+finanzas}});
+    expect(await hoja.text()).toEqual('%PDF-1.7 Evidencia QA'+' '.repeat(90_000));
     const emitir=()=>ctx.api(ruta+'/documentos',{method:'POST',token:admin,body:{tipo:'HISTORIAL'}});
     const documento=await emitir();
     expect(documento.response.status).toBe(201);
     expect((await emitir()).data.id).toBe(documento.data.id);
     expect((await ctx.api(ruta+'/documentos/'+documento.data.id+'/historial',{token:admin})).data).toMatchObject({
-      esquema:'expediente-egreso-iua/v3',alumno:{matricula:a.matricula},calificaciones:[expect.objectContaining({calificacion:9})],
+      esquema:'expediente-egreso-iua/v3',alumno:{matricula},calificaciones:[expect.objectContaining({calificacion:9})],
     });
     expect((await ctx.api(ruta+'/documentos',{method:'POST',token:admin,body:{tipo:'FINALIZACION'}})).response.status).toBe(201);
     expect((await emitir()).response.status).toBe(409);

@@ -5,6 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { guardarContenido, leerContenido } from '../alumnos/contenido-egreso';
 import { expedienteHistorico } from '../alumnos/expediente-historico';
 import { readFile } from 'fs/promises';
 import { resolve, sep } from 'path';
@@ -48,7 +49,7 @@ export class DocumentosEgresoService {
   private async obtener(m: EntityManager, matricula: string, actor: JwtUser, escritura = false) {
     exigir(actor, 'ADMINISTRATIVO', 'DIRECTOR', 'FINANZAS');
     const e = await m.findOne(EgresoAlumno, {
-      where: { alumno: { matricula } },
+      where: { alumno: { matricula:matricula.trim().toUpperCase() } },
       relations: { alumno: { usuario: true }, ciclo: true },
     });
     if (!e) throw new NotFoundException('No se encontró un egreso conciliado para esa matrícula');
@@ -173,9 +174,9 @@ export class DocumentosEgresoService {
       mime,
       sha256,
       clave,
-      instantanea,
-      contenido: bytes.toString('base64'),
     });
+    await guardarContenido(m, d.id, 'CONTENIDO', bytes);
+    if (instantanea) await guardarContenido(m, d.id, 'INSTANTANEA', Buffer.from(instantanea));
     return { id: d.id, tipo, sha256 };
   }
   evidencia(matricula: string, d: EvidenciaDto, archivo: Express.Multer.File | undefined, actor: JwtUser) {
@@ -185,10 +186,12 @@ export class DocumentosEgresoService {
     return this.ds.transaction('SERIALIZABLE', async (m) => {
       const e = await this.obtener(m, matricula, actor, true);
       let contexto = '';
+      let cuentaConfirmada: Awaited<ReturnType<DocumentosEgresoService['finanzas']>> | undefined;
       if (d.tipo === 'NO_ADEUDO') {
         const cuenta = await this.finanzas(m, e.alumnoId);
         if (cuenta.some((c) => c.total > c.pagado))
           throw new ConflictException('Hay cargos pendientes de liquidación');
+        cuentaConfirmada = cuenta;
         contexto = huella(JSON.stringify(cuenta));
       } else if (d.tipo === 'CONCLUSION') {
         const h = await historialEgreso(m, e.alumnoId);
@@ -223,6 +226,21 @@ export class DocumentosEgresoService {
         contexto,
         archivo ? 'application/pdf' : 'application/xml',
         archivo?.buffer ?? Buffer.from(acta),
+        JSON.stringify({
+          tipo: d.tipo,
+          matricula: e.alumno.matricula,
+          responsable: actor.nombre,
+          usuarioId: actor.sub,
+          fecha: new Date().toISOString(),
+          referencia: d.detalle.trim(),
+          cuenta: cuentaConfirmada,
+          declaracion:
+            d.tipo === 'NO_ADEUDO'
+              ? 'Finanzas certifica que la cuenta del alumno está liquidada.'
+              : d.tipo === 'SERVICIO_SOCIAL'
+                ? 'Administración certifica la liberación del servicio social.'
+                : 'Administración certifica la conclusión del plan de estudios.',
+        }),
       );
     });
   }
@@ -347,26 +365,18 @@ export class DocumentosEgresoService {
     });
   }
   async instantanea(matricula: string, id: number, actor: JwtUser) {
-    exigir(actor, 'ADMINISTRATIVO', 'DIRECTOR');
     const e = await this.obtener(this.ds.manager, matricula, actor);
-    const d = await this.ds.manager.findOne(EgresoDocumento, {
-      where: { id, egresoId: e.id },
-      select: { id: true, instantanea: true },
-    });
-    if (!d?.instantanea) throw new NotFoundException();
-    return Buffer.from(d.instantanea);
+    const d = await this.ds.manager.findOneBy(EgresoDocumento, { id, egresoId: e.id });
+    if (!d) throw new NotFoundException();
+    if (d.tipo !== 'NO_ADEUDO') exigir(actor, 'ADMINISTRATIVO', 'DIRECTOR');
+    return leerContenido(this.ds.manager, id, 'INSTANTANEA');
   }
   async descargar(matricula: string, id: number, actor: JwtUser) {
     const e = await this.obtener(this.ds.manager, matricula, actor);
-    const d = await this.ds
-      .getRepository(EgresoDocumento)
-      .createQueryBuilder('d')
-      .addSelect('d.contenido')
-      .where('d.id=:id AND d.egresoId=:egreso', { id, egreso: e.id })
-      .getOne();
+    const d = await this.ds.manager.findOneBy(EgresoDocumento, { id, egresoId: e.id });
     if (!d) throw new NotFoundException();
     if (d.tipo !== 'NO_ADEUDO') exigir(actor, 'ADMINISTRATIVO', 'DIRECTOR');
-    const bytes = Buffer.from(d.contenido, 'base64');
+    const bytes = await leerContenido(this.ds.manager, id, 'CONTENIDO');
     if (huella(bytes) !== d.sha256) throw new ConflictException('El documento requiere revisión de integridad');
     return { bytes, mime: d.mime, nombre: d.tipo + '-' + d.id + (d.mime === 'application/pdf' ? '.pdf' : '.xml') };
   }

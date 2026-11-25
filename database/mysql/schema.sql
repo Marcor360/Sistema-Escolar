@@ -1248,10 +1248,18 @@ CREATE TABLE egreso_documentos (
   sha256 VARCHAR(64) NOT NULL,
   clave VARCHAR(64) NOT NULL UNIQUE,
   mime VARCHAR(40) NOT NULL,
-  instantanea LONGTEXT NULL,
-  contenido LONGTEXT NOT NULL,
   created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   FOREIGN KEY (egreso_id) REFERENCES egresos_alumnos(id),
   FOREIGN KEY (actor_id) REFERENCES usuarios(id)
 );
 CREATE INDEX idx_egreso_documentos_tipo ON egreso_documentos(egreso_id,tipo,id);
+
+CREATE TABLE egreso_documento_partes (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  documento_id INT NOT NULL,
+  tipo VARCHAR(12) NOT NULL,
+  orden INT NOT NULL,
+  datos TEXT NOT NULL,
+  FOREIGN KEY (documento_id) REFERENCES egreso_documentos(id)
+);
+CREATE UNIQUE INDEX uq_egreso_documento_partes ON egreso_documento_partes(documento_id,tipo,orden);

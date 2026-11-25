@@ -1278,8 +1278,15 @@ CREATE TABLE egreso_documentos (
   sha256 NVARCHAR(64) NOT NULL,
   clave NVARCHAR(64) NOT NULL UNIQUE,
   mime NVARCHAR(40) NOT NULL,
-  instantanea NVARCHAR(MAX) NULL,
-  contenido VARCHAR(MAX) NOT NULL,
   created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
 );
 CREATE INDEX idx_egreso_documentos_tipo ON egreso_documentos(egreso_id,tipo,id);
+
+CREATE TABLE egreso_documento_partes (
+  id INT IDENTITY(1,1) PRIMARY KEY,
+  documento_id INT NOT NULL REFERENCES egreso_documentos(id),
+  tipo NVARCHAR(12) NOT NULL,
+  orden INT NOT NULL,
+  datos NVARCHAR(MAX) NOT NULL
+);
+CREATE UNIQUE INDEX uq_egreso_documento_partes ON egreso_documento_partes(documento_id,tipo,orden);

@@ -28,6 +28,7 @@ function entorno(estadoArchivo = 'VIGENTE') {
     })),
     find,
     findOneBy: jest.fn().mockResolvedValue(null),
+    insert: jest.fn(),
     save,
     update,
   });
@@ -83,7 +84,6 @@ it('guarda la referencia digital, el responsable y la hoja íntegra al confirmar
     expect.objectContaining({
       detalle: 'Carta digital',
       actorId: 10,
-      contenido: evidencia.buffer.toString('base64'),
     }),
   );
 });

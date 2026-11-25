@@ -16,7 +16,18 @@ export class EgresoDocumento {
   @Column({ length: 64 }) sha256!: string;
   @Column({ length: 64, unique: true }) clave!: string;
   @Column({ length: 40 }) mime!: string;
-  @Column({ type: 'text', select: false }) contenido!: string;
-  @Column({ type: 'text', select: false, nullable: true }) instantanea!: string | null;
+  contenido?: string;
+  instantanea?: string;
   @CreateDateColumn() createdAt!: Date;
+}
+
+@Entity('egreso_documento_partes')
+@Index('uq_egreso_documento_partes', ['documentoId', 'tipo', 'orden'], { unique: true })
+export class EgresoDocumentoParte {
+  @PrimaryGeneratedColumn() id!: number;
+  @Column() documentoId!: number;
+  @ManyToOne(() => EgresoDocumento) @JoinColumn({ name: 'documento_id' }) documento!: EgresoDocumento;
+  @Column({ length: 12 }) tipo!: 'CONTENIDO' | 'INSTANTANEA';
+  @Column() orden!: number;
+  @Column({ type: 'text' }) datos!: string;
 }
