@@ -316,7 +316,7 @@ it("cerrar sesión requiere confirmación", async () => {
     expect.any(Array),
   );
 });
-it("confirmar reemplazo permite elegir archivo y cancelar no envía entrega", async () => {
+it("seleccionar un reemplazo y cancelar su confirmación conserva la entrega", async () => {
   vi.mocked(api.get).mockResolvedValue({
     data: {
       datos: [
@@ -333,19 +333,19 @@ it("confirmar reemplazo permite elegir archivo y cancelar no envía entrega", as
     },
   });
   vi.mocked(DocumentPicker.getDocumentAsync).mockResolvedValue({
-    canceled: true,
-    assets: null,
+    canceled: false,
+    assets: [{name: "ensayo.pdf", uri: "file:///ensayo.pdf", size: 100, lastModified: 0}],
   });
   await montar(<Tareas />);
+  await act(async () => vista.root.findByProps({ accessibilityLabel: "Cargar archivo: Ensayo" }).props.onPress());
   await act(async () =>
     vista.root
       .findByProps({ accessibilityLabel: "Reemplazar entrega: Ensayo" })
       .props.onPress(),
   );
   const botones = vi.mocked(Alert.alert).mock.calls.at(-1)?.[2];
-  await act(async () =>
-    botones?.find((b) => b.text === "Elegir nuevo archivo")?.onPress?.(),
-  );
+  expect(botones?.some(b => b.text === "Reemplazar archivo")).toBe(true);
+  expect(botones?.some(b => b.text === "Cancelar")).toBe(true);
   expect(DocumentPicker.getDocumentAsync).toHaveBeenCalledOnce();
   expect(api.post).not.toHaveBeenCalled();
 });
@@ -430,7 +430,7 @@ it("no envía archivo si el selector termina después de desmontar la pantalla",
   await montar(<Tareas />);
   await act(async () =>
     vista.root
-      .findByProps({ accessibilityLabel: "Entregar archivo: Ensayo" })
+      .findByProps({ accessibilityLabel: "Cargar archivo: Ensayo" })
       .props.onPress(),
   );
   await act(async () => vista.unmount());
@@ -695,7 +695,7 @@ it("tareas conserva datos solo como referencia y bloquea entregas con informaci�
   vi.mocked(api.get).mockResolvedValue({ data: { datos: [tarea], total: 1 } });
   await montar(<Tareas />);
   expect(
-    vista.root.findByProps({ accessibilityLabel: "Entregar archivo: Trabajo" })
+    vista.root.findByProps({ accessibilityLabel: "Cargar archivo: Trabajo" })
       .props.disabled,
   ).toBe(false);
   vi.mocked(api.get).mockRejectedValueOnce(new Error("Red interrumpida"));
@@ -705,7 +705,7 @@ it("tareas conserva datos solo como referencia y bloquea entregas con informaci�
       .props.onPress(),
   );
   expect(
-    vista.root.findByProps({ accessibilityLabel: "Entregar archivo: Trabajo" })
+    vista.root.findByProps({ accessibilityLabel: "Cargar archivo: Trabajo" })
       .props.disabled,
   ).toBe(true);
   expect(texto()).toContain("desactualizados");
@@ -720,7 +720,7 @@ it("tareas conserva datos solo como referencia y bloquea entregas con informaci�
       .props.onPress(),
   );
   expect(
-    vista.root.findByProps({ accessibilityLabel: "Entregar archivo: Trabajo" })
+    vista.root.findByProps({ accessibilityLabel: "Cargar archivo: Trabajo" })
       .props.disabled,
   ).toBe(false);
 });
@@ -746,7 +746,7 @@ it("bloquea el envío si la consulta vence mientras el selector está abierto", 
   );
   await act(async () =>
     vista.root
-      .findByProps({ accessibilityLabel: "Entregar archivo: Trabajo" })
+      .findByProps({ accessibilityLabel: "Cargar archivo: Trabajo" })
       .props.onPress(),
   );
   const reloj = vi
@@ -791,13 +791,13 @@ it("rechaza crear una copia temporal del adjunto cuando el preflight online fall
   await montar(<Tareas />);
   await act(async () =>
     vista.root
-      .findByProps({ accessibilityLabel: "Entregar archivo: Informe" })
+      .findByProps({ accessibilityLabel: "Cargar archivo: Informe" })
       .props.onPress(),
   );
   expect(DocumentPicker.getDocumentAsync).not.toHaveBeenCalled();
   expect(api.post).not.toHaveBeenCalled();
   expect(Alert.alert).toHaveBeenCalledWith(
-    "No se pudo entregar",
+    "No se pudo seleccionar el archivo",
     expect.any(String),
   );
 });
@@ -878,7 +878,7 @@ it("no abre el selector si la pantalla se desmonta durante el preflight", async 
   );
   await act(async () =>
     vista.root
-      .findByProps({ accessibilityLabel: "Entregar archivo: Trabajo" })
+      .findByProps({ accessibilityLabel: "Cargar archivo: Trabajo" })
       .props.onPress(),
   );
   await act(async () => vista.unmount());
@@ -1065,7 +1065,7 @@ it("pagina tareas en servidor y vuelve a validar solo la página visible antes d
   });
   await act(async () =>
     vista.root
-      .findByProps({ accessibilityLabel: "Entregar archivo: Trabajo paginado" })
+      .findByProps({ accessibilityLabel: "Cargar archivo: Trabajo paginado" })
       .props.onPress(),
   );
   expect(api.get).toHaveBeenLastCalledWith("/alumnos/me/tareas/listado", {

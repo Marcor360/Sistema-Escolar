@@ -53,7 +53,7 @@ export default function LoginScreen({ aviso = "" }: { aviso?: string } = {}) {
   if (activacionVisible) return <ActivarCuentaScreen correoInicial={email} volver={() => setActivacionVisible(false)} />;
 
   return (
-    <KeyboardAvoidingView
+    <KeyboardAvoidingView testID="pantalla-acceso-alumno"
       style={[estilos.fondo, { backgroundColor: marca.colorPrimario }]}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >

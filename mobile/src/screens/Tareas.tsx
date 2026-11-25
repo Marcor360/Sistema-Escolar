@@ -71,6 +71,7 @@ export default function TareasScreen() {
   const [comentarios, setComentarios] = useState<Record<number, string>>({});
   const [modos, setModos] = useState<Record<number, "ARCHIVO" | "TEXTO">>({});
   const [respuestas, setRespuestas] = useState<Record<number, string>>({});
+  const [archivos, setArchivos] = useState<Record<number, DocumentPicker.DocumentPickerAsset>>({});
   const [entregandoId, setEntregandoId] = useState<number | null>(null);
 
   const activa = useRef(true);
@@ -135,6 +136,65 @@ export default function TareasScreen() {
   );
 
   const entregaEnCurso = useRef(false);
+  const comprobarDisponible = async (tarea: Tarea) => {
+    // Evitar crear otra copia privada en caché cuando la API no está disponible.
+    const { data: disponibles } = await api.get<{
+      datos: Tarea[];
+      total: number;
+    }>("/alumnos/me/tareas/listado", { params: { pagina, porPagina: 10 } });
+    if (!activa.current) return false;
+    const actual = disponibles.datos.find((item) => item.id === tarea.id);
+    if (!actual || actual.entrega?.estatus === "CALIFICADA") {
+      Alert.alert(
+        "Entrega no disponible",
+        "La tarea cambió. Actualiza la lista antes de seleccionar otro archivo.",
+      );
+      cargar();
+      return false;
+    }
+    if (!vigente()) {
+      avisarDatosVencidos();
+      return false;
+    }
+    return true;
+  };
+  const elegirArchivo = async (tarea: Tarea) => {
+    if (entregaEnCurso.current || !vigente() || tarea.entrega?.estatus === "CALIFICADA") return;
+    entregaEnCurso.current = true;
+    setEntregandoId(tarea.id);
+    try {
+      // En web el selector necesita el gesto directo. En nativo validar antes de copiar a caché.
+      if (Platform.OS !== "web" && !await comprobarDisponible(tarea)) return;
+      const resultado = await DocumentPicker.getDocumentAsync({
+        base64: false,
+        copyToCacheDirectory: true,
+      });
+      if (!resultado.canceled && Platform.OS === "web" && resultado.assets[0]?.uri.startsWith("blob:")) {
+        URL.revokeObjectURL(resultado.assets[0].uri);
+      }
+      if (!activa.current || resultado.canceled || !resultado.assets[0])
+        return;
+      if (!vigente()) {
+        avisarDatosVencidos();
+        return;
+      }
+      const archivo = resultado.assets[0];
+      // En web usamos el File del selector, nunca una URL para descargar contenido.
+      const problema = validarArchivoEntrega(Platform.OS === 'web'
+        ? { name: archivo.name, size: archivo.file?.size ?? archivo.size }
+        : archivo);
+      if (problema) {
+        Alert.alert("Archivo no válido", problema);
+        return;
+      }
+      setArchivos(previos => ({ ...previos, [tarea.id]: archivo }));
+    } catch (err) {
+      if (activa.current) Alert.alert("No se pudo seleccionar el archivo", mensajeDeError(err));
+    } finally {
+      entregaEnCurso.current = false;
+      if (activa.current) setEntregandoId(null);
+    }
+  };
   const entregar = async (tarea: Tarea) => {
     if (!activa.current || entregaEnCurso.current) return;
     if (!vigente()) {
@@ -154,48 +214,14 @@ export default function TareasScreen() {
     entregaEnCurso.current = true;
     try {
       setEntregandoId(tarea.id);
-      // Evitar crear otra copia privada en caché cuando la API no está disponible.
-      const { data: disponibles } = await api.get<{
-        datos: Tarea[];
-        total: number;
-      }>("/alumnos/me/tareas/listado", { params: { pagina, porPagina: 10 } });
-      if (!activa.current) return;
-      const actual = disponibles.datos.find((item) => item.id === tarea.id);
-      if (!actual || actual.entrega?.estatus === "CALIFICADA") {
-        Alert.alert(
-          "Entrega no disponible",
-          "La tarea cambió. Actualiza la lista antes de seleccionar otro archivo.",
-        );
-        cargar();
-        return;
-      }
-      if (!vigente()) {
-        avisarDatosVencidos();
-        return;
-      }
+      if (!await comprobarDisponible(tarea)) return;
       const form = new FormData();
       form.append("respuestaTexto", modo === "TEXTO" ? respuesta : "");
       if (comentarios[tarea.id]?.trim())
         form.append("comentario", comentarios[tarea.id].trim());
       if (modo === "ARCHIVO") {
-        const resultado = await DocumentPicker.getDocumentAsync({
-          copyToCacheDirectory: true,
-        });
-        if (!activa.current || resultado.canceled || !resultado.assets[0])
-          return;
-        if (!vigente()) {
-          avisarDatosVencidos();
-          return;
-        }
-        const archivo = resultado.assets[0];
-        // En web usamos el File del selector, nunca una URL para descargar contenido.
-        const problema = validarArchivoEntrega(Platform.OS === 'web'
-          ? { name: archivo.name, size: archivo.file?.size ?? archivo.size }
-          : archivo);
-        if (problema) {
-          Alert.alert("Archivo no válido", problema);
-          return;
-        }
+        const archivo = archivos[tarea.id];
+        if (!archivo) return;
         if (Platform.OS === 'web') {
           if (!archivo.file) {
             Alert.alert('Archivo no disponible', 'Vuelve a elegir el archivo desde este dispositivo.');
@@ -216,6 +242,11 @@ export default function TareasScreen() {
         timeout: 300_000,
       });
       if (!activa.current) return;
+      setArchivos(previos => {
+        const restantes = { ...previos };
+        delete restantes[tarea.id];
+        return restantes;
+      });
       Alert.alert("Entrega enviada", `"${tarea.titulo}" quedó registrada.`);
       cargar();
     } catch (err) {
@@ -226,6 +257,9 @@ export default function TareasScreen() {
       if (activa.current) setEntregandoId(null);
     }
   };
+
+  const envioBloqueado = (item: Tarea) => entregandoId !== null || !datosVigentes ||
+    item.entrega?.estatus === "CALIFICADA" || (modos[item.id] !== "TEXTO" && !archivos[item.id]);
 
   const solicitarEntrega = (tarea: Tarea) => {
     if (entregandoId !== null) return;
@@ -252,7 +286,7 @@ export default function TareasScreen() {
             text:
               modos[tarea.id] === "TEXTO"
                 ? "Enviar respuesta"
-                : "Elegir nuevo archivo",
+                : "Reemplazar archivo",
             onPress: () => {
               void entregar(tarea);
             },
@@ -336,89 +370,6 @@ export default function TareasScreen() {
                 Comentarios del profesor: {item.entrega.comentarioDocente}
               </Text>
             )}
-            <View
-              accessibilityRole="radiogroup"
-              accessibilityLabel={`Tipo de entrega: ${item.titulo}`}
-            >
-              {(["ARCHIVO", "TEXTO"] as const).map((modo) => (
-                <TouchableOpacity
-                  key={modo}
-                  accessibilityRole="radio"
-                  accessibilityLabel={`${modo === "ARCHIVO" ? "Adjuntar archivo" : "Escribir respuesta"}: ${item.titulo}`}
-                  accessibilityState={{
-                    checked: (modos[item.id] ?? "ARCHIVO") === modo,
-                    disabled:
-                      entregandoId !== null ||
-                      item.entrega?.estatus === "CALIFICADA",
-                  }}
-                  disabled={
-                    entregandoId !== null ||
-                    item.entrega?.estatus === "CALIFICADA"
-                  }
-                  style={base.botonAccesible}
-                  onPress={() =>
-                    setModos((previos) => ({ ...previos, [item.id]: modo }))
-                  }
-                >
-                  <Text>
-                    {(modos[item.id] ?? "ARCHIVO") === modo ? "● " : "○ "}
-                    {modo === "ARCHIVO"
-                      ? "Adjuntar archivo"
-                      : "Escribir respuesta"}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            {modos[item.id] === "TEXTO" && (
-              <>
-                <TextInput
-                  accessibilityLabel={`Respuesta escrita: ${item.titulo}`}
-                  placeholder="Escribe tu respuesta"
-                  placeholderTextColor={colores.gris}
-                  multiline
-                  maxLength={3000}
-                  style={estilos.comentario}
-                  editable={
-                    item.entrega?.estatus !== "CALIFICADA" &&
-                    entregandoId === null
-                  }
-                  value={
-                    respuestas[item.id] ?? item.entrega?.respuestaTexto ?? ""
-                  }
-                  onChangeText={(texto) =>
-                    setRespuestas((previos) => ({
-                      ...previos,
-                      [item.id]: texto,
-                    }))
-                  }
-                />
-                <Text>
-                  {
-                    (respuestas[item.id] ?? item.entrega?.respuestaTexto ?? "")
-                      .length
-                  }
-                  /3000 caracteres
-                </Text>
-              </>
-            )}
-            {item.entrega?.respuestaTexto && (
-              <Text>Respuesta enviada: {item.entrega.respuestaTexto}</Text>
-            )}
-            <TextInput
-              editable={
-                item.entrega?.estatus !== "CALIFICADA" && entregandoId === null
-              }
-              accessibilityLabel={`Comentario para el profesor: ${item.titulo}`}
-              placeholder="Comentario opcional para el profesor"
-              placeholderTextColor={colores.gris}
-              multiline
-              style={estilos.comentario}
-              maxLength={500}
-              value={comentarios[item.id] ?? ""}
-              onChangeText={(texto) =>
-                setComentarios((previos) => ({ ...previos, [item.id]: texto }))
-              }
-            />
             {item.grupoMateria?.materia && (
               <Text style={base.secundario}>
                 {item.grupoMateria.materia.clave} —{" "}
@@ -439,39 +390,122 @@ export default function TareasScreen() {
               }
               tono={tono(item)}
             />
-            <TouchableOpacity
-              style={[estilos.boton, { backgroundColor: marca.colorPrimario }]}
-              onPress={() => solicitarEntrega(item)}
-              disabled={
-                entregandoId !== null ||
-                !datosVigentes ||
-                item.entrega?.estatus === "CALIFICADA"
-              }
-              accessibilityRole="button"
-              accessibilityState={{
-                disabled:
-                  entregandoId !== null ||
-                  !datosVigentes ||
-                  item.entrega?.estatus === "CALIFICADA",
-                busy: entregandoId === item.id,
-              }}
-              accessibilityLabel={`${item.entrega ? "Reemplazar entrega" : modos[item.id] === "TEXTO" ? "Enviar respuesta" : "Entregar archivo"}: ${item.titulo}`}
-            >
-              <Text
-                style={[
-                  estilos.botonTexto,
-                  { color: textoSobreFondo(marca.colorPrimario) },
-                ]}
+            {item.entrega?.respuestaTexto && (
+              <Text>Respuesta enviada: {item.entrega.respuestaTexto}</Text>
+            )}
+            {item.entrega?.estatus === "CALIFICADA" && !!item.entrega.comentarioAlumno &&
+              <Text>Tu comentario: {item.entrega.comentarioAlumno}</Text>}
+            {item.entrega?.estatus !== "CALIFICADA" && <>
+              <View
+                style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}
+                accessibilityRole="radiogroup"
+                accessibilityLabel={`Tipo de entrega: ${item.titulo}`}
               >
-                {entregandoId === item.id
-                  ? "Enviando…"
-                  : item.entrega
-                    ? "Reemplazar entrega"
-                    : modos[item.id] === "TEXTO"
-                      ? "Enviar respuesta"
-                      : "Entregar archivo"}
-              </Text>
-            </TouchableOpacity>
+                {(["ARCHIVO", "TEXTO"] as const).map((modo) => (
+                  <TouchableOpacity
+                    key={modo}
+                    accessibilityRole="radio" aria-checked={(modos[item.id] ?? "ARCHIVO") === modo}
+                    accessibilityLabel={`${modo === "ARCHIVO" ? "Adjuntar archivo" : "Escribir respuesta"}: ${item.titulo}`}
+                    accessibilityState={{
+                      checked: (modos[item.id] ?? "ARCHIVO") === modo,
+                      disabled:
+                        entregandoId !== null,
+                    }}
+                    disabled={
+                      entregandoId !== null
+                    }
+                    style={[base.botonAccesible, { borderRadius: 8, borderWidth: 1, borderColor: (modos[item.id] ?? "ARCHIVO") === modo ? colores.enlace : colores.linea }]}
+                    onPress={() =>
+                      setModos((previos) => ({ ...previos, [item.id]: modo }))
+                    }
+                  >
+                    <Text>
+                      {(modos[item.id] ?? "ARCHIVO") === modo ? "● " : "○ "}
+                      {modo === "ARCHIVO"
+                        ? "Adjuntar archivo"
+                        : "Escribir respuesta"}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {modos[item.id] !== "TEXTO" && <View style={{ gap: 8 }}>
+                <TouchableOpacity accessibilityRole="button" accessibilityLabel={`${archivos[item.id] ? "Cambiar archivo" : "Cargar archivo"}: ${item.titulo}`}
+                  disabled={!datosVigentes || entregandoId !== null} onPress={() => void elegirArchivo(item)}
+                  style={[base.botonAccesible, { paddingHorizontal: 16, borderRadius: 8, borderWidth: 1, borderColor: colores.enlace, backgroundColor: colores.suave }]}>
+                  <Text style={{color: colores.enlace, fontWeight: "700"}}>{archivos[item.id] ? "Cambiar archivo" : "Cargar archivo"}</Text>
+                </TouchableOpacity>
+                <Text accessibilityLiveRegion="polite" style={base.secundario}>{archivos[item.id]?.name ?? "Elige un archivo de hasta 100 MB."}</Text>
+              </View>}
+              {modos[item.id] === "TEXTO" && (
+                <>
+                  <TextInput
+                    accessibilityLabel={`Respuesta escrita: ${item.titulo}`}
+                    placeholder="Escribe tu respuesta"
+                    placeholderTextColor={colores.gris}
+                    multiline
+                    maxLength={3000}
+                    style={estilos.comentario}
+                    editable={
+                      entregandoId === null
+                    }
+                    value={
+                      respuestas[item.id] ?? item.entrega?.respuestaTexto ?? ""
+                    }
+                    onChangeText={(texto) =>
+                      setRespuestas((previos) => ({
+                        ...previos,
+                        [item.id]: texto,
+                      }))
+                    }
+                  />
+                  <Text>
+                    {
+                      (respuestas[item.id] ?? item.entrega?.respuestaTexto ?? "")
+                        .length
+                    }
+                    /3000 caracteres
+                  </Text>
+                </>
+              )}
+              <TextInput
+                editable={
+                  entregandoId === null
+                }
+                accessibilityLabel={`Comentario para el profesor: ${item.titulo}`}
+                placeholder="Comentario opcional para el profesor"
+                placeholderTextColor={colores.gris}
+                multiline
+                style={estilos.comentario}
+                maxLength={500}
+                value={comentarios[item.id] ?? ""}
+                onChangeText={(texto) =>
+                  setComentarios((previos) => ({ ...previos, [item.id]: texto }))
+                }
+              />
+              <TouchableOpacity
+                style={[estilos.boton, { backgroundColor: marca.colorPrimario, opacity: envioBloqueado(item) ? 0.6 : 1 }]}
+                onPress={() => solicitarEntrega(item)}
+                disabled={envioBloqueado(item)}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: envioBloqueado(item), busy: entregandoId === item.id }}
+                accessibilityLabel={`${item.entrega ? "Reemplazar entrega" : modos[item.id] === "TEXTO" ? "Enviar respuesta" : "Entregar archivo"}: ${item.titulo}`}
+              >
+                <Text
+                  style={[
+                    estilos.botonTexto,
+                    { color: textoSobreFondo(marca.colorPrimario) },
+                  ]}
+                >
+                  {entregandoId === item.id
+                    ? "Procesando…"
+                    : item.entrega
+                      ? "Reemplazar entrega"
+                      : modos[item.id] === "TEXTO"
+                        ? "Enviar respuesta"
+                        : "Entregar archivo"}
+                </Text>
+              </TouchableOpacity>
+            </>}
           </Tarjeta>
         )}
       />
@@ -491,7 +525,7 @@ const crearEstilos = (colores: ColoresAlumno) => StyleSheet.create({
     textAlignVertical: "top",
   },
   boton: {
-    marginTop: 10,
+    borderRadius: 8,
     alignSelf: "flex-start",
     backgroundColor: colores.pizarra,
     minHeight: 48,
