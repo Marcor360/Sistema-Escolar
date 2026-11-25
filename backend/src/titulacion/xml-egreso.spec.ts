@@ -103,3 +103,7 @@ it('una corrección de calificación invalida la firma anterior', () => {
 it('un certificado total requiere acreditar cada asignatura del catálogo', () => {
   expect(() => generar({ inscripciones: [], materias: [{ ...materia, resultado: 5 }] })).toThrow('acreditado');
 });
+
+it('reconoce la nota definitiva publicada de una inscripción legada cerrada por egreso', () => {
+  expect(generar({ inscripciones: [], materias: [{ ...materia, estado: 'BAJA' }] }, sello).cadena).toBe(cadena);
+});

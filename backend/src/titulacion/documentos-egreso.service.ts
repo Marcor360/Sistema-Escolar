@@ -26,7 +26,7 @@ import { ScopeService } from '../planteles/scope.service';
 import { JwtUser } from '../common/current-user.decorator';
 import { fechaElegibleArchivo } from '../alumnos/egreso-alumno';
 import { validarEsquema } from './validar-esquema';
-import { historialEgreso } from './historial-egreso';
+import { historialEgreso, materiaCursada } from './historial-egreso';
 import { documentoSep, escaparXml, perfilSep } from './xml-egreso';
 import { EvidenciaDto, ExpedicionDto } from './documentos-egreso.dto';
 
@@ -196,10 +196,10 @@ export class DocumentosEgresoService {
       } else if (d.tipo === 'CONCLUSION') {
         const h = await historialEgreso(m, e.alumnoId);
         if (
-          !h.materias.some((f) => f.estado !== 'BAJA') ||
+          !h.materias.some(materiaCursada) ||
           h.materias.some(
             (f) =>
-              f.estado !== 'BAJA' &&
+              materiaCursada(f) &&
               (!f.publicada || f.resultado === null || (f.intento > 0 && f.estado !== 'FINALIZADA')),
           )
         )

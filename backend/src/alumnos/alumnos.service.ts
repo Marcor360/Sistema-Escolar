@@ -453,7 +453,7 @@ export class AlumnosService {
       }
       alumno.estatus = 'EGRESADO';
       await alumnos.save(alumno);
-      await manager.getRepository(Inscripcion).update({ alumnoId: id, estatus: 'ACTIVA' }, { estatus: 'BAJA' });
+      await manager.getRepository(Inscripcion).update({ alumnoId: id, estatus: 'ACTIVA' }, { estatus: 'HISTORICA' });
       await manager
         .getRepository(ParticipacionAsignatura)
         .update({ alumnoId: id, estado: 'ACTIVA' }, { estado: 'BAJA', activoClave: null });

@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { X509Certificate, verify } from 'crypto';
-import { HistorialEgreso } from './historial-egreso';
+import { HistorialEgreso, materiaCursada } from './historial-egreso';
 import { EgresoAlumno } from '../entities';
 
 type Atributos = Record<string, string>;
@@ -115,7 +115,7 @@ export function documentoSep(
         f.carreraPlanId === p.carreraPlanId &&
         f.materia === d.clave &&
         f.publicada &&
-        f.estado !== 'BAJA' &&
+        materiaCursada(f) &&
         f.resultado !== null &&
         f.escala === Number(m.Carrera.calificacionMaxima) &&
         f.resultado >= Number(m.Carrera.calificacionMinimaAprobatoria),

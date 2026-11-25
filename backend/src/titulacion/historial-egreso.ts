@@ -89,3 +89,8 @@ export async function historialEgreso(m: EntityManager, alumnoId: number) {
   };
 }
 export type HistorialEgreso = Awaited<ReturnType<typeof historialEgreso>>;
+
+/** Egresos previos registraban BAJA al cerrar la inscripción. Una nota definitiva publicada conserva su valor académico. */
+export function materiaCursada(fila: HistorialEgreso['materias'][number]) {
+  return fila.estado !== 'BAJA' || (fila.intento === 0 && fila.publicada && fila.resultado !== null);
+}

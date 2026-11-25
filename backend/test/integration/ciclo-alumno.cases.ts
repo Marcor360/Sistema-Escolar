@@ -126,6 +126,10 @@ export function registrarCicloAlumno(ctx: ContextoIntegracion) {
     const grupo = await ctx.dataSource.getRepository(Grupo).save({ cicloId: ciclo.id, plantelId: ctx.plantelId, nombre: 'Egreso piloto' });
     await ctx.dataSource.getRepository(Inscripcion).save({ alumnoId: a.id, grupoId: grupo.id, estatus: 'ACTIVA' });
     expect((await ctx.api(`/alumnos/${a.id}/egreso`, { method: 'POST', token })).response.status).toBe(409);
+    const referencia=await ctx.dataSource.getRepository(GrupoMateria).findOneByOrFail({id:ctx.grupoMateriaIdMaestro});
+    const clase=await ctx.dataSource.getRepository(GrupoMateria).save({grupoId:grupo.id,materiaId:referencia.materiaId,regimenEvaluacion:'CUATRO_PARCIALES_10'});
+    await ctx.dataSource.getRepository(Calificacion).save({alumnoId:a.id,grupoMateriaId:clase.id,parcial:0,calificacion:9,escalaMaxima:10});
+    await ctx.dataSource.getRepository(PeriodoCalificacion).save({grupoMateriaId:clase.id,parcial:0,estatus:'CERRADO'});
     // Precondición sintética: cierre institucional se comprueba en el recorrido académico existente.
     await ctx.dataSource.getRepository(CicloEscolar).update(ciclo.id, { estado: 'CERRADO', activo: false });
     expect((await ctx.api(`/alumnos/${a.id}/egreso`, { method: 'POST', token })).response.status).toBe(201);
@@ -143,17 +147,13 @@ export function registrarCicloAlumno(ctx: ContextoIntegracion) {
     expect((await ctx.api(ruta,{token:admin})).data).toMatchObject({matricula,cerrado:false,documentos:[]});
     expect((await ctx.api(ruta+'/documentos',{method:'POST',token:admin,body:{tipo:'TITULO'}})).response.status).toBe(403);
     expect((await ctx.api(ruta+'/documentos',{method:'POST',token:admin,body:{tipo:'HISTORIAL'}})).response.status).toBe(409);
-    const referencia=await ctx.dataSource.getRepository(GrupoMateria).findOneByOrFail({id:ctx.grupoMateriaIdMaestro});
-    const clase=await ctx.dataSource.getRepository(GrupoMateria).save({grupoId:grupo.id,materiaId:referencia.materiaId,regimenEvaluacion:'CUATRO_PARCIALES_10'});
-    await ctx.dataSource.getRepository(Calificacion).save({alumnoId:a.id,grupoMateriaId:clase.id,parcial:0,calificacion:9,escalaMaxima:10});
-    await ctx.dataSource.getRepository(PeriodoCalificacion).save({grupoMateriaId:clase.id,parcial:0,estatus:'CERRADO'});
     for(const tipo of ['NO_ADEUDO','SERVICIO_SOCIAL','CONCLUSION']){
       const form=new FormData();
       form.set('tipo',tipo);
       form.set('detalle','Liberación de prueba sintética');
       if(tipo!=='CONCLUSION')form.set('archivo',new Blob(['%PDF-1.7 Evidencia QA',' '.repeat(90_000)],{type:'application/pdf'}),'hoja.pdf');
       const r=await fetch(ctx.baseUrl+ruta+'/evidencias',{method:'POST',headers:{Authorization:'Bearer '+(tipo==='NO_ADEUDO'?finanzas:admin)},body:form});
-      expect({status:r.status,body:await r.text()}).toMatchObject({status:201});
+      if(r.status!==201)throw new Error('Registro '+tipo+' ('+r.status+'): '+await r.text());
     }
     const indice=await ctx.api(ruta,{token:finanzas});
     expect(indice.data.documentos).toHaveLength(1);

@@ -175,6 +175,7 @@ async function esperarServidor() {
       if (path.endsWith('/academico/grupos/1/alumnos')) data = [{ id: 1, alumno: { id: 1, matricula: 'NO-QA-001', usuario: { nombre: 'Alumno Beta', apellidoPaterno: 'Prueba' } } }];
       if (path.endsWith('/calificaciones/periodos/1/1')) data = { estatus: 'ABIERTO', inscritos: 1, capturados: 0, faltantes: 1 };
       if (path.endsWith('/calificaciones/periodos/1/1/historial')) data = { datos: [{ id: 1, alumnoId: 1, fecha: '2026-10-13T12:00:00Z', valorAnterior: 80, valorNuevo: 90, usuarioId: 1, motivo: 'Corrección autorizada de prueba' }], total: 1, pagina: 1, porPagina: 10 };
+      if (path.endsWith('/notificaciones/comunicados')) data = { datos: [], total: 0, pagina: 1, porPagina: 10 };
       if (path.endsWith('/calendario/listado')) data = {datos:[],total:0,pagina:1,porPagina:10};
       if (path.endsWith('/biblioteca')) data = { carpetas: [{ id: 1, nombre: 'Documentos Beta', padreId: null }], archivos: [{ id: 1, titulo: 'Calendario institucional de prueba para familias y docentes', archivoNombre: 'calendario-con-nombre-extenso.pdf', categoria: 'CALENDARIO', bytes: 512 }], total: 1, pagina: 1, porPagina: 10, bytes: 512, cuota: 104857600 };
       if (path.endsWith('/academico/bitacora')) data = { datos: [], total: 0, pagina: 1 };
