@@ -49,6 +49,7 @@ export class AlumnosService {
       .leftJoinAndSelect('a.usuario', 'u')
       .leftJoinAndSelect('a.plantel', 'p');
     if (planteles !== null) qb.andWhere('a.plantel_id IN (:...planteles)', { planteles });
+    qb.andWhere("NOT EXISTS (SELECT 1 FROM egresos_alumnos eg WHERE eg.alumno_id = a.id AND (eg.estado_archivo = 'ARCHIVADO' OR (eg.estado_archivo = 'VIGENTE' AND eg.archivar_desde <= :hoyArchivo)))", {hoyArchivo:new Date()});
     if (query.estatus) qb.andWhere('a.estatus = :estatusAlumno', { estatusAlumno: query.estatus });
     if (query.vista === 'EGRESADOS') qb.andWhere('a.estatus = :egresado', { egresado: 'EGRESADO' });
     if (query.vista === 'REGULARES') qb.andWhere('a.estatus <> :egresado', { egresado: 'EGRESADO' });
@@ -108,6 +109,10 @@ export class AlumnosService {
         if (!permitido) throw new ForbiddenException('El alumno no pertenece a uno de tus grupos');
       }
       if (!maestroPuro) await this.scope.validarGestion(user, alumno.plantelId);
+    }
+    if(user&&alumno.estatus==='EGRESADO'){
+      const e=await this.dataSource.getRepository(EgresoAlumno).findOneBy({alumnoId:id});
+      if(e&&(e.estadoArchivo==='ARCHIVADO'||(e.estadoArchivo==='VIGENTE'&&e.archivarDesde<=new Date())))throw new NotFoundException('Consulta el expediente histórico por matrícula');
     }
     return alumno;
   }

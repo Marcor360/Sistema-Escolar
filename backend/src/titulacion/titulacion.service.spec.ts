@@ -85,7 +85,7 @@ describe('titulación: borradores con RVOE pendiente', () => {
     const resultado = await service.listar({ pagina: 1, porPagina: 10 },
       { ...director, roles: ['DIRECTOR', 'SUPERADMIN'] });
     expect(resultado.total).toBe(0);
-    expect(qb.andWhere).not.toHaveBeenCalled();
+    expect(qb.andWhere).not.toHaveBeenCalledWith('al.plantelId IN (:...permitidos)', expect.anything());
   });
 
   it('conserva el filtro de planteles para un director sin alcance global', async () => {

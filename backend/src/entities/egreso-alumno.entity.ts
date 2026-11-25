@@ -21,8 +21,9 @@ export class EgresoAlumno {
   /** Fecha civil de evidencia legada, sin inventar una hora de egreso. */
   @Column({ type: 'date', nullable: true }) fechaDocumental!: string | null;
   @Column({ type: 'datetime' }) fechaEgreso!: Date;
+  @Column({type:'datetime',nullable:true}) finalizadoEn!:Date|null;
   @Column({ type: 'datetime' }) archivarDesde!: Date;
-  @Column({ type: String, length: 15, default: 'VIGENTE' }) estadoArchivo!: 'VIGENTE' | 'ARCHIVADO';
+  @Column({ type: String, length: 15, default: 'VIGENTE' }) estadoArchivo!: 'VIGENTE' | 'EN_TRAMITE' | 'ARCHIVADO';
   @Column({ type: String, length: 300, nullable: true }) rutaArchivo!: string | null;
   @Column({ type: String, length: 64, nullable: true }) sha256Archivo!: string | null;
   @Column({ type: 'datetime', nullable: true }) archivadoEn!: Date | null;

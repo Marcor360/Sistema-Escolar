@@ -37,6 +37,7 @@ export class TitulacionService {
       throw new ConflictException('El alumno aún no tiene un egreso elegible');
     }
     await this.scope.validarGestion(actor, alumno.plantelId);
+    if(egreso.finalizadoEn||egreso.estadoArchivo==='ARCHIVADO'||(egreso.estadoArchivo==='VIGENTE'&&egreso.archivarDesde<=new Date())) throw new ConflictException('Expediente cerrado');
     const carrera = await this.carreras.findOne({ where: { id: dto.carreraPlanId, activo: true } });
     if (!carrera || carrera.plantelId !== alumno.plantelId) {
       throw new ConflictException('El programa académico no pertenece al plantel del egresado');
@@ -74,7 +75,7 @@ export class TitulacionService {
     const porPagina = Math.min(query.porPagina ?? 10, 50);
     const qb = this.expedientes.createQueryBuilder('exp')
       .innerJoin('exp.egreso', 'eg')
-      .innerJoin('eg.alumno', 'al');
+      .innerJoin('eg.alumno', 'al').andWhere('(eg.estadoArchivo = :vigente AND eg.archivarDesde > :ahora OR eg.estadoArchivo = :tramite)',{vigente:'VIGENTE',tramite:'EN_TRAMITE',ahora:new Date()});
     if (permitidos !== null) qb.andWhere('al.plantelId IN (:...permitidos)', { permitidos });
     const [filas, total] = await qb.orderBy('exp.id', 'DESC')
       .skip((pagina - 1) * porPagina).take(porPagina).getManyAndCount();

@@ -333,6 +333,7 @@ export default function MaestroPage() {
                     </button>
                   </article>
                 ))}
+              {modo === 'entregas' && <p role="status">{entregas.length ? `${entregas.filter(e=>e.calificacion==null).length} por calificar de ${entregas.length} entregas.` : 'Todavía no hay entregas de esta actividad.'}</p>}
               {modo === 'entregas' &&
                 entregas.map((e) => (
                   <article key={e.id}>
@@ -486,6 +487,7 @@ export default function MaestroPage() {
                 {entrega.alumno.matricula} · {entrega.alumno.usuario.nombre}
               </p>
               <p>{entrega.comentarioAlumno || 'Sin comentario del alumno'}</p>
+              {entrega.archivoRuta && <button type="button" className="enlace" onClick={() => void abrirArchivo('entregas', entrega.id).catch(err=>setError(mensajeDeError(err)))}>Abrir archivo entregado</button>}
               {entrega.respuestaTexto && (
                 <div>
                   <strong>Respuesta escrita</strong>
