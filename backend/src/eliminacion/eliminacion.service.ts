@@ -10,7 +10,7 @@ import { UsuarioPlantel } from '../entities/usuario-plantel.entity';
 export type TipoEliminacion = 'alumnos' | 'docentes' | 'planteles' | 'usuarios';
 const cuentasAuxiliares = new Set([
   'usuario_roles', 'usuario_planteles', 'sesiones', 'password_reset_tokens',
-  'activacion_tokens', 'auth_correo_outbox', 'auth_correo_eventos', 'push_dispositivos', 'notificaciones',
+  'activacion_tokens', 'auth_correo_outbox', 'auth_correo_eventos', 'auth_dispositivos_acceso', 'push_dispositivos', 'notificaciones',
 ]);
 const nombresVinculos: Record<string, string> = {
   alumnos: 'expedientes de alumnos', docentes: 'expedientes de docentes', planteles: 'dirección de planteles',

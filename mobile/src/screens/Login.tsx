@@ -1,8 +1,10 @@
+import { useEstilosAlumno, type ColoresAlumno } from "../tema-alumno";
+import { LogoInstitucional } from '../components/LogoInstitucional';
 import { CampoPassword } from '../components/CampoPassword';
 import { useDisenoAlumno } from "../use-diseno-alumno";
-import { useRef, useEffect, useState } from "react";
+import { useRef, useState } from "react";
 import {
-  Image,
+  Image, Linking,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -14,11 +16,12 @@ import {
 import { Text } from "../components/Texto";
 import { useSesion } from "../sesion";
 import { archivosBase, mensajeDeError } from "../api/client";
-import { colores, radio, espacio, tipografia, textoSobreFondo } from "../theme";
+import { radio, espacio, tipografia, textoSobreFondo } from "../theme";
 import { useMarca } from "../marca";
 import ActivarCuentaScreen from "./ActivarCuenta";
 
 export default function LoginScreen({ aviso = "" }: { aviso?: string } = {}) {
+  const estilos = useEstilosAlumno(crearEstilos);
   const { iniciar } = useSesion();
   const diseno = useDisenoAlumno();
   const { marca } = useMarca();
@@ -27,8 +30,6 @@ export default function LoginScreen({ aviso = "" }: { aviso?: string } = {}) {
   const [error, setError] = useState("");
   const [enviando, setEnviando] = useState(false);
   const enCurso = useRef(false);
-  const [logoFallo, setLogoFallo] = useState(false);
-  useEffect(() => setLogoFallo(false), [marca.logoUrl, marca.logoAlumnoUrl]);
   const [activacionVisible, setActivacionVisible] = useState(false);
   const [recuperacionVisible, setRecuperacionVisible] = useState(false);
   const passwordRef = useRef<TextInput>(null);
@@ -52,43 +53,24 @@ export default function LoginScreen({ aviso = "" }: { aviso?: string } = {}) {
   if (activacionVisible) return <ActivarCuentaScreen correoInicial={email} volver={() => setActivacionVisible(false)} />;
 
   return (
-    <KeyboardAvoidingView
+    <KeyboardAvoidingView testID="pantalla-acceso-alumno"
       style={[estilos.fondo, { backgroundColor: marca.colorPrimario }]}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
+      {marca.fondoAlumnoUrl && <Image accessible={false} source={{uri: archivosBase + marca.fondoAlumnoUrl}} resizeMode="cover" style={[StyleSheet.absoluteFill, {width:"100%", height:"100%"}]} />}
       <ScrollView
         contentContainerStyle={[estilos.desplazamiento,{paddingHorizontal:diseno.lateral}]}
         keyboardShouldPersistTaps="handled"
       >
         <View style={[estilos.caja, { borderTopColor: marca.colorAcento, padding:diseno.compacto?16:24 }]}>
-          {(marca.logoAlumnoUrl || marca.logoUrl) && !logoFallo ? (
-            <View style={[estilos.logoFondo, { backgroundColor: marca.colorPrimario }]}>
-              <Image
-                source={{ uri: archivosBase + (marca.logoAlumnoUrl || marca.logoUrl) }}
-                style={estilos.logo}
-                resizeMode="contain"
-                onError={() => setLogoFallo(true)}
-                accessibilityLabel={marca.nombreInstitucion}
-              />
-            </View>
-          ) : (
-            <View
-              style={[estilos.monograma, { borderColor: marca.colorPrimario }]}
-            >
-              <Text
-                style={[estilos.monogramaTexto, { color: marca.colorPrimario }]}
-              >
-                {marca.nombreCorto}
-              </Text>
-            </View>
-          )}
+          <View style={{ marginBottom: 16 }}><LogoInstitucional /></View>
           <Text style={estilos.titulo} accessibilityRole="header">
-            {marca.nombrePortalAlumno || 'Sistema Escolar Portal Alumno'}
+            {marca.bienvenidaAlumno || marca.nombrePortalAlumno || 'Sistema Escolar Portal Alumno'}
           </Text>
           <Text style={estilos.descripcion}>
-            Consulta materias, entrega tareas y revisa tus
-            calificaciones y pagos. Ingresa con tu correo institucional.
+            {marca.descripcionAlumno || "Consulta materias, entrega tareas y revisa tus calificaciones y pagos. Ingresa con tu correo institucional."}
           </Text>
+          {!!marca.avisoAlumno && <Text style={estilos.ayuda}>{marca.avisoAlumno}</Text>}
           {aviso !== "" && <Text accessibilityRole="alert" style={estilos.ayuda}>{aviso}</Text>}
           <Text style={estilos.etiqueta}>Correo institucional</Text>
           <TextInput
@@ -151,13 +133,16 @@ export default function LoginScreen({ aviso = "" }: { aviso?: string } = {}) {
           </TouchableOpacity>
           <TouchableOpacity style={estilos.controlPassword} disabled={enviando} onPress={() => { setPassword(""); setError(""); setRecuperacionVisible(true); }} accessibilityRole="button" accessibilityLabel="¿Olvidaste tu contraseña?"><Text>¿Olvidaste tu contraseña?</Text></TouchableOpacity>
           <Text style={estilos.ayuda}>Si no puedes acceder a tu correo institucional, contacta a Control escolar. El personal utiliza el portal web.</Text>
+          {!!marca.contactoAlumno && <Text style={estilos.descripcion}>{marca.contactoAlumno}</Text>}
+          {([["Aviso de privacidad", marca.privacidadAlumno], ["Reglamento", marca.reglamentoAlumno], ["Sitio oficial", marca.sitioAlumno]] as const).map(([label,url]) =>
+            url && /^https:\/\//i.test(url) ? <TouchableOpacity key={label} accessibilityRole="link" style={estilos.controlPassword} onPress={() => void Linking.openURL(url).catch(() => setError("No se pudo abrir el enlace institucional."))}><Text>{label}</Text></TouchableOpacity> : null)}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
-const estilos = StyleSheet.create({
+const crearEstilos = (colores: ColoresAlumno) => StyleSheet.create({
   fondo: { flex: 1, backgroundColor: colores.pizarra },
   desplazamiento: {
     flexGrow: 1,
@@ -183,20 +168,6 @@ const estilos = StyleSheet.create({
     borderTopColor: colores.dorado,
     borderRadius: radio.lg,
   },
-  monograma: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    borderWidth: 2,
-    borderColor: colores.pizarra,
-    alignSelf: "center",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 10,
-  },
-  monogramaTexto: { fontSize: 18, color: colores.pizarra, fontWeight: "600" },
-  logo: { width: 160, height: 72, alignSelf: "center" },
-  logoFondo: { borderRadius: 12, padding: 12, marginBottom: 14, alignSelf: "center" },
   titulo: {
     fontSize: tipografia.titulo,
     textAlign: "center",
@@ -218,8 +189,8 @@ const estilos = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: "#B9C0BA",
-    backgroundColor: "#fff",
+    borderColor: colores.linea,
+    backgroundColor: colores.superficie,
     minHeight: 48,
     paddingHorizontal: espacio.md,
     paddingVertical: espacio.sm,

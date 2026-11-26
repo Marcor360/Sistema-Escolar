@@ -1,6 +1,6 @@
 import { View, TouchableOpacity } from "react-native";
 import { Text } from "./Texto";
-import { base } from "../screens/comunes";
+import { useBase } from "../screens/comunes";
 export function Paginador({
   pagina,
   total,
@@ -14,6 +14,7 @@ export function Paginador({
   ocupado: boolean;
   cambiar: (p: number) => void;
 }) {
+  const base = useBase();
   const paginas = Math.max(1, Math.ceil(total / porPagina));
   if (paginas === 1 && total >= 0) return total > 0 ? <Text style={[base.secundario, { marginBottom: 16 }]}>{total} registros</Text> : null;
   return (

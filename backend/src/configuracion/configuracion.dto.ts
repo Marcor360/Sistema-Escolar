@@ -1,7 +1,7 @@
 import { OpcionalNoNulo } from '../common/opcional-no-nulo';
 import { Transform } from 'class-transformer';
 const limpiar = ({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value;
-import { IsIn, Length, Matches } from 'class-validator';
+import { IsIn, IsUrl, ValidateIf, Length, Matches } from 'class-validator';
 
 export class ActualizarMarcaDto {
   @OpcionalNoNulo() @Transform(limpiar) @Length(2, 150) nombreAdministrativo?: string;
@@ -22,6 +22,15 @@ export class ActualizarMarcaDto {
 export class ActualizarOpcionesGlobalesDto {
   @Transform(limpiar) @Length(0, 180)
   mensajeBienvenida!: string;
+  @OpcionalNoNulo() @Transform(limpiar) @Length(0, 180) bienvenidaAlumno?: string;
+  @OpcionalNoNulo() @Transform(limpiar) @Length(0, 420) descripcionAlumno?: string;
+  @OpcionalNoNulo() @Transform(limpiar) @Length(0, 360) avisoAlumno?: string;
+  @OpcionalNoNulo() @Transform(limpiar) @Length(0, 180) contactoAlumno?: string;
+  @OpcionalNoNulo() @Transform(limpiar) @Length(0, 500) @ValidateIf((_obj, value) => value !== '') @IsUrl({ protocols: ['https'], require_protocol: true, disallow_auth: true }) privacidadAlumno?: string;
+  @OpcionalNoNulo() @Transform(limpiar) @Length(0, 500) @ValidateIf((_obj, value) => value !== '') @IsUrl({ protocols: ['https'], require_protocol: true, disallow_auth: true }) reglamentoAlumno?: string;
+  @OpcionalNoNulo() @Transform(limpiar) @Length(0, 500) @ValidateIf((_obj, value) => value !== '') @IsUrl({ protocols: ['https'], require_protocol: true, disallow_auth: true }) sitioAlumno?: string;
+  @OpcionalNoNulo() @Transform(limpiar) @Length(0, 120) tituloBoleta?: string;
+  @OpcionalNoNulo() @Transform(limpiar) @Length(0, 480) pieBoleta?: string;
   @IsIn(['NORMAL', 'GRANDE'])
   tamanoLogo!: 'NORMAL' | 'GRANDE';
 }
@@ -39,5 +48,15 @@ export interface MarcaPublicaDto {
   colorAcento: string;
   mensajeBienvenida: string;
   tamanoLogo: 'NORMAL' | 'GRANDE';
+  tituloBoleta?: string | null;
+  pieBoleta?: string | null;
+  fondoAlumnoUrl?: string | null;
+  bienvenidaAlumno?: string | null;
+  descripcionAlumno?: string | null;
+  avisoAlumno?: string | null;
+  contactoAlumno?: string | null;
+  privacidadAlumno?: string | null;
+  reglamentoAlumno?: string | null;
+  sitioAlumno?: string | null;
   actualizadoEn: Date;
 }

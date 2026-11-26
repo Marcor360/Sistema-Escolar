@@ -1,3 +1,4 @@
+import { MemoryRouter } from 'react-router-dom';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { api } from '../api/client';
@@ -15,7 +16,7 @@ it('el alumno consulta su asistencia sin controles ni consultas de captura', asy
     .mockResolvedValue({
       data: { datos: [{ id: 1, fecha: '2026-10-26', estado: 'PRESENTE', materia: 'Matemáticas', grupo: 'A' }] },
     });
-  render(<AsistenciasPage />);
+  render(<MemoryRouter><AsistenciasPage /></MemoryRouter>);
   await screen.findByText('PRESENTE');
   expect(screen.queryByText('Guardar asistencias')).toBeNull();
   expect(get.mock.calls.every(([ruta]) => ruta === '/asistencias')).toBe(true);
@@ -34,7 +35,7 @@ it('la consulta administrativa respeta puedeCapturar del servidor', async () => 
             }
           : { datos: [] },
   }));
-  render(<AsistenciasPage />);
+  render(<MemoryRouter><AsistenciasPage /></MemoryRouter>);
   await screen.findByText('A · Matemáticas');
   fireEvent.change(screen.getByLabelText('Clase'), { target: { value: '1' } });
   await waitFor(() => expect((screen.getByLabelText('Asistencia de Alumno') as HTMLSelectElement).disabled).toBe(true));

@@ -6,7 +6,7 @@ import { api } from '../api/client';
 const sesion = vi.hoisted(() => ({ sub: 1 }));
 vi.mock('../sesion', () => ({ useSesion: () => ({ sesion }) }));
 vi.mock('../api/client', () => ({ api: { get: vi.fn() }, archivosBase: 'https://example.test', mensajeDeError: (e: Error) => e.message }));
-vi.mock('../screens/comunes', () => ({ base: { tarjeta: {} } }));
+vi.mock('../screens/comunes', () => ({ useBase: () => ({ tarjeta: {} }) }));
 vi.mock('./Texto', () => ({ Text: 'Text' }));
 vi.mock('react-native', () => ({ View: 'View', TouchableOpacity: 'TouchableOpacity', Linking: { openURL: vi.fn() } }));
 vi.mock('@react-navigation/native', () => ({ useFocusEffect: (efecto: () => void | (() => void)) => useEffect(efecto, [efecto]) }));

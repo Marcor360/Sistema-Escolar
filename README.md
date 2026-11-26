@@ -1,6 +1,6 @@
 # Sistema Escolar Multiplataforma · IUA
 
-**Versión candidata: `1.38.6`** · Confirmaciones accesibles de roles, comunicados y recursos de marca; recuperación de fallos de consulta y control de respuestas obsoletas en comunicados. Solo web y pruebas; sin migraciones. Pruebas técnicas, aceptación institucional y despliegue se acreditan por separado.
+**Versión candidata: `1.39.0`** · Expedientes de egreso, liberaciones documentales, expedición de XML y seguimiento docente. Pruebas técnicas, aceptación institucional y despliegue se acreditan por separado.
 
 Sistema escolar multiplataforma para operación académica, administrativa y financiera. Monorepo TypeScript con una API NestJS como única fuente de reglas de negocio; frontend web React/Vite y aplicación Expo **exclusiva para ALUMNO**. Las funciones de gestión, docentes, finanzas y superadministración solo están en web.
 
@@ -19,7 +19,9 @@ Información vigente: [estado y pendientes](docs/ESTADO_IMPLEMENTACION.md), [ín
 
 ### Entrega actual
 
-La candidata **1.38.6** reemplaza las confirmaciones nativas de roles, publicación de comunicados y retiro de favicons/logos por el diálogo accesible reutilizable; distingue red caída de lista vacía y permite reintentar consultas de comunicados, sin cambiar permisos ni emitir mensajes automáticamente. Sin migraciones.
+El flujo de expedición y consulta está descrito en [Expedientes de egreso y firma electrónica](docs/EXPEDIENTES_EGRESO_SEP.md).
+
+La candidata **1.39.0** amplía el portal alumno para pantallas grandes, mejora el calendario y conserva la sección al volver. La apariencia admite Sistema, Claro y Oscuro con la marca de Administración. Los avisos de acceso se generan al reconocer un navegador o una instalación por primera vez.
 
 La candidata **1.38.5** impide reclasificar conceptos de cobro y preserva el historial financiero. Las tarifas autorizadas pueden corregirse sin recalcular automáticamente cargos emitidos. Conserva las capacidades de 1.37.0. Sin migraciones; CI y UAT se acreditan por separado.
 

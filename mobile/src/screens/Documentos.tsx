@@ -1,3 +1,4 @@
+import { useEstilosAlumno, type ColoresAlumno } from "../tema-alumno";
 import { useDisenoAlumno } from "../use-diseno-alumno";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -16,8 +17,8 @@ import { leerConCache } from "../api/cache-academica";
 import { resolverEnlacePrivado } from "../api/enlaces-privados";
 import { crearControlLectura } from "../api/lectura-vigente";
 import { useSesion } from "../sesion";
-import { colores, espacio, radio } from "../theme";
-import { base, ErrorCarga, GuiaPantalla, Tarjeta, Vacio } from "./comunes";
+import { espacio, radio } from "../theme";
+import { useBase, ErrorCarga, GuiaPantalla, Tarjeta, Vacio } from "./comunes";
 
 interface Boleta {
   inscripcionId: number;
@@ -42,6 +43,8 @@ const VIDA_CACHE = 5 * 60 * 1000;
 
 /** Carpetas de consulta del alumno: índices de la API, no archivos locales ni biblioteca administrativa. */
 export default function DocumentosScreen() {
+  const base = useBase();
+  const estilos = useEstilosAlumno(crearEstilos);
   const diseno = useDisenoAlumno();
   const { sesion } = useSesion();
   const [boletas, setBoletas] = useState<Boleta[]>([]);
@@ -274,9 +277,9 @@ export default function DocumentosScreen() {
   );
 }
 
-const estilos = StyleSheet.create({
+const crearEstilos = (colores: ColoresAlumno) => StyleSheet.create({
   tituloSeccion: { color: colores.tinta, fontSize: 17, fontWeight: "700", marginTop: espacio.md, marginBottom: espacio.md },
-  carpeta: { backgroundColor: "#fff", borderWidth: 1, borderColor: colores.linea,
+  carpeta: { backgroundColor: colores.superficie, borderWidth: 1, borderColor: colores.linea,
     borderRadius: radio.md, padding: espacio.lg, marginBottom: espacio.md, minHeight: 64, justifyContent: "center" },
   botonCarpeta: { minHeight: 52, justifyContent: "center" },
   documento: { minHeight: 48, justifyContent: "center", paddingVertical: espacio.sm,

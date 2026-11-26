@@ -53,6 +53,15 @@ export class ConfiguracionService {
 
   async actualizarOpciones(dto: ActualizarOpcionesGlobalesDto): Promise<MarcaPublicaDto> {
     return this.modificar((marca) => {
+      if (dto.tituloBoleta !== undefined) marca.tituloBoleta = dto.tituloBoleta || null;
+      if (dto.pieBoleta !== undefined) marca.pieBoleta = dto.pieBoleta || null;
+      if (dto.bienvenidaAlumno !== undefined) marca.bienvenidaAlumno = dto.bienvenidaAlumno || null;
+      if (dto.descripcionAlumno !== undefined) marca.descripcionAlumno = dto.descripcionAlumno || null;
+      if (dto.avisoAlumno !== undefined) marca.avisoAlumno = dto.avisoAlumno || null;
+      if (dto.contactoAlumno !== undefined) marca.contactoAlumno = dto.contactoAlumno || null;
+      if (dto.privacidadAlumno !== undefined) marca.privacidadAlumno = dto.privacidadAlumno || null;
+      if (dto.reglamentoAlumno !== undefined) marca.reglamentoAlumno = dto.reglamentoAlumno || null;
+      if (dto.sitioAlumno !== undefined) marca.sitioAlumno = dto.sitioAlumno || null;
       marca.mensajeBienvenida = dto.mensajeBienvenida;
       marca.tamanoLogo = dto.tamanoLogo;
     });
@@ -75,8 +84,8 @@ export class ConfiguracionService {
     }
   }
 
-  async guardarRecurso(file: Express.Multer.File, campo: 'faviconAdministrativoUrl' | 'faviconAlumnoUrl' | 'logoAlumnoUrl'): Promise<MarcaPublicaDto> {
-    const esFavicon = campo !== 'logoAlumnoUrl';
+  async guardarRecurso(file: Express.Multer.File, campo: 'faviconAdministrativoUrl' | 'faviconAlumnoUrl' | 'logoAlumnoUrl' | 'fondoAlumnoUrl'): Promise<MarcaPublicaDto> {
+    const esFavicon = campo.startsWith('favicon');
     let nombre = '';
     let publicado = false;
     try {
@@ -99,7 +108,7 @@ export class ConfiguracionService {
       } else if (!file.originalname.toLowerCase().endsWith('.webp')) {
         throw new BadRequestException('El logo de alumno debe optimizarse a WebP');
       }
-      const prefijo = campo === 'logoAlumnoUrl' ? 'marca-logo-alumno' :
+      const prefijo = campo === 'fondoAlumnoUrl' ? 'marca-fondo-alumno' : campo === 'logoAlumnoUrl' ? 'marca-logo-alumno' :
         campo === 'faviconAlumnoUrl' ? 'marca-favicon-alumno' : 'marca-favicon-administrativo';
       nombre = `${prefijo}-${randomUUID()}.${esFavicon ? 'png' : 'webp'}`;
       const destino = join(uploadsPath(), nombre);
@@ -113,7 +122,7 @@ export class ConfiguracionService {
     } finally { await fs.unlink(file.path).catch(() => undefined); }
   }
 
-  async quitarRecurso(campo: 'faviconAdministrativoUrl' | 'faviconAlumnoUrl' | 'logoAlumnoUrl'): Promise<MarcaPublicaDto> {
+  async quitarRecurso(campo: 'faviconAdministrativoUrl' | 'faviconAlumnoUrl' | 'logoAlumnoUrl' | 'fondoAlumnoUrl'): Promise<MarcaPublicaDto> {
     return this.modificar((marca) => { marca[campo] = null; });
   }
 
@@ -158,10 +167,10 @@ export class ConfiguracionService {
       const repo = manager.getRepository(ConfiguracionMarca);
       const marca = await repo.findOneOrFail({ where: { id: 1 }, lock: { mode: 'pessimistic_write' } });
       const anterior = marca.logoUrl;
-      const recursosAnteriores = [marca.faviconAdministrativoUrl, marca.faviconAlumnoUrl, marca.logoAlumnoUrl];
+      const recursosAnteriores = [marca.faviconAdministrativoUrl, marca.faviconAlumnoUrl, marca.logoAlumnoUrl, marca.fondoAlumnoUrl];
       cambio(marca);
       const guardada = await repo.save(marca);
-      const recursosActuales = [guardada.faviconAdministrativoUrl, guardada.faviconAlumnoUrl, guardada.logoAlumnoUrl];
+      const recursosActuales = [guardada.faviconAdministrativoUrl, guardada.faviconAlumnoUrl, guardada.logoAlumnoUrl, guardada.fondoAlumnoUrl];
       for (const [indice, recurso] of recursosAnteriores.entries()) {
         if (recurso && recurso !== recursosActuales[indice]) await programarLimpieza(manager, recurso);
       }
@@ -190,6 +199,16 @@ export class ConfiguracionService {
       colorAcento: marca.colorAcento,
       mensajeBienvenida: marca.mensajeBienvenida,
       tamanoLogo: marca.tamanoLogo,
+      tituloBoleta: marca.tituloBoleta,
+      pieBoleta: marca.pieBoleta,
+      fondoAlumnoUrl: marca.fondoAlumnoUrl ?? null,
+      bienvenidaAlumno: marca.bienvenidaAlumno ?? null,
+      descripcionAlumno: marca.descripcionAlumno ?? null,
+      avisoAlumno: marca.avisoAlumno ?? null,
+      contactoAlumno: marca.contactoAlumno ?? null,
+      privacidadAlumno: marca.privacidadAlumno ?? null,
+      reglamentoAlumno: marca.reglamentoAlumno ?? null,
+      sitioAlumno: marca.sitioAlumno ?? null,
       actualizadoEn: marca.actualizadoEn,
     };
   }

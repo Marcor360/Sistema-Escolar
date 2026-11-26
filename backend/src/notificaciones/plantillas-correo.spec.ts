@@ -54,7 +54,7 @@ it('notifica ingreso y cambios, con aviso para reportar operaciones no solicitad
   const ingreso = plantillaEventoSeguridad('INGRESO');
   const recuperacion = plantillaEventoSeguridad('RECUPERACION_EXITOSA');
   const cambio = plantillaEventoSeguridad('CAMBIO_PASSWORD');
-  expect(ingreso.html).toContain('Bienvenido');
+  expect(ingreso.html).toContain('Inicio de sesión en un dispositivo nuevo');
   expect(recuperacion.html).toContain('Sistemas de IUA');
   expect(cambio.html).toContain('coordinador académico');
   expect(ingreso.html).not.toContain('contraseña actual');

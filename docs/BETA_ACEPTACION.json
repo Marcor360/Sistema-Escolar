@@ -1,6 +1,6 @@
 {
-  "version": "1.38.6",
-  "alcance": "Candidata 1.38.6: Confirmaciones accesibles de roles, comunicados y recursos de marca; recuperación de fallos de consulta y control de respuestas obsoletas en comunicados. Solo web y pruebas; sin migraciones.",
+  "version": "1.39.0",
+  "alcance": "Candidata 1.39.0. Expedientes de egreso, liberaciones documentales, expedición de XML y seguimiento docente.",
   "puertas": [
     {
       "id": "ci_ultimo_sha",

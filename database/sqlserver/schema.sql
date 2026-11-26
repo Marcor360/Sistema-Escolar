@@ -1244,3 +1244,49 @@ CREATE TABLE auth_correo_eventos (
  CONSTRAINT ck_auth_eventos_intentos CHECK (intentos >= 0 AND intentos <= 5)
 );
 CREATE INDEX idx_auth_eventos_pendientes ON auth_correo_eventos(estado,proximo_intento);
+
+-- El reconocimiento permanece al depurar sesiones vencidas y se elimina con la cuenta.
+CREATE TABLE auth_dispositivos_acceso (
+  usuario_id INT NOT NULL,
+  huella NVARCHAR(64) NOT NULL,
+  primer_evento_id NVARCHAR(36) NOT NULL,
+  CONSTRAINT pk_auth_dispositivos_acceso PRIMARY KEY (usuario_id, huella),
+  CONSTRAINT uq_auth_dispositivos_aviso UNIQUE (primer_evento_id),
+  CONSTRAINT fk_auth_dispositivos_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+);
+
+ALTER TABLE configuracion_marca ADD fondo_alumno_url NVARCHAR(255) NULL,
+  bienvenida_alumno NVARCHAR(180) NULL,
+  descripcion_alumno NVARCHAR(420) NULL,
+  aviso_alumno NVARCHAR(360) NULL,
+  contacto_alumno NVARCHAR(180) NULL,
+  privacidad_alumno NVARCHAR(500) NULL,
+  reglamento_alumno NVARCHAR(500) NULL,
+  sitio_alumno NVARCHAR(500) NULL;
+
+ALTER TABLE configuracion_marca ADD titulo_boleta NVARCHAR(120) NULL,  pie_boleta NVARCHAR(480) NULL;
+ALTER TABLE boleta_respuestas ADD archivo_oficial NVARCHAR(36) NULL;
+
+ALTER TABLE egresos_alumnos ADD finalizado_en DATETIME2 NULL;
+CREATE TABLE egreso_documentos (
+  id INT IDENTITY(1,1) PRIMARY KEY,
+  egreso_id INT NOT NULL REFERENCES egresos_alumnos(id),
+  actor_id INT NOT NULL REFERENCES usuarios(id),
+  tipo NVARCHAR(24) NOT NULL,
+  detalle NVARCHAR(600) NOT NULL,
+  contexto NVARCHAR(64) NOT NULL,
+  sha256 NVARCHAR(64) NOT NULL,
+  clave NVARCHAR(64) NOT NULL UNIQUE,
+  mime NVARCHAR(40) NOT NULL,
+  created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+);
+CREATE INDEX idx_egreso_documentos_tipo ON egreso_documentos(egreso_id,tipo,id);
+
+CREATE TABLE egreso_documento_partes (
+  id INT IDENTITY(1,1) PRIMARY KEY,
+  documento_id INT NOT NULL REFERENCES egreso_documentos(id),
+  tipo NVARCHAR(12) NOT NULL,
+  orden INT NOT NULL,
+  datos NVARCHAR(MAX) NOT NULL
+);
+CREATE UNIQUE INDEX uq_egreso_documento_partes ON egreso_documento_partes(documento_id,tipo,orden);

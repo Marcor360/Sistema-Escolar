@@ -3,7 +3,8 @@ import { Alert, TextInput, TouchableOpacity, View } from "react-native";
 import * as Crypto from "expo-crypto";
 import { Text } from "./Texto";
 import { api, mensajeDeError } from "../api/client";
-import { base } from "../screens/comunes";
+import { useTemaAlumno } from "../tema-alumno";
+import { useBase } from "../screens/comunes";
 type Registro = {
   id: number;
   fecha: string;
@@ -18,6 +19,7 @@ type Tramite = {
   estado: string;
   revision: number;
 };
+const categorias: Record<string, string> = { GENERAL: 'General', ACADEMICA: 'Académica', FINANCIERA: 'Financiera' };
 type Preferencia = { tipo: string; push: boolean; correo: boolean };
 type Sesion = {
   dispositivo?:string;
@@ -31,10 +33,11 @@ const hoy = () =>
     new Date(),
   );
 export function SeguimientoAlumno({ abiertoInicial = false, vistaInicial = 'pendientes' }: { abiertoInicial?: boolean; vistaInicial?: string } = {}) {
+  const base = useBase();
   const [abierto, setAbierto] = useState(abiertoInicial);
   return (
     <View>
-      <TouchableOpacity
+      {!abiertoInicial && <TouchableOpacity
         accessibilityRole="button"
         accessibilityState={{ expanded: abierto }}
         style={base.botonAccesible}
@@ -45,12 +48,13 @@ export function SeguimientoAlumno({ abiertoInicial = false, vistaInicial = 'pend
             ? "Cerrar seguimiento"
             : "Mis asistencias, trámites y pendientes"}
         </Text>
-      </TouchableOpacity>
+      </TouchableOpacity>}
       {abierto && <Contenido vistaInicial={vistaInicial} />}
     </View>
   );
 }
 function Contenido({ vistaInicial }: { vistaInicial: string }) {
+  const base = useBase();
   const [vista, setVista] = useState(vistaInicial),
     [revision, setRevision] = useState(0),
     [pagina, setPagina] = useState(1),
@@ -130,20 +134,27 @@ function Contenido({ vistaInicial }: { vistaInicial: string }) {
       if (vigente.current) setOcupado(false);
     }
   };
-  const boton = (titulo: string, accion: () => void, deshabilitado = false) => (
+  const { colores } = useTemaAlumno();
+  const campo = { minHeight: 46, color: colores.tinta, backgroundColor: colores.papel, borderColor: colores.linea,
+    borderWidth: 1, borderRadius: 8, padding: 12 } as const;
+  const boton = (titulo: string, accion: () => void, deshabilitado = false, seleccionado?: boolean, primario = false) => (
     <TouchableOpacity
       accessibilityRole="button"
-      accessibilityState={{ disabled: deshabilitado }}
-      style={base.botonAccesible}
+      accessibilityState={{ disabled: deshabilitado, selected: seleccionado }}
+      style={[base.botonAccesible, { paddingHorizontal: 14, borderWidth: 1, borderRadius: 9,
+        borderColor: seleccionado ? colores.enlace : colores.linea,
+        backgroundColor: primario ? colores.pizarra : seleccionado ? colores.suave : colores.superficie,
+        opacity: deshabilitado ? 0.64 : 1 }]}
       disabled={deshabilitado}
       onPress={accion}
     >
-      <Text>{titulo}</Text>
+      <Text style={{ color: primario ? colores.sobrePrimario : seleccionado ? colores.enlace : colores.tinta, fontWeight: primario || seleccionado ? "700" : "500" }}>{titulo}</Text>
     </TouchableOpacity>
   );
   return (
-    <View>
-      <Text accessibilityRole="header">Mi seguimiento escolar</Text>
+    <View style={[base.tarjeta, { gap: 12 }]}>
+      <Text accessibilityRole="header" style={base.tituloTarjeta}>Mi seguimiento escolar</Text>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
       {[
         "pendientes",
         "asistencias",
@@ -164,9 +175,11 @@ function Contenido({ vistaInicial }: { vistaInicial: string }) {
                     : "Mis pendientes",
             () => setVista(v),
             ocupado,
+            vista === v,
           )}
         </View>
       ))}
+      </View>
       {cargando && <Text accessibilityRole="alert">Consultando…</Text>}
       {!!error && <Text accessibilityRole="alert">{error}</Text>}
       {!!mensaje && <Text>{mensaje}</Text>}
@@ -189,6 +202,7 @@ function Contenido({ vistaInicial }: { vistaInicial: string }) {
           <Text>Desde (AAAA-MM-DD)</Text>
           <TextInput
             accessibilityLabel="Desde"
+            style={campo}
             value={desde}
             onChangeText={(v) => {
               setDesde(v);
@@ -198,6 +212,7 @@ function Contenido({ vistaInicial }: { vistaInicial: string }) {
           <Text>Hasta (AAAA-MM-DD)</Text>
           <TextInput
             accessibilityLabel="Hasta"
+            style={campo}
             value={hasta}
             onChangeText={(v) => {
               setHasta(v);
@@ -227,15 +242,19 @@ function Contenido({ vistaInicial }: { vistaInicial: string }) {
       )}
       {vista === "tramites" && (
         <>
-          <Text>Solicitar un trámite</Text>
-          {["CONSTANCIA", "CORRECCION", "DOCUMENTO"].map((t) => (
-            <View key={t}>
-              {boton((tipo === t ? "✓ " : "") + t, () => setTipo(t), ocupado)}
-            </View>
-          ))}
+          <Text accessibilityRole="header" style={base.tituloTarjeta}>Solicitar un trámite</Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+            {["CONSTANCIA", "CORRECCION", "DOCUMENTO"].map((t) => (
+              <View key={t}>
+                {boton((tipo === t ? "✓ " : "") + t, () => setTipo(t), ocupado, tipo === t)}
+              </View>
+            ))}
+          </View>
           <TextInput
             accessibilityLabel="Detalle de la solicitud"
             placeholder="Describe lo que necesitas"
+            placeholderTextColor={colores.gris}
+            style={[campo, { minHeight: 102, textAlignVertical: "top" }]}
             multiline
             maxLength={600}
             editable={!ocupado}
@@ -255,10 +274,12 @@ function Contenido({ vistaInicial }: { vistaInicial: string }) {
                 if (vigente.current) setDetalle("");
               }),
             ocupado || detalle.trim().length < 5,
+            undefined,
+            true,
           )}
           {tramites.map((t) => (
-            <View key={t.id}>
-              <Text>
+            <View key={t.id} style={{ borderTopWidth: 1, borderColor: colores.linea, gap: 8, paddingTop: 12 }}>
+              <Text style={base.tituloTarjeta}>
                 Folio #{t.id} · {t.tipo} · {t.estado}
               </Text>
               <Text>{t.detalle}</Text>
@@ -308,28 +329,24 @@ function Contenido({ vistaInicial }: { vistaInicial: string }) {
       {vista === "preferencias" && (
         <>
           <Text>
-            Los avisos permanecen en tu bandeja. Los correos de seguridad
-            siempre están habilitados.
+            Los avisos permanecen en tu bandeja. Los avisos de seguridad incluyen accesos desde dispositivos nuevos y cambios de contraseña.
           </Text>
           {preferencias.map((p) => (
-            <View key={p.tipo}>
-              <Text>{p.tipo}</Text>
-              {(["push", "correo"] as const).map((c) => (
-                <View key={c}>
-                  {boton(
-                    (c === "push" ? "Dispositivo" : "Correo opcional") +
-                      ": " +
-                      (p[c] ? "Activado" : "Desactivado"),
-                    () =>
-                      setPreferencias((ps) =>
-                        ps.map((x) =>
-                          x.tipo === p.tipo ? { ...x, [c]: !x[c] } : x,
-                        ),
-                      ),
-                    ocupado,
-                  )}
-                </View>
-              ))}
+            <View key={p.tipo} style={{ gap: 10, borderTopWidth: 1, borderColor: colores.linea, paddingTop: 12 }}>
+              <Text style={base.tituloTarjeta}>{categorias[p.tipo] ?? p.tipo}</Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+                {(["push", "correo"] as const).map(c => {
+                  const canal = c === "push" ? "Dispositivo" : "Correo opcional";
+                  return <TouchableOpacity key={c} accessibilityRole="switch" aria-checked={p[c]}
+                    accessibilityLabel={`${canal} · ${categorias[p.tipo] ?? p.tipo}`}
+                    accessibilityState={{ checked: p[c], disabled: ocupado }} disabled={ocupado}
+                    style={[base.botonAccesible, { paddingHorizontal: 14, borderWidth: 1, borderRadius: 9,
+                      borderColor: p[c] ? colores.enlace : colores.linea, backgroundColor: p[c] ? colores.suave : colores.superficie }]}
+                    onPress={() => setPreferencias(ps => ps.map(x => x.tipo === p.tipo ? {...x, [c]: !x[c]} : x))}>
+                    <Text>{canal}: {p[c] ? "Activado" : "Desactivado"}</Text>
+                  </TouchableOpacity>;
+                })}
+              </View>
             </View>
           ))}
           {boton(

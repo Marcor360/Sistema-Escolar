@@ -1,3 +1,6 @@
+import { FinanzasModule } from '../finanzas/finanzas.module';
+import { DocumentosEgresoController } from './documentos-egreso.controller';
+import { DocumentosEgresoService } from './documentos-egreso.service';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Alumno } from '../entities/alumno.entity';
@@ -13,8 +16,8 @@ import { TitulacionController } from './titulacion.controller';
 import { TitulacionService } from './titulacion.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([TitulacionExpediente, EgresoAlumno, CarreraPlan, Alumno, Inscripcion, TitulacionFirmante]), PlantelesModule],
-  providers: [TitulacionService, FirmantesService],
-  controllers: [TitulacionController, FirmantesController],
+  imports: [FinanzasModule, TypeOrmModule.forFeature([TitulacionExpediente, EgresoAlumno, CarreraPlan, Alumno, Inscripcion, TitulacionFirmante]), PlantelesModule],
+  providers: [DocumentosEgresoService,TitulacionService, FirmantesService],
+  controllers: [DocumentosEgresoController,TitulacionController, FirmantesController],
 })
 export class TitulacionModule {}

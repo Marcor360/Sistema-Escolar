@@ -1,11 +1,11 @@
 import { expect, it } from "vitest";
 import { calcularDisenoAlumno } from "./diseno-alumno";
 it("mantiene los accesos dentro del ancho útil en teléfonos, orientación horizontal y tabletas", () => {
-  for (const ancho of [280, 320, 360, 390, 430, 568, 683.5, 737.142, 768, 1024, 1366])
+  for (const ancho of [280, 320, 360, 390, 430, 568, 683.5, 737.142, 768, 1024, 1366, 1920, 2560, 3840])
     for (const fuente of [1, 1.3, 1.5, 2, 3]) {
       const d = calcularDisenoAlumno(ancho, fuente);
       expect(d.anchoContenido).toBeLessThanOrEqual(ancho);
-      expect(d.anchoContenido).toBeLessThanOrEqual(1200);
+      expect(d.anchoContenido).toBeLessThanOrEqual(1600);
       expect(
         d.anchoAcceso * d.columnas + 16 * (d.columnas - 1) + d.lateral * 2,
       ).toBeLessThanOrEqual(d.anchoContenido + 0.001);
@@ -18,4 +18,6 @@ it("aprovecha tabletas con dos columnas y vuelve a una con texto ampliado", () =
   expect(calcularDisenoAlumno(768, 2).columnas).toBe(1);
   expect(calcularDisenoAlumno(1024).anchoContenido).toBe(1024);
   expect(calcularDisenoAlumno(1366).columnas).toBe(3);
+  expect(calcularDisenoAlumno(2560).anchoContenido).toBe(1600);
+  expect(calcularDisenoAlumno(2560, 2).amplio).toBe(false);
 });

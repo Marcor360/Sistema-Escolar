@@ -8,7 +8,7 @@ import { ActivacionService } from '../../src/auth/activacion.service';
 import { AuthService } from '../../src/auth/auth.service';
 import { AuthCorreoEventosService } from '../../src/auth/auth-correo-eventos.service';
 import { NotificacionesService } from '../../src/notificaciones/notificaciones.service';
-import { ActivacionToken, AuthCorreoEvento, AuthCorreoOutbox, PasswordResetToken, Usuario } from '../../src/entities';
+import { ActivacionToken, AuthCorreoEvento, AuthCorreoOutbox, DispositivoAcceso, PasswordResetToken, Sesion, Usuario } from '../../src/entities';
 import { ContextoIntegracion } from './contexto';
 
 export function registrarOutbox(ctx: ContextoIntegracion) {
@@ -28,7 +28,7 @@ export function registrarOutbox(ctx: ContextoIntegracion) {
     const vencida = new Date('2010-01-01T00:00:00Z');
     const vigente = new Date(Date.now() + 120_000);
     await eventos.save(ids.map((id, i) => ({
-      id, usuarioId: usuario.id, tipo: 'INGRESO' as const, estado: 'PROCESANDO' as const,
+      id, usuarioId: usuario.id, tipo: 'CAMBIO_PASSWORD' as const, estado: 'PROCESANDO' as const,
       intentos: i === 2 ? 4 : 5, proximoIntento: vencida,
       leaseHasta: i === 1 ? vigente : vencida, claim: id,
     })));
@@ -39,6 +39,39 @@ export function registrarOutbox(ctx: ContextoIntegracion) {
       expect(await eventos.findOneByOrFail({ id: ids[1] })).toMatchObject({ estado: 'PROCESANDO', intentos: 5, claim: ids[1] });
       expect(await eventos.findOneByOrFail({ id: ids[2] })).toMatchObject({ estado: 'ENVIADO', intentos: 5, claim: null });
       expect(correo.mock.calls.filter(([destino]) => destino === usuario.email)).toHaveLength(1);
+    } finally { correo.mockRestore(); }
+  });
+
+  it('avisa sobre dos dispositivos distintos y deduplica el primer acceso concurrente', async () => {
+    const usuarios = ctx.dataSource.getRepository(Usuario);
+    const root = await usuarios.findOneByOrFail({ id: ctx.superadminId });
+    const cuenta = await nuevo('dispositivos', false);
+    await usuarios.save({ id: cuenta.id, roles: root.roles });
+    const auth = ctx.app.get(AuthService);
+    const eventos = ctx.dataSource.getRepository(AuthCorreoEvento);
+    const avisos = ctx.app.get(AuthCorreoEventosService);
+    const idAnterior = randomUUID();
+    const dispositivo = randomUUID();
+    const password = ctx.passwords.get(root.email!) ?? 'Integracion_Segura_42!';
+    const iniciar = (id: string) => auth.login(cuenta.email!, password, 'WEB', undefined, 'Chrome Windows', false, id);
+    const correo = jest.spyOn(ctx.app.get(NotificacionesService), 'enviarEmail').mockResolvedValue({ simulado: false });
+    try {
+      await avisos.encolar(cuenta.id, 'INGRESO', idAnterior); // Cola sin huella de la versión anterior.
+      const [primero] = await Promise.all([iniciar(dispositivo), iniciar(dispositivo)]);
+      await auth.logout(primero.usuario);
+      await iniciar(dispositivo);
+      await ctx.dataSource.getRepository(Sesion).delete({ usuarioId: cuenta.id });
+      await iniciar(dispositivo); // El borrado de sesiones vencidas no olvida el dispositivo.
+      await iniciar(randomUUID());
+      await avisos.procesar();
+      expect(await eventos.findOneByOrFail({ id: idAnterior })).toMatchObject({ estado: 'FALLIDO' });
+      const enviados = await eventos.findBy({ usuarioId: cuenta.id, tipo: 'INGRESO', estado: 'ENVIADO' });
+      expect(enviados).toHaveLength(2);
+      const dispositivos = ctx.dataSource.getRepository(DispositivoAcceso);
+      const reconocidos = await dispositivos.findBy({ primerEventoId: In(enviados.map(e => e.id)) });
+      expect(new Set(reconocidos.map(d => d.huella)).size).toBe(2);
+      expect(correo.mock.calls.filter(([destino, asunto]) =>
+        destino === cuenta.email && asunto.startsWith('Nuevo dispositivo'))).toHaveLength(2);
     } finally { correo.mockRestore(); }
   });
 

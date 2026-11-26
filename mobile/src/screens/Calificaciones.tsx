@@ -18,7 +18,7 @@ import {
 import { Text } from "../components/Texto";
 import { useFocusEffect } from "@react-navigation/native";
 import { api, archivosBase, mensajeDeError } from "../api/client";
-import { BannerAlumno, base, ErrorCarga, Tarjeta, Vacio } from "./comunes";
+import { BannerAlumno, useBase, ErrorCarga, Tarjeta, Vacio } from "./comunes";
 
 interface Boleta {
   inscripcionId: number;
@@ -42,6 +42,7 @@ interface Calificacion {
 }
 
 export default function CalificacionesScreen() {
+  const base = useBase();
   const diseno = useDisenoAlumno();
   const { sesion } = useSesion();
   const [pagina, setPagina] = useState(1),

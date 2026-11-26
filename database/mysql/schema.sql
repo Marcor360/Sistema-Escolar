@@ -1214,3 +1214,52 @@ CREATE TABLE auth_correo_eventos (
  CONSTRAINT ck_auth_eventos_intentos CHECK (intentos >= 0 AND intentos <= 5)
 );
 CREATE INDEX idx_auth_eventos_pendientes ON auth_correo_eventos(estado,proximo_intento);
+
+-- El reconocimiento permanece al depurar sesiones vencidas y se elimina con la cuenta.
+CREATE TABLE auth_dispositivos_acceso (
+  usuario_id INT NOT NULL,
+  huella VARCHAR(64) NOT NULL,
+  primer_evento_id VARCHAR(36) NOT NULL,
+  CONSTRAINT pk_auth_dispositivos_acceso PRIMARY KEY (usuario_id, huella),
+  CONSTRAINT uq_auth_dispositivos_aviso UNIQUE (primer_evento_id),
+  CONSTRAINT fk_auth_dispositivos_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+ALTER TABLE configuracion_marca ADD fondo_alumno_url VARCHAR(255) NULL,
+  ADD bienvenida_alumno VARCHAR(180) NULL,
+  ADD descripcion_alumno VARCHAR(420) NULL,
+  ADD aviso_alumno VARCHAR(360) NULL,
+  ADD contacto_alumno VARCHAR(180) NULL,
+  ADD privacidad_alumno VARCHAR(500) NULL,
+  ADD reglamento_alumno VARCHAR(500) NULL,
+  ADD sitio_alumno VARCHAR(500) NULL;
+
+ALTER TABLE configuracion_marca ADD titulo_boleta VARCHAR(120) NULL, ADD pie_boleta VARCHAR(480) NULL;
+ALTER TABLE boleta_respuestas ADD archivo_oficial VARCHAR(36) NULL;
+
+ALTER TABLE egresos_alumnos ADD finalizado_en DATETIME NULL;
+CREATE TABLE egreso_documentos (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  egreso_id INT NOT NULL,
+  actor_id INT NOT NULL,
+  tipo VARCHAR(24) NOT NULL,
+  detalle VARCHAR(600) NOT NULL,
+  contexto VARCHAR(64) NOT NULL,
+  sha256 VARCHAR(64) NOT NULL,
+  clave VARCHAR(64) NOT NULL UNIQUE,
+  mime VARCHAR(40) NOT NULL,
+  created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  FOREIGN KEY (egreso_id) REFERENCES egresos_alumnos(id),
+  FOREIGN KEY (actor_id) REFERENCES usuarios(id)
+);
+CREATE INDEX idx_egreso_documentos_tipo ON egreso_documentos(egreso_id,tipo,id);
+
+CREATE TABLE egreso_documento_partes (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  documento_id INT NOT NULL,
+  tipo VARCHAR(12) NOT NULL,
+  orden INT NOT NULL,
+  datos TEXT NOT NULL,
+  FOREIGN KEY (documento_id) REFERENCES egreso_documentos(id)
+);
+CREATE UNIQUE INDEX uq_egreso_documento_partes ON egreso_documento_partes(documento_id,tipo,orden);

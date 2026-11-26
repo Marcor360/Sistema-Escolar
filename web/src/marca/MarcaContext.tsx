@@ -15,6 +15,16 @@ export type Marca = {
   colorAcento: string;
   mensajeBienvenida: string;
   tamanoLogo: 'NORMAL' | 'GRANDE';
+  tituloBoleta?: string | null;
+  pieBoleta?: string | null;
+  fondoAlumnoUrl?: string | null;
+  bienvenidaAlumno?: string | null;
+  descripcionAlumno?: string | null;
+  avisoAlumno?: string | null;
+  contactoAlumno?: string | null;
+  privacidadAlumno?: string | null;
+  reglamentoAlumno?: string | null;
+  sitioAlumno?: string | null;
   actualizadoEn: string;
 };
 
@@ -63,7 +73,9 @@ export function esMarcaWebValida(valor: unknown): valor is Marca {
         /^\/uploads\/marca-(?:favicon-administrativo|favicon-alumno|logo-alumno)-[0-9a-f-]+\.(?:png|webp)$/i.test(url)))
     && (datos.mensajeBienvenida === undefined || typeof datos.mensajeBienvenida === 'string')
     && (datos.tamanoLogo === undefined || ['NORMAL', 'GRANDE'].includes(datos.tamanoLogo))
-    && typeof datos.actualizadoEn === 'string';
+    && (datos.fondoAlumnoUrl == null || /^\/uploads\/marca-fondo-alumno-[a-f0-9-]+\.webp$/i.test(datos.fondoAlumnoUrl)) &&
+    [datos.bienvenidaAlumno, datos.descripcionAlumno, datos.avisoAlumno, datos.contactoAlumno, datos.privacidadAlumno, datos.reglamentoAlumno, datos.sitioAlumno].every(v => v == null || typeof v === 'string') &&
+    typeof datos.actualizadoEn === 'string';
 }
 
 function leerMarcaGuardada(): Marca | null {
@@ -84,6 +96,15 @@ function marcaIgual(anterior: Marca, siguiente: Marca): boolean {
     && anterior.faviconAdministrativoUrl === siguiente.faviconAdministrativoUrl
     && anterior.faviconAlumnoUrl === siguiente.faviconAlumnoUrl
     && anterior.logoAlumnoUrl === siguiente.logoAlumnoUrl
+    && anterior.tituloBoleta === siguiente.tituloBoleta && anterior.pieBoleta === siguiente.pieBoleta
+    && anterior.fondoAlumnoUrl === siguiente.fondoAlumnoUrl
+    && anterior.bienvenidaAlumno === siguiente.bienvenidaAlumno
+    && anterior.descripcionAlumno === siguiente.descripcionAlumno
+    && anterior.avisoAlumno === siguiente.avisoAlumno
+    && anterior.contactoAlumno === siguiente.contactoAlumno
+    && anterior.privacidadAlumno === siguiente.privacidadAlumno
+    && anterior.reglamentoAlumno === siguiente.reglamentoAlumno
+    && anterior.sitioAlumno === siguiente.sitioAlumno
     && anterior.colorPrimario === siguiente.colorPrimario
     && anterior.colorPrimarioOscuro === siguiente.colorPrimarioOscuro
     && anterior.colorAcento === siguiente.colorAcento

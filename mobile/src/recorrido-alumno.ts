@@ -36,7 +36,7 @@ export const pasosAlumno: PasoAlumno[] = [
     pantalla: "Materias",
     subpantalla: "MisTareas",
     descripcion:
-      "En Tareas y entregas, elige la actividad. Revisa instrucciones y vencimiento, elige Entregar archivo o escribe una respuesta y confirma una sola vez. Revisa el resultado antes de reintentar.",
+      "En Tareas y entregas, elige la actividad. Revisa instrucciones y vencimiento, usa Cargar archivo, revisa el nombre y pulsa Entregar archivo, o escribe una respuesta. Revisa el resultado antes de reintentar.",
     comprobar: "Esta guía no envía tareas ni adjunta archivos por ti.",
   },
   {

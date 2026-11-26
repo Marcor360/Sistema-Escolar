@@ -1,5 +1,4 @@
 import { createContext, useContext } from 'react';
-import { colores } from './theme';
 
 export type Marca = {
   nombreAdministrativo?: string;
@@ -9,9 +8,18 @@ export type Marca = {
   logoUrl: string | null;
   faviconAlumnoUrl?: string | null;
   logoAlumnoUrl?: string | null;
+  tamanoLogo?: 'NORMAL' | 'GRANDE';
   colorPrimario: string;
   colorPrimarioOscuro: string;
   colorAcento: string;
+  fondoAlumnoUrl?: string | null;
+  bienvenidaAlumno?: string | null;
+  descripcionAlumno?: string | null;
+  avisoAlumno?: string | null;
+  contactoAlumno?: string | null;
+  privacidadAlumno?: string | null;
+  reglamentoAlumno?: string | null;
+  sitioAlumno?: string | null;
   actualizadoEn: string;
 };
 
@@ -21,14 +29,6 @@ export const MARCA_POR_DEFECTO: Marca = {
   nombreInstitucion: 'Sistema Escolar', nombreCorto: 'SE', logoUrl: null, faviconAlumnoUrl: null, logoAlumnoUrl: null,
   colorPrimario: '#14343B', colorPrimarioOscuro: '#0E262B', colorAcento: '#C79A3C', actualizadoEn: '',
 };
-
-export function aplicarColores(marca: Marca) {
-  Object.assign(colores, {
-    pizarra: marca.colorPrimario,
-    pizarraOscuro: marca.colorPrimarioOscuro,
-    dorado: marca.colorAcento,
-  });
-}
 
 export const MarcaContext = createContext<{ marca: Marca }>({ marca: MARCA_POR_DEFECTO });
 export const useMarca = () => useContext(MarcaContext);

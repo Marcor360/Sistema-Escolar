@@ -78,3 +78,9 @@ El sistema propone el promedio exacto de P1–P4 (25 % cada uno). El profesor pu
 Redondeo automático continúa desactivado: esta corrección define aprobación, no resuelve los ejemplos contradictorios. Los formatos continúan informativos y UAT de la candidata sigue pendiente; no se atribuye aceptación institucional a pruebas automatizadas.
 
 Seguimiento de decisiones y aceptación aún pendientes: [#210](https://github.com/Marcor360/Sistema-Escolar/issues/210). El cierre de #139 corresponde a implementación candidata en #209, sin afirmar merge ni despliegue.
+
+## Emisión de boletas a partir de 1.38.9
+
+SUPERADMIN configura el título, el pie y la identidad institucional en Configuración. El profesor captura las calificaciones de sus grupos. Al publicarse la boleta digital, el alumno puede solicitar revisión o confirmar la versión presentada. Cada aceptación nueva guarda en la BD el detalle de las materias, la versión, la fecha, el firmante y la referencia al PDF oficial. Un reintento de la misma solicitud devuelve el mismo folio.
+
+El servidor crea la carpeta privada `UPLOADS_DIR/historial/<alumnoId>/boletas/<inscripcionId>/` al emitir el PDF. El historial ofrece la descarga a la familia y al personal con alcance en el plantel. Las correcciones posteriores conservan el archivo emitido. Las aceptaciones anteriores a la migración conservan su constancia histórica. El respaldo y la restauración del expediente requieren tanto la BD como el directorio de archivos. La impresión usa la variante PNG del logo institucional cuando la marca se carga como WebP.

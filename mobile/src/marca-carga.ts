@@ -16,6 +16,8 @@ export function esMarcaValida(valor: unknown): valor is Marca {
         /^\/uploads\/[a-z0-9_-]+\.(png|jpg|jpeg|webp)$/i.test(m.logoUrl))) &&
     [m.faviconAlumnoUrl, m.logoAlumnoUrl].every((url) => url === undefined || url === null ||
       (typeof url === 'string' && /^\/uploads\/marca-(?:favicon-alumno|logo-alumno)-[0-9a-f-]+\.(?:png|webp)$/i.test(url))) &&
+    (m.fondoAlumnoUrl == null || /^\/uploads\/marca-fondo-alumno-[a-f0-9-]+\.webp$/i.test(m.fondoAlumnoUrl)) &&
+    [m.bienvenidaAlumno, m.descripcionAlumno, m.avisoAlumno, m.contactoAlumno, m.privacidadAlumno, m.reglamentoAlumno, m.sitioAlumno].every(v => v == null || typeof v === "string") &&
     typeof m.actualizadoEn === "string"
   );
 }
@@ -66,9 +68,18 @@ export async function cargarMarca(
 export function mismaMarca(a: Marca, b: Marca): boolean {
   return a.nombreAdministrativo === b.nombreAdministrativo && a.nombrePortalAlumno === b.nombrePortalAlumno && a.nombreInstitucion === b.nombreInstitucion
     && a.nombreCorto === b.nombreCorto
+    && a.tamanoLogo === b.tamanoLogo
     && a.logoUrl === b.logoUrl
     && a.faviconAlumnoUrl === b.faviconAlumnoUrl
     && a.logoAlumnoUrl === b.logoAlumnoUrl
+    && a.fondoAlumnoUrl === b.fondoAlumnoUrl
+    && a.bienvenidaAlumno === b.bienvenidaAlumno
+    && a.descripcionAlumno === b.descripcionAlumno
+    && a.avisoAlumno === b.avisoAlumno
+    && a.contactoAlumno === b.contactoAlumno
+    && a.privacidadAlumno === b.privacidadAlumno
+    && a.reglamentoAlumno === b.reglamentoAlumno
+    && a.sitioAlumno === b.sitioAlumno
     && a.colorPrimario === b.colorPrimario
     && a.colorPrimarioOscuro === b.colorPrimarioOscuro
     && a.colorAcento === b.colorAcento

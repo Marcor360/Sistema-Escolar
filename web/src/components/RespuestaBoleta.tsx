@@ -26,6 +26,7 @@ export interface SeguimientoBoleta {
     firmanteTipo: string;
     asignatura: string | null;
     fecha: string;
+    oficialDisponible?: boolean;
     vigente: boolean;
   }[];
 }
@@ -126,18 +127,18 @@ export function RespuestaBoleta({ inscripcionId }: { inscripcionId: number }) {
       bloqueo.current = false;
     }
   };
-  const descargarConstancia = async (respuestaId: number) => {
+  const descargarConstancia = async (respuestaId: number, oficial = false) => {
     if (ocupado) return;
     setOcupado(true);
     setError('');
     try {
-      const r = await api.get(`/boletas/inscripciones/${inscripcionId}/constancias/${respuestaId}/pdf`, {
+      const r = await api.get(`/boletas/inscripciones/${inscripcionId}/${oficial ? 'oficiales' : 'constancias'}/${respuestaId}/pdf`, {
         responseType: 'blob',
       });
       const url = URL.createObjectURL(r.data),
         a = document.createElement('a');
       a.href = url;
-      a.download = `constancia-boleta-${respuestaId}.pdf`;
+      a.download = `${oficial ? 'boleta-oficial' : 'constancia-boleta'}-${respuestaId}.pdf`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch (e) {
@@ -369,6 +370,7 @@ export function RespuestaBoleta({ inscripcionId }: { inscripcionId: number }) {
               </p>
               {!h.vigente && <p className="texto-ayuda">Corresponde a una versión anterior de las calificaciones.</p>}
               {h.comentario && <p className="boleta-comentario">{h.comentario}</p>}
+              {h.oficialDisponible && <button type="button" disabled={ocupado} onClick={() => void descargarConstancia(h.id, true)}>Descargar boleta oficial #{h.id}</button>}
               {h.estado === 'ACEPTADA' && (alumno || datos.puedeGestionar) && (
                 <button type="button" disabled={ocupado} onClick={() => void descargarConstancia(h.id)}>
                   Descargar constancia de aceptación #{h.id}

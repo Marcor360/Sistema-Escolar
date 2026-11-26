@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
-import { Image, ScrollView, View, TouchableOpacity } from "react-native";
+import { useTemaAlumno, useEstilosAlumno, type ColoresAlumno } from "../tema-alumno";
+import { useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, Image, ScrollView, StyleSheet, View, TouchableOpacity } from "react-native";
+import { useDisenoAlumno } from "../use-diseno-alumno";
+import { IconoAlumno } from "./IconoAlumno";
 import { Text } from "./Texto";
 import { api, archivosBase, mensajeDeError } from "../api/client";
-import { base } from "../screens/comunes";
-import { diaCalendarioEscolar, eventosDelDia, mesInicialCalendario } from "../utils/calendario-escolar";
-import { colores, radio, espacio } from "../theme";
+import { useBase } from "../screens/comunes";
+import { diaCalendarioEscolar, mesInicialCalendario } from "../utils/calendario-escolar";
 
 type Ciclo = {
   id: number;
@@ -22,6 +24,7 @@ type Evento = {
 };
 const dia = diaCalendarioEscolar;
 function ImagenCiclo({ evento }: { evento: Evento }) {
+  const base = useBase();
   const [url, setUrl] = useState("");
   const [cargando,setCargando]=useState(true),[intento,setIntento]=useState(0);
   const [error, setError] = useState("");
@@ -62,11 +65,12 @@ function ImagenCiclo({ evento }: { evento: Evento }) {
   );
 }
 export function CalendarioCiclo({ abiertoInicial = false }: { abiertoInicial?: boolean } = {}) {
+  const estilos = useEstilosAlumno(crearEstilos);
   const [abierto, setAbierto] = useState(abiertoInicial);
   return (
     <View>
-      <TouchableOpacity
-        style={base.botonAccesible}
+      {!abiertoInicial && <TouchableOpacity
+        style={estilos.opcion}
         accessibilityRole="button"
         accessibilityState={{ expanded: abierto }}
         onPress={() => setAbierto((v) => !v)}
@@ -76,12 +80,16 @@ export function CalendarioCiclo({ abiertoInicial = false }: { abiertoInicial?: b
             ? "Ocultar calendario institucional"
             : "Ver calendario institucional"}
         </Text>
-      </TouchableOpacity>
+      </TouchableOpacity>}
       {abierto && <ContenidoCalendario />}
     </View>
   );
 }
 function ContenidoCalendario() {
+  const estilos = useEstilosAlumno(crearEstilos);
+  const { colores } = useTemaAlumno();
+  const { amplio, anchoContenido } = useDisenoAlumno();
+  const compacto = anchoContenido <= 420;
   const [ciclos, setCiclos] = useState<Ciclo[]>([]);
   const [seleccion, setSeleccion] = useState(0);
   const [mes, setMes] = useState("");
@@ -99,9 +107,8 @@ function ContenidoCalendario() {
       .then(({ data }) => {
         if (vigente) {
           setCiclos(data.ciclos);
-          setSeleccion(
-            data.ciclos.find((c) => c.activo)?.id ?? data.ciclos[0]?.id ?? 0,
-          );
+          setSeleccion(anterior => data.ciclos.some(c => c.id === anterior)
+            ? anterior : data.ciclos.find(c => c.activo)?.id ?? data.ciclos[0]?.id ?? 0);
           setCargando(false);
         }
       })
@@ -164,165 +171,166 @@ function ContenidoCalendario() {
       d = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1, 12));
     }
   }
+  const indiceMes = meses.indexOf(mes);
+  const hoyEscolar = dia(new Date().toISOString());
+  const eventosFechados = useMemo(() => eventos.filter(e => !e.imagenNombre)
+    .sort((a, b) => a.fechaInicio.localeCompare(b.fechaInicio))
+    .map(evento => ({ evento, inicio: dia(evento.fechaInicio), fin: dia(evento.fechaFin ?? evento.fechaInicio) })), [eventos]);
+  const actividadesDelDia = (fecha: string) => eventosFechados.filter(e => e.inicio <= fecha && fecha <= e.fin);
+  const eventosSeleccionados = diaSeleccionado ? actividadesDelDia(diaSeleccionado) : [];
+  const imagenes = eventos.filter(e => e.imagenNombre);
+  const opcionesVista = { mes: "Mes", ciclo: "Ciclo completo", imagen: "Imagen institucional", agenda: "Agenda accesible" } as const;
+  const textoFecha = (fecha: string, opciones: Intl.DateTimeFormatOptions) => {
+    const texto = new Intl.DateTimeFormat("es-MX", { ...opciones, timeZone: "UTC" }).format(new Date(fecha + "T12:00:00Z"));
+    return texto.charAt(0).toUpperCase() + texto.slice(1);
+  };
+  const nombreMes = (mesVisible: string) => textoFecha(mesVisible + "-01", { month: "long", year: "numeric" });
+  const cambiarMes = (indice: number) => {
+    const destino = meses[indice];
+    if (!destino) return;
+    setMes(destino);
+    setDiaSeleccionado(destino === hoyEscolar.slice(0, 7) ? hoyEscolar :
+      destino === ciclo?.fechaInicio.slice(0, 7) ? ciclo.fechaInicio : destino + "-01");
+  };
+  const opcion = (titulo: string, seleccionada: boolean, seleccionar: () => void, etiqueta = titulo) => (
+    <TouchableOpacity key={etiqueta} accessibilityRole="button" accessibilityLabel={etiqueta}
+      accessibilityState={{ selected: seleccionada }} {...{ "aria-pressed": seleccionada }} onPress={seleccionar}
+      style={[estilos.opcion, seleccionada && estilos.opcionActiva]}>
+      <Text style={seleccionada ? estilos.textoActivo : estilos.textoOpcion}>{titulo}</Text>
+    </TouchableOpacity>
+  );
+
   return (
-    <View>
-      <Text accessibilityRole="header">Calendario del ciclo escolar</Text>
-      {ciclos.length === 1 && <Text>{ciclos[0].nombre}</Text>}
-      {ciclos.length > 1 && ciclos.map((c) => (
-        <TouchableOpacity
-          key={c.id}
-          accessibilityRole="button"
-          accessibilityState={{ selected: c.id === seleccion }}
-          style={base.botonAccesible}
-          onPress={() => setSeleccion(c.id)}
-        >
-          <Text>
-            {c.id === seleccion ? "✓ " : ""}
-            {c.nombre}
-          </Text>
-        </TouchableOpacity>
-      ))}
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: espacio.sm, marginVertical: espacio.md }}>
-        {(["CONSOLIDADO", "GLOBAL"] as const).map((opcion) => (
-          <TouchableOpacity key={opcion} accessibilityRole="button"
-            accessibilityLabel={opcion === "CONSOLIDADO" ? "Eventos institucionales y de mi plantel" : "Solo eventos institucionales"}
-            accessibilityState={{ selected: ambito === opcion }}
-            style={[base.botonAccesible, { borderWidth: 1, borderColor: colores.linea, borderRadius: radio.sm, backgroundColor: ambito === opcion ? colores.papel : "#fff" }]}
-            onPress={() => setAmbito(opcion)}>
-            <Text>{opcion === "CONSOLIDADO" ? "Mi plantel e institucional" : "Solo institucional"}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: espacio.sm }}>
-      {(["mes", "ciclo", "imagen", "agenda"] as const).map((v) => (
-        <TouchableOpacity
-          key={v}
-          accessibilityRole="button"
-          accessibilityState={{ selected: vista === v }}
-          style={base.botonAccesible}
-          onPress={() => setVista(v)}
-        >
-          <Text>
-            {v === "mes"
-              ? "Mes"
-              : v === "ciclo"
-                ? "Ciclo completo"
-                : v === "agenda" ? "Agenda accesible" : "Imagen institucional"}
-          </Text>
-        </TouchableOpacity>
-      ))}
-      </View>
-      {cargando && <Text>Cargando calendario…</Text>}
-      {!!error && (
-        <View accessibilityRole="alert">
-          <Text>{error}</Text>
-          <TouchableOpacity
-            accessibilityRole="button"
-            style={base.botonAccesible}
-            onPress={() => setRevision((r) => r + 1)}
-          >
-            <Text>Reintentar</Text>
-          </TouchableOpacity>
+    <View style={[estilos.panel, compacto && estilos.panelCompacto]}>
+      <Text accessibilityRole="header" style={[estilos.titulo, compacto && estilos.margenCompacto]}>Calendario del ciclo escolar</Text>
+      {ciclos.length === 1 && <Text style={[estilos.secundario, compacto && estilos.margenCompacto]}>{ciclos[0].nombre}</Text>}
+      {ciclos.length > 1 && <View style={[estilos.opciones, compacto && estilos.margenCompacto]}>
+        {ciclos.map(c => opcion(c.nombre, c.id === seleccion, () => setSeleccion(c.id)))}
+      </View>}
+      {!!ciclo && <>
+        <View style={[estilos.opciones, compacto && estilos.margenCompacto]} accessibilityLabel="Alcance del calendario">
+          {opcion("Mi plantel e institucional", ambito === "CONSOLIDADO", () => setAmbito("CONSOLIDADO"), "Eventos institucionales y de mi plantel")}
+          {opcion("Solo institucional", ambito === "GLOBAL", () => setAmbito("GLOBAL"), "Solo eventos institucionales")}
+        </View>
+        <View style={[estilos.vistas, compacto && estilos.margenCompacto]} accessibilityLabel="Vistas del calendario">
+          {(Object.keys(opcionesVista) as Array<keyof typeof opcionesVista>).map(v =>
+            opcion(opcionesVista[v], vista === v, () => setVista(v)),
+          )}
+        </View>
+      </>}
+      {cargando && <View style={estilos.carga}><ActivityIndicator color={colores.enlace} /><Text>Consultando calendario…</Text></View>}
+      {!!error && <View accessibilityRole="alert" style={estilos.detalleDia}>
+        <Text style={{ color: colores.peligro }}>{error}</Text>
+        <TouchableOpacity accessibilityRole="button" style={estilos.opcion} onPress={() => setRevision(r => r + 1)}><Text>Reintentar</Text></TouchableOpacity>
+      </View>}
+      {!cargando && !error && !ciclo && <Text style={estilos.secundario}>No hay ciclos escolares disponibles.</Text>}
+      {!cargando && !error && ciclo && vista === "imagen" && (
+        imagenes.length ? imagenes.map(evento => <ImagenCiclo key={evento.id} evento={evento} />) : <Text style={estilos.secundario}>No hay imagen publicada para tu nivel.</Text>
+      )}
+      {!cargando && !error && ciclo && vista === "agenda" && <View style={estilos.detalleDia}>
+        {eventosFechados.length ? eventosFechados.map(({ evento: e }) => (
+          <View key={e.id} style={estilos.evento}>
+            <Text style={estilos.secundario}>{dia(e.fechaInicio)}{e.fechaFin ? " — " + dia(e.fechaFin) : ""}</Text>
+            <Text style={estilos.textoOpcion}>{e.titulo}</Text>
+          </View>
+        )) : <Text style={estilos.secundario}>No hay eventos en la agenda de este ciclo.</Text>}
+      </View>}
+      {!cargando && !error && ciclo && (vista === "mes" || vista === "ciclo") && (
+        <View style={[estilos.distribucion, amplio && vista === "mes" && { flexDirection: "row", alignItems: "flex-start" }]}>
+          <View style={{ flex: amplio && vista === "mes" ? 1 : undefined, minWidth: 0, gap: 18 }}>
+            {(vista === "mes" ? [mes] : meses).filter(Boolean).map(m => {
+              const [a, n] = m.split("-").map(Number);
+              const dias = new Date(Date.UTC(a, n, 0)).getUTCDate();
+              const offset = (new Date(Date.UTC(a, n - 1, 1)).getUTCDay() + 6) % 7;
+              const semanas = Math.ceil((offset + dias) / 7);
+              return <View key={m} style={estilos.mes}>
+                <View style={estilos.encabezadoMes}>
+                  {vista === "mes" && <TouchableOpacity accessibilityRole="button" accessibilityLabel="Mes anterior"
+                    disabled={indiceMes <= 0} accessibilityState={{ disabled: indiceMes <= 0 }}
+                    onPress={() => cambiarMes(indiceMes - 1)} style={[estilos.flecha, indiceMes <= 0 && estilos.deshabilitado]}>
+                    <IconoAlumno nombre="chevron" color={colores.enlace} tamano={20} invertido />
+                  </TouchableOpacity>}
+                  <Text accessibilityRole="header" style={estilos.nombreMes}>{nombreMes(m)}</Text>
+                  {vista === "mes" && <TouchableOpacity accessibilityRole="button" accessibilityLabel="Mes siguiente"
+                    disabled={indiceMes >= meses.length - 1} accessibilityState={{ disabled: indiceMes >= meses.length - 1 }}
+                    onPress={() => cambiarMes(indiceMes + 1)} style={[estilos.flecha, indiceMes >= meses.length - 1 && estilos.deshabilitado]}>
+                    <IconoAlumno nombre="chevron" color={colores.enlace} tamano={20} />
+                  </TouchableOpacity>}
+                </View>
+                <ScrollView horizontal nestedScrollEnabled contentContainerStyle={{ minWidth: 308, flexGrow: 1 }}>
+                  <View style={{ flex: 1 }}>
+                    <View style={estilos.semana}>
+                      {["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map(d => <Text key={d} style={estilos.diaSemana}>{d}</Text>)}
+                    </View>
+                    {Array.from({ length: semanas }, (_, semana) => <View key={semana} style={estilos.semana}>
+                      {Array.from({ length: 7 }, (_, columna) => {
+                        const numero = semana * 7 + columna - offset + 1;
+                        if (numero < 1 || numero > dias) return <View key={columna} style={estilos.celdaVacia} />;
+                        const fecha = m + "-" + String(numero).padStart(2, "0");
+                        const cantidad = actividadesDelDia(fecha).length;
+                        const seleccionado = diaSeleccionado === fecha;
+                        const hoy = fecha === hoyEscolar;
+                        return (
+                          <TouchableOpacity key={columna} accessibilityRole="button"
+                            accessibilityLabel={`${fecha}: ${cantidad} evento(s)`}
+                            accessibilityHint={hoy ? "Hoy" : undefined}
+                            accessibilityState={{ selected: seleccionado }}
+                            {...{ "aria-pressed": seleccionado }}
+                            onPress={() => { setDiaSeleccionado(fecha); setMes(m); setVista("mes"); }}
+                            style={[estilos.celda, amplio && { minHeight: 70 }, hoy && estilos.hoy, seleccionado && estilos.celdaActiva]}>
+                            <Text style={[estilos.numero, seleccionado && { color: colores.sobrePrimario }]}>{numero}</Text>
+                            {cantidad > 0 && <View style={[estilos.contador, seleccionado && { backgroundColor: colores.sobrePrimario }]}>
+                              <Text style={{ color: seleccionado ? colores.pizarra : colores.enlace, fontSize: 12, fontWeight: "700" }}>{cantidad}</Text>
+                            </View>}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>)}
+                  </View>
+                </ScrollView>
+              </View>;
+            })}
+          </View>
+          {vista === "mes" && <View style={[estilos.detalleDia, amplio && { width: "28%" }]}>
+            <Text accessibilityRole="header" accessibilityLabel={diaSeleccionado ? `Actividades del ${diaSeleccionado}` : undefined} style={estilos.titulo}>
+              {diaSeleccionado ? textoFecha(diaSeleccionado, { weekday: "long", day: "numeric", month: "long" }) : "Actividades del día"}
+            </Text>
+            {eventosSeleccionados.length ? eventosSeleccionados.map(({ evento: e }) => <View key={e.id} style={estilos.evento}><Text style={estilos.textoOpcion}>{e.titulo}</Text></View>)
+              : <Text style={estilos.secundario}>Sin actividades publicadas para este día.</Text>}
+          </View>}
         </View>
       )}
-      {!cargando && !ciclos.length && !error && (
-        <Text>No hay ciclos escolares disponibles.</Text>
-      )}
-      {!cargando && !error && (vista === "imagen" ? (
-        <>
-          {eventos
-            .filter((e) => e.imagenNombre)
-            .map((e) => (
-              <ImagenCiclo key={e.id} evento={e} />
-            ))}
-          {!cargando && !eventos.some((e) => e.imagenNombre) && (
-            <Text>No hay imagen publicada para tu nivel.</Text>
-          )}
-        </>
-      ) : vista === "agenda" ? <View>{eventos.filter(e => !e.imagenNombre).length === 0 ? <Text>No hay eventos en la agenda de este ciclo.</Text> : eventos.filter(e => !e.imagenNombre).map(e => <View key={e.id} style={{ paddingVertical: espacio.md, borderBottomWidth: 1, borderColor: colores.linea }}><Text>{dia(e.fechaInicio)}{e.fechaFin ? ' — ' + dia(e.fechaFin) : ''}: {e.titulo}</Text></View>)}</View> : (
-        <>
-          {vista === "mes" && (
-            <View
-              style={{ flexDirection: "row", justifyContent: "space-between" }}
-            >
-              <TouchableOpacity
-                accessibilityRole="button"
-                style={base.botonAccesible}
-                disabled={meses.indexOf(mes) <= 0}
-                onPress={() => {setMes(meses[meses.indexOf(mes) - 1]); setDiaSeleccionado("");}}
-              >
-                <Text>Mes anterior</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                accessibilityRole="button"
-                style={base.botonAccesible}
-                disabled={meses.indexOf(mes) >= meses.length - 1}
-                onPress={() => {setMes(meses[meses.indexOf(mes) + 1]); setDiaSeleccionado("");}}
-              >
-                <Text>Mes siguiente</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-          {(vista === "mes" ? [mes] : meses).filter(Boolean).map((m) => {
-            const [a, n] = m.split("-").map(Number);
-            const dias = new Date(Date.UTC(a, n, 0)).getUTCDate();
-            const offset =
-              (new Date(Date.UTC(a, n - 1, 1)).getUTCDay() + 6) % 7;
-            return (
-              <View key={m} style={{ marginVertical: 12 }}>
-                <Text accessibilityRole="header">
-                  {new Intl.DateTimeFormat("es-MX", {
-                    month: "long",
-                    year: "numeric",
-                    timeZone: "UTC",
-                  }).format(new Date(m + "-01T12:00:00Z"))}
-                </Text>
-                <ScrollView horizontal nestedScrollEnabled contentContainerStyle={{ minWidth: 336, flexGrow: 1 }}>
-                <View style={{ flexDirection: "row", flexWrap: "wrap", width: "100%" }}>
-                  {["L", "M", "X", "J", "V", "S", "D"].map((d, i) => (
-                    <Text key={"d" + i} style={{ width: "14.28%" }}>
-                      {d}
-                    </Text>
-                  ))}
-                  {Array.from({ length: offset }, (_, i) => (
-                    <View key={"b" + i} style={{ width: "14.28%" }} />
-                  ))}
-                  {Array.from({ length: dias }, (_, i) => {
-                    const fecha = m + "-" + String(i + 1).padStart(2, "0");
-                    const eventosDia = eventosDelDia(eventos, fecha);
-                    return (
-                      <TouchableOpacity
-                        key={fecha}
-                        accessibilityRole="button"
-                        accessibilityLabel={`${fecha}: ${eventosDia.length} evento(s)`}
-                        accessibilityState={{ selected: diaSeleccionado === fecha }}
-                        onPress={() => setDiaSeleccionado(fecha)}
-                        style={{
-                          width: "14.28%",
-                          minHeight: 52,
-                          padding: 4,
-                          borderWidth: 1,
-                          borderColor: diaSeleccionado === fecha ? colores.pizarra : colores.linea,
-                          backgroundColor: diaSeleccionado === fecha ? colores.papel : "#fff",
-                        }}
-                      >
-                        <Text>{i + 1}</Text>
-                        {eventosDia.length > 0 && <Text style={{ fontSize: 12, color: colores.pizarra }}>{eventosDia.length} evento(s)</Text>}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-                </ScrollView>
-                {vista === "mes" && <View style={{ marginTop: espacio.md, padding: espacio.md, backgroundColor: "#fff", borderWidth: 1, borderColor: colores.linea, borderRadius: radio.sm }}>
-                  <Text accessibilityRole="header">{diaSeleccionado ? `Actividades del ${diaSeleccionado}` : "Selecciona un día para consultar sus actividades"}</Text>
-                  {diaSeleccionado && eventosDelDia(eventos, diaSeleccionado).length === 0 && <Text>Sin actividades publicadas para este día.</Text>}
-                  {diaSeleccionado && eventosDelDia(eventos, diaSeleccionado).map((e) => <Text key={e.id} style={{ paddingVertical: espacio.sm }}>{e.titulo}</Text>)}
-                </View>}
-              </View>
-            );
-          })}
-        </>
-      ))}
     </View>
   );
 }
+
+const crearEstilos = (colores: ColoresAlumno) => StyleSheet.create({
+  panel: { backgroundColor: colores.superficie, borderWidth: 1, borderColor: colores.linea, borderRadius: 16, padding: 14, gap: 12, marginBottom: 16, minWidth: 0 },
+  panelCompacto: { paddingHorizontal: 4 },
+  margenCompacto: { marginHorizontal: 8 },
+  titulo: { fontSize: 19, fontWeight: "700", color: colores.tinta },
+  secundario: { color: colores.gris, lineHeight: 22 },
+  opciones: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  vistas: { flexDirection: "row", flexWrap: "wrap", gap: 8, borderTopWidth: 1, borderColor: colores.linea, paddingTop: 12 },
+  opcion: { alignSelf: "flex-start", minHeight: 44, paddingHorizontal: 12, paddingVertical: 8, justifyContent: "center", borderRadius: 9, borderWidth: 1, borderColor: colores.linea, backgroundColor: colores.superficie, marginBottom: 2 },
+  opcionActiva: { backgroundColor: colores.pizarra, borderColor: colores.pizarra },
+  textoOpcion: { fontSize: 14, color: colores.tinta, fontWeight: "600" },
+  textoActivo: { fontSize: 14, color: colores.sobrePrimario, fontWeight: "700" },
+  carga: { flexDirection: "row", gap: 10, alignItems: "center", paddingVertical: 16 },
+  distribucion: { gap: 14, minWidth: 0 },
+  mes: { borderWidth: 1, borderColor: colores.linea, backgroundColor: colores.papel, borderRadius: 12, overflow: "hidden" },
+  encabezadoMes: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8, padding: 8 },
+  nombreMes: { flex: 1, textAlign: "center", fontSize: 17, fontWeight: "700" },
+  flecha: { alignItems: "center", justifyContent: "center", width: 44, height: 44, borderRadius: 8, borderWidth: 1, borderColor: colores.linea, backgroundColor: colores.superficie },
+  deshabilitado: { opacity: 0.4 },
+  semana: { flexDirection: "row" },
+  diaSemana: { flex: 1, minWidth: 44, textAlign: "center", paddingVertical: 10, fontSize: 12, color: colores.gris, fontWeight: "700" },
+  celda: { flex: 1, minWidth: 44, minHeight: 56, alignItems: "center", justifyContent: "center", gap: 3, borderWidth: 0.5, borderColor: colores.linea, backgroundColor: colores.superficie },
+  celdaVacia: { flex: 1, minWidth: 44, backgroundColor: colores.suave, borderWidth: 0.5, borderColor: colores.linea },
+  celdaActiva: { backgroundColor: colores.pizarra, borderColor: colores.pizarra },
+  hoy: { borderWidth: 2, borderColor: colores.enlace },
+  numero: { fontSize: 15, fontWeight: "600" },
+  contador: { borderRadius: 12, paddingHorizontal: 6, backgroundColor: colores.suave },
+  detalleDia: { padding: 14, gap: 8, borderRadius: 12, borderWidth: 1, borderColor: colores.linea, backgroundColor: colores.papel },
+  evento: { borderLeftWidth: 3, borderLeftColor: colores.dorado, padding: 10, backgroundColor: colores.superficie, borderRadius: 6 },
+});

@@ -19,22 +19,26 @@ export const tipografia = {
   titulo: 25,
   subtitulo: 18,
   cuerpo: 15,
-  secundaria: 13,
+  secundaria: 14,
   dato: 24,
 } as const;
 
+function luminancia(color: string) {
+  const canales = [1, 3, 5].map((pos) => {
+    const valor = Number.parseInt(color.slice(pos, pos + 2), 16) / 255;
+    return valor <= 0.04045 ? valor / 12.92 : ((valor + 0.055) / 1.055) ** 2.4;
+  });
+  return canales[0] * 0.2126 + canales[1] * 0.7152 + canales[2] * 0.0722;
+}
+
+export function contraste(fondo: string, texto: string) {
+  const a = luminancia(fondo), b = luminancia(texto);
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
+
 /** Determina color de texto sobre un fondo de marca según WCAG 2.2 AA. */
 export function textoSobreFondo(fondo: string): '#ffffff' | '#19272c' | '#000000' {
-  const luminancia = (color: string): number => {
-    const canales = [1, 3, 5].map((pos) => {
-      const valor = Number.parseInt(color.slice(pos, pos + 2), 16) / 255;
-      return valor <= 0.04045 ? valor / 12.92 : ((valor + 0.055) / 1.055) ** 2.4;
-    });
-    return canales[0] * 0.2126 + canales[1] * 0.7152 + canales[2] * 0.0722;
-  };
   if (!/^#[0-9a-fA-F]{6}$/.test(fondo)) return '#19272c';
-  const l = luminancia(fondo);
-  if (1.05 / (l + 0.05) >= 4.5) return '#ffffff';
-  const oscuro = luminancia('#19272c');
-  return (l + 0.05) / (oscuro + 0.05) >= 4.5 ? '#19272c' : '#000000';
+  if (contraste(fondo, '#ffffff') >= 4.5) return '#ffffff';
+  return contraste(fondo, '#19272c') >= 4.5 ? '#19272c' : '#000000';
 }

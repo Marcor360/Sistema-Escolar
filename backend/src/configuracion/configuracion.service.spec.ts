@@ -45,6 +45,15 @@ describe('ConfiguracionService', () => {
       service.actualizarOpciones({ mensajeBienvenida: 'Bienvenido a IUA', tamanoLogo: 'GRANDE' }),
     ).resolves.toMatchObject({ mensajeBienvenida: 'Bienvenido a IUA', tamanoLogo: 'GRANDE', logoUrl: null });
   });
+  it('conserva los textos del alumno en clientes anteriores y permite restablecerlos', async () => {
+    const { service } = crear();
+    const opciones = { mensajeBienvenida: '', tamanoLogo: 'NORMAL' as const };
+    await service.actualizarOpciones({ ...opciones, bienvenidaAlumno: 'Hola', avisoAlumno: 'Inscripciones' });
+    await expect(service.actualizarOpciones(opciones)).resolves.toMatchObject({ bienvenidaAlumno: 'Hola' });
+    await expect(service.actualizarOpciones({ ...opciones, bienvenidaAlumno: '' })).resolves.toMatchObject({
+      bienvenidaAlumno: null, avisoAlumno: 'Inscripciones',
+    });
+  });
   it('quitarLogo deja logoUrl en null', async () => {
     const { service, limpiezas } = crear({
       id: 1,

@@ -87,6 +87,14 @@ export class ConfiguracionController {
     if (!file) throw new BadRequestException('Selecciona un logo WebP');
     return this.service.guardarRecurso(file, 'logoAlumnoUrl');
   }
+  @Post('marca/fondo-alumno')
+  @ApiBearerAuth() @ApiOperation({ summary: 'Cargar fondo WebP específico del alumno, solo SUPERADMIN' })
+  @UseGuards(JwtAuthGuard, RolesGuard) @Roles('SUPERADMIN') @ApiConsumes('multipart/form-data')
+  @UseInterceptors(LogoUploadErrorInterceptor, FileInterceptor('logo', logoUploadConfig))
+  fondoAlumno(@UploadedFile() file?: Express.Multer.File) {
+    if (!file) throw new BadRequestException('Selecciona un fondo WebP');
+    return this.service.guardarRecurso(file, 'fondoAlumnoUrl');
+  }
   @Delete('marca/favicon/administrativo')
   @ApiBearerAuth() @UseGuards(JwtAuthGuard, RolesGuard) @Roles('SUPERADMIN')
   quitarFaviconAdministrativo() { return this.service.quitarRecurso('faviconAdministrativoUrl'); }
@@ -96,6 +104,9 @@ export class ConfiguracionController {
   @Delete('marca/logo-alumno')
   @ApiBearerAuth() @UseGuards(JwtAuthGuard, RolesGuard) @Roles('SUPERADMIN')
   quitarLogoAlumno() { return this.service.quitarRecurso('logoAlumnoUrl'); }
+  @Delete('marca/fondo-alumno')
+  @ApiBearerAuth() @UseGuards(JwtAuthGuard, RolesGuard) @Roles('SUPERADMIN')
+  quitarFondoAlumno() { return this.service.quitarRecurso('fondoAlumnoUrl'); }
 
   @Delete('marca/logo')
   @ApiBearerAuth()

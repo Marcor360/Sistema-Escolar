@@ -87,7 +87,7 @@ it('cancela el refresh de logout antes de autenticar una sesión nueva', async (
   expect(refreshPendiente).toBe(true);
   await act(async () => { fireEvent.click(screen.getByText('Ingresar')); });
   expect(screen.getByText('Autenticado')).toBeTruthy();
-  expect(post).toHaveBeenLastCalledWith('/auth/login', { email: 'nuevo@example.invalid', password: 'clave' });
+  expect(post).toHaveBeenLastCalledWith('/auth/login', { email: 'nuevo@example.invalid', password: 'clave', dispositivoId: expect.any(String) });
 });
 
 it('envía únicamente interacciones humanas a la API, con máximo un pulso por minuto', async () => {

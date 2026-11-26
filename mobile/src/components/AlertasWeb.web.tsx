@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
+import { useTemaAlumno } from "../tema-alumno";
 import { Alert } from "react-native";
 import type { AlertButton } from "react-native";
 export function AlertasWeb() {
+  const { colores } = useTemaAlumno();
   const [aviso, setAviso] = useState<{
     titulo: string;
     mensaje?: string;
@@ -46,11 +48,11 @@ export function AlertasWeb() {
       }}
       style={{
         maxWidth: "min(480px,90vw)",
-        border: "1px solid #D8DCD6",
+        border: `1px solid ${colores.linea}`,
         borderRadius: 16,
         padding: 24,
-        color: "#1C2528",
-        background: "white",
+        color: colores.tinta,
+        background: colores.superficie,
       }}
     >
       <h2 id="alerta-app-titulo">{aviso.titulo}</h2>
@@ -60,7 +62,7 @@ export function AlertasWeb() {
           <button
             key={i}
             onClick={() => cerrar(b)}
-            style={{ minHeight: 44, padding: "10px 16px", cursor: "pointer" }}
+            style={{ minHeight: 44, padding: "10px 16px", cursor: "pointer", background: b.style === "cancel" ? colores.suave : colores.pizarra, color: b.style === "cancel" ? colores.tinta : colores.sobrePrimario, border: `1px solid ${colores.linea}`, borderRadius: 8 }}
           >
             {b.text || "Aceptar"}
           </button>

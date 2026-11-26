@@ -49,6 +49,21 @@ export class BoletasController {
     res.setHeader('Content-Disposition', contentDisposition(`constancia-boleta-${respuestaId}.pdf`, 'attachment'));
     res.send(buffer);
   }
+  @Get('inscripciones/:id/oficiales/:respuestaId/pdf')
+  @Roles('ALUMNO', 'ADMINISTRATIVO', 'DIRECTOR')
+  async oficial(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('respuestaId', ParseIntPipe) respuestaId: number,
+    @CurrentUser() u: JwtUser,
+    @Res() res: Response,
+  ) {
+    const buffer = await this.service.oficial(id, respuestaId, u);
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Content-Disposition', contentDisposition(`boleta-oficial-${respuestaId}.pdf`, 'attachment'));
+    res.send(buffer);
+  }
   @Get('seguimiento')
   @Header('Cache-Control', 'private, no-store')
   @Roles('ADMINISTRATIVO', 'DIRECTOR', 'MAESTRO')

@@ -21,7 +21,7 @@ vi.mock('react-native', async () => {
   const { createElement } = await import('react');
   return {
     useWindowDimensions: () => ({width:390,height:844,fontScale:1,scale:1}),
-    View: 'View', Text: 'Text', TouchableOpacity: 'TouchableOpacity', Pressable: 'Pressable',
+    View: 'View', Image: 'Image', Text: 'Text', TouchableOpacity: 'TouchableOpacity', Pressable: 'Pressable',
     ActivityIndicator: 'ActivityIndicator', RefreshControl: 'RefreshControl',
     Linking: { openURL: vi.fn() }, StyleSheet: { create: (styles: unknown) => styles },
     FlatList: ({ data, renderItem, ListEmptyComponent, ListHeaderComponent, refreshControl }: {

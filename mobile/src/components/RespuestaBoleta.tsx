@@ -1,3 +1,4 @@
+import { useTemaAlumno } from "../tema-alumno";
 import { abrirDocumentoFirmado } from "../api/abrir-documento-firmado";
 import { useEffect, useRef, useState } from "react";
 import { Alert, TextInput, TouchableOpacity, View } from "react-native";
@@ -5,7 +6,7 @@ import { Text } from "./Texto";
 import { api, mensajeDeError } from "../api/client";
 import { useMarca } from "../marca";
 import { textoSobreFondo, colores } from "../theme";
-import { base, Tarjeta } from "../screens/comunes";
+import { useBase, Tarjeta } from "../screens/comunes";
 interface Historial {
   id: number;
   estado: string;
@@ -14,6 +15,7 @@ interface Historial {
   firmanteTipo: string;
   asignatura: string | null;
   fecha: string;
+  oficialDisponible?: boolean;
   vigente: boolean;
 }
 interface Datos {
@@ -37,6 +39,8 @@ interface Datos {
   historial: Historial[];
 }
 export function RespuestaBoleta({ inscripcionId }: { inscripcionId: number }) {
+  const base = useBase();
+  const { colores } = useTemaAlumno();
   const { marca } = useMarca();
   const [datos, setDatos] = useState<Datos | null>(null),
     [error, setError] = useState(""),
@@ -58,7 +62,7 @@ export function RespuestaBoleta({ inscripcionId }: { inscripcionId: number }) {
       consultaActual.current++;
     };
   }, [inscripcionId]);
-  const descargarConstancia = async (respuestaId: number) => {
+  const descargarConstancia = async (respuestaId: number, oficial = false) => {
     if (bloqueo.current) return;
     bloqueo.current = true;
     setOcupado(true);
@@ -69,12 +73,12 @@ export function RespuestaBoleta({ inscripcionId }: { inscripcionId: number }) {
         params: {
           inscripcionId,
           respuestaId,
-          formato: "constancia-aceptacion",
+          formato: oficial ? "boleta-oficial" : "constancia-aceptacion",
         },
       });
       await abrirDocumentoFirmado(
         r.data.url,
-        `constancia-boleta-${respuestaId}.pdf`,
+        `${oficial ? "boleta-oficial" : "constancia-boleta"}-${respuestaId}.pdf`,
         () => consulta === consultaActual.current,
       );
     } catch (e) {
@@ -434,6 +438,7 @@ export function RespuestaBoleta({ inscripcionId }: { inscripcionId: number }) {
                 {!h.vigente ? " · Versión anterior" : ""}
               </Text>
               {!!h.comentario && <Text>{h.comentario}</Text>}
+              {h.oficialDisponible && boton(`Descargar boleta oficial #${h.id}`, () => void descargarConstancia(h.id, true))}
               {h.estado === "ACEPTADA" &&
                 boton(
                   `Descargar constancia de aceptación #${h.id}`,
