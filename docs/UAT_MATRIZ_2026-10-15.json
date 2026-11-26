@@ -1,6 +1,6 @@
 {
-  "version": "1.38.10",
-  "alcance": "Candidata 1.38.10. Portal alumno con controles espaciados, ayuda descartable, selección de adjuntos antes de entregar y cierre de sesión con limpieza de la vista.",
+  "version": "1.39.0",
+  "alcance": "Candidata 1.39.0. Expedientes de egreso, liberaciones documentales, expedición de XML y seguimiento docente.",
   "escenarios": [
     {
       "id": "UAT-01",

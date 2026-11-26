@@ -14,6 +14,7 @@ import { construirRecorrido, recorridosPorArea } from '../components/recorrido-p
 const secciones = [
   { destino: '/boletas', etiqueta: 'Boletas y revisiones', roles: ['MAESTRO','ADMINISTRATIVO','DIRECTOR'] },
   { destino: '/seguimiento', etiqueta: 'Seguimiento y pendientes', roles: ['ALUMNO','MAESTRO','ADMINISTRATIVO','FINANZAS'] },
+  { destino: '/expedientes-egreso', etiqueta: 'Expedientes de egreso', roles: ['DIRECTOR','ADMINISTRATIVO','FINANZAS'] },
   { destino: '/asistencias', etiqueta: 'Asistencias', roles: ['ALUMNO','MAESTRO','ADMINISTRATIVO'] },
   { destino: '/biblioteca', etiqueta: 'Biblioteca', roles: ['ADMINISTRATIVO'] },
   { destino: '/operaciones', etiqueta: 'Importar y promover', roles: ['ADMINISTRATIVO'] },
@@ -42,13 +43,14 @@ const secciones = [
 
 const gruposMenu = [
   { titulo: 'Inicio y seguimiento', rutas: ['/', '/boletas', '/seguimiento', '/asistencias', '/calendario', '/avisos'] },
-  { titulo: 'Control escolar', rutas: ['/alumnos', '/docentes', '/catalogos-academicos', '/apertura-cartera', '/recursamientos', '/programas-especiales', '/materias', '/grupos', '/operaciones'] },
+  { titulo: 'Control escolar', rutas: ['/alumnos','/expedientes-egreso', '/docentes', '/catalogos-academicos', '/apertura-cartera', '/recursamientos', '/programas-especiales', '/materias', '/grupos', '/operaciones'] },
   { titulo: 'Docencia', rutas: ['/maestro', '/temarios', '/calificaciones', '/conducta'] },
   { titulo: 'Finanzas e informes', rutas: ['/finanzas', '/analitica'] },
   { titulo: 'Administración', rutas: ['/planteles', '/biblioteca', '/usuarios', '/roles-personal', '/configuracion'] },
 ];
 
 const iconosPorRuta: Record<string, NombreIcono> = {
+  '/expedientes-egreso': 'clipboard-check',
   '/boletas': 'clipboard-check',
   '/seguimiento': 'clipboard-check',
   '/asistencias': 'clipboard-check',
@@ -224,7 +226,7 @@ export function Shell() {
             {gruposMenu.map((grupo) => {
               const opciones = grupo.rutas
                 .map((ruta) => secciones.find((seccion) => seccion.destino === ruta)!)
-                .filter((seccion) => tieneRol(...seccion.roles));
+                .filter((seccion) => seccion.destino === '/expedientes-egreso' ? seccion.roles.some(r=>sesion?.roles.includes(r)) : tieneRol(...seccion.roles));
               if (!opciones.length) return null;
               return (
                 <div className="menu-grupo" key={grupo.titulo} role="group" aria-label={grupo.titulo}>

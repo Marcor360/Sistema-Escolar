@@ -33,6 +33,7 @@ export function GestionComunicadosAlumno() {
       api.get<Listado>('/notificaciones/comunicados', { params: { pagina, porPagina: 10 } }),
     ]);
     if (solicitud !== consultaActual.current) return;
+    if (!Array.isArray(sedes) || !Array.isArray(lista?.datos)) throw new Error('La respuesta de comunicados está incompleta. Vuelve a consultar.');
     setPlanteles(sedes);
     setListado(lista);
     setPlantelId((actual) => actual || String(sedes[0]?.id || ''));

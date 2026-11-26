@@ -1176,3 +1176,19 @@ dialog :is(.boton, button):focus-visible { outline: 3px solid var(--dorado); out
 .recorrido-reducido { position: fixed; bottom: 16px; right: 16px; z-index: 90; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--linea); border-radius: 12px; background: white; color: var(--pizarra); box-shadow: 0 4px 18px #0002; max-width: calc(100vw - 32px); }
 .preparacion-grupo { display: grid; gap: 6px; min-width: 170px; font-size: .85rem; }
 .preparacion-grupo .sello { white-space: normal; }
+
+.expediente-egreso form.panel, .expediente-egreso fieldset, .expediente-egreso label {
+  display: grid;
+  gap: var(--espacio-3);
+}
+.expediente-egreso form button { justify-self: start; }
+.expediente-egreso fieldset > div {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: var(--espacio-4);
+}
+.expediente-egreso section.panel > button, .expediente-egreso article > button {
+  margin: 4px 12px 4px 0;
+  min-height: 44px;
+}
+.expediente-egreso article + article { margin-top: 1rem; border-top: 1px solid var(--linea); }

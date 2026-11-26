@@ -1,3 +1,4 @@
+import { useSearchParams } from 'react-router-dom';
 import { FormEvent, useEffect, useState } from 'react';
 import { api, mensajeDeError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
@@ -23,10 +24,11 @@ interface Registro {
   materia: string;
 }
 export default function AsistenciasPage() {
+  const [params]=useSearchParams();
   const { sesion } = useAuth(),
     alumno = sesion?.roles.includes('ALUMNO');
   const [clases, setClases] = useState<Clase[]>([]),
-    [clase, setClase] = useState(''),
+    [clase, setClase] = useState(params.get('clase') ?? ''),
     [fecha, setFecha] = useState(diaLocal()),
     [desde, setDesde] = useState(diaLocal().slice(0, 7) + '-01'),
     [hasta, setHasta] = useState(diaLocal());
@@ -58,6 +60,8 @@ export default function AsistenciasPage() {
   }, [alumno]);
   useEffect(() => {
     setLista([]);
+    setRevision('');
+    setMotivo('');
     setPuede(false);
     if (!clase) return;
     let vigente = true;
@@ -94,7 +98,7 @@ export default function AsistenciasPage() {
   }, [desde, hasta, pagina, clase, cambio]);
   const guardar = async (e: FormEvent) => {
     e.preventDefault();
-    if (ocupado) return;
+    if (ocupado || !puede || !lista.length) return;
     setError('');
     setMensaje('');
     if (lista.some((a) => !a.estado)) {
@@ -165,9 +169,9 @@ export default function AsistenciasPage() {
           </label>
           {clase && (
             <form onSubmit={guardar}>
-              <div className="tabla-contenedor">
+              <div className="tabla-contenedor" role="region" aria-label="Pase de lista" tabIndex={0}>
                 <table>
-                  <caption>Lista de alumnos inscritos</caption>
+                  <caption>Lista de alumnos inscritos · {lista.filter(a => a.estado).length} de {lista.length} registrados</caption>
                   <thead>
                     <tr>
                       <th>Matrícula</th>

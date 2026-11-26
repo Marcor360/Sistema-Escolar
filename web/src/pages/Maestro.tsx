@@ -24,6 +24,7 @@ export default function MaestroPage() {
   const pagina = Number(q.get(modo + 'Pagina')) || 1,
     buscar = q.get(modo + 'Buscar') || '';
   const [clase, setClase] = useState<GrupoMateria | null>(null),
+    [actividadActual,setActividadActual]=useState<Actividad|null>(null),
     [actividades, setActividades] = useState<Actividad[]>([]),
     [materiales, setMateriales] = useState<Material[]>([]),
     [entregas, setEntregas] = useState<Entrega[]>([]),
@@ -54,6 +55,7 @@ export default function MaestroPage() {
     setListo(false);
     setError('');
     setClase(null);
+    setActividadActual(null);
     setActividades([]);
     setMateriales([]);
     setEntregas([]);
@@ -117,6 +119,8 @@ export default function MaestroPage() {
         if (modo === 'entregas' || modo === 'calificar-entrega') {
           const a = await api.get<Actividad & { grupoMateriaId: number }>(`/actividades/${actividadId}`);
           if (a.data.grupoMateriaId !== Number(claseId)) throw new Error('La actividad no corresponde a la clase');
+          if (!vigente) return;
+          setActividadActual(a.data);
           if (modo === 'entregas') {
             const r = await api.get(`/actividades/${actividadId}/entregas/listado`, {
               params: { pagina, porPagina: 10 },
@@ -238,6 +242,7 @@ export default function MaestroPage() {
                 <button onClick={() => ir('material-nuevo')}>Subir material</button>
                 <Link to={`/temarios?vista=consulta&clase=${clase.id}`}>Temario de esta clase</Link>
                 <Link to={`/recursamientos?clase=${clase.id}`}>Recursantes y notas de esta materia</Link>
+                <Link to={`/asistencias?clase=${clase.id}`}>Pasar lista de esta clase</Link>
                 <Link to="/calificaciones">Calificaciones oficiales</Link>
                 {clase.grupo.ciclo.id && (
                   <Link to={`/ciclos/${clase.grupo.ciclo.id}`}>Ficha del ciclo de esta clase</Link>
@@ -249,7 +254,7 @@ export default function MaestroPage() {
             <section className="panel">
               <h2>
                 {modo === 'entregas'
-                  ? 'Entregas de la actividad ' + actividadId
+                  ? 'Entregas de ' + (actividadActual?.titulo ?? 'la actividad')
                   : modo === 'actividades'
                     ? 'Actividades de la clase'
                     : 'Materiales de la clase'}
@@ -333,6 +338,7 @@ export default function MaestroPage() {
                     </button>
                   </article>
                 ))}
+              {modo === 'entregas' && entregas.length > 0 && <p role="status">{entregas.filter(e=>e.calificacion==null).length} por calificar de las {entregas.length} entregas de esta página.</p>}
               {modo === 'entregas' &&
                 entregas.map((e) => (
                   <article key={e.id}>
@@ -483,9 +489,10 @@ export default function MaestroPage() {
               }}
             >
               <p>
-                {entrega.alumno.matricula} · {entrega.alumno.usuario.nombre}
+                {actividadActual?.titulo} · {entrega.alumno.matricula} · {entrega.alumno.usuario.nombre} {entrega.alumno.usuario.apellidoPaterno}
               </p>
               <p>{entrega.comentarioAlumno || 'Sin comentario del alumno'}</p>
+              {entrega.archivoRuta && <button type="button" className="enlace" onClick={() => void abrirArchivo('entregas', entrega.id).catch(err=>setError(mensajeDeError(err)))}>Abrir archivo entregado</button>}
               {entrega.respuestaTexto && (
                 <div>
                   <strong>Respuesta escrita</strong>

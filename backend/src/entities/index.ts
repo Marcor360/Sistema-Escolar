@@ -90,3 +90,4 @@ export * from './auth-correo-evento.entity';
 export * from './titulacion-expediente.entity';
 export * from './titulacion-firmante.entity';
 export * from './usuario-vinculo-persona.entity';
+export * from './egreso-documento.entity';
