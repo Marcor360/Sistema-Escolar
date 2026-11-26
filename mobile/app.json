@@ -11,7 +11,7 @@
     },
     "android": {
       "package": "iua.app",
-      "versionCode": 4
+      "versionCode": 5
     },
     "plugins": [
       "expo-asset",
