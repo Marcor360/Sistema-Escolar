@@ -61,7 +61,7 @@ El script genera `android/` si falta y lo reutiliza en las compilaciones siguien
 
 ## Firma de instalación
 
-Si ya se distribuyó una app con `mx.escuela.alumnos`, **reutilizar su keystore**. Una firma nueva impide instalar este APK como actualización de la app anterior. Para la primera distribución, crear un keystore fuera del repositorio con `keytool` (pedirá contraseñas); guardar el archivo y sus contraseñas en un respaldo seguro:
+El identificador Android actual es `iua.app`. Los APK anteriores con `mx.escuela.alumnos` son una aplicación distinta para Android y no se actualizan con este identificador. Si ya se distribuyó `iua.app`, **reutilizar su keystore**: una firma nueva impide instalar el APK como actualización. Para la primera distribución, crear un keystore fuera del repositorio con `keytool` (pedirá contraseñas); guardar el archivo y sus contraseñas en un respaldo seguro:
 
 ```powershell
 New-Item -ItemType Directory -Force "$env:USERPROFILE\escolar-android" | Out-Null

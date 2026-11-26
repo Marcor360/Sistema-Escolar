@@ -10,7 +10,8 @@
       "bundleIdentifier": "mx.escuela.alumnos"
     },
     "android": {
-      "package": "mx.escuela.alumnos"
+      "package": "iua.app",
+      "versionCode": 4
     },
     "plugins": [
       "expo-asset",
