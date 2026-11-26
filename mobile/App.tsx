@@ -260,11 +260,20 @@ function AppInterna() {
             setAvisoCierre("La cuenta cambió. Ingresa nuevamente para verificar tu identidad.");
             return;
           }
+          const roles = data.roles.map((r: { clave: string }) => r.clave);
+          if (!roles.includes("ALUMNO")) {
+            await eliminarTokensSesion();
+            await persistenciaActividad.current.borrar();
+            usuarioEnDesbloqueo.current = null;
+            setBloqueoBiometrico(false);
+            setAvisoCierre("Esta aplicación es exclusiva para alumnos. Usa el portal administrativo.");
+            return;
+          }
           setSesion({
             sub: data.id,
             email: data.email,
             nombre: data.nombreCompleto,
-            roles: data.roles.map((r: { clave: string }) => r.clave),
+            roles,
             passwordChangeRequired: data.passwordChangeRequired,
           });
         } catch (error) {

@@ -66,6 +66,16 @@ it("agrupa boletas por ciclo y documentos por carpeta de materia", async () => {
   expect(api.get).toHaveBeenCalledWith("/grupo-materias/7/materiales");
   expect(textos()).not.toContain("biblioteca");
 });
+it("distingue una consulta fallida de una lista realmente vacía", async () => {
+  vi.mocked(api.get).mockImplementation(async (ruta) => {
+    if (ruta === "/reportes/mis-boletas") throw new Error("Sin conexión");
+    return { data: [] };
+  });
+  await montar();
+  expect(textos()).toContain("Sin conexión");
+  expect(textos()).toContain("Aún no hay materias asignadas");
+  expect(textos()).not.toContain("No hay boletas de inscripciones");
+});
 it("abre únicamente boleta y material con enlace firmado de la API", async () => {
   await montar();
   vi.mocked(api.get).mockResolvedValueOnce({ data: { url: "/api/reportes/boleta-descarga/4?t=firmado" } });

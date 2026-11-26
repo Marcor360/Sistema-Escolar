@@ -46,6 +46,8 @@ export default function DocumentosScreen() {
   const { sesion } = useSesion();
   const [boletas, setBoletas] = useState<Boleta[]>([]);
   const [materias, setMaterias] = useState<Materia[]>([]);
+  const [boletasConsultadas, setBoletasConsultadas] = useState(false);
+  const [materiasConsultadas, setMateriasConsultadas] = useState(false);
   const [materiales, setMateriales] = useState<Record<number, Material[]>>({});
   const [carpetaAbierta, setCarpetaAbierta] = useState<number | null>(null);
   const [cargando, setCargando] = useState(false);
@@ -68,6 +70,8 @@ export default function DocumentosScreen() {
     aperturaEnCurso.current = false;
     setBoletas([]);
     setMaterias([]);
+    setBoletasConsultadas(false);
+    setMateriasConsultadas(false);
     setMateriales({});
     setCarpetaAbierta(null);
     setInicialCompleta(false);
@@ -86,6 +90,8 @@ export default function DocumentosScreen() {
       setBoletas([]);
       setMaterias([]);
       setMateriales({});
+      setBoletasConsultadas(false);
+      setMateriasConsultadas(false);
       setSinConexion(false);
       setError("La copia temporal venció. Conéctate y vuelve a consultar tus documentos.");
     }, Math.max(0, expiraCache - Date.now()));
@@ -113,16 +119,20 @@ export default function DocumentosScreen() {
         const copias: number[] = [];
         if (b.status === "fulfilled") {
           setBoletas(b.value.data);
+          setBoletasConsultadas(true);
           if (b.value.offline) copias.push(b.value.fecha);
         } else {
           setBoletas([]);
+          setBoletasConsultadas(false);
           errores.push("boletas: " + mensajeDeError(b.reason));
         }
         if (m.status === "fulfilled") {
           setMaterias(m.value.data);
+          setMateriasConsultadas(true);
           if (m.value.offline) copias.push(m.value.fecha);
         } else {
           setMaterias([]);
+          setMateriasConsultadas(false);
           errores.push("materias: " + mensajeDeError(m.reason));
         }
         setSinConexion(copias.length > 0);
@@ -216,7 +226,7 @@ export default function DocumentosScreen() {
       {cargando && !inicialCompleta && <ActivityIndicator accessibilityLabel="Cargando documentos" />}
       {abriendo && <Text accessibilityRole="text">Solicitando enlace privado…</Text>}
       <Text accessibilityRole="header" style={estilos.tituloSeccion}>Boletas por ciclo escolar</Text>
-      {inicialCompleta && boletas.length === 0 && <Vacio mensaje="No hay boletas de inscripciones disponibles." />}
+      {inicialCompleta && boletasConsultadas && boletas.length === 0 && <Vacio mensaje="No hay boletas de inscripciones disponibles." />}
       {boletas.map((b) => (
         <TouchableOpacity key={b.inscripcionId} style={estilos.carpeta}
           accessibilityRole="button" accessibilityLabel={`Abrir boleta PDF de ${b.ciclo}, ${b.grupo}`}
@@ -228,7 +238,7 @@ export default function DocumentosScreen() {
         </TouchableOpacity>
       ))}
       <Text accessibilityRole="header" style={estilos.tituloSeccion}>Materiales de mis materias</Text>
-      {inicialCompleta && materias.length === 0 && <Vacio mensaje="Aún no hay materias asignadas con carpetas de materiales." />}
+      {inicialCompleta && materiasConsultadas && materias.length === 0 && <Vacio mensaje="Aún no hay materias asignadas con carpetas de materiales." />}
       {materias.map((m) => (
         <Tarjeta key={m.id}>
           <TouchableOpacity style={estilos.botonCarpeta} accessibilityRole="button"
